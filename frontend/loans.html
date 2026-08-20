@@ -1,0 +1,680 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="loans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Farm Assist - Loans</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root { --loan-blue: #2563eb; --loan-blue-soft: #DBEAFE; --loan-blue-bg: rgba(37,99,235,0.06); --loan-purple: #7c3aed; --loan-green: #059669; }
+    .loan-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+    .loan-badge.active { background:#D1FAE5; color:#065F46; }
+    .loan-badge.draft { background:#F3F4F6; color:#6B7280; }
+    .loan-badge.submitted { background:#DBEAFE; color:#1E40AF; }
+    .loan-badge.approved { background:#D1FAE5; color:#065F46; }
+    .loan-badge.rejected { background:#FEE2E2; color:#991B1B; }
+    .loan-badge.review { background:#FEF3C7; color:#92400E; }
+    .loan-tab { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+    .loan-tab-btn { padding:8px 18px; font-size:12px; font-weight:600; border-radius:30px; cursor:pointer; transition:all 0.2s; background:transparent; color:var(--text-secondary); border:1px solid var(--border-light); }
+    .loan-tab-btn:hover { border-color:var(--loan-blue); color:var(--loan-blue); }
+    .loan-tab-btn.active { background:var(--loan-blue); color:white; border-color:var(--loan-blue); }
+    .loan-section { margin-bottom:20px; }
+    .loan-section-title { font-size:16px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    .loan-form-group { margin-bottom:14px; }
+    .loan-form-label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
+    .loan-form-input,.loan-form-select { width:100%; padding:12px 14px; border:1px solid var(--border-light); border-radius:var(--radius-sm); font-size:14px; background:white; transition:border-color 0.2s; }
+    .loan-form-input:focus,.loan-form-select:focus { border-color:var(--loan-blue); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+    .loan-product-card { background:white; border-radius:var(--radius-md); padding:16px; border:1px solid var(--border-light); margin-bottom:10px; transition:transform 0.2s; }
+    .loan-product-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-sm); }
+    .loan-product-card .bank-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .loan-stat { text-align:center; padding:12px 8px; background:var(--loan-blue-bg); border-radius:var(--radius-sm); }
+    .loan-stat-value { font-size:16px; font-weight:800; color:var(--loan-blue); }
+    .loan-stat-label { font-size:10px; color:var(--text-muted); }
+    .loan-step { display:none; }
+    .loan-step.active { display:block; }
+    .loan-step-indicator { display:flex; gap:8px; margin-bottom:20px; justify-content:center; }
+    .loan-step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; background:var(--border-light); color:var(--text-muted); transition:all 0.3s; }
+    .loan-step-dot.active { background:var(--loan-blue); color:white; }
+    .loan-step-dot.done { background:var(--loan-green); color:white; }
+    .loan-success-icon { font-size:56px; color:var(--loan-green); margin-bottom:12px; }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+  </style>
+</head>
+<body>
+<main class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h1><i class="fas fa-hand-holding-usd" style="color:var(--loan-blue);"></i> Loans</h1>
+      <p>Explore and apply for agricultural loans from banks and lenders.</p>
+    </div>
+    <button class="btn-primary btn-sm" onclick="openModal('apply-modal')" style="background:var(--loan-blue);"><i class="fas fa-plus-circle"></i> New Application</button>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="loan-tab" id="tab-nav">
+    <button class="loan-tab-btn active" data-tab="available"><i class="fas fa-list"></i> Available Loans</button>
+    <button class="loan-tab-btn" data-tab="applications"><i class="fas fa-file-alt"></i> My Applications</button>
+  </div>
+
+  <!-- ===== AVAILABLE LOANS TAB ===== -->
+  <div class="tab-content active" id="tab-available">
+    <div class="loan-section">
+      <div class="loan-section-title"><i class="fas fa-university" style="color:var(--loan-blue);"></i> Loan Products</div>
+      <div id="available-loans-list">
+        <div style="text-align:center;padding:40px 20px;">
+          <div class="skeleton-loader" style="height:20px;width:200px;margin:0 auto 10px;border-radius:8px;"></div>
+          <div class="skeleton-loader" style="height:14px;width:160px;margin:0 auto;border-radius:8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MY APPLICATIONS TAB ===== -->
+  <div class="tab-content" id="tab-applications">
+    <div class="loan-section">
+      <div class="loan-section-title"><i class="fas fa-file-alt" style="color:var(--loan-blue);"></i> My Applications</div>
+      <div id="my-applications-list">
+        <div style="text-align:center;padding:40px 20px;">
+          <div class="skeleton-loader" style="height:20px;width:200px;margin:0 auto 10px;border-radius:8px;"></div>
+          <div class="skeleton-loader" style="height:14px;width:160px;margin:0 auto;border-radius:8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Apply Loan Modal -->
+<div class="modal-backdrop" id="apply-modal">
+  <div class="modal-box" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h3 style="font-size:18px;"><i class="fas fa-hand-holding-usd" style="color:var(--loan-blue);"></i> Apply for Loan</h3>
+      <button onclick="closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+    </div>
+
+    <input type="hidden" id="apply-loan-name">
+
+    <!-- Step Indicator -->
+    <div class="loan-step-indicator">
+      <div class="loan-step-dot active" id="step-dot-1">1</div>
+      <div class="loan-step-dot" id="step-dot-2">2</div>
+      <div class="loan-step-dot" id="step-dot-3">3</div>
+      <div class="loan-step-dot" id="step-dot-4">4</div>
+    </div>
+
+    <form id="loan-application-form" onsubmit="submitLoanApplication(event)">
+      <!-- Step 1: Personal Details -->
+      <div class="loan-step active" id="loan-step-1">
+        <h4 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-user" style="color:var(--loan-blue);"></i> Step 1: Personal Details</h4>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Full Name <span style="color:#EF4444;">*</span></label>
+          <input class="loan-form-input" id="app-name" placeholder="Enter your full name" required>
+        </div>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Phone Number <span style="color:#EF4444;">*</span></label>
+          <input class="loan-form-input" type="tel" id="app-phone" placeholder="Enter 10-digit mobile number" pattern="[0-9]{10}" required>
+        </div>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Aadhar Number <span style="color:#EF4444;">*</span></label>
+          <input class="loan-form-input" type="text" id="app-aadhar" placeholder="Enter 12-digit Aadhar number" pattern="[0-9]{12}" required>
+        </div>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Email</label>
+          <input class="loan-form-input" type="email" id="app-email" placeholder="Enter your email (optional)">
+        </div>
+        <button type="button" class="btn-primary" style="width:100%;background:var(--loan-blue);" onclick="nextStep(2)"><i class="fas fa-arrow-right"></i> Next</button>
+      </div>
+
+      <!-- Step 2: Farm Details -->
+      <div class="loan-step" id="loan-step-2">
+        <h4 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-tractor" style="color:var(--loan-blue);"></i> Step 2: Farm Details</h4>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Farm Size (acres) <span style="color:#EF4444;">*</span></label>
+          <input class="loan-form-input" type="number" id="app-farm-size" placeholder="e.g. 5" min="0" step="0.1" required>
+        </div>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Primary Crop</label>
+          <input class="loan-form-input" id="app-crop" placeholder="e.g. Paddy, Wheat, Cotton">
+        </div>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Land Type</label>
+          <select class="loan-form-select" id="app-land-type">
+            <option value="">Select land type</option>
+            <option value="Owned">Owned</option>
+            <option value="Leased">Leased</option>
+            <option value="Shared">Shared / Joint</option>
+          </select>
+        </div>
+        <div class="grid-2">
+          <button type="button" class="btn-secondary" onclick="prevStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
+          <button type="button" class="btn-primary" style="background:var(--loan-blue);" onclick="nextStep(3)"><i class="fas fa-arrow-right"></i> Next</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Upload Documents -->
+      <div class="loan-step" id="loan-step-3">
+        <h4 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-file-upload" style="color:var(--loan-blue);"></i> Step 3: Upload Documents</h4>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Aadhar Card <span style="color:#EF4444;">*</span></label>
+          <input class="loan-form-input" type="file" id="app-doc-aadhar" accept=".pdf,.jpg,.jpeg,.png" required>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">PDF, JPG or PNG (max 5MB)</div>
+        </div>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Land Records <span style="color:#EF4444;">*</span></label>
+          <input class="loan-form-input" type="file" id="app-doc-land" accept=".pdf,.jpg,.jpeg,.png" required>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">7/12 extract or land tax receipt</div>
+        </div>
+        <div class="loan-form-group">
+          <label class="loan-form-label">Bank Statement (6 months)</label>
+          <input class="loan-form-input" type="file" id="app-doc-bank" accept=".pdf,.jpg,.jpeg,.png">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Optional but recommended</div>
+        </div>
+        <div class="grid-2">
+          <button type="button" class="btn-secondary" onclick="prevStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
+          <button type="button" class="btn-primary" style="background:var(--loan-blue);" onclick="nextStep(4)"><i class="fas fa-arrow-right"></i> Next</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Review & Submit -->
+      <div class="loan-step" id="loan-step-4">
+        <h4 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-check-circle" style="color:var(--loan-blue);"></i> Step 4: Review &amp; Submit</h4>
+        <div class="card-premium" style="padding:14px;margin-bottom:12px;">
+          <div id="review-details" style="font-size:12px;line-height:1.8;">
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Loan:</span> <span id="review-loan" style="font-weight:600;">--</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Name:</span> <span id="review-name" style="font-weight:600;">--</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Phone:</span> <span id="review-phone" style="font-weight:600;">--</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Farm Size:</span> <span id="review-farm" style="font-weight:600;">--</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Crop:</span> <span id="review-crop" style="font-weight:600;">--</span></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <button type="button" class="btn-secondary" onclick="prevStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
+          <button type="submit" class="btn-primary" style="background:var(--loan-blue);"><i class="fas fa-paper-plane"></i> Submit</button>
+        </div>
+      </div>
+
+      <!-- Step 5: Success -->
+      <div class="loan-step" id="loan-step-5">
+        <div style="text-align:center;padding:20px 0;">
+          <div class="loan-success-icon"><i class="fas fa-check-circle"></i></div>
+          <h4 style="font-size:18px;margin-bottom:8px;">Application Submitted!</h4>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Your loan application has been received. We will contact you within 48 hours.</p>
+          <div class="card-premium" style="padding:12px;text-align:left;margin-bottom:16px;">
+            <div style="font-size:11px;color:var(--text-muted);">Application ID</div>
+            <div style="font-size:16px;font-weight:800;color:var(--loan-blue);" id="app-submitted-id">FALOAN-0000</div>
+          </div>
+          <button type="button" class="btn-primary" style="background:var(--loan-blue);width:100%;" onclick="closeModalAndRefresh()"><i class="fas fa-check"></i> Done</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var formatters = {
+    inr: function (amount) {
+      var num = parseFloat(amount) || 0;
+      var parts = num.toFixed(2).split('.');
+      var intPart = parts[0];
+      var lastThree = intPart.substring(intPart.length - 3);
+      var otherNums = intPart.substring(0, intPart.length - 3);
+      if (otherNums !== '') lastThree = ',' + lastThree;
+      var formatted = otherNums.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
+      return '\u20B9' + formatted;
+    },
+    inrShort: function (amount) {
+      var num = parseFloat(amount) || 0;
+      if (num >= 10000000) return '\u20B9' + (num / 10000000).toFixed(1) + ' Cr';
+      if (num >= 100000) return '\u20B9' + (num / 100000).toFixed(1) + ' L';
+      return formatters.inr(num);
+    },
+    date: function (d) {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+  };
+
+  /* ---- Mock Loan Products ---- */
+  var mockLoanProducts = [
+    {
+      id: 'KCC',
+      bank: 'State Bank of India',
+      bankIcon: 'fas fa-university',
+      bankColor: '#2563eb',
+      bankBg: 'rgba(37,99,235,0.1)',
+      name: 'Kisan Credit Card',
+      interest: '4% p.a.',
+      maxAmount: 300000,
+      repayment: '12 months',
+      eligibility: 'All farmers with land records',
+      description: 'Short-term credit for crop cultivation, post-harvest expenses and domestic needs.'
+    },
+    {
+      id: 'CROP-LOAN',
+      bank: 'Bank of Baroda',
+      bankIcon: 'fas fa-piggy-bank',
+      bankColor: '#D97706',
+      bankBg: 'rgba(217,119,6,0.1)',
+      name: 'Crop Loan',
+      interest: '7% p.a.',
+      maxAmount: 500000,
+      repayment: '18 months',
+      eligibility: 'Farmers with 2+ acres of cultivable land',
+      description: 'Flexible loan for sowing, fertilisers, irrigation and labour expenses.'
+    },
+    {
+      id: 'FARM-MACHINERY',
+      bank: 'NABARD',
+      bankIcon: 'fas fa-tractor',
+      bankColor: '#059669',
+      bankBg: 'rgba(5,150,105,0.1)',
+      name: 'Farm Machinery Loan',
+      interest: '8% p.a.',
+      maxAmount: 1500000,
+      repayment: '60 months',
+      eligibility: 'Farmers & agri-entrepreneurs with 5+ acres',
+      description: 'Finance tractors, harvesters, rotavators and other farm equipment.'
+    },
+    {
+      id: 'SOLAR-PUMP',
+      bank: 'Indian Bank',
+      bankIcon: 'fas fa-sun',
+      bankColor: '#D97706',
+      bankBg: 'rgba(245,158,11,0.1)',
+      name: 'Solar Pump Loan',
+      interest: '5% p.a.',
+      maxAmount: 800000,
+      repayment: '36 months',
+      eligibility: 'Farmers with existing irrigation source',
+      description: 'Subsidised financing for solar-powered pump sets with government subsidy.'
+    },
+    {
+      id: 'COLD-STORAGE',
+      bank: 'Canara Bank',
+      bankIcon: 'fas fa-snowflake',
+      bankColor: '#0891B2',
+      bankBg: 'rgba(8,145,178,0.1)',
+      name: 'Cold Storage Loan',
+      interest: '9% p.a.',
+      maxAmount: 2500000,
+      repayment: '84 months',
+      eligibility: 'FPOs, cooperatives & individual farmers with 10+ acres',
+      description: 'Build or expand cold storage facilities for produce preservation.'
+    },
+    {
+      id: 'DAIRY-DEV',
+      bank: 'Punjab National Bank',
+      bankIcon: 'fas fa-cow',
+      bankColor: '#7c3aed',
+      bankBg: 'rgba(124,58,237,0.1)',
+      name: 'Dairy Development Loan',
+      interest: '6% p.a.',
+      maxAmount: 600000,
+      repayment: '48 months',
+      eligibility: 'Dairy farmers with 5+ cattle',
+      description: 'Purchase milch animals, milking machines and cattle feed storage.'
+    },
+    {
+      id: 'ORGANIC-FARMING',
+      bank: 'Union Bank of India',
+      bankIcon: 'fas fa-leaf',
+      bankColor: '#16a34a',
+      bankBg: 'rgba(22,163,74,0.1)',
+      name: 'Organic Farming Loan',
+      interest: '5.5% p.a.',
+      maxAmount: 400000,
+      repayment: '24 months',
+      eligibility: 'Farmers with organic certification or in conversion',
+      description: 'Support for organic inputs, bio-fertilisers, vermicompost and certification.'
+    },
+    {
+      id: 'LAND-DEV',
+      bank: 'Axis Bank',
+      bankIcon: 'fas fa-mountain',
+      bankColor: '#dc2626',
+      bankBg: 'rgba(220,38,38,0.1)',
+      name: 'Land Development Loan',
+      interest: '8.5% p.a.',
+      maxAmount: 2000000,
+      repayment: '72 months',
+      eligibility: 'Farmers with clear land title of 3+ acres',
+      description: 'Leveling, terracing, bunding, drainage and soil conservation works.'
+    }
+  ];
+
+  /* ---- Mock Applications ---- */
+  var mockApplications = [
+    {
+      id: 'FALOAN-1042',
+      loanName: 'Kisan Credit Card',
+      bank: 'State Bank of India',
+      amount: 150000,
+      date: '2026-07-15',
+      status: 'draft'
+    },
+    {
+      id: 'FALOAN-1043',
+      loanName: 'Crop Loan',
+      bank: 'SBI',
+      amount: 300000,
+      date: '2026-07-18',
+      status: 'submitted'
+    },
+    {
+      id: 'FALOAN-1044',
+      loanName: 'Solar Pump Loan',
+      bank: 'Indian Bank',
+      amount: 650000,
+      date: '2026-06-10',
+      status: 'approved'
+    },
+    {
+      id: 'FALOAN-1045',
+      loanName: 'Farm Machinery Loan',
+      bank: 'NABARD',
+      amount: 1200000,
+      date: '2026-05-22',
+      status: 'rejected'
+    }
+  ];
+
+  var currentStep = 1;
+  var appCounter = 1046;
+
+  function mapBackendLoan(l) {
+    var statusMap = { active: 'approved', approved: 'approved', pending: 'submitted', submitted: 'submitted', draft: 'draft', rejected: 'rejected' };
+    var st = statusMap[l.status] || 'submitted';
+    return {
+      id: l.loan_id || l.id,
+      loanName: (l.loan_type) ? l.loan_type : (l.bank_name || 'Farm Loan'),
+      bank: l.bank_name || 'Bank',
+      amount: l.loan_amount || 0,
+      date: l.start_date || l.created_at,
+      status: st
+    };
+  }
+
+  function loadBackendLoans() {
+    if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+    API.Loan.list().then(function (res) {
+      var items = (res && res.data) || [];
+      if (!items.length) return;
+      mockApplications = items.map(mapBackendLoan);
+      renderMyApplications();
+    }).catch(function () {});
+  }
+
+  /* ---- Render Available Loans ---- */
+  function renderAvailableLoans() {
+    var container = document.getElementById('available-loans-list');
+    UIState.loading(container);
+
+    setTimeout(function () {
+      var html = '';
+      for (var i = 0; i < mockLoanProducts.length; i++) {
+        var p = mockLoanProducts[i];
+        html += '<div class="loan-product-card">' +
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
+            '<div class="bank-icon" style="background:' + p.bankBg + ';color:' + p.bankColor + ';"><i class="' + p.bankIcon + '"></i></div>' +
+            '<div style="flex:1;">' +
+              '<div style="font-size:14px;font-weight:700;">' + p.name + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted);">' + p.bank + '</div>' +
+            '</div>' +
+            '<span class="loan-badge active" style="font-size:10px;">' + p.interest + '</span>' +
+          '</div>' +
+          '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">' + p.description + '</div>' +
+          '<div class="grid-3" style="margin-bottom:10px;">' +
+            '<div class="loan-stat"><div class="loan-stat-value">' + formatters.inrShort(p.maxAmount) + '</div><div class="loan-stat-label">Max Amount</div></div>' +
+            '<div class="loan-stat"><div class="loan-stat-value">' + p.repayment + '</div><div class="loan-stat-label">Repayment</div></div>' +
+            '<div class="loan-stat"><div class="loan-stat-value" style="font-size:12px;">' + p.eligibility.substring(0, 20) + '...</div><div class="loan-stat-label">Eligibility</div></div>' +
+          '</div>' +
+          '<button class="btn-primary btn-sm" style="width:100%;background:var(--loan-blue);" onclick="openApplyModal(\'' + p.id + '\')"><i class="fas fa-file-signature"></i> Apply Now</button>' +
+        '</div>';
+      }
+      container.innerHTML = html;
+    }, 400);
+  }
+
+  /* ---- Render My Applications ---- */
+  function renderMyApplications() {
+    var container = document.getElementById('my-applications-list');
+    UIState.loading(container);
+
+    setTimeout(function () {
+      var html = '';
+      for (var i = 0; i < mockApplications.length; i++) {
+        var a = mockApplications[i];
+        var statusLabel = { draft: 'Draft', submitted: 'Under Review', approved: 'Approved', rejected: 'Rejected' }[a.status] || 'Unknown';
+        var badgeClass = { draft: 'draft', submitted: 'submitted', approved: 'approved', rejected: 'rejected' }[a.status] || 'draft';
+        var iconColor = { draft: '#6B7280', submitted: '#1E40AF', approved: '#065F46', rejected: '#991B1B' }[a.status] || '#6B7280';
+        var iconBg = { draft: 'rgba(107,114,128,0.1)', submitted: 'rgba(30,64,175,0.1)', approved: 'rgba(5,150,105,0.1)', rejected: 'rgba(153,27,27,0.1)' }[a.status] || 'rgba(107,114,128,0.1)';
+
+        html += '<div class="price-card">' +
+          '<div class="price-info">' +
+            '<div class="price-icon" style="background:' + iconBg + ';color:' + iconColor + ';"><i class="fas fa-file-alt"></i></div>' +
+            '<div>' +
+              '<div class="price-crop">' + a.loanName + '</div>' +
+              '<div style="font-size:10px;color:var(--text-muted);">' + a.bank + ' &bull; ' + formatters.date(a.date) + ' &bull; ' + formatters.inr(a.amount) + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+            '<span class="loan-badge ' + badgeClass + '">' + statusLabel + '</span>';
+        if (a.status === 'draft') {
+          html += '<button class="btn-primary btn-sm" style="font-size:10px;padding:5px 10px;border-radius:8px;background:var(--loan-blue);" onclick="continueApplication(\'' + a.id + '\')">Continue Application</button>';
+        } else if (a.status === 'submitted') {
+          html += '<button class="btn-secondary btn-sm" style="font-size:10px;padding:5px 10px;border-radius:8px;" onclick="showToast(\'Tracking details for ' + a.id + ' loading...\',\'info\')">Track</button>';
+        } else if (a.status === 'approved') {
+          html += '<button class="btn-secondary btn-sm" style="font-size:10px;padding:5px 10px;border-radius:8px;" onclick="showToast(\'Loan of ' + formatters.inr(a.amount) + ' approved! Disbursal in 3-5 days.\',\'success\')"><i class="fas fa-check-circle"></i> Disbursal Info</button>';
+        } else if (a.status === 'rejected') {
+          html += '<button class="btn-secondary btn-sm" style="font-size:10px;padding:5px 10px;border-radius:8px;" onclick="showToast(\'Reasons: Insufficient land documents. Please re-apply with updated records.\',\'error\')">View Reason</button>';
+        }
+        html += '</div></div>';
+      }
+      container.innerHTML = html;
+    }, 400);
+  }
+
+  /* ---- Application Modal ---- */
+  window.openApplyModal = function (loanId) {
+    for (var i = 0; i < mockLoanProducts.length; i++) {
+      if (mockLoanProducts[i].id === loanId) {
+        document.getElementById('apply-loan-name').value = mockLoanProducts[i].name;
+        break;
+      }
+    }
+    currentStep = 1;
+    showStep(1);
+    document.getElementById('loan-application-form').reset();
+    document.getElementById('loan-step-5').classList.remove('active');
+    openModal('apply-modal');
+  };
+
+  /* ---- Multi-step navigation ---- */
+  function showStep(step) {
+    for (var i = 1; i <= 5; i++) {
+      var el = document.getElementById('loan-step-' + i);
+      if (el) el.classList.remove('active');
+      var dot = document.getElementById('step-dot-' + i);
+      if (dot) {
+        dot.classList.remove('active');
+        dot.classList.remove('done');
+      }
+    }
+    var current = document.getElementById('loan-step-' + step);
+    if (current) current.classList.add('active');
+    for (var j = 1; j < step; j++) {
+      var d = document.getElementById('step-dot-' + j);
+      if (d) d.classList.add('done');
+    }
+    var activeDot = document.getElementById('step-dot-' + step);
+    if (activeDot) activeDot.classList.add('active');
+    currentStep = step;
+  }
+
+  window.nextStep = function (step) {
+    var valid = validateStep(currentStep);
+    if (!valid) {
+      showToast('Please fill all required fields.', 'error');
+      return;
+    }
+    if (step === 4) populateReview();
+    showStep(step);
+  };
+
+  window.prevStep = function (step) {
+    showStep(step);
+  };
+
+  function validateStep(step) {
+    if (step === 1) {
+      if (!document.getElementById('app-name').value.trim()) return false;
+      if (!document.getElementById('app-phone').value.trim()) return false;
+      if (!document.getElementById('app-aadhar').value.trim()) return false;
+      return true;
+    }
+    if (step === 2) {
+      if (!document.getElementById('app-farm-size').value) return false;
+      return true;
+    }
+    if (step === 3) {
+      if (!document.getElementById('app-doc-aadhar').value) return false;
+      if (!document.getElementById('app-doc-land').value) return false;
+      return true;
+    }
+    return true;
+  }
+
+  function populateReview() {
+    document.getElementById('review-loan').textContent = document.getElementById('apply-loan-name').value || '--';
+    document.getElementById('review-name').textContent = document.getElementById('app-name').value || '--';
+    document.getElementById('review-phone').textContent = document.getElementById('app-phone').value || '--';
+    var farmSize = document.getElementById('app-farm-size').value || '0';
+    document.getElementById('review-farm').textContent = farmSize + ' acres';
+    document.getElementById('review-crop').textContent = document.getElementById('app-crop').value || 'Not specified';
+  }
+
+  /* ---- Submit ---- */
+  window.submitLoanApplication = function (e) {
+    e.preventDefault();
+    var btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+    var loanName = document.getElementById('apply-loan-name').value;
+    var applicantName = document.getElementById('app-name').value;
+    var farmSize = document.getElementById('app-farm-size').value;
+
+    var appId = 'FALOAN-' + appCounter;
+    appCounter++;
+
+    var product = null;
+    for (var i = 0; i < mockLoanProducts.length; i++) {
+      if (mockLoanProducts[i].name === loanName) { product = mockLoanProducts[i]; break; }
+    }
+    var bankName = product ? product.bank : loanName;
+    var loanAmount = product ? product.maxAmount : 0;
+    var interest = product ? (parseFloat(product.interest) || 0) : 0;
+    var tenure = product ? (parseInt(product.repayment, 10) || 12) : 12;
+
+    function addLocalApplication() {
+      mockApplications.unshift({
+        id: appId,
+        loanName: loanName,
+        bank: bankName,
+        amount: loanAmount,
+        date: new Date().toISOString().split('T')[0],
+        status: 'submitted'
+      });
+    }
+
+    function finishSubmit() {
+      document.getElementById('app-submitted-id').textContent = appId;
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+      showStep(5);
+      renderMyApplications();
+      showToast('Loan application ' + appId + ' submitted successfully!', 'success');
+    }
+
+    if (window.API && localStorage.getItem('fa-auth-token')) {
+      API.Loan.create({
+        bank_name: bankName,
+        loan_amount: loanAmount,
+        interest_rate: interest,
+        tenure_months: tenure,
+        emi_amount: null
+      }).then(function (res) {
+        if (res && res.data && res.data.loan_id) appId = res.data.loan_id;
+        addLocalApplication();
+        finishSubmit();
+      }).catch(function () {
+        addLocalApplication();
+        finishSubmit();
+      });
+    } else {
+      addLocalApplication();
+      finishSubmit();
+    }
+  };
+
+  window.continueApplication = function (appId) {
+    showToast('Opening draft application ' + appId + '...', 'info');
+    openModal('apply-modal');
+  };
+
+  window.closeModalAndRefresh = function () {
+    closeModal();
+    renderMyApplications();
+  };
+
+  /* ---- Modal ---- */
+  window.openModal = function (id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.add('active');
+  };
+
+  window.closeModal = function () {
+    document.querySelectorAll('.modal-backdrop.active').forEach(function (el) { el.classList.remove('active'); });
+  };
+
+  /* ---- Tab Switching ---- */
+  function initTabs() {
+    var btns = document.querySelectorAll('.loan-tab-btn');
+    btns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        btns.forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(function (t) { t.classList.remove('active'); });
+        var tabId = 'tab-' + btn.dataset.tab;
+        var tab = document.getElementById(tabId);
+        if (tab) tab.classList.add('active');
+        if (btn.dataset.tab === 'applications') renderMyApplications();
+      });
+    });
+  }
+
+  /* ---- Close modal on backdrop click ---- */
+  document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('modal-backdrop')) closeModal();
+  });
+
+  /* ---- Init ---- */
+  document.addEventListener('DOMContentLoaded', function () {
+    initTabs();
+    renderAvailableLoans();
+    renderMyApplications();
+    loadBackendLoans();
+  });
+})();
+</script>
+</body>
+</html>

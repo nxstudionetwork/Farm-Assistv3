@@ -1,0 +1,486 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="input-store">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Input Store</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root { --store-accent: #B8860B; }
+    [data-page="input-store"] .page-header h1 i { color: var(--store-accent); }
+    .input-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    @media (max-width: 900px) { .input-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 540px) { .input-grid { grid-template-columns: 1fr; } }
+    .input-card { background: var(--bg-card); border-radius: var(--radius-md); padding: 16px; border: 1px solid var(--border-light); transition: all 0.25s ease; cursor: default; position: relative; overflow: hidden; }
+    .input-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--primary-green); }
+    .input-card .img-placeholder { width: 100%; height: 120px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 36px; color: #fff; margin-bottom: 10px; }
+    .input-card .product-name { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .input-card .product-category { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .input-card .product-price { font-size: 18px; font-weight: 800; color: var(--primary-green); }
+    .input-card .product-unit { font-size: 10px; color: var(--text-muted); }
+    .input-card .product-seller { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+    .input-card .product-stock { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-top: 4px; }
+    .stock-in { background: var(--soft-green); color: var(--primary-green); }
+    .stock-low { background: var(--sun-soft); color: #A67C00; }
+    .stock-out { background: #FFF0F0; color: var(--danger); }
+    .input-card .rating-stars { display: inline-flex; gap: 1px; font-size: 11px; color: #f5a623; margin-top: 2px; }
+    .input-card .add-btn { width: 100%; margin-top: 10px; padding: 8px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
+    .input-card .add-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .input-card .add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .cart-badge { position: fixed; top: 74px; right: 16px; z-index: 500; display: none; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; background: var(--primary-green); color: #fff; font-size: 16px; cursor: pointer; box-shadow: var(--shadow-lg); transition: transform 0.2s; }
+    .cart-badge:hover { transform: scale(1.05); }
+    .cart-badge .cart-count-badge { position: absolute; top: -4px; right: -4px; background: var(--danger); color: #fff; font-size: 9px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+    .cart-panel { position: fixed; top: 0; right: -380px; width: 360px; max-width: 90vw; height: 100%; background: var(--bg-card); z-index: 1020; box-shadow: -4px 0 24px rgba(0,0,0,0.12); display: flex; flex-direction: column; transition: right 0.3s cubic-bezier(0.16,1,0.3,1); }
+    .cart-panel.open { right: 0; }
+    .cart-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1019; display: none; }
+    .cart-backdrop.open { display: block; }
+    .cart-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--border-light); }
+    .cart-header h3 { font-size: 16px; }
+    .cart-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); padding: 4px; }
+    .cart-items { flex: 1; overflow-y: auto; padding: 12px 20px; }
+    .cart-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+    .cart-item-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; flex-shrink: 0; }
+    .cart-item-info { flex: 1; min-width: 0; }
+    .cart-item-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cart-item-price { font-size: 11px; color: var(--text-muted); }
+    .cart-item-qty { display: flex; align-items: center; gap: 6px; }
+    .cart-item-qty button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border-light); background: var(--bg-card-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text-primary); transition: all 0.15s; }
+    .cart-item-qty button:hover { background: var(--primary-green); color: #fff; border-color: var(--primary-green); }
+    .cart-item-qty span { font-size: 14px; font-weight: 600; min-width: 20px; text-align: center; }
+    .cart-item-remove { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 4px; }
+    .cart-item-remove:hover { color: var(--danger); }
+    .cart-footer { padding: 16px 20px; border-top: 1px solid var(--border-light); }
+    .cart-total { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+    .cart-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+    .cart-empty i { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+    .cart-empty h4 { font-size: 15px; color: var(--text-secondary); margin-bottom: 4px; }
+    .cart-empty p { font-size: 11px; }
+    .checkout-btn { width: 100%; padding: 12px; border-radius: var(--radius-md); background: var(--header-gradient); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+    .checkout-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .skeleton-loader { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .form-select { width:100%;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-light);background:var(--bg-card);color:var(--text-primary);font-size:13px;cursor:pointer;outline:none;margin-bottom:16px; }
+    .orders-badge { position:fixed;top:124px;right:16px;z-index:500;display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;background:var(--store-accent,#B8860B);color:#fff;font-size:16px;cursor:pointer;box-shadow:var(--shadow-lg);transition:transform 0.2s; }
+    .orders-badge:hover { transform:scale(1.05); }
+    .orders-panel { position:fixed;top:0;right:-480px;width:460px;max-width:90vw;height:100%;background:var(--bg-card);z-index:1020;box-shadow:-4px 0 24px rgba(0,0,0,0.12);display:flex;flex-direction:column;transition:right 0.3s cubic-bezier(0.16,1,0.3,1); }
+    .orders-panel.open { right:0; }
+    .orders-backdrop { position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:1019;display:none; }
+    .orders-backdrop.open { display:block; }
+    .order-card { background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px; }
+    .order-card-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:8px; }
+    .order-id { font-size:12px;font-weight:700;color:var(--text-primary); }
+    .order-date { font-size:11px;color:var(--text-muted); }
+    .order-status { display:inline-block;font-size:10px;font-weight:600;padding:2px 10px;border-radius:10px; }
+    .order-status.delivered { background:var(--soft-green);color:var(--primary-green); }
+    .order-status.shipped { background:var(--sun-soft);color:#A67C00; }
+    .order-status.processing { background:#E8F0FE;color:#1A73E8; }
+    .order-items-summary { font-size:12px;color:var(--text-secondary);margin-bottom:4px; }
+    .order-total { font-size:14px;font-weight:700;color:var(--primary-green); }
+    .orders-empty { text-align:center;padding:40px 20px;color:var(--text-muted); }
+    .orders-empty i { font-size:48px;margin-bottom:12px;opacity:0.5; }
+  </style>
+</head>
+<body>
+
+<main class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h1><i class="fas fa-bag-shopping"></i> Input Store</h1>
+      <p>Seeds, fertilizers, tools, and crop protection products</p>
+    </div>
+  </div>
+
+  <div class="market-search">
+    <i class="fas fa-search"></i>
+    <input type="text" placeholder="Search seeds, fertilizers, tools, crop protection..." id="store-search-input">
+  </div>
+
+  <select class="form-select" id="category-select">
+    <option value="all">All</option>
+    <option value="Seeds">Seeds</option>
+    <option value="Fertilizers">Fertilizers</option>
+    <option value="Organic">Organic</option>
+    <option value="Tools">Tools</option>
+    <option value="Crop Protection">Crop Protection</option>
+  </select>
+
+  <div class="cart-badge" id="cart-badge">
+    <i class="fas fa-shopping-cart"></i>
+    <span class="cart-count-badge" id="cart-count-badge">0</span>
+  </div>
+
+  <div class="orders-badge" id="orders-badge">
+    <i class="fas fa-box"></i>
+  </div>
+
+  <div id="store-grid" class="input-grid"></div>
+</main>
+
+<div class="cart-backdrop" id="cart-backdrop"></div>
+
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <h3><i class="fas fa-shopping-cart" style="color:var(--primary-green);margin-right:8px;"></i> Your Cart</h3>
+    <button class="cart-close" id="cart-close"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="cart-items" id="cart-items">
+    <div class="cart-empty">
+      <i class="fas fa-shopping-bag"></i>
+      <h4>Your cart is empty</h4>
+      <p>Add items from the store to get started</p>
+    </div>
+  </div>
+  <div class="cart-footer" id="cart-footer" style="display:none;">
+    <div class="cart-total">
+      <span>Total</span>
+      <span id="cart-total-amount">â‚¹0</span>
+    </div>
+    <button class="checkout-btn" id="checkout-btn"><i class="fas fa-credit-card"></i> Checkout</button>
+  </div>
+</div>
+
+<div class="orders-backdrop" id="orders-backdrop"></div>
+
+<div class="orders-panel" id="orders-panel">
+  <div class="cart-header">
+    <h3><i class="fas fa-box" style="color:var(--store-accent,#B8860B);margin-right:8px;"></i> Order History</h3>
+    <button class="cart-close" id="orders-close"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="cart-items" id="orders-items">
+    <div class="orders-empty">
+      <i class="fas fa-box-open"></i>
+      <h4 style="font-size:15px;color:var(--text-secondary);margin-bottom:4px;">No orders yet</h4>
+      <p style="font-size:11px;">Your order history will appear here</p>
+    </div>
+  </div>
+</div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="js/mockData.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var products = [
+    { id: 1, name: 'Hybrid Wheat Seeds', category: 'Seeds', price: 85, unit: 'kg', seller: 'AgroSeed Corp', stock: 'in', rating: 4.5, reviews: 128, icon: 'fa-seedling', color: '#2D8659' },
+    { id: 2, name: 'DAP Fertilizer', category: 'Fertilizers', price: 1200, unit: 'bag', seller: 'GreenGro Supplies', stock: 'in', rating: 4.3, reviews: 94, icon: 'fa-flask', color: '#1B5E3F' },
+    { id: 3, name: 'Organic Compost', category: 'Organic', price: 350, unit: 'bag', seller: 'EcoFarm Organics', stock: 'in', rating: 4.7, reviews: 215, icon: 'fa-leaf', color: '#52B788' },
+    { id: 4, name: 'Power Tiller', category: 'Tools', price: 45000, unit: 'piece', seller: 'FarmEquip India', stock: 'low', rating: 4.1, reviews: 47, icon: 'fa-tractor', color: '#8B6F47' },
+    { id: 5, name: 'Neem Oil Spray', category: 'Crop Protection', price: 280, unit: 'L', seller: 'PestShield Bio', stock: 'in', rating: 4.4, reviews: 76, icon: 'fa-bug', color: '#E9B640' },
+    { id: 6, name: 'BT Cotton Seeds', category: 'Seeds', price: 850, unit: 'pack', seller: 'BioSeed Technologies', stock: 'in', rating: 4.6, reviews: 182, icon: 'fa-seedling', color: '#40916C' },
+    { id: 7, name: 'NPK 20-20-20', category: 'Fertilizers', price: 950, unit: 'bag', seller: 'NutriFields Agro', stock: 'in', rating: 4.2, reviews: 63, icon: 'fa-flask', color: '#0F2E1E' },
+    { id: 8, name: 'Pruning Shears', category: 'Tools', price: 450, unit: 'piece', seller: 'GardenPro Tools', stock: 'in', rating: 4.8, reviews: 311, icon: 'fa-scissors', color: '#2D8659' },
+    { id: 9, name: 'Vermicompost', category: 'Organic', price: 420, unit: 'bag', seller: 'EcoFarm Organics', stock: 'in', rating: 4.5, reviews: 89, icon: 'fa-leaf', color: '#52B788' },
+    { id: 10, name: 'Fungicide Spray', category: 'Crop Protection', price: 190, unit: 'L', seller: 'CropGuard Chemicals', stock: 'low', rating: 4.0, reviews: 42, icon: 'fa-shield', color: '#D63031' },
+    { id: 11, name: 'Vegetable Seed Kit', category: 'Seeds', price: 320, unit: 'pack', seller: 'HomeGarden Seeds', stock: 'in', rating: 4.4, reviews: 156, icon: 'fa-seedling', color: '#2D6A4F' },
+    { id: 12, name: 'Urea Fertilizer', category: 'Fertilizers', price: 650, unit: 'bag', seller: 'GreenGro Supplies', stock: 'in', rating: 4.1, reviews: 78, icon: 'fa-flask', color: '#1B4332' },
+    { id: 13, name: 'Garden Hoe', category: 'Tools', price: 280, unit: 'piece', seller: 'FarmEquip India', stock: 'in', rating: 4.3, reviews: 64, icon: 'fa-tools', color: '#7F5539' },
+    { id: 14, name: 'Bio Pesticide', category: 'Crop Protection', price: 350, unit: 'L', seller: 'PestShield Bio', stock: 'in', rating: 4.6, reviews: 93, icon: 'fa-bug', color: '#E9B640' },
+    { id: 15, name: 'Coco Peat Block', category: 'Organic', price: 180, unit: 'block', seller: 'EcoFarm Organics', stock: 'in', rating: 4.2, reviews: 51, icon: 'fa-leaf', color: '#52B788' }
+  ];
+
+  var cart = JSON.parse(localStorage.getItem('fa-input-cart') || '[]');
+  var allProducts = products.slice();
+
+  function formatPrice(val) {
+    var num = parseFloat(val) || 0;
+    return '\u20B9' + num.toLocaleString('en-IN');
+  }
+
+  function renderSkeleton(grid) {
+    var html = '';
+    for (var i = 0; i < 6; i++) {
+      html += '<div class="input-card" style="cursor:default;">' +
+        '<div class="skeleton-loader" style="height:120px;border-radius:var(--radius-sm);margin-bottom:10px;"></div>' +
+        '<div class="skeleton-loader" style="height:14px;width:70%;border-radius:6px;margin-bottom:6px;"></div>' +
+        '<div class="skeleton-loader" style="height:10px;width:50%;border-radius:6px;margin-bottom:8px;"></div>' +
+        '<div class="skeleton-loader" style="height:18px;width:40%;border-radius:6px;margin-bottom:8px;"></div>' +
+        '<div class="skeleton-loader" style="height:32px;width:100%;border-radius:6px;"></div>' +
+      '</div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  function starRating(rating) {
+    var full = Math.floor(rating);
+    var half = rating % 1 >= 0.5 ? 1 : 0;
+    var empty = 5 - full - half;
+    var s = '';
+    for (var i = 0; i < full; i++) s += '<i class="fas fa-star"></i>';
+    if (half) s += '<i class="fas fa-star-half-alt"></i>';
+    for (var i = 0; i < empty; i++) s += '<i class="far fa-star"></i>';
+    return s + ' <span style="font-size:10px;color:var(--text-muted);margin-left:2px;">' + rating.toFixed(1) + '</span>';
+  }
+
+  function renderProducts(items) {
+    var grid = document.getElementById('store-grid');
+    if (!grid) return;
+    if (!items || items.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;"><div style="font-size:48px;color:var(--text-muted);opacity:0.5;margin-bottom:12px;"><i class="fas fa-search"></i></div><h4 style="font-size:16px;color:var(--text-secondary);margin-bottom:4px;">No products found</h4><p style="font-size:12px;color:var(--text-muted);">Try a different search or category</p></div>';
+      return;
+    }
+    grid.innerHTML = items.map(function (p) {
+      var stockClass = 'stock-in';
+      var stockLabel = 'In Stock';
+      if (p.stock === 'low') { stockClass = 'stock-low'; stockLabel = 'Low Stock'; }
+      if (p.stock === 'out') { stockClass = 'stock-out'; stockLabel = 'Out of Stock'; }
+      var disabled = p.stock === 'out' ? 'disabled' : '';
+      var inCart = cart.some(function (c) { return c.id === p.id; });
+      var btnText = inCart ? '<i class="fas fa-check"></i> In Cart' : '<i class="fas fa-shopping-cart"></i> Add to Cart';
+      var btnClass = inCart ? 'add-btn' : 'add-btn btn-primary';
+      var ratingHtml = starRating(p.rating);
+      var safeName = p.name.replace(/'/g, "\\'");
+      return '<div class="input-card">' +
+        '<div class="img-placeholder" style="background:' + p.color + ';"><i class="fas ' + p.icon + '"></i></div>' +
+        '<div class="product-name">' + p.name + '</div>' +
+        '<div class="product-category"><i class="fas fa-tag" style="margin-right:3px;"></i>' + p.category + '</div>' +
+        '<div class="product-price">' + formatPrice(p.price) + ' <span class="product-unit">/ ' + p.unit + '</span></div>' +
+        '<div class="product-seller"><i class="fas fa-store" style="margin-right:4px;font-size:9px;"></i>' + p.seller + '</div>' +
+        '<div><span class="product-stock ' + stockClass + '">' + stockLabel + '</span></div>' +
+        '<div class="rating-stars">' + ratingHtml + '</div>' +
+        '<button class="' + btnClass + '" onclick="InputStore.addToCart(' + p.id + ')" ' + disabled + '>' + btnText + '</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function getActiveFilter() {
+    var select = document.getElementById('category-select');
+    return select ? select.value : 'all';
+  }
+
+  function getSearchQuery() {
+    var input = document.getElementById('store-search-input');
+    return input ? input.value.toLowerCase().trim() : '';
+  }
+
+  function filterAndRender() {
+    var filter = getActiveFilter();
+    var query = getSearchQuery();
+    var filtered = allProducts;
+    if (filter !== 'all') {
+      filtered = filtered.filter(function (p) { return p.category === filter; });
+    }
+    if (query) {
+      filtered = filtered.filter(function (p) {
+        return p.name.toLowerCase().indexOf(query) !== -1 ||
+               p.category.toLowerCase().indexOf(query) !== -1 ||
+               p.seller.toLowerCase().indexOf(query) !== -1;
+      });
+    }
+    renderProducts(filtered);
+  }
+
+  function updateCartBadge() {
+    var badge = document.getElementById('cart-badge');
+    var countEl = document.getElementById('cart-count-badge');
+    if (badge && countEl) {
+      countEl.textContent = cart.length;
+      badge.style.display = cart.length > 0 ? 'flex' : 'none';
+    }
+  }
+
+  function renderCartPanel() {
+    var container = document.getElementById('cart-items');
+    var footer = document.getElementById('cart-footer');
+    var totalEl = document.getElementById('cart-total-amount');
+    if (!container) return;
+    if (cart.length === 0) {
+      container.innerHTML = '<div class="cart-empty"><i class="fas fa-shopping-bag"></i><h4>Your cart is empty</h4><p>Add items from the store to get started</p></div>';
+      if (footer) footer.style.display = 'none';
+      return;
+    }
+    var total = 0;
+    var html = '';
+    cart.forEach(function (item, idx) {
+      total += item.price * item.qty;
+      var p = allProducts.find(function (x) { return x.id === item.id; });
+      var color = p ? p.color : '#2D8659';
+      var icon = p ? p.icon : 'fa-shopping-bag';
+      html += '<div class="cart-item">' +
+        '<div class="cart-item-icon" style="background:' + color + ';"><i class="fas ' + icon + '"></i></div>' +
+        '<div class="cart-item-info">' +
+          '<div class="cart-item-name">' + item.name + '</div>' +
+          '<div class="cart-item-price">' + formatPrice(item.price) + ' / ' + item.unit + '</div>' +
+        '</div>' +
+        '<div class="cart-item-qty">' +
+          '<button onclick="InputStore.decQty(' + idx + ')">-</button>' +
+          '<span>' + item.qty + '</span>' +
+          '<button onclick="InputStore.incQty(' + idx + ')">+</button>' +
+        '</div>' +
+        '<button class="cart-item-remove" onclick="InputStore.removeItem(' + idx + ')"><i class="fas fa-trash-can"></i></button>' +
+      '</div>';
+    });
+    container.innerHTML = html;
+    if (totalEl) totalEl.textContent = formatPrice(total);
+    if (footer) footer.style.display = 'block';
+    updateCartBadge();
+  }
+
+  function saveCart() {
+    localStorage.setItem('fa-input-cart', JSON.stringify(cart));
+    renderCartPanel();
+    filterAndRender();
+  }
+
+  function openCart() {
+    document.getElementById('cart-panel').classList.add('open');
+    document.getElementById('cart-backdrop').classList.add('open');
+  }
+
+  function closeCart() {
+    document.getElementById('cart-panel').classList.remove('open');
+    document.getElementById('cart-backdrop').classList.remove('open');
+  }
+
+  window.InputStore = {
+    addToCart: function (id) {
+      var p = allProducts.find(function (x) { return x.id === id; });
+      if (!p || p.stock === 'out') return;
+      var existing = cart.filter(function (c) { return c.id === id; });
+      if (existing.length > 0) {
+        openCart();
+        return;
+      }
+      cart.push({ id: p.id, name: p.name, price: p.price, unit: p.unit, qty: 1 });
+      saveCart();
+      if (typeof showToast === 'function') showToast(p.name + ' added to cart', 'success');
+      openCart();
+    },
+    incQty: function (idx) {
+      if (idx >= 0 && idx < cart.length) {
+        cart[idx].qty++;
+        saveCart();
+      }
+    },
+    decQty: function (idx) {
+      if (idx >= 0 && idx < cart.length) {
+        cart[idx].qty--;
+        if (cart[idx].qty <= 0) cart.splice(idx, 1);
+        saveCart();
+      }
+    },
+    removeItem: function (idx) {
+      if (idx >= 0 && idx < cart.length) {
+        var name = cart[idx].name;
+        cart.splice(idx, 1);
+        saveCart();
+        if (typeof showToast === 'function') showToast(name + ' removed from cart', 'warning');
+        if (cart.length === 0) closeCart();
+      }
+    }
+  };
+
+  function openOrders() {
+    renderOrdersPanel();
+    document.getElementById('orders-panel').classList.add('open');
+    document.getElementById('orders-backdrop').classList.add('open');
+  }
+
+  function closeOrders() {
+    document.getElementById('orders-panel').classList.remove('open');
+    document.getElementById('orders-backdrop').classList.remove('open');
+  }
+
+  function renderOrdersPanel() {
+    var container = document.getElementById('orders-items');
+    if (!container) return;
+    var orders = JSON.parse(localStorage.getItem('fa-input-orders') || '[]');
+    if (orders.length === 0) {
+      container.innerHTML = '<div class="orders-empty"><i class="fas fa-box-open"></i><h4 style="font-size:15px;color:var(--text-secondary);margin-bottom:4px;">No orders yet</h4><p style="font-size:11px;">Your order history will appear here</p></div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < orders.length; i++) {
+      var order = orders[i];
+      var itemsSummary = '';
+      for (var j = 0; j < order.items.length; j++) {
+        var item = order.items[j];
+        if (j > 0) itemsSummary += ', ';
+        itemsSummary += item.name + ' x ' + item.qty;
+      }
+      var dateObj = new Date(order.date);
+      var dateStr = dateObj.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+      var statusClass = order.status.toLowerCase();
+      html += '<div class="order-card">' +
+        '<div class="order-card-header">' +
+          '<span class="order-id">' + order.id + '</span>' +
+          '<span class="order-date">' + dateStr + '</span>' +
+        '</div>' +
+        '<div class="order-items-summary">' + itemsSummary + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">' +
+          '<span class="order-total">' + formatPrice(order.total) + '</span>' +
+          '<span class="order-status ' + statusClass + '">' + order.status + '</span>' +
+        '</div>' +
+      '</div>';
+    }
+    container.innerHTML = html;
+  }
+
+  function init() {
+    var grid = document.getElementById('store-grid');
+    renderSkeleton(grid);
+    setTimeout(function () {
+      renderProducts(allProducts);
+      updateCartBadge();
+    }, 500);
+
+    document.getElementById('category-select').addEventListener('change', function () {
+      filterAndRender();
+    });
+
+    var searchInput = document.getElementById('store-search-input');
+    if (searchInput) {
+      var debounce = null;
+      searchInput.addEventListener('input', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () { filterAndRender(); }, 250);
+      });
+    }
+
+    document.getElementById('cart-badge').addEventListener('click', openCart);
+    document.getElementById('cart-close').addEventListener('click', closeCart);
+    document.getElementById('cart-backdrop').addEventListener('click', closeCart);
+
+    document.getElementById('checkout-btn').addEventListener('click', function () {
+      if (cart.length === 0) return;
+      var total = 0;
+      for (var i = 0; i < cart.length; i++) {
+        total += cart[i].price * cart[i].qty;
+      }
+      var order = {
+        id: 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase(),
+        items: JSON.parse(JSON.stringify(cart)),
+        total: total,
+        date: new Date().toISOString(),
+        status: 'Processing'
+      };
+      var orders = JSON.parse(localStorage.getItem('fa-input-orders') || '[]');
+      orders.unshift(order);
+      localStorage.setItem('fa-input-orders', JSON.stringify(orders));
+      if (typeof showToast === 'function') showToast('Order placed successfully! Total: ' + formatPrice(total), 'success');
+      cart = [];
+      saveCart();
+      closeCart();
+    });
+
+    document.getElementById('orders-badge').addEventListener('click', openOrders);
+    document.getElementById('orders-close').addEventListener('click', closeOrders);
+    document.getElementById('orders-backdrop').addEventListener('click', closeOrders);
+
+    renderCartPanel();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

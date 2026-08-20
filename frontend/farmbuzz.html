@@ -1,0 +1,2839 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="farmbuzz" data-hide-nav="true">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - FarmBuzz</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* ====================================================================
+       FARM BUZZ v2 - Home | Shorts | Trends | Post | Self
+       ==================================================================== */
+
+    .fb-wrap { padding: 0 0 10px; }
+
+    /* ---- Top Nav ------------------------------------------------------ */
+    .fb-topnav {
+      display: flex; align-items: center; gap: 4px;
+      background: linear-gradient(135deg, #0F2E1E 0%, #1B5E3F 60%, #2D8659 100%);
+      border-radius: var(--radius-lg); padding: 7px;
+      position: sticky; top: 0; z-index: 40; margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    .fb-topnav button {
+      flex: 1; border: none; background: transparent; color: rgba(255,255,255,0.78);
+      font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+      padding: 9px 4px; border-radius: var(--radius-md); transition: all .22s;
+      display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+    }
+    .fb-topnav button i { font-size: 13px; }
+    .fb-topnav button.active {
+      background: rgba(255,255,255,0.16); color: #fff;
+      box-shadow: inset 0 -2px 0 var(--light-green,#52B788);
+    }
+    .fb-topnav button:hover { color: #fff; }
+
+    /* ---- FarmBuzz Home (dashboard) button ---- */
+    button.fb-home-btn {
+      flex: 0 0 auto; width: 44px; height: 40px; border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.16); color: #fff; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      transition: transform .18s ease, background .2s ease, box-shadow .2s ease;
+      position: relative; margin-left: 2px;
+    }
+    button.fb-home-btn:hover {
+      background: rgba(255,255,255,0.3); transform: scale(1.08);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.14);
+    }
+    button.fb-home-btn:active { transform: scale(0.92); }
+    button.fb-home-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    button.fb-home-btn .fb-home-tip {
+      position: absolute; top: calc(100% + 9px); right: 0; z-index: 60;
+      background: #0F2E1E; color: #fff; font-size: 11px; font-weight: 600;
+      padding: 6px 10px; border-radius: 8px; white-space: nowrap; letter-spacing: .2px;
+      opacity: 0; transform: translateY(-4px); pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,.25); font-family: inherit;
+    }
+    button.fb-home-btn:hover .fb-home-tip,
+    button.fb-home-btn:focus-visible .fb-home-tip { opacity: 1; transform: translateY(0); }
+    @media (max-width: 520px) {
+      button.fb-home-btn { width: 40px; height: 38px; font-size: 14px; }
+    }
+
+    @media (max-width: 400px) {
+      .fb-topnav { gap: 2px; padding: 6px 5px; }
+      .fb-topnav button { font-size: 10.5px; padding: 8px 2px; gap: 4px; }
+      .fb-topnav button i { font-size: 11px; }
+      button.fb-home-btn { width: 36px; height: 36px; margin-left: 1px; }
+      button.fb-home-btn .fb-home-tip { display: none; }
+    }
+
+    @media (max-width: 520px) {
+      .fb-topnav button { font-size: 11.5px; }
+      .fb-topnav button i { font-size: 12px; }
+    }
+
+    /* ---- Tools row ---------------------------------------------------- */
+    .fb-tools { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+    .fb-searchbar {
+      flex: 1; position: relative; display: flex; align-items: center;
+      background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-md);
+      padding: 0 12px; transition: all .2s;
+    }
+    .fb-searchbar:focus-within { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,.08); }
+    .fb-searchbar i { color: var(--text-muted); font-size: 13px; }
+    .fb-searchbar input {
+      flex: 1; border: none; outline: none; padding: 11px 10px; font-size: 13px;
+      background: transparent; font-family: inherit; min-width: 0;
+    }
+    .fb-search-clear { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; display: none; }
+    .fb-bell-btn {
+      position: relative; width: 42px; height: 42px; border-radius: 50%;
+      border: 1px solid var(--border-light); background: #fff; color: var(--primary-green);
+      font-size: 15px; cursor: pointer; transition: all .2s; flex: 0 0 auto;
+    }
+    .fb-bell-btn:hover { border-color: var(--medium-green); }
+    .fb-bell-dot {
+      position: absolute; top: 6px; right: 7px; width: 9px; height: 9px; border-radius: 50%;
+      background: #e74c3c; border: 2px solid #fff;
+    }
+
+    /* ---- Views -------------------------------------------------------- */
+    .fb-view { display: none; animation: fadeUp .35s ease both; }
+    .fb-view.active { display: block; }
+
+    .fb-section-head {
+      display: flex; align-items: center; justify-content: space-between; margin: 6px 0 12px;
+    }
+    .fb-section-head h3 { font-size: 17px; font-weight: 700; color: var(--text-dark,#173423); }
+    .fb-section-head h3 i { color: var(--primary-green); margin-right: 7px; }
+    .fb-section-head a, .fb-section-head button.fb-link {
+      background: none; border: none; color: var(--primary-green); font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+
+    /* ---- Home: story/farmer strip ------------------------------------- */
+    .fb-farmers-row { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: none; }
+    .fb-farmers-row::-webkit-scrollbar { display: none; }
+    .fb-farmer-pill {
+      flex: 0 0 68px; text-align: center; cursor: pointer;
+    }
+    .fb-farmer-pill .fb-fp-avatar {
+      width: 62px; height: 62px; border-radius: 50%; object-fit: cover;
+      border: 3px solid var(--primary-green); padding: 2px; background: #fff; box-shadow: var(--shadow-sm);
+    }
+    .fb-farmer-pill .fb-fp-add {
+      width: 62px; height: 62px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg,#1B5E3F,#52B788); color: #fff; font-size: 20px; border: 3px solid #fff;
+      box-shadow: var(--shadow-sm);
+    }
+    .fb-farmer-pill span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ---- Home: feed cards --------------------------------------------- */
+    .fb-post-card {
+      background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-lg);
+      overflow: hidden; margin-bottom: 16px; animation: fadeUp .4s ease both;
+    }
+    .fb-post-head {
+      display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px;
+    }
+    .fb-avatar {
+      width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex: 0 0 auto;
+      border: 2px solid var(--border-light); cursor: pointer;
+    }
+    .fb-post-head-info { flex: 1; min-width: 0; cursor: pointer; }
+    .fb-post-head-info b { font-size: 13.5px; color: var(--text-dark,#173423); display: flex; align-items: center; gap: 5px; }
+    .fb-post-head-info b .fa-circle-check { color: #2D8659; font-size: 12px; }
+    .fb-post-head-info small { color: var(--text-muted); font-size: 11.5px; display: block; }
+    .fb-follow-btn {
+      border: 1px solid var(--primary-green); color: var(--primary-green); background: #fff;
+      font-size: 11.5px; font-weight: 700; padding: 6px 13px; border-radius: 20px; cursor: pointer; transition: all .2s; font-family: inherit;
+    }
+    .fb-follow-btn.following { background: var(--primary-green); color: #fff; }
+    .fb-follow-btn:hover { background: var(--primary-green); color: #fff; }
+    .fb-follow-btn.following:hover { background: #fff; color: var(--primary-green); }
+    .fb-more-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; font-size: 15px; }
+
+    .fb-post-media { position: relative; width: 100%; background: #0F2E1E; overflow: hidden; }
+    .fb-post-media img { width: 100%; display: block; object-fit: cover; max-height: 480px; }
+    .fb-post-media.fb-tall img { max-height: 560px; }
+    .fb-media-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0); transition: all .2s;
+    }
+    .fb-post-media:hover .fb-media-overlay { background: rgba(0,0,0,0.08); }
+    .fb-cat-chip {
+      position: absolute; top: 10px; left: 10px; background: rgba(15,46,30,.85); color: #fff;
+      font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: .4px; z-index: 2;
+    }
+    .fb-short-badge {
+      position: absolute; top: 10px; right: 10px; background: #E9B640; color: #1B2E21;
+      font-size: 10.5px; font-weight: 800; padding: 4px 10px; border-radius: 20px; z-index: 2;
+    }
+
+    .fb-post-actions {
+      display: flex; align-items: center; gap: 4px; padding: 8px 10px 2px;
+    }
+    .fb-act {
+      background: none; border: none; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; gap: 6px; color: #44524a; font-size: 13px; font-weight: 600;
+      padding: 8px 10px; border-radius: 20px; transition: all .18s;
+    }
+    .fb-act i { font-size: 16px; }
+    .fb-act:hover { background: rgba(45,106,79,.08); color: var(--primary-green); }
+    .fb-act.liked { color: #e74c3c; }
+    .fb-act.saved { color: #1565C0; }
+    .fb-act .fa-heart.liked { animation: fbPop .35s ease; }
+
+    .fb-post-body { padding: 2px 14px 14px; }
+    .fb-post-likes { font-size: 13px; font-weight: 700; color: var(--text-dark,#173423); margin-bottom: 5px; }
+    .fb-post-caption { font-size: 13.5px; color: #2c3a32; line-height: 1.55; margin-bottom: 7px; }
+    .fb-post-caption b { font-weight: 700; color: var(--text-dark,#173423); }
+    .fb-hashtag { color: var(--primary-green); font-weight: 600; cursor: pointer; }
+    .fb-hashtag:hover { text-decoration: underline; }
+    .fb-post-loc { font-size: 12px; color: var(--text-muted); }
+    .fb-post-loc i { margin-right: 4px; }
+    .fb-post-comments {
+      font-size: 12.5px; color: var(--text-muted); cursor: pointer; margin-top: 6px;
+    }
+    .fb-post-comments:hover { color: var(--primary-green); }
+
+    /* ---- Trending strips ---------------------------------------------- */
+    .fb-shorts-strip { display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 12px; scrollbar-width: none; }
+    .fb-shorts-strip::-webkit-scrollbar { display: none; }
+    .fb-strip-card {
+      flex: 0 0 118px; position: relative; border-radius: var(--radius-md); overflow: hidden;
+      height: 200px; cursor: pointer; background: #0F2E1E;
+    }
+    .fb-strip-card img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s; }
+    .fb-strip-card:hover img { transform: scale(1.06); }
+    .fb-strip-card .fb-strip-views {
+      position: absolute; bottom: 6px; left: 8px; color: #fff; font-size: 11px; font-weight: 600;
+      text-shadow: 0 1px 3px rgba(0,0,0,.7); display: flex; align-items: center; gap: 4px;
+    }
+    .fb-strip-card .fb-strip-play {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.92); color: var(--primary-green);
+      display: flex; align-items: center; justify-content: center; font-size: 13px;
+    }
+    .fb-strip-card .fb-strip-cat {
+      position: absolute; top: 7px; left: 7px; background: rgba(15,46,30,.8); color: #fff;
+      font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 12px;
+    }
+
+    /* ---- Tip cards ---------------------------------------------------- */
+    .fb-tip-card {
+      display: flex; gap: 12px; background: #fff; border: 1px solid var(--border-light);
+      border-radius: var(--radius-md); padding: 12px; margin-bottom: 10px; cursor: pointer; transition: all .2s;
+    }
+    .fb-tip-card:hover { border-color: var(--medium-green); box-shadow: var(--shadow-sm); }
+    .fb-tip-icon {
+      width: 44px; height: 44px; flex: 0 0 auto; border-radius: 12px; display: flex;
+      align-items: center; justify-content: center; font-size: 18px; color: #fff;
+    }
+    .fb-tip-body { flex: 1; min-width: 0; }
+    .fb-tip-body h5 { font-size: 13.5px; color: var(--text-dark,#173423); margin-bottom: 3px; }
+    .fb-tip-body p { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+
+    /* ---- Shorts grid -------------------------------------------------- */
+    .fb-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; scrollbar-width: none; }
+    .fb-chips::-webkit-scrollbar { display: none; }
+    .fb-chip {
+      flex: 0 0 auto; border: 1px solid var(--border-light); background: #fff; color: #44524a;
+      font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 20px; cursor: pointer; transition: all .2s; font-family: inherit;
+    }
+    .fb-chip.active { background: var(--primary-green); border-color: var(--primary-green); color: #fff; }
+    .fb-chip:hover:not(.active) { border-color: var(--medium-green); color: var(--primary-green); }
+
+    .fb-shorts-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+    }
+    @media (min-width: 700px) { .fb-shorts-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 1000px) { .fb-shorts-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .fb-short-card {
+      position: relative; border-radius: var(--radius-md); overflow: hidden; cursor: pointer;
+      background: #0F2E1E; aspect-ratio: 9 / 15.5; display: block;
+    }
+    .fb-short-card img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s; }
+    .fb-short-card:hover img { transform: scale(1.05); }
+    .fb-short-card .fb-short-cat {
+      position: absolute; top: 8px; left: 8px; background: rgba(15,46,30,.82); color: #fff;
+      font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 12px;
+    }
+    .fb-short-card .fb-short-info {
+      position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 9px 9px;
+      background: linear-gradient(transparent, rgba(0,0,0,.72)); color: #fff;
+    }
+    .fb-short-card .fb-short-info b { display: block; font-size: 11.5px; line-height: 1.35; margin-bottom: 4px; }
+    .fb-short-card .fb-short-info small { font-size: 10px; opacity: .85; display: flex; align-items: center; gap: 5px; }
+    .fb-short-card .fb-short-likes {
+      position: absolute; top: 8px; right: 8px; color: #fff; font-size: 10.5px; font-weight: 700;
+      text-shadow: 0 1px 3px rgba(0,0,0,.7); display: flex; align-items: center; gap: 4px;
+    }
+
+    /* ---- Trends ------------------------------------------------------- */
+    .fb-trend-row {
+      background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-md);
+      padding: 13px 14px; margin-bottom: 10px; cursor: pointer; transition: all .2s; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .fb-trend-row:hover { border-color: var(--medium-green); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+    .fb-trend-rank {
+      width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px; font-size: 13px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; color: #fff;
+    }
+    .fb-trend-body { flex: 1; min-width: 0; }
+    .fb-trend-body .fb-trend-topic { font-size: 14px; font-weight: 700; color: var(--text-dark,#173423); margin-bottom: 2px; }
+    .fb-trend-body .fb-trend-desc { font-size: 12px; color: var(--text-muted); line-height: 1.45; margin-bottom: 6px; }
+    .fb-trend-meta { display: flex; align-items: center; gap: 12px; font-size: 11px; color: var(--text-muted); }
+    .fb-trend-meta .fb-trend-score { color: var(--premium-green,#1B5E3F); font-weight: 700; }
+
+    .fb-trend-banner {
+      background: linear-gradient(135deg,#0F2E1E,#2D8659); border-radius: var(--radius-lg);
+      color: #fff; padding: 16px 16px; margin-bottom: 14px; position: relative; overflow: hidden;
+    }
+    .fb-trend-banner h3 { color: #fff; font-size: 18px; margin-bottom: 3px; }
+    .fb-trend-banner p { font-size: 12.5px; opacity: .85; }
+    .fb-trend-banner .fa-fire {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 46px; opacity: .16;
+    }
+
+    /* ---- Post composer ------------------------------------------------- */
+    .fb-composer { background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-lg); overflow: hidden; }
+    .fb-comp-top {
+      display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border-light);
+      flex-wrap: wrap;
+    }
+    .fb-comp-top .fb-user-mini { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 160px; }
+    .fb-comp-top .fb-user-mini img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+    .fb-comp-top .fb-user-mini b { font-size: 13px; color: var(--text-dark,#173423); }
+    .fb-vis-select {
+      border: 1px solid var(--border-light); border-radius: 20px; font-size: 12px; padding: 5px 10px;
+      color: #44524a; background: #f7f9f8; font-family: inherit; cursor: pointer; outline: none;
+    }
+    .fb-comp-media {
+      padding: 14px; border-bottom: 1px solid var(--border-light);
+    }
+    .fb-media-picker { display: flex; gap: 8px; }
+    .fb-media-picker button {
+      flex: 1; border: 1.5px dashed var(--border-light); background: #fafcfb; color: #44524a;
+      border-radius: var(--radius-md); padding: 22px 6px; cursor: pointer; transition: all .2s;
+      font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 12px; font-weight: 600;
+    }
+    .fb-media-picker button i { font-size: 22px; color: var(--primary-green); }
+    .fb-media-picker button.active { border-color: var(--primary-green); color: var(--primary-green); background: rgba(45,106,79,.06); }
+    .fb-media-picker button:hover { border-color: var(--medium-green); }
+    .fb-media-preview { position: relative; margin-top: 12px; display: none; border-radius: var(--radius-md); overflow: hidden; }
+    .fb-media-preview img, .fb-media-preview video { width: 100%; max-height: 320px; object-fit: cover; display: block; }
+    .fb-media-remove {
+      position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%;
+      background: rgba(0,0,0,.65); color: #fff; border: none; cursor: pointer; font-size: 13px;
+    }
+    .fb-comp-fields { padding: 14px; display: grid; gap: 10px; }
+    .fb-field { display: grid; gap: 4px; }
+    .fb-field label { font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
+    .fb-field input, .fb-field select, .fb-field textarea {
+      width: 100%; border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+      padding: 10px 12px; font-size: 13px; font-family: inherit; outline: none; background: #fff; transition: all .2s;
+    }
+    .fb-field textarea { resize: vertical; min-height: 78px; line-height: 1.5; }
+    .fb-field input:focus, .fb-field select:focus, .fb-field textarea:focus {
+      border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,.08);
+    }
+    .fb-field .fb-hint { font-size: 11px; color: var(--text-muted); }
+    .fb-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 480px) { .fb-field-row { grid-template-columns: 1fr; } }
+
+    .fb-tag-people { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fb-tag-chip {
+      border: 1px solid var(--border-light); background: #fafcfb; color: #44524a; border-radius: 20px;
+      font-size: 11.5px; padding: 5px 11px; cursor: pointer; font-family: inherit; transition: all .2s;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .fb-tag-chip img { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
+    .fb-tag-chip.on { background: var(--primary-green); border-color: var(--primary-green); color: #fff; }
+
+    .fb-comp-footer { padding: 12px 14px 14px; border-top: 1px solid var(--border-light); }
+    .fb-char-count { font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 5px; }
+    .fb-post-btn {
+      width: 100%; border: none; border-radius: var(--radius-md); padding: 13px;
+      background: linear-gradient(135deg,#1B5E3F,#2D8659); color: #fff; font-size: 14.5px; font-weight: 700;
+      cursor: pointer; transition: all .2s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .fb-post-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .fb-post-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+    .fb-post-btn .fa-circle-notch { animation: spin 1s linear infinite; }
+    .fb-upload-progress { display: none; margin-top: 10px; }
+    .fb-upload-progress .fb-up-bar { height: 7px; background: #e8efe9; border-radius: 10px; overflow: hidden; }
+    .fb-upload-progress .fb-up-fill { height: 100%; width: 0; background: linear-gradient(90deg,#1B5E3F,#52B788); transition: width .3s; }
+    .fb-upload-progress span { font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 5px; text-align: center; }
+
+    /* ---- Self profile --------------------------------------------------- */
+    .fb-profile-card { background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-lg); overflow: hidden; }
+    .fb-profile-cover {
+      height: 110px; background: linear-gradient(135deg,#0F2E1E 0%, #1B5E3F 55%, #52B788 100%);
+      position: relative;
+    }
+    .fb-profile-cover .fa-seedling { position: absolute; right: 18px; bottom: 8px; font-size: 44px; opacity: .18; color: #fff; }
+    .fb-profile-main { padding: 0 18px 16px; position: relative; }
+    .fb-profile-avatar-wrap { position: absolute; top: -46px; left: 18px; }
+    .fb-profile-avatar-wrap img {
+      width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 4px solid #fff; box-shadow: var(--shadow-md);
+    }
+    .fb-profile-head { padding-top: 56px; }
+    .fb-profile-head h2 { font-size: 20px; font-weight: 800; color: var(--text-dark,#173423); display: flex; align-items: center; gap: 7px; }
+    .fb-profile-head h2 .fa-circle-check { color: #2D8659; font-size: 16px; }
+    .fb-profile-head .fb-fid { font-size: 12px; color: var(--text-muted); font-family: 'Outfit', sans-serif; letter-spacing: .4px; }
+    .fb-profile-loc { font-size: 12.5px; color: #44524a; margin-top: 7px; }
+    .fb-profile-loc i { color: var(--primary-green); margin-right: 5px; }
+    .fb-profile-bio { font-size: 13px; color: #2c3a32; line-height: 1.55; margin-top: 8px; }
+    .fb-profile-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+    .fb-profile-tags span {
+      background: rgba(45,106,79,.08); color: var(--primary-green); font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 16px;
+    }
+    .fb-profile-stats { display: flex; gap: 10px; margin-top: 14px; }
+    .fb-profile-stats .fb-stat-box {
+      flex: 1; text-align: center; background: #f7f9f8; border-radius: var(--radius-sm); padding: 11px 6px;
+    }
+    .fb-profile-stats .fb-stat-box b { display: block; font-size: 16px; font-weight: 800; color: var(--text-dark,#173423); }
+    .fb-profile-stats .fb-stat-box span { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
+    .fb-profile-btns { display: flex; gap: 8px; margin-top: 14px; }
+    .fb-profile-btns .btn { flex: 1; }
+    .fb-profile-tabs { display: flex; gap: 4px; margin-top: 14px; border-bottom: 1px solid var(--border-light); }
+    .fb-profile-tabs button {
+      flex: 1; background: none; border: none; font-family: inherit; font-size: 12.5px; font-weight: 600;
+      color: var(--text-muted); padding: 11px 4px; cursor: pointer; border-bottom: 2.5px solid transparent; transition: all .2s;
+    }
+    .fb-profile-tabs button.active { color: var(--primary-green); border-bottom-color: var(--primary-green); }
+    .fb-profile-content { padding-top: 14px; }
+
+    /* ---- Fullscreen Shorts player ------------------------------------- */
+    .fb-shorts-player {
+      position: fixed; inset: 0; z-index: 100; background: #0B1F15; display: none;
+      flex-direction: column;
+    }
+    .fb-shorts-player.open { display: flex; }
+    .fb-shorts-player .fb-sp-top {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center;
+      padding: 12px 14px; justify-content: space-between;
+    }
+    .fb-sp-close {
+      background: rgba(255,255,255,.14); color: #fff; border: none; width: 38px; height: 38px;
+      border-radius: 50%; font-size: 16px; cursor: pointer;
+    }
+    .fb-sp-top-actions { display: flex; align-items: center; gap: 8px; }
+    .fb-sp-mute {
+      background: rgba(255,255,255,.14); color: #fff; border: none; width: 38px; height: 38px;
+      border-radius: 50%; font-size: 15px; cursor: pointer; transition: all .2s;
+    }
+    .fb-sp-mute:hover { background: rgba(255,255,255,.26); }
+    .fb-sp-counter {
+      background: rgba(255,255,255,.14); color: #fff; font-size: 12px; font-weight: 700;
+      padding: 7px 12px; border-radius: 20px; letter-spacing: .5px;
+    }
+    .fb-sp-loading {
+      position: absolute; inset: 0; z-index: 2; display: none; align-items: center; justify-content: center;
+      background: rgba(11,31,21,.35); pointer-events: none;
+    }
+    .fb-sp-slide.loading .fb-sp-loading { display: flex; }
+    .fb-sp-loading i { font-size: 34px; color: #E9B640; animation: fbSpin 1s linear infinite; }
+    @keyframes fbSpin { to { transform: rotate(360deg); } }
+    .fb-sp-swipe-hint {
+      position: absolute; right: 16px; bottom: 16px; z-index: 3; color: rgba(255,255,255,.7);
+      font-size: 11px; display: flex; align-items: center; gap: 5px; pointer-events: none;
+    }
+    .fb-sp-top h5 { color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .fb-sp-top h5 i { color: #E9B640; }
+    .fb-sp-stage {
+      flex: 1; position: relative; overflow-y: auto; overflow-x: hidden;
+      scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .fb-sp-stage::-webkit-scrollbar { display: none; }
+    .fb-sp-slide {
+      position: relative; height: 100%; flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always;
+      display: flex; align-items: flex-end; justify-content: center; background: #0B1F15; overflow: hidden;
+    }
+    .fb-sp-slide img, .fb-sp-slide video {
+      position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    }
+    .fb-sp-vignette { position: absolute; inset: 0; background: linear-gradient(transparent 40%, rgba(0,0,0,.75)); }
+    .fb-sp-grad-top { position: absolute; inset: 0; background: linear-gradient(rgba(0,0,0,.45), transparent 30%); }
+    .fb-sp-info {
+      position: relative; z-index: 3; width: 100%; max-width: 560px; padding: 0 16px 26px; color: #fff;
+    }
+    .fb-sp-info .fb-sp-author { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+    .fb-sp-info .fb-sp-author img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.7); }
+    .fb-sp-info .fb-sp-author b { font-size: 14px; }
+    .fb-sp-info .fb-sp-author .fa-circle-check { color: #52B788; font-size: 12px; }
+    .fb-sp-info .fb-sp-author .fb-sp-follow {
+      margin-left: auto; background: #fff; color: #173423; border: none; font-size: 11.5px; font-weight: 700;
+      padding: 6px 13px; border-radius: 20px; cursor: pointer; font-family: inherit;
+    }
+    .fb-sp-info .fb-sp-follow.following { background: rgba(255,255,255,.25); color: #fff; }
+    .fb-sp-info .fb-sp-title { font-size: 16px; font-weight: 700; line-height: 1.4; margin-bottom: 5px; }
+    .fb-sp-info .fb-sp-meta { font-size: 12px; opacity: .85; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .fb-sp-info .fb-sp-desc { font-size: 12.5px; opacity: .92; line-height: 1.5; margin-top: 6px; }
+    .fb-sp-right {
+      position: absolute; right: 12px; bottom: 110px; z-index: 4; display: flex; flex-direction: column; gap: 18px;
+      align-items: center;
+    }
+    .fb-sp-rail { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+    .fb-sp-rail .fb-sp-rail-btn {
+      width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.16); color: #fff;
+      border: none; font-size: 19px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .18s;
+    }
+    .fb-sp-rail .fb-sp-rail-btn.liked { color: #ff6b6b; }
+    .fb-sp-rail .fb-sp-rail-btn.saved { color: #74b9ff; }
+    .fb-sp-rail .fb-sp-rail-btn:active { transform: scale(.9); }
+    .fb-sp-rail b { color: #fff; font-size: 11px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+    .fb-sp-avatar-ring { width: 52px; height: 52px; border-radius: 50%; padding: 2px; background: linear-gradient(135deg,#52B788,#E9B640); }
+    .fb-sp-avatar-ring img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid #0B1F15; }
+    .fb-sp-progress { height: 3px; background: rgba(255,255,255,.25); position: absolute; top: 0; left: 0; right: 0; z-index: 6; }
+    .fb-sp-progress span { display: block; height: 100%; background: #E9B640; width: 0; transition: width .2s linear; }
+    .fb-sp-nav {
+      position: absolute; top: 50%; transform: translateY(-50%); z-index: 4; width: 42px; height: 42px;
+      border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; border: none; font-size: 16px; cursor: pointer;
+    }
+    .fb-sp-nav.prev { left: 10px; }
+    .fb-sp-nav.next { right: 10px; }
+    .fb-sp-paused {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 4;
+      color: #fff; font-size: 60px; opacity: .85; display: none; pointer-events: none;
+    }
+    .fb-sp-paused.show { display: block; animation: fbPulse .5s ease; }
+    .fb-sp-comments { flex: 0 0 44%; max-height: 46%; background: #fff; border-radius: 22px 22px 0 0; z-index: 6; overflow: hidden; display: none; }
+    .fb-sp-comments-head { padding: 13px 16px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; }
+    .fb-sp-comments-head h5 { font-size: 14px; color: var(--text-dark,#173423); }
+    .fb-sp-comments-list { height: calc(100% - 118px); overflow-y: auto; padding: 8px 14px; }
+    .fb-sp-comment { display: flex; gap: 9px; padding: 9px 0; }
+    .fb-sp-comment img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+    .fb-sp-comment .fb-c-body { flex: 1; min-width: 0; }
+    .fb-sp-comment .fb-c-body b { font-size: 12.5px; color: var(--text-dark,#173423); margin-right: 6px; }
+    .fb-sp-comment .fb-c-body span { font-size: 12.5px; color: #2c3a32; }
+    .fb-sp-comment .fb-c-body small { display: block; font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+    .fb-sp-comment-input { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; padding: 10px 14px; border-top: 1px solid var(--border-light); display: flex; gap: 8px; }
+    .fb-sp-comment-input input {
+      flex: 1; border: 1px solid var(--border-light); border-radius: 20px; padding: 9px 14px; font-size: 13px; outline: none; font-family: inherit;
+    }
+    .fb-sp-comment-input button {
+      width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--primary-green); color: #fff; cursor: pointer; font-size: 14px;
+    }
+
+    /* ---- Modals -------------------------------------------------------- */
+    .fb-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(8,22,15,.55); z-index: 90; display: none;
+      align-items: flex-end; justify-content: center; backdrop-filter: blur(3px);
+    }
+    .fb-modal-backdrop.open { display: flex; animation: fadeIn .25s ease; }
+    @media (min-width: 640px) { .fb-modal-backdrop { align-items: center; } }
+
+    .fb-sheet {
+      background: #fff; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto;
+      border-radius: 20px 20px 0 0; animation: sheetUp .3s cubic-bezier(.2,.9,.3,1);
+    }
+    @media (min-width: 640px) { .fb-sheet { border-radius: var(--radius-lg); } }
+    .fb-sheet-head {
+      display: flex; align-items: center; justify-content: space-between; padding: 15px 18px 12px;
+      border-bottom: 1px solid var(--border-light); position: sticky; top: 0; background: #fff; z-index: 2;
+    }
+    .fb-sheet-head h4 { font-size: 15px; color: var(--text-dark,#173423); }
+    .fb-sheet-close { background: #f0f4f1; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: #44524a; font-size: 14px; }
+    .fb-sheet-body { padding: 14px 18px 20px; }
+
+    /* Detail modal */
+    .fb-detail-media { width: 100%; max-height: 46vh; object-fit: cover; display: block; background: #0F2E1E; }
+    .fb-detail-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; }
+    .fb-detail-body { padding: 2px 16px 8px; }
+    .fb-detail-actions { display: flex; gap: 6px; padding: 8px 14px 4px; }
+    .fb-detail-comments { padding: 6px 16px 18px; }
+    .fb-detail-comments h5 { font-size: 13px; color: var(--text-dark,#173423); margin-bottom: 8px; }
+
+    .fb-comment-item { display: flex; gap: 9px; padding: 9px 0; border-bottom: 1px solid #f1f5f2; }
+    .fb-comment-item:last-child { border-bottom: none; }
+    .fb-comment-item img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+    .fb-comment-item .fb-c-body { flex: 1; min-width: 0; }
+    .fb-comment-item .fb-c-body b { font-size: 12.5px; color: var(--text-dark,#173423); margin-right: 6px; }
+    .fb-comment-item .fb-c-body span { font-size: 12.5px; color: #2c3a32; }
+    .fb-comment-item .fb-c-body small { display: block; font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+    .fb-comment-input { display: flex; gap: 8px; margin-top: 12px; }
+    .fb-comment-input input {
+      flex: 1; border: 1px solid var(--border-light); border-radius: 20px; padding: 9px 14px; font-size: 13px; outline: none; font-family: inherit;
+    }
+    .fb-comment-input input:focus { border-color: var(--primary-green); }
+    .fb-comment-input button {
+      width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--primary-green); color: #fff; cursor: pointer; font-size: 14px;
+    }
+
+    /* Share sheet */
+    .fb-share-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 6px 0 10px; }
+    .fb-share-opt {
+      background: none; border: none; cursor: pointer; font-family: inherit; text-align: center; padding: 10px 4px;
+      border-radius: var(--radius-md); transition: all .18s;
+    }
+    .fb-share-opt:hover { background: #f0f4f1; }
+    .fb-share-opt .fb-share-icon {
+      width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 7px; display: flex; align-items: center;
+      justify-content: center; font-size: 18px; color: #fff;
+    }
+    .fb-share-opt span { font-size: 11.5px; font-weight: 600; color: #44524a; display: block; }
+    .fb-copy-link {
+      width: 100%; border: 1px solid var(--border-light); background: #fafcfb; color: #44524a; font-family: inherit;
+      font-size: 12.5px; padding: 11px; border-radius: var(--radius-sm); cursor: pointer; transition: all .2s;
+    }
+    .fb-copy-link:hover { border-color: var(--medium-green); color: var(--primary-green); }
+
+    /* Notifications */
+    .fb-notif-item { display: flex; gap: 10px; padding: 11px 0; border-bottom: 1px solid #f1f5f2; align-items: flex-start; }
+    .fb-notif-item:last-child { border-bottom: none; }
+    .fb-notif-icon {
+      width: 36px; height: 36px; border-radius: 50%; flex: 0 0 auto; display: flex; align-items: center;
+      justify-content: center; color: #fff; font-size: 13px;
+    }
+    .fb-notif-body { flex: 1; min-width: 0; }
+    .fb-notif-body p { font-size: 12.5px; color: #2c3a32; line-height: 1.45; }
+    .fb-notif-body p b { color: var(--text-dark,#173423); }
+    .fb-notif-body small { font-size: 10.5px; color: var(--text-muted); }
+
+    /* Search panel */
+    .fb-search-panel { padding: 6px 0; }
+    .fb-search-type-head { font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 6px; }
+    .fb-search-row { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-radius: var(--radius-sm); cursor: pointer; }
+    .fb-search-row:hover { background: #f0f4f1; }
+    .fb-search-row img { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; flex: 0 0 auto; }
+    .fb-search-row .fb-search-thumb {
+      width: 36px; height: 36px; border-radius: 10px; flex: 0 0 auto; display: flex; align-items: center;
+      justify-content: center; color: #fff; font-size: 13px;
+    }
+    .fb-search-row .fb-sr-body { flex: 1; min-width: 0; }
+    .fb-search-row .fb-sr-body b { font-size: 13px; color: var(--text-dark,#173423); display: block; }
+    .fb-search-row .fb-sr-body small { font-size: 11.5px; color: var(--text-muted); }
+
+    /* Farmer profile sheet */
+    .fb-fp-cover { height: 92px; background: linear-gradient(135deg,#0F2E1E,#52B788); position: relative; }
+    .fb-fp-main { padding: 0 18px 18px; position: relative; }
+    .fb-fp-avatar { position: absolute; top: -38px; left: 18px; width: 84px; height: 84px; border-radius: 50%; border: 4px solid #fff; object-fit: cover; box-shadow: var(--shadow-md); }
+    .fb-fp-head { padding-top: 52px; }
+    .fb-fp-head h3 { font-size: 18px; font-weight: 800; color: var(--text-dark,#173423); display: flex; align-items: center; gap: 6px; }
+    .fb-fp-head h3 .fa-circle-check { color: #2D8659; font-size: 14px; }
+    .fb-fp-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+    .fb-fp-bio { font-size: 12.5px; color: #2c3a32; margin-top: 8px; line-height: 1.5; }
+    .fb-fp-stats { display: flex; gap: 8px; margin-top: 12px; }
+    .fb-fp-stats .fb-fp-stat { flex: 1; text-align: center; background: #f7f9f8; border-radius: var(--radius-sm); padding: 9px 4px; }
+    .fb-fp-stats .fb-fp-stat b { display: block; font-size: 15px; font-weight: 800; color: var(--text-dark,#173423); }
+    .fb-fp-stats .fb-fp-stat span { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
+    .fb-fp-actions { display: flex; gap: 8px; margin-top: 13px; }
+    .fb-fp-posts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+    .fb-fp-posts .fb-fp-post { aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden; cursor: pointer; background: #0F2E1E; }
+    .fb-fp-posts .fb-fp-post img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Edit profile modal */
+    .fb-edit-form { display: grid; gap: 12px; }
+    .fb-edit-form .fb-avatar-edit { display: flex; align-items: center; gap: 12px; }
+    .fb-edit-form .fb-avatar-edit img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-light); }
+    .fb-edit-form .fb-avatar-edit input { flex: 1; border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 12.5px; font-family: inherit; outline: none; }
+
+    /* States */
+    body.fb-searching #fbForYou,
+    body.fb-searching #fbFarmersRow,
+    body.fb-searching #fbShortsStrip,
+    body.fb-searching #fbTipList,
+    body.fb-searching .fb-section-head { display: none !important; }
+    .fb-empty {
+      text-align: center; padding: 44px 20px; color: var(--text-muted);
+    }
+    .fb-empty i { font-size: 40px; color: #c4d5c9; display: block; margin-bottom: 12px; }
+    .fb-empty p { font-size: 13.5px; }
+    .fb-skeleton { background: linear-gradient(90deg,#eef3ef 25%,#f7faf8 37%,#eef3ef 63%); background-size: 400% 100%; animation: fbShimmer 1.4s ease infinite; border-radius: var(--radius-md); }
+    .fb-skel-card { height: 320px; margin-bottom: 16px; }
+    .fb-skel-line { height: 14px; margin: 10px 14px; }
+
+    /* Scrollbar & misc */
+    .fb-trend-banner .fb-live { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,.18); padding: 3px 10px; border-radius: 14px; font-size: 10.5px; font-weight: 700; margin-top: 8px; }
+    .fb-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff6b6b; animation: fbBlink 1.2s ease infinite; }
+    .fb-recent-tag { background: #f0f4f1; border-radius: 20px; padding: 5px 12px; font-size: 11.5px; color: #44524a; display: inline-flex; align-items: center; gap: 6px; margin: 0 6px 6px 0; cursor: pointer; }
+
+    @keyframes fbPop { 0%{transform:scale(1)} 40%{transform:scale(1.35)} 100%{transform:scale(1)} }
+    @keyframes fbPulse { 0%{transform:translate(-50%,-50%) scale(1.2);opacity:.4} 100%{transform:translate(-50%,-50%) scale(1);opacity:.85} }
+    @keyframes fbBlink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes fbShimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
+    @keyframes sheetUp { from{transform:translateY(60px);opacity:.6} to{transform:translateY(0);opacity:1} }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<main class="page-container">
+  <div class="fb-wrap">
+
+    <!-- Top Nav -->
+    <nav class="fb-topnav" aria-label="FarmBuzz sections">
+      <button class="active" data-view="home"><i class="fas fa-house"></i><span>Home</span></button>
+      <button data-view="shorts"><i class="fas fa-clapperboard"></i><span>Shorts</span></button>
+      <button data-view="trends"><i class="fas fa-fire-flame-curved"></i><span>Trends</span></button>
+      <button data-view="post"><i class="fas fa-square-plus"></i><span>Post</span></button>
+      <button data-view="self"><i class="fas fa-user"></i><span>Self</span></button>
+      <button class="fb-home-btn" id="fbHomeBtn" aria-label="Go to Farm Assist dashboard" title="Go to Dashboard">
+        <i class="fas fa-house"></i>
+        <span class="fb-home-tip">Go to Dashboard</span>
+      </button>
+    </nav>
+
+    <!-- Tools -->
+    <div class="fb-tools">
+      <div class="fb-searchbar">
+        <i class="fas fa-magnifying-glass"></i>
+        <input type="text" id="fbSearchInput" placeholder="Search posts, farmers, topics..." autocomplete="off" aria-label="Search FarmBuzz">
+        <button class="fb-search-clear" id="fbSearchClear" aria-label="Clear search"><i class="fas fa-xmark"></i></button>
+      </div>
+      <button class="fb-bell-btn" id="fbBellBtn" aria-label="Notifications">
+        <i class="fas fa-bell"></i>
+        <span class="fb-bell-dot" id="fbBellDot"></span>
+      </button>
+    </div>
+
+    <!-- ===== HOME ===== -->
+    <section class="fb-view active" id="fbViewHome">
+      <div class="fb-section-head">
+        <h3><i class="fas fa-house"></i> Your Feed</h3>
+        <button class="fb-link" data-goto="shorts">View Shorts</button>
+      </div>
+
+      <div id="fbForYou"></div>
+      <div class="fb-farmers-row" id="fbFarmersRow"></div>
+
+      <div class="fb-section-head">
+        <h3><i class="fas fa-clapperboard"></i> Trending Shorts</h3>
+        <button class="fb-link" data-goto="shorts">See all</button>
+      </div>
+      <div class="fb-shorts-strip" id="fbShortsStrip"></div>
+
+      <div class="fb-section-head" style="margin-top:6px;">
+        <h3><i class="fas fa-wheat-awn"></i> Latest Posts</h3>
+        <button class="fb-link" data-hashtag="#farming">#farming</button>
+      </div>
+      <div id="fbHomePosts"></div>
+
+      <div class="fb-section-head" style="margin-top:8px;">
+        <h3><i class="fas fa-lightbulb"></i> Quick Farming Tips</h3>
+      </div>
+      <div id="fbTipList"></div>
+    </section>
+
+    <!-- ===== SHORTS ===== -->
+    <section class="fb-view" id="fbViewShorts">
+      <div class="fb-section-head">
+        <h3><i class="fas fa-clapperboard"></i> Shorts</h3>
+      </div>
+      <div class="fb-chips" id="fbShortChips"></div>
+      <div class="fb-shorts-grid" id="fbShortsGrid"></div>
+    </section>
+
+    <!-- ===== TRENDS ===== -->
+    <section class="fb-view" id="fbViewTrends">
+      <div class="fb-trend-banner">
+        <i class="fas fa-fire"></i>
+        <h3><i class="fas fa-fire-flame-curved"></i> Today&rsquo;s Trends</h3>
+        <p>What the farming community is talking about right now</p>
+        <span class="fb-live"><span class="fb-live-dot"></span> LIVE TRENDING</span>
+      </div>
+      <div class="fb-chips" id="fbTrendChips"></div>
+      <div id="fbTrendList"></div>
+    </section>
+
+    <!-- ===== POST ===== -->
+    <section class="fb-view" id="fbViewPost">
+      <div class="fb-section-head">
+        <h3><i class="fas fa-square-plus"></i> Create Post</h3>
+      </div>
+      <div class="fb-composer">
+        <div class="fb-comp-top">
+          <div class="fb-user-mini">
+            <img id="fbCompAvatar" alt="You">
+            <b id="fbCompName">You</b>
+          </div>
+          <select class="fb-vis-select" id="fbVisibility" aria-label="Post visibility">
+            <option value="public">Public</option>
+            <option value="farmers">Farmers only</option>
+            <option value="followers">Followers</option>
+          </select>
+        </div>
+
+        <div class="fb-comp-media">
+          <div class="fb-media-picker" id="fbMediaPicker">
+            <button type="button" class="active" data-kind="photo"><i class="fas fa-image"></i><span>Photo</span></button>
+            <button type="button" data-kind="video"><i class="fas fa-video"></i><span>Video</span></button>
+            <button type="button" data-kind="text"><i class="fas fa-font"></i><span>Text only</span></button>
+          </div>
+          <input type="file" id="fbFileInput" accept="image/*,video/*" style="display:none;" aria-label="Choose media">
+          <div class="fb-media-preview" id="fbMediaPreview">
+            <img id="fbPreviewImg" alt="Preview" style="display:none;">
+            <video id="fbPreviewVideo" controls style="display:none;"></video>
+            <button class="fb-media-remove" id="fbMediaRemove" aria-label="Remove media"><i class="fas fa-xmark"></i></button>
+          </div>
+        </div>
+
+        <div class="fb-comp-fields">
+          <div class="fb-field">
+            <label>Caption</label>
+            <textarea id="fbCaption" maxlength="2000" placeholder="Share what's happening on your farm... use #tags"></textarea>
+            <span class="fb-hint" id="fbCharCount">0 / 2000</span>
+          </div>
+          <div class="fb-field-row">
+            <div class="fb-field">
+              <label>Location</label>
+              <input type="text" id="fbLocation" placeholder="e.g. Karimnagar, Telangana" maxlength="120">
+            </div>
+            <div class="fb-field">
+              <label>Crop</label>
+              <input type="text" id="fbCrop" placeholder="e.g. Paddy" maxlength="60" list="fbCropList">
+              <datalist id="fbCropList">
+                <option value="Paddy"><option value="Cotton"><option value="Chilli">
+                <option value="Tomato"><option value="Sugarcane"><option value="Maize">
+                <option value="Mango"><option value="Vegetables"><option value="Soyabean">
+              </datalist>
+            </div>
+          </div>
+          <div class="fb-field">
+            <label>Category</label>
+            <select id="fbCategory">
+              <option value="Farming" selected>Farming</option>
+              <option value="Crop">Crop</option>
+              <option value="Machinery">Machinery</option>
+              <option value="Market">Market &amp; Price</option>
+              <option value="Success Story">Success Story</option>
+              <option value="Question">Question</option>
+              <option value="Tip">Tip</option>
+              <option value="Community">Community</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="fb-field">
+            <label>Hashtags</label>
+            <input type="text" id="fbTags" placeholder="#paddy #kharif (comma separated)" maxlength="200">
+            <span class="fb-hint">Suggested: <button class="fb-link" data-sugtag="#organic">#organic</button> <button class="fb-link" data-sugtag="#irrigation">#irrigation</button> <button class="fb-link" data-sugtag="#harvest">#harvest</button> <button class="fb-link" data-sugtag="#tips">#tips</button></span>
+          </div>
+          <div class="fb-field">
+            <label>Tag people</label>
+            <div class="fb-tag-people" id="fbTagPeople"></div>
+          </div>
+        </div>
+
+        <div class="fb-comp-footer">
+          <button class="fb-post-btn" id="fbPostBtn"><i class="fas fa-paper-plane"></i><span>Post to FarmBuzz</span></button>
+          <div class="fb-upload-progress" id="fbUploadProgress">
+            <div class="fb-up-bar"><div class="fb-up-fill" id="fbUpFill"></div></div>
+            <span id="fbUpLabel">Uploading...</span>
+          </div>
+          <div class="fb-char-count" id="fbPostHint">&nbsp;</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SELF ===== -->
+    <section class="fb-view" id="fbViewSelf">
+      <div id="fbSelfProfile"></div>
+      <div class="fb-profile-tabs" id="fbSelfTabs">
+        <button class="active" data-tab="posts">Posts</button>
+        <button data-tab="shorts">Shorts</button>
+        <button data-tab="saved">Saved</button>
+        <button data-tab="about">About</button>
+      </div>
+      <div class="fb-profile-content" id="fbSelfContent"></div>
+    </section>
+
+  </div>
+</main>
+
+<!-- ===== Fullscreen Shorts Player ===== -->
+<div class="fb-shorts-player" id="fbShortsPlayer" role="dialog" aria-modal="true" aria-label="Shorts player">
+  <div class="fb-sp-top">
+    <h5><i class="fas fa-clapperboard"></i> FarmBuzz Shorts</h5>
+    <div class="fb-sp-top-actions">
+      <span class="fb-sp-counter" id="fbSpCounter">1/1</span>
+      <button class="fb-sp-mute" id="fbSpMute" aria-label="Mute or unmute sound" aria-pressed="false"><i class="fas fa-volume-up"></i></button>
+      <button class="fb-sp-close" id="fbSpClose" aria-label="Close Shorts"><i class="fas fa-xmark"></i></button>
+    </div>
+  </div>
+  <div class="fb-sp-progress"><span id="fbSpProgressFill"></span></div>
+  <div class="fb-sp-stage" id="fbSpStage"></div>
+  <button class="fb-sp-nav prev" id="fbSpPrev" aria-label="Previous short"><i class="fas fa-chevron-up"></i></button>
+  <button class="fb-sp-nav next" id="fbSpNext" aria-label="Next short"><i class="fas fa-chevron-down"></i></button>
+  <i class="fas fa-play fb-sp-paused" id="fbSpPaused"></i>
+  <div class="fb-sp-comments" id="fbSpCommentsPanel">
+    <div class="fb-sp-comments-head">
+      <h5 id="fbSpCommentTitle">Comments</h5>
+      <button class="fb-sheet-close" id="fbSpCloseComments" aria-label="Close comments"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="fb-sp-comments-list" id="fbSpCommentsList"></div>
+    <div class="fb-sp-comment-input">
+      <input type="text" id="fbSpCommentInput" placeholder="Add a comment..." maxlength="1000" autocomplete="off">
+      <button id="fbSpCommentBtn" aria-label="Post comment"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Post Detail Modal ===== -->
+<div class="fb-modal-backdrop" id="fbDetailModal">
+  <div class="fb-sheet" role="dialog" aria-modal="true" aria-label="Post detail">
+    <div class="fb-sheet-head">
+      <h4><i class="fas fa-file-lines" style="color:var(--primary-green);"></i> Post</h4>
+      <button class="fb-sheet-close" data-close="fbDetailModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="fb-detail-head" id="fbDetailHead"></div>
+    <img class="fb-detail-media" id="fbDetailImg" alt="" style="display:none;">
+    <div class="fb-detail-body" id="fbDetailBody"></div>
+    <div class="fb-detail-actions" id="fbDetailActions"></div>
+    <div class="fb-detail-comments">
+      <h5><i class="fas fa-comment-dots"></i> Comments <span id="fbDetailCommentCount"></span></h5>
+      <div id="fbDetailComments"></div>
+      <div class="fb-comment-input">
+        <input type="text" id="fbDetailCommentInput" placeholder="Add a comment..." maxlength="1000" autocomplete="off">
+        <button id="fbDetailCommentBtn" aria-label="Post comment"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Share Sheet ===== -->
+<div class="fb-modal-backdrop" id="fbShareModal">
+  <div class="fb-sheet" role="dialog" aria-modal="true" aria-label="Share">
+    <div class="fb-sheet-head">
+      <h4><i class="fas fa-share-nodes" style="color:var(--primary-green);"></i> Share</h4>
+      <button class="fb-sheet-close" data-close="fbShareModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="fb-sheet-body">
+      <div class="fb-share-grid" id="fbShareGrid"></div>
+      <button class="fb-copy-link" id="fbCopyLink"><i class="fas fa-copy"></i> Copy link</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Notifications Sheet ===== -->
+<div class="fb-modal-backdrop" id="fbNotifModal">
+  <div class="fb-sheet" role="dialog" aria-modal="true" aria-label="Notifications">
+    <div class="fb-sheet-head">
+      <h4><i class="fas fa-bell" style="color:var(--primary-green);"></i> Notifications</h4>
+      <button class="fb-sheet-close" data-close="fbNotifModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="fb-sheet-body" id="fbNotifList"></div>
+  </div>
+</div>
+
+<!-- ===== Farmer Profile Sheet ===== -->
+<div class="fb-modal-backdrop" id="fbFarmerModal">
+  <div class="fb-sheet" role="dialog" aria-modal="true" aria-label="Farmer profile">
+    <div class="fb-sheet-head">
+      <h4><i class="fas fa-user" style="color:var(--primary-green);"></i> Farmer</h4>
+      <button class="fb-sheet-close" data-close="fbFarmerModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="fb-sheet-body" style="padding-top:0;" id="fbFarmerBody"></div>
+  </div>
+</div>
+
+<!-- ===== Edit Profile Modal ===== -->
+<div class="fb-modal-backdrop" id="fbEditModal">
+  <div class="fb-sheet" role="dialog" aria-modal="true" aria-label="Edit profile">
+    <div class="fb-sheet-head">
+      <h4><i class="fas fa-user-pen" style="color:var(--primary-green);"></i> Edit Profile</h4>
+      <button class="fb-sheet-close" data-close="fbEditModal" aria-label="Close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="fb-sheet-body">
+      <div class="fb-edit-form">
+        <div class="fb-avatar-edit">
+          <img id="fbEditAvatar" alt="Avatar">
+          <input type="text" id="fbEditAvatarUrl" placeholder="Profile photo URL (optional)" maxlength="300">
+        </div>
+        <div class="fb-field">
+          <label>Bio</label>
+          <textarea id="fbEditBio" maxlength="300" placeholder="Tell farmers about you and your farm..."></textarea>
+        </div>
+        <div class="fb-field-row">
+          <div class="fb-field">
+            <label>Farm location</label>
+            <input type="text" id="fbEditLocation" maxlength="120" placeholder="Village, District">
+          </div>
+          <div class="fb-field">
+            <label>Farming type</label>
+            <select id="fbEditFarmingType">
+              <option value="">Select...</option>
+              <option value="Crop Farmer">Crop Farmer</option>
+              <option value="Vegetable Farmer">Vegetable Farmer</option>
+              <option value="Organic Farmer">Organic Farmer</option>
+              <option value="Dairy Farmer">Dairy Farmer</option>
+              <option value="Poultry Farmer">Poultry Farmer</option>
+              <option value="Horticulturist">Horticulturist</option>
+              <option value="AgriTech Expert">AgriTech Expert</option>
+              <option value="Agronomist">Agronomist</option>
+            </select>
+          </div>
+        </div>
+        <button class="fb-post-btn" id="fbEditSave"><i class="fas fa-check"></i> Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== DATA ==================== */
+  var LS_LIKES = 'fa-farmbuzz-likes';
+  var LS_SAVED = 'fa-farmbuzz-saved';
+  var LS_FOLLOW = 'fa-farmbuzz-follow';
+  var LS_COMMENTS = 'fa-farmbuzz-comments';
+  var LS_POSTS = 'fa-farmbuzz-my-posts';
+  var LS_NOTIF_READ = 'fa-farmbuzz-notif-read';
+  var LS_RECENT = 'fa-farmbuzz-recent-search';
+  var LS_MYPROFILE = 'fa-farmbuzz-my-profile';
+  var LS_PROFILE_IMG = 'fa-profile-image';
+
+  var PHOTOS = {
+    p01:'photo-1500382017468-9049fed747ef', p02:'photo-1625246333195-78d9c38ad449',
+    p03:'photo-1416879595882-3373a0480b5b', p04:'photo-1464226184884-fa280b87c399',
+    p05:'photo-1523348837708-15d4a09cfac2', p06:'photo-1574943320219-553eb213f72d',
+    p07:'photo-1605000797499-95a51c5269ae', p08:'photo-1470506028280-a011fb34b6f7',
+    p09:'photo-1500937386664-56d1dfef3854', p10:'photo-1546445317-29f4545e9d53',
+    p11:'photo-1592982537447-7440770cbfc9', p12:'photo-1523741543316-beb7fc7023d8',
+    p13:'photo-1509099836639-18ba1795216d', p14:'photo-1444858291040-58f756a3bdd6',
+    p15:'photo-1518531933037-91b2f5f229cc', p16:'photo-1531353826977-0941b4779a1c',
+    p17:'photo-1559314809-0d155014e29e', p18:'photo-1542838132-92c53300491e',
+    p19:'photo-1587574293340-e0011c4e8ecf', p20:'photo-1546182990-dffeafbe841d',
+    p21:'photo-1530026186672-2cd00ffc50fe', p22:'photo-1586771107445-d3ca888129ff',
+    p23:'photo-1517824806704-9040b037703b', p24:'photo-1518568814500-bf0f8d125f46',
+    p25:'photo-1589923188900-85dae523342b', p26:'photo-1509391366360-2e959784a276',
+    p27:'photo-1594633312681-425c7b97ccd1'
+  };
+  var AVATAR_IDS = [
+    'photo-1507003211169-0a1dd7228f2d', 'photo-1494790108377-be9c29b29330',
+    'photo-1500648767791-00dcc994a43e', 'photo-1544005313-94ddf0286df2',
+    'photo-1539571696357-5a69c17a67c6', 'photo-1519085360753-af0119f7cbe7',
+    'photo-1438761681033-6461ffad8d80', 'photo-1552058544-f2b08422138a',
+    'photo-1472099645785-5658abf4ff4e', 'photo-1534528741775-53994a69daeb',
+    'photo-1573497019940-1c28c88b4f3e', 'photo-1508214751196-bcfd4ca60f91'
+  ];
+
+  function img(id, w, h) {
+    var u = 'https://images.unsplash.com/' + id + '?auto=format&fit=crop&w=' + (w || 800) + '&q=60';
+    if (h) u += '&h=' + h;
+    return u;
+  }
+
+  var FARMERS = [
+    { id:'f1', name:'Ramesh Patil', farmerId:'FA-AS-100241', location:'Karimnagar, Telangana', crops:['Paddy','Chilli'], type:'Crop Farmer', bio:'Growing paddy and chillies on 12 acres. Sharing what works on my farm, one season at a time.', avatar:0, followers:2840, following:112, verified:true, expert:false },
+    { id:'f2', name:'Sunita Devi', farmerId:'FA-AS-100302', location:'Nashik, Maharashtra', crops:['Grapes','Onion'], type:'Vegetable Farmer', bio:'Organic grape grower and market seller. From 2 acres to a weekly subscription box!', avatar:1, followers:5120, following:205, verified:true, expert:false },
+    { id:'f3', name:'Dr. Arvind Sharma', farmerId:'FA-EX-005144', location:'Ludhiana, Punjab', crops:['Wheat','Maize'], type:'Agronomist', bio:'Senior agronomist. 20+ years in soil health, precision ag and IPM. Ask me anything.', avatar:2, followers:12840, following:34, verified:true, expert:true },
+    { id:'f4', name:'Mahesh Naidu', farmerId:'FA-AS-100187', location:'Guntur, Andhra Pradesh', crops:['Cotton','Chilli'], type:'Crop Farmer', bio:'Cotton and chilli farmer. Drone-spraying enthusiast and pest management tinkerer.', avatar:3, followers:1980, following:340, verified:false, expert:false },
+    { id:'f5', name:'Lakshmi Reddy', farmerId:'FA-AS-100455', location:'Mysuru, Karnataka', crops:['Tomato','Cabbage'], type:'Vegetable Farmer', bio:'Polyhouse tomato grower. Sharing trellising, pruning and crop-protection experiments.', avatar:4, followers:3420, following:88, verified:true, expert:false },
+    { id:'f6', name:'Ganesh More', farmerId:'FA-AS-100129', location:'Kolhapur, Maharashtra', crops:['Sugarcane','Soyabean'], type:'Crop Farmer', bio:'Sugarcane farmer. Big fan of vermicompost and jeevamrut. Slow farming, steady yields.', avatar:5, followers:1560, following:95, verified:false, expert:false },
+    { id:'f7', name:'Priya Nair', farmerId:'FA-AS-100288', location:'Palakkad, Kerala', crops:['Banana','Coconut'], type:'Horticulturist', bio:'Banana and coconut grower. Small farm, big experiments in mulching and compost.', avatar:6, followers:2210, following:140, verified:false, expert:false },
+    { id:'f8', name:'Suresh Kumar', farmerId:'FA-AS-100377', location:'Amritsar, Punjab', crops:['Wheat','Mustard'], type:'Crop Farmer', bio:'Wheat and mustard grower. Following the market, not just the season.', avatar:7, followers:1300, following:76, verified:false, expert:false },
+    { id:'f9', name:'Anita Patel', farmerId:'FA-AS-100209', location:'Anand, Gujarat', crops:['Vegetables','Dairy'], type:'Dairy Farmer', bio:'Dairy + vegetable farm run with my family. Cows, compost and community markets.', avatar:8, followers:4100, following:220, verified:true, expert:false },
+    { id:'f10', name:'Krishna Murthy', farmerId:'FA-AS-100419', location:'Vijayawada, Andhra Pradesh', crops:['Mango','Maize'], type:'Crop Farmer', bio:'Mango orchard caretaker. Teaching grafting and orchard nutrition to new growers.', avatar:9, followers:2870, following:130, verified:false, expert:false },
+    { id:'f11', name:'Dr. Meera Iyer', farmerId:'FA-EX-006210', location:'Coimbatore, Tamil Nadu', crops:['Tomato','Chilli'], type:'Plant Pathologist', bio:'Plant pathologist specialising in leaf curl, wilt and biological control agents.', avatar:10, followers:9760, following:41, verified:true, expert:true },
+    { id:'f12', name:'Vikram Singh', farmerId:'FA-AS-100363', location:'Indore, Madhya Pradesh', crops:['Soyabean','Wheat'], type:'Crop Farmer', bio:'Soyabean and wheat rotation farmer. Testing soil-test-based fertiliser planning.', avatar:11, followers:1740, following:101, verified:false, expert:false }
+  ];
+
+  var POSTS = [
+    { id:'p1', author:'f1', img:'p01', caption:'Day 12 after transplanting. The paddy lines are filling in nicely. Irrigation on schedule with #drip to save water. #paddy #kharif', location:'Karimnagar, Telangana', crop:'Paddy', cat:'crop_farming', time:'2h', likes:342, comments:18, shares:12, views:'4.1K', tall:false },
+    { id:'p2', author:'f2', img:'p02', caption:'Morning harvest in the vineyard. Happy grapes mean happy customers! #organic #harvest', location:'Nashik, Maharashtra', crop:'Grapes', cat:'horticulture', time:'4h', likes:518, comments:32, shares:27, views:'6.8K', tall:false },
+    { id:'p3', author:'f3', img:'p03', caption:'Soil test shows pH 6.2 with low organic carbon. First step to every good season is knowing your soil. #soilhealth #tips', location:'Ludhiana, Punjab', crop:'Wheat', cat:'soil_health', time:'6h', likes:289, comments:41, shares:33, views:'3.9K', tall:false },
+    { id:'p4', author:'f4', img:'p04', caption:'Installing pheromone traps for pink bollworm. Early detection beats late spraying. #pestcontrol #cotton', location:'Guntur, Andhra Pradesh', crop:'Cotton', cat:'pest_control', time:'8h', likes:214, comments:14, shares:9, views:'2.7K', tall:false },
+    { id:'p5', author:'f5', img:'p05', caption:'Polyhouse tomato trellising done right. 18 cm spacing, weekly pruning. #tomato #polyhouse', location:'Mysuru, Karnataka', crop:'Tomato', cat:'horticulture', time:'10h', likes:463, comments:29, shares:18, views:'5.5K', tall:true },
+    { id:'p6', author:'f6', img:'p06', caption:'Jeevamrut batch 3 is brewing. 7 days and it will be ready for the sugarcane. #organicfarming #jeevamrut', location:'Kolhapur, Maharashtra', crop:'Sugarcane', cat:'organic_farming', time:'12h', likes:197, comments:22, shares:15, views:'2.2K', tall:false },
+    { id:'p7', author:'f7', img:'p07', caption:'Banana bunch development is looking strong. Mulching with dried leaves keeps the roots cool. #banana #mulching', location:'Palakkad, Kerala', crop:'Banana', cat:'horticulture', time:'1d', likes:331, comments:19, shares:11, views:'3.6K', tall:false },
+    { id:'p8', author:'f8', img:'p08', caption:'Wheat near flowering. Watching the market so I harvest at the right price window. #wheat #market', location:'Amritsar, Punjab', crop:'Wheat', cat:'market', time:'1d', likes:256, comments:17, shares:8, views:'3.1K', tall:false },
+    { id:'p9', author:'f9', img:'p09', caption:'Vegetable plot update - okra, brinjal and coriander are loving this monsoon. #vegetables #monsoon', location:'Anand, Gujarat', crop:'Vegetables', cat:'crop_farming', time:'1d', likes:384, comments:26, shares:19, views:'4.4K', tall:false },
+    { id:'p10', author:'f10', img:'p10', caption:'Grafting mango seedlings with my nephew. Patience is the cheapest input in farming. #mango #grafting', location:'Vijayawada, Andhra Pradesh', crop:'Mango', cat:'horticulture', time:'1d', likes:295, comments:24, shares:14, views:'3.3K', tall:false },
+    { id:'p11', author:'f11', img:'p11', caption:'Identified early leaf-curl on tomato. Removed 3 infected plants before it spread. Biocontrol spray tomorrow. #leafcurl #tomato', location:'Coimbatore, Tamil Nadu', crop:'Tomato', cat:'pest_control', time:'1d', likes:412, comments:38, shares:21, views:'5.9K', tall:false },
+    { id:'p12', author:'f12', img:'p12', caption:'Soyabean stand looks even this year. Split-dose fertiliser based on soil test. #soyabean #soiltest', location:'Indore, Madhya Pradesh', crop:'Soyabean', cat:'crop_farming', time:'1d', likes:273, comments:15, shares:7, views:'2.9K', tall:false },
+    { id:'p13', author:'f1', img:'p13', caption:'Chilli drying day at our farm gate. Sunset makes everything look better. #chilli #harvest', location:'Karimnagar, Telangana', crop:'Chilli', cat:'crop_farming', time:'1d', likes:367, comments:20, shares:13, views:'4.0K', tall:false },
+    { id:'p14', author:'f3', img:'p14', caption:'Maize seed spacing demo - 20 cm apart, 2.5 cm deep. Depth matters as much as distance. #maize #tips', location:'Ludhiana, Punjab', crop:'Maize', cat:'crop_farming', time:'2d', likes:308, comments:16, shares:10, views:'3.4K', tall:false },
+    { id:'p15', author:'f4', img:'p15', caption:'Drone NDVI scan mapped a nitrogen-stressed patch in the north block. Spraying that corner only. #agritech #drone', location:'Guntur, Andhra Pradesh', crop:'Cotton', cat:'crop_farming', time:'2d', likes:221, comments:12, shares:6, views:'2.6K', tall:false },
+    { id:'p16', author:'f2', img:'p16', caption:'Onion beds after weeding. Hands-on work you cannot outsource to any machine. #onion #weeding', location:'Nashik, Maharashtra', crop:'Onion', cat:'crop_farming', time:'2d', likes:288, comments:18, shares:9, views:'3.2K', tall:false },
+    { id:'p17', author:'f6', img:'p17', caption:'Sunflower patch in bloom behind the sugar block. Bees are doing their part. #sunflower #pollinators', location:'Kolhapur, Maharashtra', crop:'Sugarcane', cat:'crop_farming', time:'2d', likes:452, comments:21, shares:17, views:'5.2K', tall:false },
+    { id:'p18', author:'f7', img:'p18', caption:'Coconut garden after rain. Natural irrigation, zero cost. #coconut #monsoon', location:'Palakkad, Kerala', crop:'Coconut', cat:'horticulture', time:'2d', likes:319, comments:13, shares:8, views:'3.5K', tall:false },
+    { id:'p19', author:'f5', img:'p19', caption:'Cabbage heads closing well. Calcium spray twice to avoid tip burn. #cabbage #vegetables', location:'Mysuru, Karnataka', crop:'Cabbage', cat:'horticulture', time:'2d', likes:240, comments:14, shares:5, views:'2.8K', tall:false },
+    { id:'p20', author:'f9', img:'p20', caption:'Our dairy shed after the morning milking. Clean shed = healthy cows. #dairy #livestock', location:'Anand, Gujarat', crop:'Dairy', cat:'livestock', time:'3d', likes:356, comments:25, shares:12, views:'4.3K', tall:false },
+    { id:'p21', author:'f10', img:'p21', caption:'Orchard nutrition: compost + neem cake before the flower flush. #mango #orchard', location:'Vijayawada, Andhra Pradesh', crop:'Mango', cat:'organic_farming', time:'3d', likes:267, comments:16, shares:7, views:'3.0K', tall:false },
+    { id:'p22', author:'f11', img:'p22', caption:'Nursery tray check - grafting success rate 78% this batch. #nursery #grafting', location:'Coimbatore, Tamil Nadu', crop:'Chilli', cat:'horticulture', time:'3d', likes:298, comments:19, shares:9, views:'3.3K', tall:false },
+    { id:'p23', author:'f12', img:'p23', caption:'Turmeric harvest day! Underground gold. #turmeric #harvest', location:'Indore, Madhya Pradesh', crop:'Turmeric', cat:'crop_farming', time:'3d', likes:431, comments:27, shares:22, views:'5.0K', tall:false },
+    { id:'p24', author:'f1', img:'p24', caption:'Mustard field from the bund. Winter crop looking golden. #mustard #wintercrop', location:'Karimnagar, Telangana', crop:'Mustard', cat:'crop_farming', time:'4d', likes:345, comments:23, shares:16, views:'3.9K', tall:false },
+    { id:'p25', author:'f3', img:'p25', caption:'Root dip before transplanting - trichoderma + jeevamrut. Cheap insurance against wilt. #tips #organic', location:'Ludhiana, Punjab', crop:'Wheat', cat:'organic_farming', time:'4d', likes:376, comments:28, shares:19, views:'4.2K', tall:false },
+    { id:'p26', author:'f4', img:'p26', caption:'Cotton boll formation. Scouting every 5 days, record card in hand. #cotton #scouting', location:'Guntur, Andhra Pradesh', crop:'Cotton', cat:'crop_farming', time:'4d', likes:189, comments:11, shares:4, views:'2.1K', tall:false },
+    { id:'p27', author:'f8', img:'p27', caption:'Papaya at the fence line. Free fruits, natural windbreak. #papaya #intercropping', location:'Amritsar, Punjab', crop:'Papaya', cat:'crop_farming', time:'5d', likes:259, comments:15, shares:6, views:'2.8K', tall:false }
+  ];
+
+  var SHORT_CATS = ['Farmer Techniques', 'Farmer Tricks', 'Farming Scenes', 'Farmer Life', 'Farming Comedy', 'Quick Knowledge', 'Educational', 'Expert Shorts'];
+  var SHORTS = [
+    { id:'s1', author:'f7', img:'p07', title:'Banana pseudostem water - free fertiliser in 5 minutes', cat:'Farmer Tricks', time:'1h', likes:1240, comments:86, shares:210, views:'18K', music:'Nature sounds' },
+    { id:'s2', author:'f4', img:'p15', title:'Drone view of our paddy fields at golden hour', cat:'Farming Scenes', time:'2h', likes:980, comments:54, shares:120, views:'12K', music:'Calm guitar' },
+    { id:'s3', author:'f3', img:'p03', title:'The 20-20-20 rule for scouting your crop', cat:'Expert Shorts', time:'3h', likes:1520, comments:132, shares:260, views:'24K', music:'None' },
+    { id:'s4', author:'f9', img:'p09', title:'Neem oil spray the easy way', cat:'Farmer Tricks', time:'5h', likes:870, comments:48, shares:95, views:'9.5K', music:'Lo-fi beat' },
+    { id:'s5', author:'f6', img:'p06', title:'Monsoon rain on the sugarcane farm', cat:'Farming Scenes', time:'7h', likes:760, comments:33, shares:80, views:'8.2K', music:'Rain sounds' },
+    { id:'s6', author:'f2', img:'p02', title:'The goat that ate my best mango sapling', cat:'Farming Comedy', time:'9h', likes:2100, comments:210, shares:410, views:'32K', music:'Funny whistle' },
+    { id:'s7', author:'f10', img:'p10', title:'Seed depth rule: 2x the seed size, never deeper', cat:'Quick Knowledge', time:'11h', likes:1120, comments:77, shares:190, views:'15K', music:'None' },
+    { id:'s8', author:'f11', img:'p11', title:'Tomato leaf curl - identify it in 10 seconds', cat:'Expert Shorts', time:'13h', likes:1340, comments:98, shares:230, views:'19K', music:'None' },
+    { id:'s9', author:'f1', img:'p01', title:'Chilli water trick for ants around seedlings', cat:'Farmer Tricks', time:'15h', likes:890, comments:52, shares:105, views:'9.8K', music:'Pop' },
+    { id:'s10', author:'f5', img:'p05', title:'Early morning walk through the polyhouse', cat:'Farming Scenes', time:'18h', likes:640, comments:29, shares:61, views:'7.1K', music:'Ambient' },
+    { id:'s11', author:'f8', img:'p08', title:'Chicken vs scarecrow - round 47', cat:'Farming Comedy', time:'20h', likes:1870, comments:174, shares:330, views:'27K', music:'Comic piano' },
+    { id:'s12', author:'f12', img:'p12', title:'Companion planting: basil next to tomato', cat:'Quick Knowledge', time:'22h', likes:1020, comments:63, shares:150, views:'13K', music:'None' },
+    { id:'s13', author:'f3', img:'p14', title:'How to read an NPK fertiliser bag', cat:'Expert Shorts', time:'1d', likes:1460, comments:121, shares:245, views:'21K', music:'None' },
+    { id:'s14', author:'f7', img:'p18', title:'Coconut watering hack with a buried pot', cat:'Farmer Tricks', time:'1d', likes:780, comments:41, shares:88, views:'8.8K', music:'Acoustic' },
+    { id:'s15', author:'f10', img:'p21', title:'Cow photobombs my grafting tutorial', cat:'Farming Comedy', time:'1d', likes:2310, comments:245, shares:460, views:'36K', music:'Funny trumpet' },
+    { id:'s16', author:'f11', img:'p22', title:'Soil pH quick test at home in 60 seconds', cat:'Quick Knowledge', time:'1d', likes:1280, comments:90, shares:205, views:'17K', music:'None' },
+    { id:'s17', author:'f5', img:'p19', title:'Split-dose urea for cabbage - when and why', cat:'Expert Shorts', time:'1d', likes:940, comments:58, shares:115, views:'10.5K', music:'None' },
+    { id:'s18', author:'f2', img:'p16', title:'Sunset tractor run through the onion beds', cat:'Farming Scenes', time:'2d', likes:860, comments:47, shares:102, views:'9.9K', music:'Slow country' },
+    { id:'s19', author:'f6', img:'p17', title:'Eggshell calcium for your vegetable patch', cat:'Farmer Tricks', time:'2d', likes:1080, comments:69, shares:178, views:'14K', music:'Ukulele' },
+    { id:'s20', author:'f1', img:'p24', title:'Paddy transplanting: straight lines, happy harvest', cat:'Farmer Techniques', time:'3d', likes:1420, comments:96, shares:240, views:'20K', music:'Folk beats' },
+    { id:'s21', author:'f4', img:'p04', title:'Seed treatment before sowing in 3 easy steps', cat:'Farmer Techniques', time:'3d', likes:1130, comments:71, shares:182, views:'15.5K', music:'None' },
+    { id:'s22', author:'f12', img:'p12', title:'How we do laser land levelling', cat:'Farming Scenes', time:'3d', likes:720, comments:38, shares:84, views:'8.4K', music:'Machine hum' },
+    { id:'s23', author:'f2', img:'p16', title:'Market day at Nashik APMC', cat:'Farmer Life', time:'3d', likes:990, comments:61, shares:145, views:'12.8K', music:'Morning market' },
+    { id:'s24', author:'f9', img:'p20', title:'Morning routine: milk, chaff and compost', cat:'Farmer Life', time:'4d', likes:820, comments:44, shares:90, views:'9.3K', music:'Calm acoustic' },
+    { id:'s25', author:'f6', img:'p06', title:'Why we swear by jeevamrut', cat:'Educational', time:'4d', likes:1210, comments:83, shares:210, views:'16K', music:'None' },
+    { id:'s26', author:'f10', img:'p21', title:'Mango flowering tips before the flush', cat:'Farmer Techniques', time:'4d', likes:1040, comments:66, shares:168, views:'13.5K', music:'None' },
+    { id:'s27', author:'f5', img:'p05', title:'My husband tried hydroponics once...', cat:'Farming Comedy', time:'4d', likes:1960, comments:188, shares:350, views:'28K', music:'Funny synth' },
+    { id:'s28', author:'f11', img:'p11', title:'Wilt or drought? The 2-minute check', cat:'Educational', time:'5d', likes:870, comments:52, shares:112, views:'10.2K', music:'None' },
+    { id:'s29', author:'f3', img:'p14', title:'Weather forecast apps every farmer should know', cat:'Educational', time:'5d', likes:760, comments:47, shares:96, views:'8.9K', music:'None' },
+    { id:'s30', author:'f7', img:'p18', title:'Coconut husk baskets for kitchen gardens', cat:'Farmer Tricks', time:'5d', likes:680, comments:35, shares:74, views:'7.6K', music:'Soft ukulele' },
+    { id:'s31', author:'f8', img:'p27', title:'Sunrise over the mustard field', cat:'Farming Scenes', time:'5d', likes:1340, comments:88, shares:225, views:'18.5K', music:'Ambient dawn' },
+    { id:'s32', author:'f2', img:'p02', title:'Pruning grapes: what goes, what stays', cat:'Farmer Techniques', time:'6d', likes:1100, comments:70, shares:176, views:'14.2K', music:'None' },
+    { id:'s33', author:'f9', img:'p09', title:'When the water buffalo "helps" with harvest', cat:'Farming Comedy', time:'6d', likes:2240, comments:232, shares:440, views:'34K', music:'Banjo laugh' },
+    { id:'s34', author:'f12', img:'p23', title:'Turmeric curing: from harvest to market', cat:'Educational', time:'6d', likes:950, comments:59, shares:138, views:'11.4K', music:'None' },
+    { id:'s35', author:'f4', img:'p26', title:'Drone spraying saves us 60% water', cat:'Farming Scenes', time:'1w', likes:1160, comments:74, shares:195, views:'15.9K', music:'Tech pulse' },
+    { id:'s36', author:'f1', img:'p13', title:'Success story: 2 acres to 6 lakh income', cat:'Farmer Life', time:'1w', likes:1830, comments:164, shares:310, views:'26K', music:'Inspiring' }
+  ];
+
+  var TRENDS = [
+    { topic:'#Monsoon2026 Update', desc:'Farmers across 14 states share how this monsoon is shaping kharif sowing.', score:9876, cat:'agriculture', icon:'fa-cloud-rain', color:'#1565C0', ref:'posts' },
+    { topic:'#PaddyBoom', desc:'Record paddy transplanting season - share your field photos.', score:8540, cat:'posts', icon:'fa-wheat-awn', color:'#2D8659', ref:'posts' },
+    { topic:'#OrganicChallenge', desc:'30-day organic input challenge. 2,400 farmers already joined.', score:7210, cat:'discussion', icon:'fa-seedling', color:'#40916C', ref:'posts' },
+    { topic:'#DroneFarming', desc:'NDVI mapping and precision spraying stories taking over Shorts.', score:6640, cat:'shorts', icon:'fa-helicopter', color:'#7c3aed', ref:'shorts' },
+    { topic:'#TomatoCrisis', desc:'Growers share leaf-curl photos and ask for help. Experts responding daily.', score:6120, cat:'discussion', icon:'fa-bug', color:'#d97706', ref:'posts' },
+    { topic:'#SoilFirst', desc:'Soil-test-based fertiliser planning is trending. Post your soil report.', score:5450, cat:'tips', icon:'fa-flask', color:'#8B6F47', ref:'tips' },
+    { topic:'#VermicompostKing', desc:'Ganesh More\u2019s 45-day vermicompost series is the most-watched this week.', score:4890, cat:'creators', icon:'fa-trophy', color:'#C9A227', ref:'creators' },
+    { topic:'#MandiRates', desc:'Live mandi updates for onion, tomato and wheat across 30 APMCs.', score:4320, cat:'agriculture', icon:'fa-chart-line', color:'#1B5E3F', ref:'posts' },
+    { topic:'#ShortTricks', desc:'One-minute farmer tricks - banana pseudostem water is today\u2019s top clip.', score:3980, cat:'shorts', icon:'fa-wand-magic-sparkles', color:'#2D8659', ref:'shorts' },
+    { topic:'#SuccessStories', desc:'Small-farm income journeys that crossed the 5-lakh mark.', score:3540, cat:'posts', icon:'fa-medal', color:'#d97706', ref:'posts' },
+    { topic:'#ZeroBudgetFarm', desc:'Cheap and free inputs that actually work - community test results.', score:3210, cat:'discussion', icon:'fa-hand-holding-heart', color:'#52B788', ref:'posts' },
+    { topic:'#ExpertHub', desc:'Dr. Meera Iyer\u2019s leaf-curl clinic answers 200+ farmer questions.', score:2870, cat:'creators', icon:'fa-user-doctor', color:'#1565C0', ref:'creators' }
+  ];
+
+  var NOTIFS = [
+    { icon:'fa-heart', color:'#e74c3c', text:'<b>Sunita Devi</b> and 27 others liked your paddy post', time:'2m ago' },
+    { icon:'fa-comment', color:'#1565C0', text:'<b>Dr. Arvind Sharma</b> commented on your soil post: "Great call on the pH correction."', time:'18m ago' },
+    { icon:'fa-user-plus', color:'#2D8659', text:'<b>Priya Nair</b> started following you', time:'1h ago' },
+    { icon:'fa-fire-flame-curved', color:'#d97706', text:'Your short <b>"Banana pseudostem water"</b> hit 1,000 likes', time:'2h ago' },
+    { icon:'fa-cloud-rain', color:'#1565C0', text:'Monsoon alert: Heavy rain expected in your district tomorrow', time:'3h ago' },
+    { icon:'fa-share-nodes', color:'#7c3aed', text:'<b>Mahesh Naidu</b> shared your chilli drying post', time:'5h ago' },
+    { icon:'fa-landmark', color:'#1B5E3F', text:'PM-KISAN: 16th installment schedule announced', time:'8h ago' },
+    { icon:'fa-bookmark', color:'#40916C', text:'<b>Lakshmi Reddy</b> saved your trellising guide', time:'12h ago' },
+    { icon:'fa-chart-line', color:'#1565C0', text:'Mandi update: Tomato up 8% at Nashik APMC today', time:'1d ago' }
+  ];
+
+  var TIPS = [
+    { icon:'fa-droplet', color:'#1565C0', title:'Drip irrigation = up to 50% less water', body:'Run 30-minute cycles in the morning, not afternoon heat, to cut evaporation.' },
+    { icon:'fa-flask', color:'#8B6F47', title:'Test soil before you buy fertiliser', body:'One soil test can save you an entire season of wasted NPK. Cost: less than one bag.' },
+    { icon:'fa-bug', color:'#d97706', title:'Scout every 5 days, not 5 minutes', body:'Walk a V-path through the field and check 10 plants. Early pests are cheap pests.' },
+    { icon:'fa-wheat-awn', color:'#2D8659', title:'Companion planting pays', body:'Marigold around vegetables and basil near tomato reduce pest pressure naturally.' }
+  ];
+
+  var SEED_COMMENTS = {
+    p1: ['Rajesh K: What spacing did you use?', 'Ramesh Patil: 20x15 cm, light soil.'],
+    p5: ['Meera S: How often do you prune?', 'Lakshmi Reddy: Weekly, removing suckers only.'],
+    p11:['Kiran P: What biocontrol did you spray?', 'Dr. Meera Iyer: Trichoderma + Bacillus, at dusk.'],
+    p6: ['Naveen B: Ratio for jeevamrut?', 'Ganesh More: 10L cow urine, 10kg dung, 2kg jaggery, per 200L water.'],
+    s3: ['Anil R: So it is 20 days scouting, 20% sample, 20 plants?', 'Dr. Arvind Sharma: Exactly. And record every visit.'],
+    s6: ['Leela M: My goat did the same last week!', 'Sunita Devi: Fencing first, replant second!'],
+    s15:['Ram P: That cow knows its angles!', 'Krishna Murthy: She is the real content creator.']
+  };
+
+  var SHARE_OPTS = [
+    { icon:'fa-brands fa-whatsapp', color:'#25D366', label:'WhatsApp', id:'wa' },
+    { icon:'fa-brands fa-facebook-f', color:'#1877F2', label:'Facebook', id:'fb' },
+    { icon:'fa-brands fa-x-twitter', color:'#0F1419', label:'X', id:'x' },
+    { icon:'fa-solid fa-comment-dots', color:'#2D8659', label:'Community', id:'community' },
+    { icon:'fa-solid fa-envelope', color:'#8B6F47', label:'Email', id:'email' },
+    { icon:'fa-solid fa-copy', color:'#44524a', label:'Copy text', id:'copy' }
+  ];
+
+  /* ==================== STATE ==================== */
+  var liked = readJSON(LS_LIKES, []);
+  var saved = readJSON(LS_SAVED, []);
+  var followed = readJSON(LS_FOLLOW, []);
+  var comments = Object.assign({}, SEED_COMMENTS, readJSON(LS_COMMENTS, {}));
+  var myPosts = readJSON(LS_POSTS, []);
+  var myProfile = readJSON(LS_MYPROFILE, {});
+  var notifReadAt = readJSON(LS_NOTIF_READ, 0);
+  var recentSearches = readJSON(LS_RECENT, []);
+
+  var currentView = 'home';
+  var activeDetailId = null;
+  var activeShareId = null;
+  var activeFarmerId = null;
+  var compKind = 'photo';
+  var selectedFile = null;
+  var selectedFileData = null;
+  var taggedPeople = [];
+  var shortsList = [];
+  var spIndex = 0;
+  var spTimer = null;
+  var spScrollDebounce = null;
+  var spProgress = 0;
+  var spPaused = false;
+  var spMuted = false;
+  var searchActive = false;
+
+  /* ==================== HELPERS ==================== */
+  function readJSON(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null') || fallback; } catch (e) { return fallback; }
+  }
+  function writeJSON(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+  }
+  function esc(s) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(s == null ? '' : String(s)));
+    return div.innerHTML;
+  }
+  function farmer(id) {
+    if (id === 'me') {
+      var d = selfData();
+      return { id:'me', name:d.name, farmerId:d.farmerId, location:d.location, crops:d.crops, type:d.farmingType, bio:d.bio, avatar:0, followers:1280, following:128, verified:false, expert:false, _avatarUrl:d.avatarUrl };
+    }
+    for (var i = 0; i < FARMERS.length; i++) if (FARMERS[i].id === id) return FARMERS[i];
+    return FARMERS[0];
+  }
+  function postById(id) {
+    for (var i = 0; i < POSTS.length; i++) if (POSTS[i].id === id) return POSTS[i];
+    for (var j = 0; j < myPosts.length; j++) if (myPosts[j].id === id) return myPosts[j];
+    return null;
+  }
+  function shortById(id) {
+    for (var i = 0; i < SHORTS.length; i++) if (SHORTS[i].id === id) return SHORTS[i];
+    return null;
+  }
+  function anyItemById(id) { return postById(id) || shortById(id); }
+  function avatarSrc(f, size) {
+    if (f._avatarUrl) return f._avatarUrl;
+    var idx = f.avatar % AVATAR_IDS.length;
+    return img(AVATAR_IDS[idx], size || 200);
+  }
+  function isLiked(id) { return liked.indexOf(id) !== -1; }
+  function isSaved(id) { return saved.indexOf(id) !== -1; }
+  function isFollowed(fid) { return followed.indexOf(fid) !== -1; }
+  function toggleIn(arr, val) {
+    var i = arr.indexOf(val);
+    if (i === -1) arr.push(val); else arr.splice(i, 1);
+    return i === -1;
+  }
+  function fmtNum(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return String(n);
+  }
+  function currentUser() {
+    try {
+      if (window.UserStore && UserStore.getCurrentUser) {
+        var u = UserStore.getCurrentUser();
+        if (u) return u;
+      }
+    } catch (e) {}
+    return null;
+  }
+  function userCrops() {
+    var u = currentUser();
+    if (u && u.preferred_crops) return u.preferred_crops;
+    return [];
+  }
+  function personalScore(item) {
+    var crops = userCrops();
+    if (!crops || !crops.length) return 0;
+    var c = String(item.crop || '').toLowerCase();
+    for (var i = 0; i < crops.length; i++) {
+      var pc = String(crops[i]).toLowerCase();
+      if (c && (c.indexOf(pc) !== -1 || pc.indexOf(c) !== -1)) return 3;
+    }
+    return 0;
+  }
+  function renderCaption(text) {
+    var safe = esc(text);
+    return safe.replace(/#([\w\u0900-\u097F]+)/g, '<span class="fb-hashtag" data-tag="#$1">#$1</span>');
+  }
+  function bindHashTags(container) {
+    container.querySelectorAll('.fb-hashtag').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openSearch(el.getAttribute('data-tag'));
+      });
+    });
+  }
+  function baseUrl() {
+    if (window._API_BASE_URL) return window._API_BASE_URL;
+    var meta = document.querySelector('meta[name="api-base-url"]');
+    if (meta && meta.content) return meta.content;
+    if (!/^file:/.test(window.location.protocol)) return window.location.origin + '/api/v1';
+    return 'http://localhost:8000/api/v1';
+  }
+  function isAuthed() {
+    try { return !!localStorage.getItem('fa-auth-token'); } catch (e) { return false; }
+  }
+  function hasApi() {
+    return !!(window.API && window.API.FarmBuzz && isAuthed());
+  }
+  function shortImg(s, w) {
+    var pid = PHOTOS[s.img] || PHOTOS.p01;
+    return img(pid, w || 420, w ? Math.round(w * 16 / 9) : 746);
+  }
+  function postImg(p, w) {
+    var pid = PHOTOS[p.img] || PHOTOS.p01;
+    return img(pid, w || 900);
+  }
+
+  /* ==================== VIEW SWITCHING ==================== */
+  var VIEWS = ['home', 'shorts', 'trends', 'post', 'self'];
+
+  function switchView(name, opts) {
+    opts = opts || {};
+    if (VIEWS.indexOf(name) === -1) name = 'home';
+    currentView = name;
+    document.querySelectorAll('.fb-topnav button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-view') === name);
+    });
+    VIEWS.forEach(function (v) {
+      var el = document.getElementById('fbView' + v.charAt(0).toUpperCase() + v.slice(1));
+      el.classList.toggle('active', v === name);
+    });
+    document.querySelector('.page-container').scrollTop = 0;
+    window.scrollTo(0, 0);
+    if (name === 'home') {
+      if (searchActive) {
+        performSearch(document.getElementById('fbSearchInput').value.trim());
+      } else {
+        renderHome();
+      }
+    }
+    if (name === 'shorts') renderShorts(opts.category);
+    if (name === 'trends') renderTrends(opts.filter || 'all');
+    if (name === 'post') initComposer();
+    if (name === 'self') renderSelf('posts');
+    updateHash();
+  }
+
+  function updateHash() {
+    try { history.replaceState(null, '', '#fb-' + currentView); } catch (e) {}
+  }
+
+  function readHash() {
+    var h = window.location.hash || '';
+    var m = h.match(/^#fb-(home|shorts|trends|post|self)/);
+    return m ? m[1] : null;
+  }
+
+  function initViewFromHash() {
+    var v = readHash();
+    if (v) switchView(v);
+  }
+
+  /* ==================== HOME ==================== */
+  function renderHome() {
+    document.getElementById('fbHomePosts').innerHTML =
+      '<div class="fb-skeleton fb-skel-card"></div><div class="fb-skeleton fb-skel-card"></div>';
+    renderForYou();
+    renderFarmersRow();
+    renderShortsStrip();
+    renderTips();
+
+    var items = POSTS.concat(myPosts.map(function (p) {
+      p._mine = true; return p;
+    }));
+    items.sort(function (a, b) {
+      return (personalScore(b) - personalScore(a)) ||
+        (likedLvl(b) - likedLvl(a)) || (a.time.length - b.time.length);
+    });
+
+    setTimeout(function () {
+      document.getElementById('fbHomePosts').innerHTML =
+        items.map(function (p) { return postCardHtml(p); }).join('');
+      bindPostCardEvents(document.getElementById('fbHomePosts'));
+    }, 250);
+  }
+
+  function likedLvl(item) {
+    return item.likes + (isLiked(item.id) ? 1 : 0);
+  }
+
+  function renderForYou() {
+    var crops = userCrops();
+    var el = document.getElementById('fbForYou');
+    var farmName = '';
+    try { farmName = localStorage.getItem('fa-selected-farm') || ''; } catch (e) {}
+    var label = 'For You';
+    var sub = 'Content matched to your farming profile';
+    if (crops && crops.length) {
+      label = 'For You \u2013 ' + crops.slice(0, 2).join(' & ');
+      sub = 'Personalised feed based on your preferred crops';
+    }
+    el.innerHTML = '<div class="fb-tip-card" style="margin-bottom:14px;border-color:var(--premium-green,#1B5E3F);">' +
+      '<div class="fb-tip-icon" style="background:linear-gradient(135deg,#1B5E3F,#52B788);"><i class="fas fa-hand-point-up"></i></div>' +
+      '<div class="fb-tip-body"><h5>' + esc(label) + '</h5><p>' + esc(sub) + (farmName ? ' \u00b7 Farm: ' + esc(farmName) : '') + '</p></div></div>';
+  }
+
+  function renderFarmersRow() {
+    var html = '';
+    FARMERS.slice(0, 9).forEach(function (f) {
+      html += '<div class="fb-farmer-pill" data-farmer="' + f.id + '" tabindex="0" role="button" aria-label="View ' + esc(f.name) + '">' +
+        '<div class="fb-fp-avatar-wrap">' +
+          '<img class="fb-fp-avatar" src="' + avatarSrc(f, 140) + '" alt="' + esc(f.name) + '" loading="lazy">' +
+        '</div><span>' + esc(f.name.split(' ')[0]) + '</span></div>';
+    });
+    var row = document.getElementById('fbFarmersRow');
+    row.innerHTML = html;
+    row.querySelectorAll('.fb-farmer-pill').forEach(function (el) {
+      el.addEventListener('click', function () { openFarmer(el.getAttribute('data-farmer')); });
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFarmer(el.getAttribute('data-farmer')); }
+      });
+    });
+  }
+
+  function renderShortsStrip() {
+    var html = '';
+    SHORTS.slice(0, 7).forEach(function (s) {
+      html += '<div class="fb-strip-card" data-id="' + s.id + '" role="button" tabindex="0" aria-label="Play short: ' + esc(s.title) + '">' +
+        '<img src="' + shortImg(s, 300) + '" alt="' + esc(s.title) + '" loading="lazy">' +
+        '<span class="fb-strip-cat">' + esc(s.cat) + '</span>' +
+        '<span class="fb-strip-play"><i class="fas fa-play"></i></span>' +
+        '<span class="fb-strip-views"><i class="fas fa-eye"></i> ' + s.views + '</span>' +
+        '</div>';
+    });
+    var strip = document.getElementById('fbShortsStrip');
+    strip.innerHTML = html;
+    strip.querySelectorAll('.fb-strip-card').forEach(function (el) {
+      el.addEventListener('click', function () { openShortsPlayer(el.getAttribute('data-id')); });
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openShortsPlayer(el.getAttribute('data-id')); }
+      });
+    });
+  }
+
+  function renderTips() {
+    var html = '';
+    TIPS.forEach(function (t) {
+      html += '<div class="fb-tip-card" data-gotip="' + esc(t.title) + '" role="button" tabindex="0">' +
+        '<div class="fb-tip-icon" style="background:' + t.color + ';"><i class="fas ' + t.icon + '"></i></div>' +
+        '<div class="fb-tip-body"><h5>' + esc(t.title) + '</h5><p>' + esc(t.body) + '</p></div></div>';
+    });
+    var el = document.getElementById('fbTipList');
+    el.innerHTML = html;
+    el.querySelectorAll('.fb-tip-card').forEach(function (card) {
+      card.addEventListener('click', function () { openShare(card.getAttribute('data-gotip')); });
+      card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openShare(card.getAttribute('data-gotip')); }
+      });
+    });
+  }
+
+  function postCardHtml(p) {
+    var f = farmer(p.author);
+    var likeCount = p.likes + (isLiked(p.id) ? 1 : 0);
+    var html =
+      '<article class="fb-post-card" data-id="' + p.id + '">' +
+      '<div class="fb-post-head">' +
+        '<img class="fb-avatar" src="' + avatarSrc(f, 160) + '" alt="' + esc(f.name) + '" data-farmer="' + f.id + '" loading="lazy">' +
+        '<div class="fb-post-head-info" data-farmer="' + f.id + '">' +
+          '<b>' + esc(f.name) + (f.verified ? ' <i class="fas fa-circle-check" title="Verified"></i>' : '') + '</b>' +
+          '<small>' + esc(f.location) + ' \u00b7 ' + esc(p.time) + '</small>' +
+        '</div>' +
+        (f.expert ? '<span class="fb-follow-btn" style="background:var(--premium-green,#1B5E3F);color:#fff;border-color:var(--premium-green);">Expert</span>' : followBtn(f.id)) +
+        '<button class="fb-more-btn" data-share="' + p.id + '" aria-label="Share"><i class="fas fa-ellipsis"></i></button>' +
+      '</div>' +
+      '<div class="fb-post-media' + (p.tall ? ' fb-tall' : '') + '">' +
+        '<img src="' + (p.mediaUrl || postImg(p)) + '" alt="" loading="lazy">' +
+        '<span class="fb-cat-chip">' + esc(catLabel(p.cat)) + '</span>' +
+      '</div>' +
+      '<div class="fb-post-actions">' +
+        actBtn('heart', p.id, likeCount) + actBtn('comment', p.id, p.comments) +
+        actBtn('share', p.id, p.shares) + actBtn('bookmark', p.id, null) +
+      '</div>' +
+      '<div class="fb-post-body">' +
+        '<div class="fb-post-likes">' + fmtNum(likeCount) + ' likes</div>' +
+        '<p class="fb-post-caption"><b>' + esc(f.name) + '</b> ' + renderCaption(p.caption) + '</p>' +
+        (p.location ? '<div class="fb-post-loc"><i class="fas fa-location-dot"></i>' + esc(p.location) + '</div>' : '') +
+        '<div class="fb-post-comments" data-comments="' + p.id + '">View all ' + p.comments + ' comments</div>' +
+      '</div></article>';
+    return html;
+  }
+
+  function catLabel(c) {
+    var map = {
+      crop_farming:'CROP', horticulture:'HORTICULTURE', organic_farming:'ORGANIC',
+      irrigation:'IRRIGATION', pest_control:'PEST CONTROL', soil_health:'SOIL HEALTH',
+      livestock:'LIVESTOCK', machinery:'MACHINERY', market:'MARKET', success_story:'SUCCESS',
+      farming:'FARMING', crop:'CROP', machinery:'MACHINERY', market:'MARKET',
+      'success story':'SUCCESS', question:'QUESTION', tip:'TIP', community:'COMMUNITY', other:'OTHER'
+    };
+    return map[String(c).toLowerCase()] || 'FARMING';
+  }
+
+  function followBtn(fid) {
+    if (isFollowed(fid)) return '<button class="fb-follow-btn following" data-follow="' + fid + '">Following</button>';
+    return '<button class="fb-follow-btn" data-follow="' + fid + '">Follow</button>';
+  }
+
+  function actBtn(kind, id, count) {
+    var cls = '';
+    var icon = 'fa-regular';
+    var label = '';
+    if (kind === 'heart') { icon = isLiked(id) ? 'fa-solid fa-heart liked' : 'fa-regular fa-heart'; cls = isLiked(id) ? 'liked' : ''; }
+    if (kind === 'comment') { icon = 'fa-regular fa-comment'; }
+    if (kind === 'share') { icon = 'fa-solid fa-paper-plane'; }
+    if (kind === 'bookmark') { icon = isSaved(id) ? 'fa-solid fa-bookmark saved' : 'fa-regular fa-bookmark'; cls = isSaved(id) ? 'saved' : ''; }
+    var c = count == null ? '' : '<span>' + fmtNum(count) + '</span>';
+    return '<button class="fb-act ' + cls + '" data-act="' + kind + '" data-id="' + id + '" aria-label="' + kind + '"><i class="' + icon + '"></i>' + c + '</button>';
+  }
+
+  function bindPostCardEvents(container) {
+    container.querySelectorAll('[data-act]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        handleAction(btn.getAttribute('data-act'), btn.getAttribute('data-id'), btn);
+      });
+    });
+    container.querySelectorAll('[data-comments]').forEach(function (el) {
+      el.addEventListener('click', function () { openDetail(el.getAttribute('data-comments')); });
+    });
+    container.querySelectorAll('[data-farmer]').forEach(function (el) {
+      el.addEventListener('click', function () { openFarmer(el.getAttribute('data-farmer')); });
+    });
+    container.querySelectorAll('[data-share]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); openShareById(el.getAttribute('data-share')); });
+    });
+    container.querySelectorAll('[data-follow]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleFollow(btn.getAttribute('data-follow'), btn);
+      });
+    });
+    container.querySelectorAll('.fb-post-media').forEach(function (media) {
+      media.addEventListener('click', function () {
+        openDetail(media.closest('.fb-post-card').getAttribute('data-id'));
+      });
+    });
+    bindHashTags(container);
+  }
+
+  function handleAction(kind, id, btn) {
+    if (kind === 'heart') {
+      var nowLiked = toggleIn(liked, id);
+      writeJSON(LS_LIKES, liked);
+      if (btn) {
+        btn.classList.toggle('liked', nowLiked);
+        var i = btn.querySelector('i');
+        i.className = nowLiked ? 'fa-solid fa-heart liked' : 'fa-regular fa-heart';
+        if (nowLiked) { i.classList.add('liked'); btn.classList.add('liked'); }
+        updateLikeCounts(id);
+      }
+      toast(nowLiked ? 'Liked this post' : 'Like removed', nowLiked ? 'success' : 'info');
+      if (hasApi()) window.API.FarmBuzz.like(id).catch(function () {});
+      return;
+    }
+    if (kind === 'bookmark') {
+      var nowSaved = toggleIn(saved, id);
+      writeJSON(LS_SAVED, saved);
+      if (btn) {
+        btn.classList.toggle('saved', nowSaved);
+        btn.querySelector('i').className = nowSaved ? 'fa-solid fa-bookmark saved' : 'fa-regular fa-bookmark';
+      }
+      toast(nowSaved ? 'Saved to your collection' : 'Removed from saved', nowSaved ? 'success' : 'info');
+      if (hasApi()) window.API.FarmBuzz.save(id).catch(function () {});
+      return;
+    }
+    if (kind === 'comment') { openDetail(id); return; }
+    if (kind === 'share') { openShareById(id); return; }
+  }
+
+  function updateLikeCounts(id) {
+    var item = anyItemById(id);
+    if (!item) return;
+    var n = item.likes + (isLiked(id) ? 1 : 0);
+    document.querySelectorAll('.fb-post-likes').forEach(function (el) {
+      var card = el.closest('[data-id="' + id + '"]');
+      if (card) el.textContent = fmtNum(n) + ' likes';
+    });
+  }
+
+  function toggleFollow(fid, btn) {
+    var f = farmer(fid);
+    var now = toggleIn(followed, fid);
+    writeJSON(LS_FOLLOW, followed);
+    if (btn) {
+      btn.classList.toggle('following', now);
+      btn.textContent = now ? 'Following' : 'Follow';
+    }
+    toast(now ? 'Following ' + f.name : 'Unfollowed ' + f.name, now ? 'success' : 'info');
+    if (hasApi()) window.API.FarmBuzz.follow(fid).catch(function () {});
+  }
+
+  /* ==================== SHORTS ==================== */
+  var shortsFilter = 'all';
+
+  function renderShorts(category) {
+    if (category) shortsFilter = category;
+    var chips = ['all'].concat(SHORT_CATS);
+    var chipHtml = '';
+    chips.forEach(function (c) {
+      chipHtml += '<button class="fb-chip' + (c === shortsFilter ? ' active' : '') + '" data-cat="' + esc(c) + '">' + esc(c === 'all' ? 'All' : c) + '</button>';
+    });
+    var chipEl = document.getElementById('fbShortChips');
+    chipEl.innerHTML = chipHtml;
+    chipEl.querySelectorAll('.fb-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () { renderShorts(chip.getAttribute('data-cat')); });
+    });
+
+    var list = SHORTS.filter(function (s) {
+      return shortsFilter === 'all' || s.cat === shortsFilter;
+    });
+    var grid = document.getElementById('fbShortsGrid');
+    if (!list.length) {
+      grid.innerHTML = '<div class="fb-empty"><i class="fas fa-clapperboard"></i><p>No shorts in this category yet.</p></div>';
+      return;
+    }
+    grid.innerHTML = list.map(function (s) {
+      return '<div class="fb-short-card" data-id="' + s.id + '" role="button" tabindex="0" aria-label="Play short: ' + esc(s.title) + '">' +
+        '<img src="' + shortImg(s, 500) + '" alt="' + esc(s.title) + '" loading="lazy">' +
+        '<span class="fb-short-cat">' + esc(s.cat) + '</span>' +
+        '<span class="fb-short-likes"><i class="fa-solid fa-heart"></i> ' + fmtNum(s.likes + (isLiked(s.id) ? 1 : 0)) + '</span>' +
+        '<div class="fb-short-info"><b>' + esc(s.title) + '</b>' +
+          '<small><i class="fas fa-eye"></i> ' + s.views + ' \u00b7 ' + esc(farmer(s.author).name) + '</small></div>' +
+        '</div>';
+    }).join('');
+    grid.querySelectorAll('.fb-short-card').forEach(function (card) {
+      card.addEventListener('click', function () { openShortsPlayer(card.getAttribute('data-id')); });
+      card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openShortsPlayer(card.getAttribute('data-id')); }
+      });
+    });
+  }
+
+  /* ---- Fullscreen player ---- */
+  function openShortsPlayer(id) {
+    var list = SHORTS.filter(function (s) {
+      return shortsFilter === 'all' || s.cat === shortsFilter;
+    });
+    if (!list.length) list = SHORTS;
+    shortsList = list;
+    spIndex = 0;
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) { spIndex = i; break; }
+    document.body.style.overflow = 'hidden';
+    var player = document.getElementById('fbShortsPlayer');
+    player.classList.add('open');
+    buildSpSlides();
+    document.getElementById('fbSpStage').scrollTop = 0;
+    showSpSlide(spIndex);
+    startSpProgress();
+  }
+
+  function buildSpSlides() {
+    var stage = document.getElementById('fbSpStage');
+    stage.innerHTML = '';
+    shortsList.forEach(function (s) {
+      var f = farmer(s.author);
+      var slide = document.createElement('div');
+      slide.className = 'fb-sp-slide';
+      slide.setAttribute('data-id', s.id);
+      var likes = s.likes + (isLiked(s.id) ? 1 : 0);
+      slide.innerHTML =
+        '<div class="fb-sp-loading"><i class="fas fa-circle-notch"></i></div>' +
+        '<img src="' + shortImg(s, 540) + '" alt="' + esc(s.title) + '" loading="lazy">' +
+        '<div class="fb-sp-grad-top"></div>' +
+        '<div class="fb-sp-vignette"></div>' +
+        '<div class="fb-sp-info">' +
+          '<div class="fb-sp-author">' +
+            '<img src="' + avatarSrc(f, 120) + '" alt="' + esc(f.name) + '" data-farmer="' + f.id + '">' +
+            '<b>' + esc(f.name) + '</b>' +
+            (f.verified ? '<i class="fas fa-circle-check"></i>' : '') +
+            '<button class="fb-sp-follow' + (isFollowed(f.id) ? ' following' : '') + '" data-follow="' + f.id + '">' + (isFollowed(f.id) ? 'Following' : 'Follow') + '</button>' +
+          '</div>' +
+          '<div class="fb-sp-title">' + esc(s.title) + '</div>' +
+          '<div class="fb-sp-meta">' +
+            '<span><i class="fas fa-eye"></i> ' + s.views + '</span>' +
+            '<span><i class="fas fa-music"></i> ' + esc(s.music) + '</span>' +
+            '<span class="fb-hashtag" data-tag="#' + esc(s.cat.replace(/\s+/g, '')) + '">#' + esc(s.cat.replace(/\s+/g, '')) + '</span>' +
+          '</div>' +
+          '<div class="fb-sp-desc">' + esc(shortDesc(s)) + '</div>' +
+        '</div>' +
+        '<div class="fb-sp-right">' +
+          '<div class="fb-sp-rail" data-rail="avatar">' +
+            '<div class="fb-sp-avatar-ring"><img src="' + avatarSrc(f, 120) + '" alt="" data-farmer="' + f.id + '"></div>' +
+            '<b>' + esc(f.name.split(' ')[0]) + '</b>' +
+          '</div>' +
+          '<div class="fb-sp-rail" data-rail="like">' +
+            '<button class="fb-sp-rail-btn' + (isLiked(s.id) ? ' liked' : '') + '" data-act="heart"><i class="fa-solid fa-heart"></i></button>' +
+            '<b>' + fmtNum(likes) + '</b>' +
+          '</div>' +
+          '<div class="fb-sp-rail" data-rail="comment">' +
+            '<button class="fb-sp-rail-btn" data-act="comment"><i class="fa-solid fa-comment"></i></button>' +
+            '<b>' + fmtNum(s.comments) + '</b>' +
+          '</div>' +
+          '<div class="fb-sp-rail" data-rail="save">' +
+            '<button class="fb-sp-rail-btn' + (isSaved(s.id) ? ' saved' : '') + '" data-act="bookmark"><i class="fa-solid fa-bookmark"></i></button>' +
+            '<b>Save</b>' +
+          '</div>' +
+          '<div class="fb-sp-rail" data-rail="share">' +
+            '<button class="fb-sp-rail-btn" data-act="share"><i class="fa-solid fa-paper-plane"></i></button>' +
+            '<b>Share</b>' +
+          '</div>' +
+        '</div>';
+      stage.appendChild(slide);
+    });
+  }
+
+  function shortDesc(s) {
+    var map = {
+      'Farmer Techniques': 'A practical technique, step by step, for your own farm.',
+      'Farmer Tricks': 'A quick, tested trick you can use on your farm today.',
+      'Farming Scenes': 'Real moments from Indian farmlands.',
+      'Farmer Life': 'Days in the life of farmers across India.',
+      'Farming Comedy': 'Because farming life needs a laugh too.',
+      'Quick Knowledge': 'One idea, taught in under 60 seconds.',
+      'Educational': 'Learn something useful about farming in 30 seconds.',
+      'Expert Shorts': 'Verified expert guidance. Watch, learn, apply.'
+    };
+    return map[s.cat] || '';
+  }
+
+  function showSpSlide(i) {
+    var stage = document.getElementById('fbSpStage');
+    var slides = stage.querySelectorAll('.fb-sp-slide');
+    if (!slides.length) return;
+    spIndex = Math.max(0, Math.min(i, slides.length - 1));
+    slides.forEach(function (sl, idx) { sl.classList.toggle('active', idx === spIndex); });
+    stage.scrollTo({ top: spIndex * stage.clientHeight, behavior: 'smooth' });
+    updateSpCounter();
+    bindSpSlideEvents(slides[spIndex]);
+    showSpLoading(slides[spIndex]);
+  }
+
+  function updateSpCounter() {
+    var el = document.getElementById('fbSpCounter');
+    if (el) el.textContent = (spIndex + 1) + '/' + shortsList.length;
+  }
+
+  function showSpLoading(slide) {
+    var img = slide.querySelector('img');
+    if (!img) return;
+    if (img.complete && img.naturalWidth > 0) return;
+    slide.classList.add('loading');
+    img.addEventListener('load', function onLoad() {
+      slide.classList.remove('loading');
+      img.removeEventListener('load', onLoad);
+    });
+    img.addEventListener('error', function onErr() {
+      slide.classList.remove('loading');
+      img.removeEventListener('error', onErr);
+    });
+  }
+
+  function spScrollHandler() {
+    var stage = document.getElementById('fbSpStage');
+    var slides = stage.querySelectorAll('.fb-sp-slide');
+    if (!slides.length || stage.clientHeight === 0) return;
+    var idx = Math.round(stage.scrollTop / stage.clientHeight);
+    idx = Math.max(0, Math.min(idx, slides.length - 1));
+    if (idx !== spIndex) {
+      spIndex = idx;
+      slides.forEach(function (sl, i) { sl.classList.toggle('active', i === spIndex); });
+      updateSpCounter();
+      bindSpSlideEvents(slides[spIndex]);
+      showSpLoading(slides[spIndex]);
+      startSpProgress();
+    }
+  }
+
+  function bindSpSlideEvents(slide) {
+    slide.querySelectorAll('[data-farmer]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openFarmer(el.getAttribute('data-farmer'));
+      });
+    });
+    slide.querySelectorAll('[data-follow]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleFollow(btn.getAttribute('data-follow'), btn);
+      });
+    });
+    slide.querySelectorAll('.fb-hashtag').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); openSearch(el.getAttribute('data-tag')); });
+    });
+    slide.querySelectorAll('[data-act]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        spRailAction(btn.getAttribute('data-act'), slide.getAttribute('data-id'), btn);
+      });
+    });
+    slide.querySelectorAll('.fb-sp-info, .fb-sp-vignette, .fb-sp-grad-top').forEach(function (el) {
+      el.addEventListener('click', toggleSpPause);
+    });
+  }
+
+  function spRailAction(kind, id, btn) {
+    var item = shortById(id);
+    if (kind === 'heart') {
+      var now = toggleIn(liked, id);
+      writeJSON(LS_LIKES, liked);
+      btn.classList.toggle('liked', now);
+      var rail = btn.closest('.fb-sp-rail');
+      var b = rail.querySelector('b');
+      if (b) b.textContent = fmtNum(item.likes + (now ? 1 : 0));
+      toast(now ? 'Liked this short' : 'Like removed', now ? 'success' : 'info');
+      if (hasApi()) window.API.FarmBuzz.like(id).catch(function () {});
+      return;
+    }
+    if (kind === 'bookmark') {
+      var savedNow = toggleIn(saved, id);
+      writeJSON(LS_SAVED, saved);
+      btn.classList.toggle('saved', savedNow);
+      toast(savedNow ? 'Saved to your collection' : 'Removed from saved', savedNow ? 'success' : 'info');
+      if (hasApi()) window.API.FarmBuzz.save(id).catch(function () {});
+      return;
+    }
+    if (kind === 'comment') { openSpComments(id); return; }
+    if (kind === 'share') { openShareById(id); return; }
+  }
+
+  function startSpProgress() {
+    if (spTimer) clearInterval(spTimer);
+    spProgress = 0;
+    spPaused = false;
+    document.getElementById('fbSpPaused').classList.remove('show');
+    spTimer = setInterval(function () {
+      if (spPaused) return;
+      spProgress += 0.75;
+      var fill = document.getElementById('fbSpProgressFill');
+      fill.style.width = Math.min(100, spProgress) + '%';
+      if (spProgress >= 100) {
+        spProgress = 0;
+        nextSp();
+      }
+    }, 100);
+  }
+
+  function toggleSpPause() {
+    spPaused = !spPaused;
+    var icon = document.getElementById('fbSpPaused');
+    icon.classList.toggle('show', spPaused);
+    if (spPaused) { icon.className = 'fas fa-play fb-sp-paused show'; }
+    else { icon.className = 'fas fa-play fb-sp-paused'; setTimeout(function () { icon.classList.remove('show'); }, 400); }
+  }
+
+  function nextSp() {
+    if (spIndex >= shortsList.length - 1) { stopSp(); return; }
+    showSpSlide(spIndex + 1);
+    startSpProgress();
+  }
+  function prevSp() {
+    if (spIndex <= 0) return;
+    showSpSlide(spIndex - 1);
+    startSpProgress();
+  }
+  function stopSp() {
+    if (spTimer) clearInterval(spTimer);
+    spTimer = null;
+    document.getElementById('fbSpProgressFill').style.width = '0%';
+    var stage = document.getElementById('fbSpStage');
+    if (stage) stage.scrollTop = 0;
+    document.getElementById('fbSpCommentsPanel').style.display = 'none';
+    document.getElementById('fbShortsPlayer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  /* ---- Shorts comments ---- */
+  function openSpComments(id) {
+    var title = document.getElementById('fbSpCommentTitle');
+    title.textContent = 'Comments (' + (comments[id] ? comments[id].length : 0) + ')';
+    renderSpComments(id);
+    var panel = document.getElementById('fbSpCommentsPanel');
+    panel.style.display = 'block';
+    document.getElementById('fbSpCommentInput').value = '';
+  }
+
+  function renderSpComments(id) {
+    var list = comments[id] || [];
+    var wrap = document.getElementById('fbSpCommentsList');
+    if (!list.length) {
+      wrap.innerHTML = '<div class="fb-empty" style="padding:26px 10px;"><i class="far fa-comment"></i><p>No comments yet. Start the conversation!</p></div>';
+      return;
+    }
+    wrap.innerHTML = list.map(function (c) {
+      var author = c.indexOf(':') !== -1 ? c.split(':')[0] : 'Farmer';
+      var text = c.indexOf(':') !== -1 ? c.slice(c.indexOf(':') + 1) : c;
+      var f = FARMERS[c.hash % FARMERS.length] || FARMERS[0];
+      return '<div class="fb-sp-comment"><img src="' + avatarSrc(f, 90) + '" alt=""><div class="fb-c-body">' +
+        '<b>' + esc(author) + '</b><span>' + esc(text) + '</span><small>Just now</small></div></div>';
+    }).join('');
+  }
+
+  function addSpComment() {
+    var s = activeSpId();
+    if (!s) return;
+    var input = document.getElementById('fbSpCommentInput');
+    var text = input.value.trim();
+    if (!text) return;
+    addCommentTo(s, text);
+    input.value = '';
+    openSpComments(s);
+    toast('Comment posted!', 'success');
+    if (hasApi()) window.API.FarmBuzz.comment(s, { content: text }).catch(function () {});
+  }
+
+  function activeSpId() {
+    var active = document.querySelector('#fbSpStage .fb-sp-slide.active');
+    return active ? active.getAttribute('data-id') : null;
+  }
+
+  /* ==================== TRENDS ==================== */
+  var trendFilter = 'all';
+
+  function renderTrends(filter) {
+    if (filter) trendFilter = filter;
+    var chips = ['all', 'posts', 'shorts', 'techniques', 'discussion', 'farmers'];
+    var labels = { all:'All', posts:'Posts', shorts:'Shorts', techniques:'Techniques', discussion:'Discussions', farmers:'Farmers' };
+    var catSets = { all:['posts','shorts','discussion','agriculture','horticulture','livestock','market','tips','creators'], posts:['posts'], shorts:['shorts'], techniques:['agriculture','horticulture','livestock','market'], discussion:['discussion'], farmers:['creators'] };
+    var chipHtml = '';
+    chips.forEach(function (c) {
+      chipHtml += '<button class="fb-chip' + (c === trendFilter ? ' active' : '') + '" data-tf="' + c + '">' + labels[c] + '</button>';
+    });
+    var chipEl = document.getElementById('fbTrendChips');
+    chipEl.innerHTML = chipHtml;
+    chipEl.querySelectorAll('.fb-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () { renderTrends(chip.getAttribute('data-tf')); });
+    });
+
+    var activeCats = catSets[trendFilter] || catSets.all;
+    var list = TRENDS.filter(function (t) {
+      return activeCats.indexOf(t.cat) !== -1;
+    });
+    var el = document.getElementById('fbTrendList');
+    if (!list.length) {
+      el.innerHTML = '<div class="fb-empty"><i class="fas fa-fire-flame-curved"></i><p>No trends in this category yet.</p></div>';
+      return;
+    }
+    el.innerHTML = list.map(function (t, i) {
+      return '<div class="fb-trend-row" data-ref="' + t.ref + '" data-topic="' + esc(t.topic) + '" role="button" tabindex="0">' +
+        '<div class="fb-trend-rank" style="background:' + t.color + ';"><i class="fas ' + t.icon + '"></i></div>' +
+        '<div class="fb-trend-body">' +
+          '<div class="fb-trend-topic">' + esc(t.topic) + '</div>' +
+          '<div class="fb-trend-desc">' + esc(t.desc) + '</div>' +
+          '<div class="fb-trend-meta">' +
+            '<span class="fb-trend-score"><i class="fas fa-fire"></i> ' + fmtNum(t.score) + ' discussions</span>' +
+            '<span><i class="fas fa-tag"></i> ' + esc(t.cat) + '</span>' +
+          '</div>' +
+        '</div></div>';
+    }).join('');
+    el.querySelectorAll('.fb-trend-row').forEach(function (row) {
+      row.addEventListener('click', function () {
+        openTrend(row.getAttribute('data-ref'), row.getAttribute('data-topic'));
+      });
+      row.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTrend(row.getAttribute('data-ref'), row.getAttribute('data-topic')); }
+      });
+    });
+  }
+
+  function openTrend(ref, topic) {
+    if (ref === 'shorts') { switchView('shorts'); return; }
+    if (ref === 'creators') {
+      var f = FARMERS[(TRENDS.length + topic.length) % FARMERS.length];
+      openFarmer(f.id);
+      return;
+    }
+    if (ref === 'tips') { switchView('home'); return; }
+    openSearch(topic);
+  }
+
+  /* ==================== POST COMPOSER ==================== */
+  function initComposer() {
+    var u = currentUser() || {};
+    var name = u.full_name || u.fullName || localStorage.getItem('user-name') || 'You';
+    document.getElementById('fbCompName').textContent = name;
+    var av = userAvatar();
+    document.getElementById('fbCompAvatar').src = av;
+
+    var wrap = document.getElementById('fbTagPeople');
+    wrap.innerHTML = '';
+    FARMERS.slice(0, 6).forEach(function (f) {
+      var on = taggedPeople.indexOf(f.id) !== -1;
+      wrap.innerHTML += '<button type="button" class="fb-tag-chip' + (on ? ' on' : '') + '" data-tagp="' + f.id + '">' +
+        '<img src="' + avatarSrc(f, 60) + '" alt="">' + esc(f.name.split(' ')[0]) + '</button>';
+    });
+    wrap.querySelectorAll('.fb-tag-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var fid = chip.getAttribute('data-tagp');
+        var i = taggedPeople.indexOf(fid);
+        if (i === -1) taggedPeople.push(fid); else taggedPeople.splice(i, 1);
+        chip.classList.toggle('on', taggedPeople.indexOf(fid) !== -1);
+      });
+    });
+  }
+
+  function userAvatar() {
+    try {
+      var savedAv = localStorage.getItem(LS_PROFILE_IMG);
+      if (savedAv) return savedAv;
+      var u = currentUser();
+      if (window.UserStore && UserStore.avatarFor) return UserStore.avatarFor(u || {});
+    } catch (e) {}
+    return avatarSrc(FARMERS[0], 120);
+  }
+
+  function setMediaPicker(kind) {
+    compKind = kind;
+    document.querySelectorAll('#fbMediaPicker button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-kind') === kind);
+    });
+    var preview = document.getElementById('fbMediaPreview');
+    if (kind === 'text') { selectedFile = null; preview.style.display = 'none'; return; }
+    document.getElementById('fbFileInput').click();
+  }
+
+  function onFileChosen(file) {
+    if (!file) return;
+    selectedFile = file;
+    selectedFileData = null;
+    var isVideo = file.type.indexOf('video') === 0;
+    var preview = document.getElementById('fbMediaPreview');
+    var pimg = document.getElementById('fbPreviewImg');
+    var pvid = document.getElementById('fbPreviewVideo');
+    pimg.style.display = 'none';
+    pvid.style.display = 'none';
+    preview.style.display = 'block';
+    var url = URL.createObjectURL(file);
+    if (isVideo) {
+      pvid.src = url; pvid.style.display = 'block';
+      compKind = 'video';
+      document.querySelectorAll('#fbMediaPicker button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-kind') === 'video');
+      });
+    } else {
+      pimg.src = url; pimg.style.display = 'block';
+      compKind = 'photo';
+      document.querySelectorAll('#fbMediaPicker button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-kind') === 'photo');
+      });
+      var reader = new FileReader();
+      reader.onload = function () { selectedFileData = reader.result; };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function submitPost() {
+    var caption = document.getElementById('fbCaption').value.trim();
+    var location = document.getElementById('fbLocation').value.trim();
+    var crop = document.getElementById('fbCrop').value.trim();
+    var cat = document.getElementById('fbCategory').value;
+    var tagsInput = document.getElementById('fbTags').value.trim();
+    var visibility = document.getElementById('fbVisibility').value;
+
+    if (compKind !== 'text' && !selectedFile && !caption) {
+      toast('Add a photo/video or write a caption first', 'error');
+      return;
+    }
+    if (caption.length > 2000) {
+      toast('Caption is too long (max 2000 characters)', 'error');
+      return;
+    }
+    if (compKind !== 'text' && !selectedFile) {
+      toast('Please choose a photo or video', 'error');
+      return;
+    }
+
+    var tags = [];
+    tagsInput.split(/[, ]+/).forEach(function (t) {
+      t = t.trim().replace(/^#/, '');
+      if (t && tags.indexOf(t) === -1) tags.push(t);
+    });
+    caption.split(/[\s]+/).forEach(function (w) {
+      if (/^#\w+/.test(w)) {
+        var t = w.slice(1);
+        if (tags.indexOf(t) === -1) tags.push(t);
+      }
+    });
+    if (tags.length > 12) tags.length = 12;
+
+    var btn = document.getElementById('fbPostBtn');
+    btn.disabled = true;
+    btn.querySelector('span').textContent = 'Posting...';
+    btn.querySelector('i').className = 'fas fa-circle-notch';
+    document.getElementById('fbUploadProgress').style.display = 'block';
+
+    var progress = 0;
+    var timer = setInterval(function () {
+      progress += Math.random() * 22 + 8;
+      if (progress >= 100) progress = 100;
+      document.getElementById('fbUpFill').style.width = progress + '%';
+      document.getElementById('fbUpLabel').textContent = 'Uploading... ' + Math.round(progress) + '%';
+      if (progress >= 100) {
+        clearInterval(timer);
+        finishPost(caption, location, crop, cat, tags, visibility);
+      }
+    }, 160);
+  }
+
+  function finishPost(caption, location, crop, cat, tags, visibility) {
+    var u = currentUser() || {};
+    var id = 'm' + Date.now();
+    var newPost = {
+      id: id,
+      author: 'me',
+      img: 'p' + (1 + (myPosts.length % 27)),
+      caption: caption,
+      location: location,
+      crop: crop || 'General',
+      cat: cat || 'Farming',
+      time: 'now',
+      likes: 0,
+      comments: 0,
+      shares: 0,
+      views: '0',
+      tall: false,
+      mine: true,
+      tags: tags,
+      visibility: visibility
+    };
+    if (selectedFile) {
+      if (selectedFile.type.indexOf('video') === 0) {
+        try { newPost.videoUrl = URL.createObjectURL(selectedFile); newPost.mediaUrl = newPost.videoUrl; } catch (e) {}
+      } else if (selectedFileData) {
+        newPost.mediaUrl = selectedFileData;
+        newPost.img = null;
+      }
+    }
+    myPosts.unshift(newPost);
+    writeJSON(LS_POSTS, myPosts);
+    resetComposer();
+    toast('Posted to FarmBuzz!', 'success');
+    if (hasApi()) {
+      var payload = {
+        caption: caption,
+        content_type: compKind === 'text' ? 'post' : 'post',
+        location: location || null,
+        crop: crop || null,
+        category: cat || 'Farming',
+        visibility: visibility,
+        hashtags: tags
+      };
+      window.API.FarmBuzz.createPost(payload).catch(function () {});
+    }
+    switchView('home');
+    setTimeout(function () {
+      var el = document.querySelector('[data-id="' + id + '"]');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+  }
+
+  function resetComposer() {
+    document.getElementById('fbCaption').value = '';
+    document.getElementById('fbLocation').value = '';
+    document.getElementById('fbCrop').value = '';
+    document.getElementById('fbCategory').value = 'Farming';
+    document.getElementById('fbTags').value = '';
+    document.getElementById('fbVisibility').value = 'public';
+    document.getElementById('fbFileInput').value = '';
+    document.getElementById('fbMediaPreview').style.display = 'none';
+    document.getElementById('fbPreviewImg').style.display = 'none';
+    document.getElementById('fbPreviewVideo').style.display = 'none';
+    document.getElementById('fbUploadProgress').style.display = 'none';
+    document.getElementById('fbUpFill').style.width = '0%';
+    document.getElementById('fbPostHint').textContent = '';
+    selectedFile = null;
+    selectedFileData = null;
+    taggedPeople = [];
+    compKind = 'photo';
+    document.querySelectorAll('#fbMediaPicker button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-kind') === 'photo');
+    });
+    var btn = document.getElementById('fbPostBtn');
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'Post to FarmBuzz';
+    btn.querySelector('i').className = 'fas fa-paper-plane';
+    initComposer();
+  }
+
+  /* ==================== SELF ==================== */
+  function selfData() {
+    var u = currentUser() || {};
+    var profile = myProfile;
+    var crops = (u.preferred_crops && u.preferred_crops.length) ? u.preferred_crops : (profile.crops || ['Paddy', 'Chilli']);
+    return {
+      name: profile.name || u.full_name || u.fullName || localStorage.getItem('user-name') || 'Farmer',
+      farmerId: profile.farmerId || u.farmer_id || u.farmerId || 'FA-AS-00000001',
+      location: profile.location || u.district || '',
+      bio: profile.bio || u.bio || '',
+      farmingType: profile.farmingType || '',
+      crops: crops,
+      avatarUrl: profile.avatarUrl || userAvatar()
+    };
+  }
+
+  function renderSelf(tab) {
+    var d = selfData();
+    var myFid = 'me';
+    var posts = myPosts.length;
+    var shortsMine = 0;
+    var savedCount = saved.length;
+    var followerCount = 1280 + (myPosts.length * 4);
+
+    document.querySelectorAll('#fbSelfTabs button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+    });
+
+    document.getElementById('fbSelfProfile').innerHTML =
+      '<div class="fb-profile-card">' +
+        '<div class="fb-profile-cover"><i class="fas fa-seedling"></i></div>' +
+        '<div class="fb-profile-main">' +
+          '<div class="fb-profile-avatar-wrap"><img src="' + esc(d.avatarUrl) + '" alt="' + esc(d.name) + '" id="fbSelfAvatar"></div>' +
+          '<div class="fb-profile-head">' +
+            '<h2>' + esc(d.name) + '</h2>' +
+            '<div class="fb-fid">' + esc(d.farmerId) + '</div>' +
+            '<div class="fb-profile-loc"><i class="fas fa-location-dot"></i>' + esc(d.location || 'Location not set') + '</div>' +
+            '<div class="fb-profile-bio">' + esc(d.bio || 'Hello! I grow food and share what I learn on FarmBuzz.') + '</div>' +
+            '<div class="fb-profile-tags">' +
+              (d.farmingType ? '<span><i class="fas fa-tractor"></i> ' + esc(d.farmingType) + '</span>' : '') +
+              d.crops.slice(0, 4).map(function (c) { return '<span><i class="fas fa-seedling"></i> ' + esc(c) + '</span>'; }).join('') +
+            '</div>' +
+            '<div class="fb-profile-stats">' +
+              '<div class="fb-stat-box"><b>' + posts + '</b><span>Posts</span></div>' +
+              '<div class="fb-stat-box"><b>' + fmtNum(followerCount) + '</b><span>Followers</span></div>' +
+              '<div class="fb-stat-box"><b>' + (128 + myPosts.length) + '</b><span>Following</span></div>' +
+              '<div class="fb-stat-box"><b>' + savedCount + '</b><span>Saved</span></div>' +
+            '</div>' +
+            '<div class="fb-profile-btns">' +
+              '<button class="btn btn-primary" id="fbEditProfileBtn"><i class="fas fa-user-pen"></i> Edit Profile</button>' +
+              '<button class="btn btn-secondary" id="fbShareProfileBtn"><i class="fas fa-share-nodes"></i> Share</button>' +
+              '<button class="btn btn-secondary" id="fbQrBtn"><i class="fas fa-qrcode"></i> QR</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById('fbEditProfileBtn').addEventListener('click', openEditProfile);
+    document.getElementById('fbShareProfileBtn').addEventListener('click', function () { openShare('My FarmBuzz profile'); });
+    document.getElementById('fbQrBtn').addEventListener('click', function () { toast('QR code shared', 'info'); });
+
+    renderSelfContent(tab);
+  }
+
+  function renderSelfContent(tab) {
+    var el = document.getElementById('fbSelfContent');
+    var html = '';
+    if (tab === 'posts') {
+      if (!myPosts.length) {
+        html = '<div class="fb-empty"><i class="fas fa-clapperboard"></i><p>You have not posted yet. Share your first farm update!</p>' +
+          '<button class="btn btn-primary" data-gopost>Create your first post</button></div>';
+      } else {
+        html = myPosts.map(function (p) { return postCardHtml(p); }).join('');
+      }
+    } else if (tab === 'shorts') {
+      html = '<div class="fb-empty"><i class="fas fa-clapperboard"></i><p>Your Shorts will appear here. Create vertical videos from the Post tab.</p>' +
+        '<button class="btn btn-primary" data-gopost>Make a Short</button></div>';
+    } else if (tab === 'saved') {
+      var savedItems = saved.map(function (id) { return anyItemById(id); }).filter(Boolean);
+      if (!savedItems.length) {
+        html = '<div class="fb-empty"><i class="fas fa-bookmark"></i><p>Nothing saved yet. Tap the bookmark on posts you love.</p></div>';
+      } else {
+        html = savedItems.map(function (it) {
+          if (it.type === 'short' || shortById(it.id)) {
+            return '<div class="fb-tip-card" data-shortopen="' + it.id + '"><div class="fb-tip-icon" style="background:#2D8659;"><i class="fas fa-clapperboard"></i></div>' +
+              '<div class="fb-tip-body"><h5>' + esc(it.title) + '</h5><p>Saved short \u00b7 Tap to watch</p></div></div>';
+          }
+          return '<div class="fb-tip-card" data-postopen="' + it.id + '"><div class="fb-tip-icon" style="background:#1B5E3F;"><i class="fas fa-file-lines"></i></div>' +
+            '<div class="fb-tip-body"><h5>' + esc(it.caption.slice(0, 60)) + '...</h5><p>Saved post \u00b7 Tap to view</p></div></div>';
+        }).join('');
+      }
+    } else if (tab === 'about') {
+      var d = selfData();
+      html = '<div class="fb-tip-card"><div class="fb-tip-icon" style="background:#1B5E3F;"><i class="fas fa-tractor"></i></div>' +
+        '<div class="fb-tip-body"><h5>Farming profile</h5><p>' + esc(d.farmingType || 'Not set yet') + ' \u00b7 ' + esc(d.crops.join(', ')) + '</p></div></div>' +
+        '<div class="fb-tip-card"><div class="fb-tip-icon" style="background:#1565C0;"><i class="fas fa-location-dot"></i></div>' +
+        '<div class="fb-tip-body"><h5>Location</h5><p>' + esc(d.location || 'Not set yet') + '</p></div></div>' +
+        '<div class="fb-tip-card"><div class="fb-tip-icon" style="background:#2D8659;"><i class="fas fa-id-card"></i></div>' +
+        '<div class="fb-tip-body"><h5>Farmer ID</h5><p>' + esc(d.farmerId) + '</p></div></div>';
+    }
+    el.innerHTML = html;
+    el.querySelectorAll('[data-gopost]').forEach(function (b) {
+      b.addEventListener('click', function () { switchView('post'); });
+    });
+    el.querySelectorAll('[data-postopen]').forEach(function (c) {
+      c.addEventListener('click', function () { openDetail(c.getAttribute('data-postopen')); });
+    });
+    el.querySelectorAll('[data-shortopen]').forEach(function (c) {
+      c.addEventListener('click', function () { openShortsPlayer(c.getAttribute('data-shortopen')); });
+    });
+    if (tab === 'posts' && myPosts.length) bindPostCardEvents(el);
+  }
+
+  function openEditProfile() {
+    var d = selfData();
+    document.getElementById('fbEditAvatar').src = d.avatarUrl;
+    document.getElementById('fbEditAvatarUrl').value = d.avatarUrl === userAvatar() && !myProfile.avatarUrl ? '' : (d.avatarUrl || '');
+    document.getElementById('fbEditBio').value = d.bio;
+    document.getElementById('fbEditLocation').value = d.location;
+    document.getElementById('fbEditFarmingType').value = d.farmingType || '';
+    document.getElementById('fbEditModal').classList.add('open');
+  }
+
+  function saveProfile() {
+    var bio = document.getElementById('fbEditBio').value.trim();
+    var location = document.getElementById('fbEditLocation').value.trim();
+    var farmingType = document.getElementById('fbEditFarmingType').value;
+    var avatarUrl = document.getElementById('fbEditAvatarUrl').value.trim();
+
+    var d = selfData();
+    myProfile = {
+      name: d.name,
+      farmerId: d.farmerId,
+      crops: d.crops,
+      bio: bio,
+      location: location,
+      farmingType: farmingType,
+      avatarUrl: avatarUrl || d.avatarUrl
+    };
+    writeJSON(LS_MYPROFILE, myProfile);
+    if (avatarUrl) { try { localStorage.setItem(LS_PROFILE_IMG, avatarUrl); } catch (e) {} }
+    if (hasApi()) {
+      window.API.FarmBuzz.updateProfile({
+        bio: bio || null,
+        farm_location: location || null,
+        farming_type: farmingType || null
+      }).catch(function () {});
+    }
+    document.getElementById('fbEditModal').classList.remove('open');
+    renderSelf('posts');
+    initComposer();
+    if (window.Navigation && Navigation.showToast) {} else { toast('Profile updated!', 'success'); }
+  }
+
+  /* ==================== DETAIL MODAL ==================== */
+  function openDetail(id) {
+    var item = postById(id);
+    if (!item) return;
+    activeDetailId = id;
+    var f = farmer(item.author);
+    document.getElementById('fbDetailHead').innerHTML =
+      '<img class="fb-avatar" src="' + avatarSrc(f, 160) + '" alt="" data-dfarmer="' + f.id + '">' +
+      '<div class="fb-post-head-info" data-dfarmer="' + f.id + '">' +
+        '<b>' + esc(f.name) + (f.verified ? ' <i class="fas fa-circle-check"></i>' : '') + '</b>' +
+        '<small>' + esc(f.location) + ' \u00b7 ' + esc(item.time) + '</small></div>' +
+      '<button class="fb-follow-btn' + (isFollowed(f.id) ? ' following' : '') + '" data-dfollow="' + f.id + '">' + (isFollowed(f.id) ? 'Following' : 'Follow') + '</button>';
+
+    document.getElementById('fbDetailHead').querySelector('[data-dfarmer]').addEventListener('click', function () {
+      openFarmer(f.id); closeModal('fbDetailModal');
+    });
+    var fbtn = document.getElementById('fbDetailHead').querySelector('[data-dfollow]');
+    fbtn.addEventListener('click', function () { toggleFollow(f.id, fbtn); });
+
+    var mediaUrl = item.mediaUrl || postImg(item);
+    var imgEl = document.getElementById('fbDetailImg');
+    imgEl.style.display = 'block';
+    imgEl.src = mediaUrl;
+    imgEl.style.height = 'auto';
+
+    var likeCount = item.likes + (isLiked(id) ? 1 : 0);
+    document.getElementById('fbDetailBody').innerHTML =
+      '<div class="fb-post-likes">' + fmtNum(likeCount) + ' likes</div>' +
+      '<p class="fb-post-caption"><b>' + esc(f.name) + '</b> ' + renderCaption(item.caption) + '</p>' +
+      (item.location ? '<div class="fb-post-loc"><i class="fas fa-location-dot"></i>' + esc(item.location) + '</div>' : '');
+    bindHashTags(document.getElementById('fbDetailBody'));
+
+    document.getElementById('fbDetailActions').innerHTML =
+      actBtn('heart', id, likeCount) + actBtn('comment', id, item.comments) +
+      actBtn('share', id, item.shares) + actBtn('bookmark', id, null);
+    document.getElementById('fbDetailActions').querySelectorAll('[data-act]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        handleAction(btn.getAttribute('data-act'), id, btn);
+        openDetail(id);
+      });
+    });
+
+    renderDetailComments(id);
+    document.getElementById('fbDetailModal').classList.add('open');
+  }
+
+  function renderDetailComments(id) {
+    var list = comments[id] || [];
+    document.getElementById('fbDetailCommentCount').textContent = list.length;
+    var wrap = document.getElementById('fbDetailComments');
+    if (!list.length) {
+      wrap.innerHTML = '<div class="fb-empty" style="padding:20px 10px;"><i class="far fa-comment"></i><p>No comments yet.</p></div>';
+      return;
+    }
+    wrap.innerHTML = list.map(function (c, i) {
+      var author = c.indexOf(':') !== -1 ? c.split(':')[0] : 'Farmer';
+      var text = c.indexOf(':') !== -1 ? c.slice(c.indexOf(':') + 1) : c;
+      var f = FARMERS[i % FARMERS.length];
+      return '<div class="fb-comment-item"><img src="' + avatarSrc(f, 90) + '" alt=""><div class="fb-c-body">' +
+        '<b>' + esc(author) + '</b><span>' + esc(text) + '</span><small>Just now</small></div></div>';
+    }).join('');
+  }
+
+  function addCommentTo(id, text) {
+    var key = id;
+    var list = comments[key] || [];
+    var name = 'You';
+    list.push(name + ': ' + text);
+    comments[key] = list;
+    writeJSON(LS_COMMENTS, comments);
+    var item = anyItemById(id);
+    if (item) { item.comments = list.length; }
+  }
+
+  function addDetailComment() {
+    var id = activeDetailId;
+    if (!id) return;
+    var input = document.getElementById('fbDetailCommentInput');
+    var text = input.value.trim();
+    if (!text) return;
+    addCommentTo(id, text);
+    input.value = '';
+    renderDetailComments(id);
+    toast('Comment posted!', 'success');
+    if (hasApi()) window.API.FarmBuzz.comment(id, { content: text }).catch(function () {});
+  }
+
+  /* ==================== SHARE ==================== */
+  function openShareById(id) {
+    activeShareId = id;
+    openShare(shareText(id));
+  }
+
+  function shareText(id) {
+    var item = anyItemById(id);
+    if (!item) return 'Check out this post on FarmBuzz!';
+    return item.caption || item.title || 'Check out this post on FarmBuzz!';
+  }
+
+  function openShare(text) {
+    var grid = document.getElementById('fbShareGrid');
+    grid.innerHTML = '';
+    SHARE_OPTS.forEach(function (opt) {
+      grid.innerHTML += '<button class="fb-share-opt" data-sopt="' + opt.id + '"><div class="fb-share-icon" style="background:' + opt.color + ';">' +
+        '<i class="' + opt.icon + '"></i></div><span>' + opt.label + '</span></button>';
+    });
+    grid.querySelectorAll('.fb-share-opt').forEach(function (btn) {
+      btn.addEventListener('click', function () { doShare(btn.getAttribute('data-sopt'), text); });
+    });
+    document.getElementById('fbShareModal').classList.add('open');
+  }
+
+  function doShare(opt, text) {
+    closeModal('fbShareModal');
+    if (opt === 'wa') { window.open('https://wa.me/?text=' + encodeURIComponent(text + ' - via Farm Assist'), '_blank'); toast('Opening WhatsApp', 'info'); return; }
+    if (opt === 'fb') { window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(text), '_blank'); return; }
+    if (opt === 'x') { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank'); return; }
+    if (opt === 'email') { window.location.href = 'mailto:?subject=FarmBuzz&body=' + encodeURIComponent(text); return; }
+    if (navigator.share) {
+      navigator.share({ title: 'FarmBuzz', text: text }).catch(function () {});
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(function () {});
+      toast('Copied to clipboard!', 'info');
+    } else {
+      toast('Copy failed. Please copy manually.', 'error');
+    }
+    if (activeShareId && hasApi()) window.API.FarmBuzz.share(activeShareId).catch(function () {});
+  }
+
+  /* ==================== NOTIFICATIONS ==================== */
+  function notifUnread() {
+    var count = NOTIFS.filter(function (n, i) {
+      return (i + 1) * 3600 > (Date.now() - notifReadAt) / 1000;
+    }).length;
+    return Math.min(count, 9);
+  }
+
+  function renderNotifs() {
+    var el = document.getElementById('fbNotifList');
+    el.innerHTML = NOTIFS.map(function (n) {
+      return '<div class="fb-notif-item"><div class="fb-notif-icon" style="background:' + n.color + ';"><i class="fas ' + n.icon + '"></i></div>' +
+        '<div class="fb-notif-body"><p>' + n.text + '</p><small>' + esc(n.time) + '</small></div></div>';
+    }).join('');
+    notifReadAt = Date.now();
+    writeJSON(LS_NOTIF_READ, notifReadAt);
+    document.getElementById('fbBellDot').style.display = 'none';
+    document.getElementById('fbNotifModal').classList.add('open');
+  }
+
+  /* ==================== SEARCH ==================== */
+  function openSearch(q) {
+    document.getElementById('fbSearchInput').value = q || '';
+    document.getElementById('fbSearchClear').style.display = q ? 'inline-block' : 'none';
+    searchActive = !!q;
+    document.body.classList.toggle('fb-searching', searchActive);
+    if (currentView !== 'home') {
+      switchView('home');
+      return;
+    }
+    performSearch(q || '');
+  }
+
+  function performSearch(q) {
+    if (!q) {
+      document.getElementById('fbHomePosts').innerHTML =
+        '<div class="fb-search-panel">' +
+          '<div class="fb-search-type-head"><i class="fas fa-clock"></i> Recent searches</div>' +
+          (recentSearches.length ? recentSearches.map(function (r) {
+            return '<span class="fb-recent-tag" data-rs="' + esc(r) + '"><i class="fas fa-clock"></i> ' + esc(r) + '</span>';
+          }).join('') : '<p style="font-size:12.5px;color:var(--text-muted);">Search posts, farmers, topics and trends.</p>') +
+        '</div>';
+      document.querySelectorAll('[data-rs]').forEach(function (tag) {
+        tag.addEventListener('click', function () { openSearch(tag.getAttribute('data-rs')); });
+      });
+      return;
+    }
+    if (recentSearches.indexOf(q) === -1) {
+      recentSearches.unshift(q);
+      if (recentSearches.length > 5) recentSearches.length = 5;
+      writeJSON(LS_RECENT, recentSearches);
+    }
+
+    var ql = q.toLowerCase().replace(/^#/, '');
+    var pMatches = POSTS.filter(function (p) {
+      return p.caption.toLowerCase().indexOf(ql) !== -1 ||
+        (p.tags && p.tags.join(' ').toLowerCase().indexOf(ql) !== -1) ||
+        farmer(p.author).name.toLowerCase().indexOf(ql) !== -1 ||
+        (p.crop || '').toLowerCase().indexOf(ql) !== -1;
+    });
+    var sMatches = SHORTS.filter(function (s) {
+      return s.title.toLowerCase().indexOf(ql) !== -1 || s.cat.toLowerCase().indexOf(ql) !== -1;
+    });
+    var fMatches = FARMERS.filter(function (f) {
+      return f.name.toLowerCase().indexOf(ql) !== -1 || f.location.toLowerCase().indexOf(ql) !== -1 ||
+        f.crops.join(' ').toLowerCase().indexOf(ql) !== -1;
+    });
+    var tMatches = TRENDS.filter(function (t) { return t.topic.toLowerCase().indexOf(ql) !== -1; });
+
+    var html = '<div class="fb-search-panel">';
+    if (fMatches.length) {
+      html += '<div class="fb-search-type-head"><i class="fas fa-users"></i> Farmers</div>';
+      fMatches.forEach(function (f) {
+        html += '<div class="fb-search-row" data-farmer="' + f.id + '"><img src="' + avatarSrc(f, 120) + '" alt="">' +
+          '<div class="fb-sr-body"><b>' + esc(f.name) + '</b><small>' + esc(f.location) + '</small></div></div>';
+      });
+    }
+    if (pMatches.length) {
+      html += '<div class="fb-search-type-head"><i class="fas fa-file-lines"></i> Posts</div>';
+      pMatches.slice(0, 4).forEach(function (p) {
+        html += '<div class="fb-search-row" data-post="' + p.id + '"><div class="fb-search-thumb" style="background:#1B5E3F;"><i class="fas fa-file-lines"></i></div>' +
+          '<div class="fb-sr-body"><b>' + esc(p.caption.slice(0, 55)) + '...</b><small>' + esc(farmer(p.author).name) + '</small></div></div>';
+      });
+    }
+    if (sMatches.length) {
+      html += '<div class="fb-search-type-head"><i class="fas fa-clapperboard"></i> Shorts</div>';
+      sMatches.slice(0, 4).forEach(function (s) {
+        html += '<div class="fb-search-row" data-short="' + s.id + '"><img src="' + shortImg(s, 120) + '" alt="">' +
+          '<div class="fb-sr-body"><b>' + esc(s.title) + '</b><small>' + esc(s.cat) + '</small></div></div>';
+      });
+    }
+    if (tMatches.length) {
+      html += '<div class="fb-search-type-head"><i class="fas fa-fire"></i> Trends</div>';
+      tMatches.forEach(function (t) {
+        html += '<div class="fb-search-row" data-trendref="' + t.ref + '" data-trendtopic="' + esc(t.topic) + '"><div class="fb-search-thumb" style="background:#d97706;"><i class="fas fa-fire"></i></div>' +
+          '<div class="fb-sr-body"><b>' + esc(t.topic) + '</b><small>Trending \u00b7 ' + fmtNum(t.score) + '</small></div></div>';
+      });
+    }
+    if (!fMatches.length && !pMatches.length && !sMatches.length && !tMatches.length) {
+      html += '<div class="fb-empty"><i class="fas fa-search"></i><p>No results for "' + esc(q) + '". Try a crop name like paddy or tomato.</p></div>';
+    }
+    html += '</div>';
+    document.getElementById('fbHomePosts').innerHTML = html;
+
+    document.querySelectorAll('.fb-search-panel [data-farmer]').forEach(function (row) {
+      row.addEventListener('click', function () { openFarmer(row.getAttribute('data-farmer')); });
+    });
+    document.querySelectorAll('.fb-search-panel [data-post]').forEach(function (row) {
+      row.addEventListener('click', function () { openDetail(row.getAttribute('data-post')); });
+    });
+    document.querySelectorAll('.fb-search-panel [data-short]').forEach(function (row) {
+      row.addEventListener('click', function () { openShortsPlayer(row.getAttribute('data-short')); });
+    });
+    document.querySelectorAll('.fb-search-panel [data-trendref]').forEach(function (row) {
+      row.addEventListener('click', function () { openTrend(row.getAttribute('data-trendref'), row.getAttribute('data-trendtopic')); });
+    });
+
+    if (hasApi()) {
+      window.API.FarmBuzz.search({ q: ql }).catch(function () {});
+    }
+  }
+
+  /* ==================== FARMER SHEET ==================== */
+  function openFarmer(fid) {
+    if (fid === 'me') { switchView('self'); return; }
+    activeFarmerId = fid;
+    var f = farmer(fid);
+    var posts = POSTS.filter(function (p) { return p.author === fid; });
+    var shorts = SHORTS.filter(function (s) { return s.author === fid; });
+    document.getElementById('fbFarmerBody').innerHTML =
+      '<div class="fb-fp-cover"></div>' +
+      '<div class="fb-fp-main">' +
+        '<img class="fb-fp-avatar" src="' + avatarSrc(f, 200) + '" alt="' + esc(f.name) + '">' +
+        '<div class="fb-fp-head">' +
+          '<h3>' + esc(f.name) + (f.verified ? ' <i class="fas fa-circle-check"></i>' : '') + (f.expert ? ' <span class="fb-chip" style="cursor:default;padding:2px 10px;">Expert</span>' : '') + '</h3>' +
+          '<div class="fb-fp-meta">' + esc(f.farmerId) + ' \u00b7 ' + esc(f.location) + '</div>' +
+          '<div class="fb-fp-bio">' + esc(f.bio) + '</div>' +
+        '</div>' +
+        '<div class="fb-profile-tags">' +
+          f.crops.map(function (c) { return '<span><i class="fas fa-seedling"></i> ' + esc(c) + '</span>'; }).join('') +
+          '<span><i class="fas fa-tractor"></i> ' + esc(f.type) + '</span>' +
+        '</div>' +
+        '<div class="fb-fp-stats">' +
+          '<div class="fb-fp-stat"><b>' + fmtNum(f.followers) + '</b><span>Followers</span></div>' +
+          '<div class="fb-fp-stat"><b>' + posts.length + '</b><span>Posts</span></div>' +
+          '<div class="fb-fp-stat"><b>' + shorts.length + '</b><span>Shorts</span></div>' +
+          '<div class="fb-fp-stat"><b>' + fmtNum(f.following) + '</b><span>Following</span></div>' +
+        '</div>' +
+        '<div class="fb-fp-actions">' +
+          '<button class="btn btn-primary" id="fbFpFollow">' + (isFollowed(fid) ? 'Following' : 'Follow') + '</button>' +
+          '<button class="btn btn-secondary" id="fbFpMsg"><i class="fas fa-comment-dots"></i> Message</button>' +
+        '</div>' +
+        '<div class="fb-fp-posts">' +
+          (posts.concat(shorts).slice(0, 9).map(function (it) {
+            return '<div class="fb-fp-post" data-pid="' + it.id + '"><img src="' + (it.type === 'short' || shortById(it.id) ? shortImg(it, 300) : postImg(it, 300)) + '" alt="" loading="lazy"></div>';
+          }).join('')) +
+        '</div>' +
+      '</div>';
+    var followBtnEl = document.getElementById('fbFpFollow');
+    followBtnEl.addEventListener('click', function () { toggleFollow(fid, followBtnEl); });
+    document.getElementById('fbFpMsg').addEventListener('click', function () {
+      toast('Opening chat with ' + f.name + '...', 'info');
+      setTimeout(function () { window.location.href = 'messages.html'; }, 500);
+    });
+    document.querySelectorAll('.fb-fp-post').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var pid = el.getAttribute('data-pid');
+        closeModal('fbFarmerModal');
+        if (shortById(pid)) openShortsPlayer(pid); else openDetail(pid);
+      });
+    });
+    document.getElementById('fbFarmerModal').classList.add('open');
+  }
+
+  /* ==================== MODALS ==================== */
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+
+  function toast(msg, type) {
+    if (window.showToast) { window.showToast(msg, type); return; }
+    if (window.Navigation && Navigation.showToast) Navigation.showToast(msg, type);
+  }
+
+  /* ==================== BACKEND SYNC (best effort) ==================== */
+  function tryBackendProfile() {
+    if (!hasApi()) return;
+    window.API.FarmBuzz.profile().then(function (data) {
+      if (data) {
+        var d = data.user || data.profile || data;
+        var prof = {};
+        if (d.full_name) prof.name = d.full_name;
+        if (d.bio) prof.bio = d.bio;
+        if (d.farm_location || d.location) prof.location = d.farm_location || d.location;
+        if (d.farming_type || d.farmingType) prof.farmingType = d.farming_type || d.farmingType;
+        if (Object.keys(prof).length) {
+          myProfile = Object.assign({}, myProfile, prof);
+          writeJSON(LS_MYPROFILE, myProfile);
+          if (currentView === 'self') renderSelf('posts');
+        }
+      }
+    }).catch(function () {});
+  }
+
+  /* ==================== EVENTS ==================== */
+  function bindEvents() {
+    document.querySelectorAll('.fb-topnav button[data-view]').forEach(function (b) {
+      b.addEventListener('click', function () { switchView(b.getAttribute('data-view')); });
+    });
+    var fbHomeBtn = document.getElementById('fbHomeBtn');
+    if (fbHomeBtn) {
+      fbHomeBtn.addEventListener('click', function () {
+        window.location.href = 'index.html';
+      });
+      fbHomeBtn.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.location.href = 'index.html'; }
+      });
+    }
+    document.querySelectorAll('[data-goto]').forEach(function (b) {
+      b.addEventListener('click', function () { switchView(b.getAttribute('data-goto')); });
+    });
+    document.querySelectorAll('[data-hashtag]').forEach(function (b) {
+      b.addEventListener('click', function () { openSearch(b.getAttribute('data-hashtag')); });
+    });
+    document.querySelectorAll('[data-sugtag]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var input = document.getElementById('fbTags');
+        var val = input.value.trim();
+        var t = b.getAttribute('data-sugtag');
+        input.value = val ? val + ', ' + t.replace('#', '') : t.replace('#', '');
+        input.focus();
+      });
+    });
+
+    /* search */
+    var searchInput = document.getElementById('fbSearchInput');
+    searchInput.addEventListener('input', function () {
+      var q = this.value.trim();
+      document.getElementById('fbSearchClear').style.display = q ? 'inline-block' : 'none';
+      clearTimeout(searchInput._t);
+      searchInput._t = setTimeout(function () {
+        searchActive = !!q;
+        document.body.classList.toggle('fb-searching', searchActive);
+        if (searchActive) {
+          if (currentView !== 'home') switchView('home');
+          performSearch(q);
+        } else if (currentView === 'home') {
+          renderHome();
+        }
+      }, 200);
+    });
+    searchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        var q = this.value.trim();
+        searchActive = !!q;
+        document.body.classList.toggle('fb-searching', searchActive);
+        performSearch(q);
+      }
+    });
+    document.getElementById('fbSearchClear').addEventListener('click', function () {
+      document.getElementById('fbSearchInput').value = '';
+      this.style.display = 'none';
+      searchActive = false;
+      document.body.classList.remove('fb-searching');
+      performSearch('');
+      renderHome();
+    });
+
+    /* notifications */
+    document.getElementById('fbBellBtn').addEventListener('click', renderNotifs);
+
+    /* composer */
+    document.querySelectorAll('#fbMediaPicker button').forEach(function (b) {
+      b.addEventListener('click', function () { setMediaPicker(b.getAttribute('data-kind')); });
+    });
+    document.getElementById('fbFileInput').addEventListener('change', function () {
+      if (this.files && this.files[0]) onFileChosen(this.files[0]);
+    });
+    document.getElementById('fbMediaRemove').addEventListener('click', function () {
+      selectedFile = null;
+      document.getElementById('fbMediaPreview').style.display = 'none';
+      document.getElementById('fbPreviewImg').style.display = 'none';
+      document.getElementById('fbPreviewVideo').style.display = 'none';
+      document.getElementById('fbFileInput').value = '';
+      document.querySelectorAll('#fbMediaPicker button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-kind') === 'text' ? false : b.getAttribute('data-kind') === 'photo');
+      });
+    });
+    document.getElementById('fbCaption').addEventListener('input', function () {
+      document.getElementById('fbCharCount').textContent = this.value.length + ' / 2000';
+    });
+    document.getElementById('fbPostBtn').addEventListener('click', submitPost);
+
+    /* self tabs */
+    document.getElementById('fbSelfTabs').addEventListener('click', function (e) {
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      renderSelf(btn.getAttribute('data-tab'));
+    });
+    document.getElementById('fbEditSave').addEventListener('click', saveProfile);
+
+    /* detail modal */
+    document.getElementById('fbDetailCommentBtn').addEventListener('click', addDetailComment);
+    document.getElementById('fbDetailCommentInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') addDetailComment();
+    });
+
+    /* shorts player */
+    document.getElementById('fbSpClose').addEventListener('click', stopSp);
+    document.getElementById('fbSpNext').addEventListener('click', nextSp);
+    document.getElementById('fbSpPrev').addEventListener('click', prevSp);
+    document.getElementById('fbSpMute').addEventListener('click', function () {
+      spMuted = !spMuted;
+      var btn = document.getElementById('fbSpMute');
+      btn.setAttribute('aria-pressed', String(spMuted));
+      btn.querySelector('i').className = spMuted ? 'fas fa-volume-xmark' : 'fas fa-volume-up';
+      toast(spMuted ? 'Sound muted' : 'Sound on', 'info');
+    });
+    var spStageEl = document.getElementById('fbSpStage');
+    if (spStageEl) {
+      spStageEl.addEventListener('scroll', function () {
+        if (spScrollDebounce) clearTimeout(spScrollDebounce);
+        spScrollDebounce = setTimeout(spScrollHandler, 90);
+      }, { passive: true });
+    }
+    document.getElementById('fbSpCommentBtn').addEventListener('click', addSpComment);
+    document.getElementById('fbSpCommentInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') addSpComment();
+    });
+    document.getElementById('fbSpCloseComments').addEventListener('click', function () {
+      document.getElementById('fbSpCommentsPanel').style.display = 'none';
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        var player = document.getElementById('fbShortsPlayer');
+        if (player.classList.contains('open')) { stopSp(); return; }
+        ['fbDetailModal', 'fbShareModal', 'fbNotifModal', 'fbFarmerModal', 'fbEditModal'].forEach(function (id) {
+          document.getElementById(id).classList.remove('open');
+        });
+      }
+      if (e.key === 'ArrowDown' && document.getElementById('fbShortsPlayer').classList.contains('open')) { e.preventDefault(); nextSp(); }
+      if (e.key === 'ArrowUp' && document.getElementById('fbShortsPlayer').classList.contains('open')) { e.preventDefault(); prevSp(); }
+      if ((e.key === ' ' || e.key === 'Spacebar') && document.getElementById('fbShortsPlayer').classList.contains('open')) { e.preventDefault(); toggleSpPause(); }
+    });
+
+    /* modal close buttons */
+    document.querySelectorAll('.fb-sheet-close[data-close]').forEach(function (btn) {
+      btn.addEventListener('click', function () { closeModal(btn.getAttribute('data-close')); });
+    });
+    document.querySelectorAll('.fb-modal-backdrop').forEach(function (bd) {
+      bd.addEventListener('click', function (e) {
+        if (e.target === bd) bd.classList.remove('open');
+      });
+    });
+
+    /* copy link */
+    document.getElementById('fbCopyLink').addEventListener('click', function () {
+      var url = window.location.href;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () {
+          toast('Link copied to clipboard!', 'success');
+        }, function () { toast('Could not copy link', 'error'); });
+      } else {
+        toast('Could not copy link', 'error');
+      }
+    });
+
+    window.addEventListener('hashchange', initViewFromHash);
+  }
+
+  /* ==================== INIT ==================== */
+  function init() {
+    document.getElementById('fbBellDot').style.display = notifUnread() ? 'block' : 'none';
+    tryBackendProfile();
+    bindEvents();
+    var v = readHash();
+    if (v) switchView(v); else switchView('home');
+  }
+
+  init();
+})();
+</script>
+
+</body>
+</html>

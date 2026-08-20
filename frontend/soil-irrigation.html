@@ -1,0 +1,748 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="soil-irrigation">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Soil & Irrigation</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root {
+      --soil-dark: #92400e;
+      --soil-med: #b45309;
+      --soil-light: #d97706;
+      --soil-bg: #fef3c7;
+      --water-dark: #0284ca;
+      --water-med: #0ea5e9;
+      --water-light: #38bdf8;
+      --water-bg: #e0f2fe;
+    }
+    .soil-irr-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .soil-overview-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 13px;
+    }
+    .soil-overview-item:last-child {
+      border-bottom: none;
+    }
+    .soil-overview-label {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .soil-overview-value {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    .health-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .health-good { background: #dcfce7; color: #166534; }
+    .health-moderate { background: #fef9c3; color: #854d0e; }
+    .health-poor { background: #fee2e2; color: #991b1b; }
+    .nutrient-bar-container {
+      margin-bottom: 14px;
+    }
+    .nutrient-bar-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .nutrient-bar-label {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .nutrient-bar-value {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .nutrient-bar-track {
+      width: 100%;
+      height: 8px;
+      background: var(--border-light);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .nutrient-bar-fill {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.8s ease;
+    }
+    .fill-n { background: linear-gradient(90deg, #92400e, #d97706); }
+    .fill-p { background: linear-gradient(90deg, #1b5e3f, #52b788); }
+    .fill-k { background: linear-gradient(90deg, #0284ca, #38bdf8); }
+    .fert-reco-card {
+      background: linear-gradient(135deg, #fef3c7, #fffbeb);
+      border: 1px solid #fde68a;
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .fert-reco-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(253, 230, 138, 0.4);
+    }
+    .fert-reco-row:last-child {
+      border-bottom: none;
+    }
+    .irr-info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .irr-info-item {
+      text-align: center;
+      padding: 12px 8px;
+      background: var(--water-bg);
+      border-radius: var(--radius-sm);
+    }
+    .irr-info-item i {
+      font-size: 20px;
+      color: var(--water-med);
+      margin-bottom: 6px;
+    }
+    .irr-info-item .irr-info-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+    .irr-info-item .irr-info-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--water-dark);
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 10px 8px;
+      background: var(--soft-green);
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .data-table th:first-child { border-radius: 8px 0 0 0; }
+    .data-table th:last-child { border-radius: 0 8px 0 0; }
+    .data-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-primary);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .tips-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .tip-card {
+      padding: 14px;
+      background: var(--water-bg);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--water-med);
+    }
+    .tip-card .tip-icon {
+      font-size: 16px;
+      color: var(--water-med);
+      margin-bottom: 6px;
+    }
+    .tip-card .tip-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .tip-card .tip-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .form-select {
+      padding: 8px 12px;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+    .form-select:focus {
+      border-color: var(--soil-med);
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-warning { background: #fef9c3; color: #854d0e; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+    .badge-info { background: #e0f2fe; color: #075985; }
+    .soil-status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 13px;
+    }
+    .soil-status-item:last-child {
+      border-bottom: none;
+    }
+    .btn-soil {
+      background: var(--soil-med);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-soil:hover { background: var(--soil-dark); }
+    .btn-water {
+      background: var(--water-dark);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-water:hover { background: #0369a1; }
+    .badge-need { font-size: 10px; padding: 2px 10px; border-radius: 12px; font-weight: 600; display: inline-block; }
+    .badge-need-high { background: #fee2e2; color: #991b1b; }
+    .badge-need-moderate { background: #fef9c3; color: #854d0e; }
+    .badge-today { background: #22c55e; color: #fff; font-size: 10px; padding: 2px 10px; border-radius: 12px; font-weight: 600; display: inline-block; }
+    @media (max-width: 768px) {
+      .soil-irr-grid { grid-template-columns: 1fr; }
+      .irr-info-grid { grid-template-columns: 1fr; }
+      .tips-container { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-water" style="color:var(--water-med);margin-right:8px;"></i> Soil & Irrigation</h1>
+        <p>Manage soil health, water resources, and irrigation schedules</p>
+      </div>
+    </div>
+
+    <div class="card-premium" id="crop-filter-section" style="margin-bottom:16px;">
+      <h3 style="font-size:14px;margin-bottom:12px;color:var(--soil-dark);"><i class="fas fa-filter" style="margin-right:6px;"></i> Filter by Crop</h3>
+      <select id="crop-filter" class="form-select" style="width:100%;">
+        <option value="all">All Crops</option>
+        <option value="paddy">Paddy</option>
+        <option value="cotton">Cotton</option>
+        <option value="maize">Maize</option>
+        <option value="wheat">Wheat</option>
+        <option value="sugarcane">Sugarcane</option>
+        <option value="tomato">Tomato</option>
+        <option value="groundnut">Groundnut</option>
+      </select>
+    </div>
+
+    <div id="soil-health-section">
+      <h2 style="font-size:15px;margin-bottom:12px;color:var(--soil-dark);"><i class="fas fa-seedling" style="margin-right:8px;"></i> Soil Health</h2>
+      <div class="soil-irr-grid">
+        <div class="card-premium">
+          <h3 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-file-lines" style="color:var(--soil-med);margin-right:6px;"></i> Soil Overview</h3>
+          <div id="soil-overview-content"></div>
+        </div>
+        <div class="card-premium">
+          <h3 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-chart-simple" style="color:var(--soil-med);margin-right:6px;"></i> Nutrient Levels</h3>
+          <div id="nutrient-levels-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="fertilizer-recommendation">
+      <div class="fert-reco-card">
+        <h3 style="font-size:14px;margin-bottom:10px;color:var(--soil-dark);"><i class="fas fa-flask" style="margin-right:8px;"></i> Fertilizer Recommendation</h3>
+        <div id="fert-reco-content"></div>
+        <div style="margin-top:12px;">
+          <button class="btn-soil" onclick="getDetailedRecommendation()"><i class="fas fa-chevron-circle-right"></i> Get Detailed Recommendation</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-premium" id="crop-fert-guide" style="margin-top:16px;">
+      <h3 style="font-size:14px;margin-bottom:12px;color:var(--soil-dark);"><i class="fas fa-seedling" style="margin-right:8px;"></i> Crop-Specific Fertilizer Guide</h3>
+      <div class="ins-form-group">
+        <label for="crop-fert-select" style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;color:var(--text-primary);">Select Crop</label>
+        <select id="crop-fert-select" class="ins-form-input" style="width:100%;max-width:300px;">
+          <option value="rice">Rice (Paddy)</option>
+          <option value="wheat">Wheat</option>
+          <option value="tomato">Tomato</option>
+          <option value="maize">Maize (Corn)</option>
+          <option value="cotton">Cotton</option>
+        </select>
+      </div>
+      <div id="crop-fert-details" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="irrigation-section">
+      <h2 style="font-size:15px;margin:16px 0 12px;color:var(--water-dark);"><i class="fas fa-sprinkler" style="margin-right:8px;"></i> Irrigation</h2>
+      <div class="card-premium">
+        <div id="irr-info-content"></div>
+        <h3 style="font-size:13px;margin:16px 0 10px;color:var(--water-dark);"><i class="fas fa-calendar-check" style="margin-right:6px;"></i> Irrigation Schedule</h3>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="irr-schedule-table">
+            <thead>
+              <tr>
+                <th>Crop</th>
+                <th>Stage</th>
+                <th>Water Need</th>
+                <th>Frequency</th>
+                <th>Next Irrigation</th>
+              </tr>
+            </thead>
+            <tbody id="irr-schedule-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="water-tips-section">
+      <h2 style="font-size:15px;margin:16px 0 12px;color:var(--water-dark);"><i class="fas fa-lightbulb" style="margin-right:8px;"></i> Water-Saving Tips</h2>
+      <div class="tips-container">
+        <div class="tip-card">
+          <div class="tip-icon"><i class="fas fa-water"></i></div>
+          <div class="tip-title">Drip Irrigation</div>
+          <div class="tip-desc">Switch to drip irrigation to save up to 40% water compared to flood irrigation. Ideal for row crops like tomatoes and cotton.</div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon"><i class="fas fa-tree"></i></div>
+          <div class="tip-title">Mulching</div>
+          <div class="tip-desc">Apply organic mulch around plants to reduce soil evaporation by 30%, suppress weeds, and maintain soil temperature.</div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon"><i class="fas fa-clock"></i></div>
+          <div class="tip-title">Optimal Timing</div>
+          <div class="tip-desc">Irrigate early morning or late evening to minimise evaporation losses. Avoid midday watering during peak sun hours.</div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon"><i class="fas fa-cloud-rain"></i></div>
+          <div class="tip-title">Rainwater Harvesting</div>
+          <div class="tip-desc">Install rainwater collection systems. A 1-acre rooftop can collect approximately 50,000 litres annually for irrigation.</div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon"><i class="fas fa-tint"></i></div>
+          <div class="tip-title">Soil Moisture Monitoring</div>
+          <div class="tip-desc">Use soil moisture sensors or the feel method to avoid over-watering. Irrigate only when soil moisture drops below 50% of field capacity.</div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon"><i class="fas fa-leaf"></i></div>
+          <div class="tip-title">Drought-Tolerant Crops</div>
+          <div class="tip-desc">Choose drought-tolerant crop varieties for dry seasons. Consider crop rotation with legumes that improve soil water retention and structure.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="soil-test-history" style="margin-top:16px;">
+      <h2 style="font-size:15px;margin-bottom:12px;color:var(--soil-dark);"><i class="fas fa-clock-rotate" style="margin-right:8px;"></i> Soil Test History</h2>
+      <div class="card-premium" style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>pH</th>
+              <th>Nitrogen (N)</th>
+              <th>Phosphorus (P)</th>
+              <th>Potassium (K)</th>
+              <th>Organic Matter</th>
+            </tr>
+          </thead>
+          <tbody id="soil-test-history-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card-premium" id="fert-recommendations-section" style="margin-top:16px;">
+      <h3 style="font-size:14px;margin-bottom:12px;color:var(--soil-dark);"><i class="fas fa-flask" style="margin-right:8px;"></i> Fertilizer Recommendations</h3>
+      <div id="fert-recommendations-content"></div>
+    </div>
+
+    <div class="card-premium" id="soil-status-section" style="margin-top:16px;">
+      <h3 style="font-size:14px;margin-bottom:12px;color:var(--soil-dark);"><i class="fas fa-chart-bar" style="margin-right:8px;"></i> Soil Status</h3>
+      <div class="grid-2" id="soil-status-content"></div>
+    </div>
+
+    <div class="card-premium" id="irrigation-schedule-section" style="margin-top:16px;">
+      <h3 style="font-size:14px;margin-bottom:12px;color:var(--water-dark);"><i class="fas fa-calendar-week" style="margin-right:8px;"></i> Weekly Irrigation Schedule</h3>
+      <div style="overflow-x:auto;">
+        <table class="responsive-table" id="weekly-irr-table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Time</th>
+              <th>Duration</th>
+              <th>Method</th>
+              <th>Crop</th>
+            </tr>
+          </thead>
+          <tbody id="weekly-irr-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="js/mockData.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    function initSoilIrrigation() {
+      var data = window.AppMockData;
+      if (!data) return;
+
+      var farm = data.farm;
+      var soil = farm.soilData;
+
+      var soilHtml =
+        '<div class="soil-overview-item"><span class="soil-overview-label">Soil Type</span><span class="soil-overview-value">' + farm.soilType + '</span></div>' +
+        '<div class="soil-overview-item"><span class="soil-overview-label">pH Level</span><span class="soil-overview-value">' + soil.pH + ' <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(slightly acidic)</span></span></div>' +
+        '<div class="soil-overview-item"><span class="soil-overview-label">Organic Matter</span><span class="soil-overview-value">' + soil.organic + '</span></div>' +
+        '<div class="soil-overview-item"><span class="soil-overview-label">Last Tested</span><span class="soil-overview-value">' + soil.lastTested + '</span></div>' +
+        '<div class="soil-overview-item"><span class="soil-overview-label">Overall Health</span><span class="health-indicator health-good"><i class="fas fa-circle" style="font-size:8px;"></i> Good</span></div>';
+      document.getElementById('soil-overview-content').innerHTML = soilHtml;
+
+      var nutrients = [
+        { label: 'Nitrogen (N)', value: soil.nitrogen, pct: soil.nitrogen === 'High' ? 80 : soil.nitrogen === 'Medium' ? 55 : 30, cls: 'fill-n' },
+        { label: 'Phosphorus (P)', value: soil.phosphorous, pct: soil.phosphorous === 'High' ? 80 : soil.phosphorous === 'Medium' ? 55 : 30, cls: 'fill-p' },
+        { label: 'Potassium (K)', value: soil.potassium, pct: soil.potassium === 'High' ? 80 : soil.potassium === 'Medium' ? 55 : 30, cls: 'fill-k' }
+      ];
+      var nutrientHtml = '';
+      nutrients.forEach(function(n) {
+        nutrientHtml +=
+          '<div class="nutrient-bar-container">' +
+            '<div class="nutrient-bar-header">' +
+              '<span class="nutrient-bar-label">' + n.label + '</span>' +
+              '<span class="nutrient-bar-value">' + n.value + '</span>' +
+            '</div>' +
+            '<div class="nutrient-bar-track"><div class="nutrient-bar-fill ' + n.cls + '" style="width:' + n.pct + '%;"></div></div>' +
+          '</div>';
+      });
+      document.getElementById('nutrient-levels-content').innerHTML = nutrientHtml;
+
+      var fertHtml =
+        '<div class="fert-reco-row"><span class="soil-overview-label">Recommended NPK Ratio</span><span class="soil-overview-value" style="color:var(--soil-dark);">20:10:10</span></div>' +
+        '<div class="fert-reco-row"><span class="soil-overview-label">Recommended Fertilizer</span><span class="soil-overview-value">DAP + MOP + Urea Blend</span></div>' +
+        '<div class="fert-reco-row"><span class="soil-overview-label">Application Rate</span><span class="soil-overview-value">120 kg/acre</span></div>' +
+        '<div class="fert-reco-row"><span class="soil-overview-label">Timing</span><span class="soil-overview-value">Apply during vegetative growth stage</span></div>';
+      document.getElementById('fert-reco-content').innerHTML = fertHtml;
+
+      var irrHtml =
+        '<div class="irr-info-grid">' +
+          '<div class="irr-info-item"><i class="fas fa-droplet"></i><div class="irr-info-label">Water Source</div><div class="irr-info-value">' + farm.waterSource + '</div></div>' +
+          '<div class="irr-info-item"><i class="fas fa-sprinkler"></i><div class="irr-info-label">Irrigation Type</div><div class="irr-info-value">' + (farm.irrigationMethod || 'Drip + Sprinkler') + '</div></div>' +
+          '<div class="irr-info-item"><i class="fas fa-check-circle"></i><div class="irr-info-label">Water Availability</div><div class="irr-info-value">Good</div></div>' +
+          (farm.liveSoilMoisture != null
+            ? '<div class="irr-info-item"><i class="fas fa-tachometer-alt"></i><div class="irr-info-label">Soil Moisture (Live)</div><div class="irr-info-value">' + farm.liveSoilMoisture + '%</div></div>'
+            : '') +
+        '</div>';
+      document.getElementById('irr-info-content').innerHTML = irrHtml;
+
+      var schedule = [
+        { crop: 'Wheat', stage: 'Vegetative', need: 'Moderate', freq: 'Every 3 days', next: 'Jul 30', needClass: 'moderate' },
+        { crop: 'Cotton', stage: 'Flowering', need: 'High', freq: 'Every 2 days', next: 'Jul 29', needClass: 'high' },
+        { crop: 'Tomato', stage: 'Fruiting', need: 'High', freq: 'Daily', next: 'Today', needClass: 'high' }
+      ];
+      if (farm.liveSoilMoisture != null) {
+        schedule.unshift({ crop: 'Sensor Reading', stage: 'Live', need: farm.liveSoilMoisture + '%', freq: 'Auto', next: 'Now', needClass: farm.liveSoilMoisture > 50 ? 'high' : 'moderate' });
+      }
+      var schedHtml = '';
+      schedule.forEach(function(s) {
+        var needBadge = s.need === 'High' ? '<span class="badge-need badge-need-high">High</span>' : s.need === 'Moderate' ? '<span class="badge-need badge-need-moderate">Moderate</span>' : '<span class="badge-need badge-need-moderate">' + s.need + '</span>';
+        var nextBadge = s.next === 'Today' ? '<span class="badge-today">Today</span>' : s.next;
+        schedHtml +=
+          '<tr>' +
+            '<td><strong>' + s.crop + '</strong></td>' +
+            '<td>' + s.stage + '</td>' +
+            '<td>' + needBadge + '</td>' +
+            '<td>' + s.freq + '</td>' +
+            '<td>' + nextBadge + '</td>' +
+          '</tr>';
+      });
+      document.getElementById('irr-schedule-body').innerHTML = schedHtml;
+
+      var testHistory = [
+        { date: '2026-03-15', ph: 6.8, n: 'Medium', p: 'High', k: 'Medium', om: '2.1%' },
+        { date: '2025-11-02', ph: 6.5, n: 'Low', p: 'Medium', k: 'Low', om: '1.8%' },
+        { date: '2025-06-20', ph: 6.2, n: 'Low', p: 'Low', k: 'Medium', om: '1.5%' },
+        { date: '2025-01-10', ph: 6.0, n: 'Medium', p: 'Low', k: 'Low', om: '1.6%' }
+      ];
+      var histHtml = '';
+      testHistory.forEach(function(h) {
+        histHtml +=
+          '<tr>' +
+            '<td>' + h.date + '</td>' +
+            '<td>' + h.ph + '</td>' +
+            '<td>' + h.n + '</td>' +
+            '<td>' + h.p + '</td>' +
+            '<td>' + h.k + '</td>' +
+            '<td>' + h.om + '</td>' +
+          '</tr>';
+      });
+      document.getElementById('soil-test-history-body').innerHTML = histHtml;
+    }
+
+    function getDetailedRecommendation() {
+      if (window.showToast) {
+        window.showToast('AI analysing soil data... Your detailed NPK recommendation is ready!', 'success');
+      }
+    }
+
+    function loadBackendSoilData() {
+      if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+      var data = window.AppMockData;
+      if (!data || !data.farm) return;
+      Promise.all([
+        API.Farm.list().catch(function() { return []; }),
+        API.Sensor.getReadings('soil_moisture', 24).catch(function() { return []; })
+      ]).then(function(results) {
+        var farms = results[0] || [];
+        var readings = results[1] || [];
+        var farm = farms.length ? farms[0] : null;
+        if (farm) {
+          if (farm.soil_type) data.farm.soilType = farm.soil_type;
+          if (farm.water_source) data.farm.waterSource = farm.water_source;
+          data.farm.irrigationMethod = farm.irrigation_method || data.farm.irrigationMethod || 'Drip + Sprinkler';
+        }
+        if (readings && readings.length) {
+          var last = readings[readings.length - 1];
+          if (last && last.value != null) {
+            data.farm.liveSoilMoisture = last.value;
+            data.farm.liveSoilMoistureTime = last.recorded_at || '';
+          }
+        }
+        if (typeof initSoilIrrigation === 'function') initSoilIrrigation();
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(initSoilIrrigation, 300);
+      loadBackendSoilData();
+    });
+
+    (function() {
+      var cropFertData = {
+        rice: { npk: '20:10:10', fertilizer: 'DAP + MOP + Urea Blend', rate: '120 kg/acre', timing: '15-20 days after transplanting', notes: 'Split nitrogen application recommended for rice. Apply 50% N at transplanting and 50% at tillering.' },
+        wheat: { npk: '120:60:40', fertilizer: 'Urea + SSP + MOP', rate: '150 kg/acre', timing: 'At sowing + 30 days after sowing', notes: 'Apply full phosphorus and potassium at sowing. Split nitrogen: 50% at sowing, 50% at first irrigation.' },
+        tomato: { npk: '60:80:80', fertilizer: 'NPK 19:19:19 + MOP', rate: '200 kg/acre', timing: 'At planting + every 15 days', notes: 'Tomato requires high potassium during fruiting. Apply micronutrients like boron and zinc for better yield.' },
+        maize: { npk: '150:75:75', fertilizer: 'Urea + DAP + MOP', rate: '180 kg/acre', timing: 'At sowing + knee-high stage', notes: 'Side-dress nitrogen at knee-high stage (30-35 days after sowing). Apply zinc sulfate @ 25 kg/acre.' },
+        cotton: { npk: '80:40:40', fertilizer: 'DAP + Urea + MOP', rate: '160 kg/acre', timing: 'At sowing + squaring stage', notes: 'Avoid excess nitrogen to prevent excessive vegetative growth. Apply magnesium sulfate at flowering.' }
+      };
+
+      var sel = document.getElementById('crop-fert-select');
+      var details = document.getElementById('crop-fert-details');
+
+      function updateCropFert() {
+        var c = sel.value;
+        var d = cropFertData[c];
+        if (!d) { details.innerHTML = ''; return; }
+        details.innerHTML =
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+            '<div style="background:var(--bg-card-soft);padding:12px;border-radius:var(--radius-sm);">' +
+              '<div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">NPK Ratio</div>' +
+              '<div style="font-size:18px;font-weight:800;color:var(--soil-dark);">' + d.npk + '</div>' +
+            '</div>' +
+            '<div style="background:var(--bg-card-soft);padding:12px;border-radius:var(--radius-sm);">' +
+              '<div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Application Rate</div>' +
+              '<div style="font-size:16px;font-weight:700;color:var(--text-primary);">' + d.rate + '</div>' +
+            '</div>' +
+            '<div style="background:var(--bg-card-soft);padding:12px;border-radius:var(--radius-sm);">' +
+              '<div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Fertilizer</div>' +
+              '<div style="font-size:14px;font-weight:600;color:var(--text-primary);">' + d.fertilizer + '</div>' +
+            '</div>' +
+            '<div style="background:var(--bg-card-soft);padding:12px;border-radius:var(--radius-sm);">' +
+              '<div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Timing</div>' +
+              '<div style="font-size:14px;font-weight:600;color:var(--text-primary);">' + d.timing + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="padding:10px 14px;background:#fef9c3;border-radius:var(--radius-sm);font-size:12px;color:var(--text-primary);border-left:3px solid var(--soil-med);">' +
+            '<i class="fas fa-info-circle" style="margin-right:6px;color:var(--soil-med);"></i>' + d.notes +
+          '</div>';
+      }
+
+      if (sel) {
+        sel.addEventListener('change', updateCropFert);
+        updateCropFert();
+      }
+    function updateFertRecommendations(crop) {
+      var npkData = {
+        all: { n: '-', p: '-', k: '-', ratio: 'Select a crop' },
+        paddy: { n: '120', p: '60', k: '40', ratio: '20:10:10' },
+        cotton: { n: '80', p: '40', k: '40', ratio: '20:10:10' },
+        maize: { n: '100', p: '50', k: '50', ratio: '15:15:15' },
+        wheat: { n: '120', p: '60', k: '40', ratio: '20:10:10' },
+        sugarcane: { n: '150', p: '75', k: '75', ratio: '15:15:15' },
+        tomato: { n: '60', p: '80', k: '80', ratio: '10:10:20' },
+        groundnut: { n: '20', p: '40', k: '60', ratio: '5:10:15' }
+      };
+      var d = npkData[crop] || npkData.all;
+      var html =
+        '<table class="responsive-table" style="width:100%;">' +
+          '<thead>' +
+            '<tr><th>Nutrient</th><th>Recommendation (kg/ha)</th><th>Status</th></tr>' +
+          '</thead>' +
+          '<tbody>' +
+            '<tr><td>Nitrogen (N)</td><td>' + d.n + '</td><td>' + (d.n !== '-' ? '<span class="badge badge-info">Apply</span>' : '<span class="badge">-</span>') + '</td></tr>' +
+            '<tr><td>Phosphorus (P)</td><td>' + d.p + '</td><td>' + (d.p !== '-' ? '<span class="badge badge-info">Apply</span>' : '<span class="badge">-</span>') + '</td></tr>' +
+            '<tr><td>Potassium (K)</td><td>' + d.k + '</td><td>' + (d.k !== '-' ? '<span class="badge badge-info">Apply</span>' : '<span class="badge">-</span>') + '</td></tr>' +
+          '</tbody>' +
+        '</table>' +
+        '<div style="margin-top:8px;font-size:12px;color:var(--text-secondary);">Recommended NPK Ratio: <strong>' + d.ratio + '</strong></div>';
+      var el = document.getElementById('fert-recommendations-content');
+      if (el) el.innerHTML = html;
+    }
+
+    function updateSoilStatus(crop) {
+      var soilStatusMap = {
+        all: { ph: 6.5, phClass: 'badge-success', phLabel: 'Good', n: 'Medium', p: 'Medium', k: 'Medium', organic: '2.1%', texture: 'Loamy' },
+        paddy: { ph: 5.5, phClass: 'badge-warning', phLabel: 'Acidic', n: 'High', p: 'Medium', k: 'Medium', organic: '2.5%', texture: 'Clay Loam' },
+        cotton: { ph: 6.8, phClass: 'badge-success', phLabel: 'Optimal', n: 'Medium', p: 'High', k: 'Medium', organic: '1.8%', texture: 'Sandy Loam' },
+        maize: { ph: 6.2, phClass: 'badge-warning', phLabel: 'Slightly Acidic', n: 'High', p: 'Medium', k: 'Low', organic: '2.0%', texture: 'Loamy' },
+        wheat: { ph: 7.0, phClass: 'badge-success', phLabel: 'Neutral', n: 'Medium', p: 'Medium', k: 'Medium', organic: '2.2%', texture: 'Clay Loam' },
+        sugarcane: { ph: 6.5, phClass: 'badge-success', phLabel: 'Good', n: 'High', p: 'High', k: 'Medium', organic: '2.8%', texture: 'Loamy' },
+        tomato: { ph: 6.0, phClass: 'badge-warning', phLabel: 'Slightly Acidic', n: 'Medium', p: 'High', k: 'High', organic: '2.3%', texture: 'Sandy Loam' },
+        groundnut: { ph: 6.5, phClass: 'badge-success', phLabel: 'Good', n: 'Low', p: 'Medium', k: 'Medium', organic: '1.9%', texture: 'Sandy' }
+      };
+      var d = soilStatusMap[crop] || soilStatusMap.all;
+      function nutrClass(v) {
+        if (v === 'High') return 'badge-success';
+        if (v === 'Medium') return 'badge-warning';
+        if (v === 'Low') return 'badge-danger';
+        return '';
+      }
+      var html =
+        '<div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">pH Level</span><span><span class="badge ' + d.phClass + '">' + d.ph + ' (' + d.phLabel + ')</span></span></div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">Nitrogen (N)</span><span class="badge ' + nutrClass(d.n) + '">' + d.n + '</span></div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">Phosphorus (P)</span><span class="badge ' + nutrClass(d.p) + '">' + d.p + '</span></div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">Potassium (K)</span><span class="badge ' + nutrClass(d.k) + '">' + d.k + '</span></div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">Organic Carbon</span><span class="badge badge-success">' + d.organic + '</span></div>' +
+        '</div>' +
+        '<div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">Soil Texture</span><span class="badge badge-info">' + d.texture + '</span></div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">Drainage</span><span class="badge badge-success">Well-drained</span></div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">CEC</span><span class="badge badge-info">15.2 meq/100g</span></div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">Salinity</span><span class="badge badge-success">Low</span></div>' +
+          '<div class="soil-status-item"><span class="soil-overview-label">Suitable For</span><span class="badge badge-success">' + (crop === 'all' ? 'Multiple Crops' : crop.charAt(0).toUpperCase() + crop.slice(1)) + '</span></div>' +
+        '</div>';
+      var el = document.getElementById('soil-status-content');
+      if (el) el.innerHTML = html;
+    }
+
+    function updateWeeklyIrrSchedule(crop) {
+      var weekData = [
+        { day: 'Monday', time: '06:00 AM', duration: '30 min', method: 'Drip', crop: 'Tomato' },
+        { day: 'Tuesday', time: '06:30 AM', duration: '45 min', method: 'Sprinkler', crop: 'Wheat' },
+        { day: 'Wednesday', time: '05:30 AM', duration: '40 min', method: 'Drip', crop: 'Cotton' },
+        { day: 'Thursday', time: '06:00 AM', duration: '30 min', method: 'Drip', crop: 'Tomato' },
+        { day: 'Friday', time: '06:30 AM', duration: '45 min', method: 'Sprinkler', crop: 'Wheat' },
+        { day: 'Saturday', time: '05:30 AM', duration: '40 min', method: 'Drip', crop: 'Cotton' },
+        { day: 'Sunday', time: '07:00 AM', duration: '60 min', method: 'Flood', crop: 'Paddy' }
+      ];
+      if (crop !== 'all') {
+        weekData = weekData.filter(function(item) {
+          return item.crop.toLowerCase() === crop;
+        });
+      }
+      var html = '';
+      for (var i = 0; i < weekData.length; i++) {
+        var item = weekData[i];
+        html +=
+          '<tr>' +
+            '<td><strong>' + item.day + '</strong></td>' +
+            '<td>' + item.time + '</td>' +
+            '<td>' + item.duration + '</td>' +
+            '<td><span class="badge badge-info">' + item.method + '</span></td>' +
+            '<td>' + item.crop + '</td>' +
+          '</tr>';
+      }
+      if (weekData.length === 0) {
+        html = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);"><i class="fas fa-info-circle"></i> No irrigation schedule for selected crop</td></tr>';
+      }
+      var el = document.getElementById('weekly-irr-body');
+      if (el) el.innerHTML = html;
+    }
+
+    function filterByCrop(crop) {
+      updateFertRecommendations(crop);
+      updateSoilStatus(crop);
+      updateWeeklyIrrSchedule(crop);
+      var rows = document.querySelectorAll('#irr-schedule-body tr');
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var cropCell = row.querySelector('td strong');
+        if (cropCell) {
+          var rowCrop = cropCell.textContent.toLowerCase();
+          if (crop === 'all' || rowCrop === crop) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        }
+      }
+    }
+
+    var cropFilter = document.getElementById('crop-filter');
+    if (cropFilter) {
+      cropFilter.addEventListener('change', function() {
+        filterByCrop(cropFilter.value);
+      });
+    }
+
+    filterByCrop('all');
+
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Analytics Center</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <main class="page-container">
+
+    <section class="hero-dashboard" style="background:var(--gradient-primary); margin-bottom:25px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2><i class="fas fa-chart-pie"></i> Analytics Center</h2>
+          <p style="font-size:13px; color:rgba(255,255,255,0.9); margin-top:5px;">
+            Visualise productivity scores, revenue aggregates, temperature fluctuations, and soil moisture levels in interactive graphs.
+          </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <select class="form-select" id="analytics-farm-selector" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,0.3); font-size:13px; background:rgba(255,255,255,0.15); color:white; min-width:140px;" onchange="updateAnalyticsFarm()">
+            <option value="all" style="color:black;">All Farms</option>
+            <option value="Green Acre" style="color:black;">Green Acre</option>
+            <option value="Saraswati" style="color:black;">Saraswati</option>
+            <option value="Deccan" style="color:black;">Deccan</option>
+          </select>
+          <button class="btn-primary btn-sm" onclick="generateReport('pdf')" style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); color:white;">
+            <i class="fas fa-file-pdf"></i> PDF
+          </button>
+          <button class="btn-primary btn-sm" onclick="generateReport('csv')" style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); color:white;">
+            <i class="fas fa-file-csv"></i> CSV
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card-premium">
+      <h3 style="font-size:16px; margin-bottom:12px;"><i class="fas fa-database" style="color:var(--premium-green); margin-right:8px;"></i> Your Farm Analytics <span id="analytics-live-badge" style="font-size:9px;font-weight:600;color:var(--text-muted);"></span></h3>
+      <div class="stats-card-grid" id="analytics-live-stats">
+        <div class="stat-box"><i class="fas fa-warehouse" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Farms</div></div>
+        <div class="stat-box"><i class="fas fa-seedling" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Active Crops</div></div>
+        <div class="stat-box"><i class="fas fa-receipt" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Transactions</div></div>
+        <div class="stat-box"><i class="fas fa-users-gear" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Worker Bookings</div></div>
+        <div class="stat-box"><i class="fas fa-cart-shopping" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Orders</div></div>
+        <div class="stat-box"><i class="fas fa-robot" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">AI Conversations</div></div>
+      </div>
+    </section>
+
+    <section class="card-premium">
+      <h3 style="font-size:16px; margin-bottom:12px;"><i class="fas fa-bolt" style="color:var(--premium-green); margin-right:8px;"></i> Overall Performance Indices</h3>
+      <div class="stats-card-grid">
+        <div class="stat-box" onclick="highlightGraph('yield')">
+          <i class="fas fa-weight-hanging" style="color:var(--premium-green); font-size:16px;"></i>
+          <div style="font-size:16px; font-weight:800; margin-top:4px;">94%</div>
+          <div style="font-size:9px; color:var(--text-muted);">Yield Rate</div>
+        </div>
+        <div class="stat-box" onclick="highlightGraph('profit')">
+          <i class="fas fa-wallet" style="color:var(--premium-green); font-size:16px;"></i>
+          <div style="font-size:16px; font-weight:800; margin-top:4px;">₹1.2L</div>
+          <div style="font-size:9px; color:var(--text-muted);">Net Profit</div>
+        </div>
+        <div class="stat-box" onclick="highlightGraph('water')">
+          <i class="fas fa-droplet" style="color:var(--premium-green); font-size:16px;"></i>
+          <div style="font-size:16px; font-weight:800; margin-top:4px;">88%</div>
+          <div style="font-size:9px; color:var(--text-muted);">Water Efficiency</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card-premium">
+      <h3 style="font-size:16px; margin-bottom:15px;"><i class="fas fa-chart-column" style="color:var(--premium-green); margin-right:8px;"></i> Monthly Cash Flow (Income vs Expense)</h3>
+      <div style="background:var(--bg-card); border-radius:16px; padding:15px;">
+        <svg class="chart-svg" viewBox="0 0 400 200">
+          <line x1="40" y1="30" x2="380" y2="30" stroke="var(--border-light)" stroke-width="1" />
+          <line x1="40" y1="80" x2="380" y2="80" stroke="var(--border-light)" stroke-width="1" />
+          <line x1="40" y1="130" x2="380" y2="130" stroke="var(--border-light)" stroke-width="1" />
+          <line x1="40" y1="180" x2="380" y2="180" stroke="var(--text-muted)" stroke-width="1" />
+          <text x="10" y="35" font-size="9" fill="var(--text-secondary)">₹1.5L</text>
+          <text x="10" y="85" font-size="9" fill="var(--text-secondary)">₹1.0L</text>
+          <text x="10" y="135" font-size="9" fill="var(--text-secondary)">₹50K</text>
+          <text x="25" y="185" font-size="9" fill="var(--text-secondary)">0</text>
+          <rect x="65" y="60" width="18" height="120" class="chart-bar" />
+          <rect x="85" y="110" width="18" height="70" class="chart-bar-alt" />
+          <rect x="145" y="50" width="18" height="130" class="chart-bar" />
+          <rect x="165" y="120" width="18" height="60" class="chart-bar-alt" />
+          <rect x="225" y="40" width="18" height="140" class="chart-bar" />
+          <rect x="245" y="135" width="18" height="45" class="chart-bar-alt" />
+          <rect x="305" y="70" width="18" height="110" class="chart-bar" />
+          <rect x="325" y="150" width="18" height="30" class="chart-bar-alt" />
+          <text x="75" y="195" font-size="10" fill="var(--text-secondary)" text-anchor="middle">March</text>
+          <text x="155" y="195" font-size="10" fill="var(--text-secondary)" text-anchor="middle">April</text>
+          <text x="235" y="195" font-size="10" fill="var(--text-secondary)" text-anchor="middle">May</text>
+          <text x="315" y="195" font-size="10" fill="var(--text-secondary)" text-anchor="middle">June</text>
+        </svg>
+      </div>
+      <div style="display:flex; justify-content:center; gap:20px; font-size:10px; margin-top:10px; font-weight:600;">
+        <span><i class="fas fa-square" style="color:var(--premium-green);"></i> Sales Revenue</span>
+        <span><i class="fas fa-square" style="color:var(--mud-accent);"></i> Capital Overhead</span>
+      </div>
+    </section>
+
+    <section class="card-premium">
+      <h3 style="font-size:16px; margin-bottom:15px;"><i class="fas fa-cloud-sun-rain" style="color:var(--premium-green); margin-right:8px;"></i> Soil Moisture vs Temperature Trends</h3>
+      <div style="background:var(--bg-card); border-radius:16px; padding:15px;">
+        <svg class="chart-svg" viewBox="0 0 400 200">
+          <line x1="30" y1="180" x2="380" y2="180" stroke="var(--text-muted)" stroke-width="1" />
+          <line x1="30" y1="30" x2="30" y2="180" stroke="var(--text-muted)" stroke-width="1" />
+          <path d="M 50 180 L 50 110 L 110 70 L 170 120 L 230 60 L 290 90 L 350 40 L 350 180 Z" class="chart-area" />
+          <path d="M 50 110 L 110 70 L 170 120 L 230 60 L 290 90 L 350 40" class="chart-line" />
+          <path d="M 50 140 L 110 130 L 170 100 L 230 110 L 290 80 L 350 70" fill="none" stroke="var(--warning)" stroke-width="3" stroke-dasharray="4" />
+          <text x="50" y="195" font-size="9" fill="var(--text-secondary)" text-anchor="middle">Day 1</text>
+          <text x="170" y="195" font-size="9" fill="var(--text-secondary)" text-anchor="middle">Day 3</text>
+          <text x="290" y="195" font-size="9" fill="var(--text-secondary)" text-anchor="middle">Day 5</text>
+          <text x="350" y="195" font-size="9" fill="var(--text-secondary)" text-anchor="middle">Day 7</text>
+          <text x="20" y="115" font-size="9" fill="var(--premium-green)">50%</text>
+          <text x="20" y="45" font-size="9" fill="var(--premium-green)">80%</text>
+        </svg>
+      </div>
+      <div style="display:flex; justify-content:center; gap:20px; font-size:10px; margin-top:10px; font-weight:600;">
+        <span><i class="fas fa-minus" style="color:var(--premium-green); font-weight:bold;"></i> Moisture Content (%)</span>
+        <span><i class="fas fa-ellipsis-h" style="color:var(--warning);"></i> Mean Air Temp (°C)</span>
+      </div>
+    </section>
+
+    <section class="card-premium">
+      <h3 style="font-size:16px; margin-bottom:15px;"><i class="fas fa-chart-pie" style="color:var(--premium-green); margin-right:8px;"></i> Profitability Breakdown (by Crop Type)</h3>
+      <div style="background:var(--bg-card); border-radius:16px; padding:15px; display:flex; align-items:center; justify-content:center; gap:30px;">
+        <svg width="150" height="150" viewBox="0 0 42 42">
+          <circle cx="21" cy="21" r="15.915" fill="var(--bg-card-solid)" stroke="var(--border-light)" stroke-width="5" />
+          <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--premium-green)" stroke-width="5" stroke-dasharray="55 45" stroke-dashoffset="25" class="chart-pie-slice" onclick="showChartValue('Rice Segment: 55% Net Shares')" />
+          <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--mud-accent)" stroke-width="5" stroke-dasharray="25 75" stroke-dashoffset="70" class="chart-pie-slice" onclick="showChartValue('Cotton Segment: 25% Net Shares')" />
+          <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--light-green)" stroke-width="5" stroke-dasharray="20 80" stroke-dashoffset="45" class="chart-pie-slice" onclick="showChartValue('Vegetables Segment: 20% Net Shares')" />
+          <circle cx="21" cy="21" r="12" fill="var(--bg-card-solid)" />
+        </svg>
+        <div style="font-size:12px; line-height:1.8;">
+          <div style="color:var(--premium-green); font-weight:700;"><i class="fas fa-circle"></i> Basmati Rice (55%)</div>
+          <div style="color:var(--mud-accent); font-weight:700;"><i class="fas fa-circle"></i> Cotton (25%)</div>
+          <div style="color:var(--light-green); font-weight:700;"><i class="fas fa-circle"></i> Vegetables (20%)</div>
+        </div>
+      </div>
+      <div id="chart-pie-value" style="font-size:11px; text-align:center; font-weight:700; color:var(--premium-green); height:16px; margin-top:10px;">Tap segments to inspect margins</div>
+    </section>
+
+  </main>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    function showChartValue(val) { document.getElementById("chart-pie-value").textContent = val; showToast(val, "success"); }
+    function highlightGraph(type) { showToast(`Selected metrics highlights: ${type.toUpperCase()}`, "success"); }
+
+    // Farm selection for Analytics
+    function updateAnalyticsFarm() {
+      var selectedFarm = document.getElementById('analytics-farm-selector').value;
+      showToast('Loading analytics for: ' + (selectedFarm === 'all' ? 'All Farms' : selectedFarm), 'info');
+      
+      // In a real implementation, this would fetch farm-specific analytics data
+      if (window.API && localStorage.getItem('fa-auth-token')) {
+        console.log('Fetching analytics data for farm:', selectedFarm);
+        // API call to get farm-specific analytics would go here
+      }
+    }
+
+    // Report generation
+    function generateReport(format) {
+      var selectedFarm = document.getElementById('analytics-farm-selector').value;
+      var farmName = selectedFarm === 'all' ? 'All Farms' : selectedFarm;
+      
+      showToast('Generating ' + format.toUpperCase() + ' report for: ' + farmName, 'info');
+      
+      // In a real implementation, this would generate and download the report
+      if (window.API && localStorage.getItem('fa-auth-token')) {
+        console.log('Generating', format, 'report for farm:', selectedFarm);
+        // API call to generate report would go here
+      }
+      
+      // Simulate report generation delay
+      setTimeout(function() {
+        showToast(format.toUpperCase() + ' report generated successfully!', 'success');
+      }, 1500);
+    }
+
+    (function () {
+      if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+      var statsEl = document.getElementById('analytics-live-stats');
+      var badgeEl = document.getElementById('analytics-live-badge');
+      API.Analytics.dashboard().then(function (res) {
+        var d = res || {};
+        var map = [
+          ['Farms', d.farms],
+          ['Active Crops', d.active_crops],
+          ['Transactions', d.transactions],
+          ['Worker Bookings', d.worker_bookings],
+          ['Orders', d.orders],
+          ['AI Conversations', d.ai_conversations]
+        ];
+        if (!statsEl) return;
+        var boxes = statsEl.querySelectorAll('.stat-box');
+        for (var i = 0; i < boxes.length && i < map.length; i++) {
+          var valEl = boxes[i].querySelector('div');
+          if (valEl) valEl.textContent = (map[i][1] != null ? map[i][1] : '0');
+        }
+        if (badgeEl) badgeEl.textContent = 'LIVE';
+      }).catch(function () {});
+      if (window.API.Analytics.usage) {
+        API.Analytics.usage(30).then(function (u) {
+          if (u && badgeEl) badgeEl.textContent = '30-day usage: ' + (u.logins || 0) + ' logins • ' + (u.transactions || 0) + ' transactions';
+        }).catch(function () {});
+      }
+    })();
+  </script>
+</body>
+</html>

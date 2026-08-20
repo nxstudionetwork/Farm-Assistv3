@@ -1,0 +1,250 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="schemes">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Farm Assist - Government Schemes</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1>Government Schemes</h1>
+        <p>Subsidies, loans, insurance & eligibility checker</p>
+      </div>
+      <button class="btn-primary btn-sm" id="check-eligibility-btn">
+        <i class="fas fa-check-circle"></i> Check Eligibility
+      </button>
+    </div>
+
+    <div style="position:relative;margin-bottom:16px;">
+      <input type="text" class="search-input" id="scheme-search" placeholder="Search schemes by name, benefit, or category..." style="padding-left:40px;">
+      <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+    </div>
+
+    <div class="filter-tabs" id="filter-tabs">
+      <button class="filter-tab active" data-filter="all">All</button>
+      <button class="filter-tab" data-filter="central">Central</button>
+      <button class="filter-tab" data-filter="state">State</button>
+      <button class="filter-tab" data-filter="subsidy">Subsidy</button>
+      <button class="filter-tab" data-filter="insurance">Insurance</button>
+      <button class="filter-tab" data-filter="loan">Loan</button>
+    </div>
+
+    <div id="schemes-content"></div>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    (function () {
+      var allSchemes = [];
+      var currentFilter = 'all';
+
+      var categoryIcons = {
+        subsidy: 'fa-hand-holding-usd',
+        insurance: 'fa-shield-alt',
+        loan: 'fa-university',
+        central: 'fa-landmark',
+        state: 'fa-map-marker-alt',
+        general: 'fa-seedling'
+      };
+
+      function getCategoryIcon(cat) {
+        if (!cat) return 'fa-seedling';
+        var key = cat.toLowerCase();
+        return categoryIcons[key] || 'fa-seedling';
+      }
+
+      function getCategoryBadge(cat) {
+        if (!cat) return '';
+        var color = '#6b7280';
+        var lower = cat.toLowerCase();
+        if (lower === 'subsidy') color = '#059669';
+        else if (lower === 'insurance') color = '#2563eb';
+        else if (lower === 'loan') color = '#d97706';
+        else if (lower === 'central') color = '#7c3aed';
+        else if (lower === 'state') color = '#dc2626';
+        return '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;background:' + color + '18;color:' + color + ';text-transform:uppercase;letter-spacing:0.5px;">' + cat + '</span>';
+      }
+
+      function renderSchemeCard(scheme) {
+        var icon = getCategoryIcon(scheme.category);
+        var badge = getCategoryBadge(scheme.category);
+        var benefits = scheme.benefits ? scheme.benefits.substring(0, 120) : 'N/A';
+        var eligibility = scheme.eligibility ? scheme.eligibility.substring(0, 120) : 'N/A';
+        var deadline = scheme.application_deadline || 'Ongoing';
+        var stateLabel = scheme.state ? '<span style="font-size:11px;color:var(--text-muted);"><i class="fas fa-map-marker-alt"></i> ' + scheme.state + '</span>' : '';
+        var cropLabel = scheme.crop ? '<span style="font-size:11px;color:var(--text-muted);margin-left:8px;"><i class="fas fa-leaf"></i> ' + scheme.crop + '</span>' : '';
+
+        return '<div class="card-premium" style="margin-bottom:14px;padding:20px;border-radius:16px;background:var(--card-bg);border:1px solid var(--border-color);box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:transform 0.2s,box-shadow 0.2s;" onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(0,0,0,0.08)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.04)\'">' +
+          '<div style="display:flex;align-items:flex-start;gap:14px;">' +
+            '<div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#059669,#10b981);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+              '<i class="fas ' + icon + '" style="font-size:20px;color:#fff;"></i>' +
+            '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">' +
+                '<h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:0;">' + (scheme.name || 'Untitled Scheme') + '</h3>' +
+                badge +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">' + stateLabel + cropLabel + '</div>' +
+              '<p style="font-size:12px;color:var(--text-secondary);margin:0 0 6px;line-height:1.5;">' + (scheme.description || '') + '</p>' +
+              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;">' +
+                '<div style="background:var(--surface-color,#f9fafb);padding:10px 12px;border-radius:10px;">' +
+                  '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Benefits</div>' +
+                  '<div style="font-size:12px;color:var(--text-primary);line-height:1.4;">' + benefits + '</div>' +
+                '</div>' +
+                '<div style="background:var(--surface-color,#f9fafb);padding:10px 12px;border-radius:10px;">' +
+                  '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Eligibility</div>' +
+                  '<div style="font-size:12px;color:var(--text-primary);line-height:1.4;">' + eligibility + '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">' +
+                '<span style="font-size:11px;color:var(--text-muted);"><i class="fas fa-calendar"></i> Deadline: ' + deadline + '</span>' +
+                '<div style="display:flex;gap:6px;">' +
+                  '<button class="btn-secondary btn-sm scheme-apply-btn" data-id="' + scheme.scheme_id + '" style="font-size:11px;padding:6px 14px;border-radius:10px;">Apply</button>' +
+                  '<button class="btn-primary btn-sm scheme-details-btn" data-id="' + scheme.scheme_id + '" style="font-size:11px;padding:6px 14px;border-radius:10px;">Details</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      function getFilteredSchemes() {
+        var query = (document.getElementById('scheme-search').value || '').toLowerCase().trim();
+        var filter = currentFilter;
+
+        return allSchemes.filter(function (s) {
+          var matchesFilter = filter === 'all' ||
+            (s.category && s.category.toLowerCase() === filter) ||
+            (s.state && filter === 'state');
+
+          var matchesSearch = !query ||
+            (s.name && s.name.toLowerCase().indexOf(query) !== -1) ||
+            (s.benefits && s.benefits.toLowerCase().indexOf(query) !== -1) ||
+            (s.category && s.category.toLowerCase().indexOf(query) !== -1) ||
+            (s.description && s.description.toLowerCase().indexOf(query) !== -1);
+
+          return matchesFilter && matchesSearch;
+        });
+      }
+
+      function renderSchemes() {
+        var container = document.getElementById('schemes-content');
+        var filtered = getFilteredSchemes();
+
+        if (filtered.length === 0) {
+          UIState.empty(container, 'No schemes match your filter', 'fa-search');
+          return;
+        }
+
+        var html = '';
+        filtered.forEach(function (scheme) {
+          html += renderSchemeCard(scheme);
+        });
+        container.innerHTML = html;
+
+        container.querySelectorAll('.scheme-apply-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var id = this.getAttribute('data-id');
+            var self = this;
+            self.disabled = true;
+            self.textContent = 'Applying...';
+            API.Government.applyScheme(id).then(function () {
+              showToast('Application submitted successfully!', 'success');
+              self.textContent = 'Applied';
+              self.style.opacity = '0.6';
+            }).catch(function (err) {
+              showToast(err.message || 'Failed to apply. Please try again.', 'danger');
+              self.disabled = false;
+              self.textContent = 'Apply';
+            });
+          });
+        });
+
+        container.querySelectorAll('.scheme-details-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var id = this.getAttribute('data-id');
+            var scheme = allSchemes.find(function (s) { return s.scheme_id === id; });
+            if (scheme) {
+              showToast(scheme.name + ': ' + (scheme.description || 'No additional details'), 'info');
+            }
+          });
+        });
+      }
+
+      function loadSchemes() {
+        var container = document.getElementById('schemes-content');
+        UIState.loading(container);
+
+        API.Government.listSchemes().then(function (res) {
+          if (Array.isArray(res)) {
+            allSchemes = res;
+          } else if (res && res.items) {
+            allSchemes = res.items;
+          } else {
+            allSchemes = [];
+          }
+          renderSchemes();
+        }).catch(function (err) {
+          UIState.error(container, err.message || 'Failed to load schemes', loadSchemes);
+        });
+      }
+
+      function initTabs() {
+        var tabs = document.querySelectorAll('#filter-tabs .filter-tab');
+        tabs.forEach(function (tab) {
+          tab.addEventListener('click', function () {
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            this.classList.add('active');
+            currentFilter = this.getAttribute('data-filter') || 'all';
+            renderSchemes();
+          });
+        });
+      }
+
+      function initSearch() {
+        var input = document.getElementById('scheme-search');
+        var debounceTimer;
+        input.addEventListener('input', function () {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(renderSchemes, 200);
+        });
+      }
+
+      function initEligibilityCheck() {
+        document.getElementById('check-eligibility-btn').addEventListener('click', function () {
+          var self = this;
+          self.disabled = true;
+          self.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+          API.Government.listApplications().then(function (res) {
+            var applications = Array.isArray(res) ? res : (res && res.items ? res.items : []);
+            if (applications.length === 0) {
+              showToast('No applications found. Apply to a scheme to get started!', 'info');
+            } else {
+              showToast('You have ' + applications.length + ' scheme application(s) on file.', 'success');
+            }
+          }).catch(function (err) {
+            showToast(err.message || 'Unable to check eligibility.', 'warning');
+          }).finally(function () {
+            self.disabled = false;
+            self.innerHTML = '<i class="fas fa-check-circle"></i> Check Eligibility';
+          });
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        initTabs();
+        initSearch();
+        initEligibilityCheck();
+        loadSchemes();
+      });
+    })();
+  </script>
+</body>
+</html>

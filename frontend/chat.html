@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Chat</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    body {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      position: sticky;
+      top: 64px;
+      z-index: 900;
+      background: var(--white);
+      border-bottom: 1px solid var(--border-light);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow-sm);
+    }
+    .chat-header .back-btn {
+      background: none;
+      border: none;
+      font-size: 18px;
+      color: var(--white);
+      cursor: pointer;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--primary-green);
+      flex-shrink: 0;
+    }
+    .chat-header .chat-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--white);
+      font-weight: 700;
+      font-size: 16px;
+      font-family: 'Outfit', sans-serif;
+    }
+    .chat-header .chat-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .chat-header .chat-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-header .chat-status {
+      font-size: 11px;
+      color: var(--light-green);
+      font-weight: 500;
+    }
+    .chat-header .more-btn {
+      background: none;
+      border: none;
+      font-size: 18px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+    }
+    .chat-header .more-btn:hover {
+      background: var(--light-gray);
+    }
+
+    .chat-messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 12px;
+      background: #ECE5DD;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8d6c0' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .chat-date-separator {
+      text-align: center;
+      margin: 16px 0 12px;
+    }
+    .chat-date-separator span {
+      background: #D4EDDA;
+      color: var(--primary-green);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 14px;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .msg-row {
+      display: flex;
+      margin-bottom: 3px;
+      animation: msgIn 0.25s ease;
+    }
+    .msg-row.outgoing {
+      justify-content: flex-end;
+    }
+    .msg-row.incoming {
+      justify-content: flex-start;
+    }
+
+    .msg-bubble {
+      max-width: 80%;
+      padding: 7px 10px;
+      border-radius: 10px;
+      position: relative;
+      word-wrap: break-word;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .msg-row.outgoing .msg-bubble {
+      background: #DCF8C6;
+      border-top-right-radius: 2px;
+    }
+    .msg-row.incoming .msg-bubble {
+      background: var(--white);
+      border-top-left-radius: 2px;
+    }
+    .msg-text {
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.45;
+      margin-bottom: 2px;
+    }
+    .msg-meta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-top: 1px;
+    }
+    .msg-time {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .msg-status {
+      font-size: 12px;
+      color: #53BDEB;
+    }
+    .msg-status.unread {
+      color: var(--text-muted);
+    }
+
+    .chat-composer {
+      background: var(--white);
+      border-top: 1px solid var(--border-light);
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      z-index: 10;
+      padding-bottom: calc(var(--bottomnav-height) + 12px);
+    }
+    .chat-composer .emoji-btn,
+    .chat-composer .attach-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .chat-composer .emoji-btn:hover,
+    .chat-composer .attach-btn:hover {
+      background: var(--light-gray);
+    }
+    .chat-composer input {
+      flex: 1;
+      background: var(--light-gray);
+      border: none;
+      border-radius: 20px;
+      padding: 9px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      outline: none;
+      min-height: 40px;
+    }
+    .chat-composer input::placeholder {
+      color: var(--text-muted);
+    }
+    .chat-composer .send-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary-green);
+      color: var(--white);
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.15s, background 0.2s;
+      box-shadow: 0 2px 8px rgba(27,94,63,0.3);
+    }
+    .chat-composer .send-btn:hover {
+      background: var(--medium-green);
+      transform: scale(1.05);
+    }
+    .chat-composer .send-btn:active {
+      transform: scale(0.95);
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 480px) {
+      .msg-bubble { max-width: 88%; }
+      .chat-header { top: 64px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Chat Header -->
+  <div class="chat-header">
+    <button class="back-btn" id="chat-back-btn" aria-label="Go back">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+    <div class="chat-avatar" id="chat-avatar" style="background: var(--primary-green);">
+      <i class="fas fa-users"></i>
+    </div>
+    <div class="chat-info">
+      <div class="chat-name" id="chat-contact-name">Farmer Community</div>
+      <div class="chat-status" id="chat-status-text">online</div>
+    </div>
+    <button class="more-btn" id="chat-more-btn" aria-label="More options">
+      <i class="fas fa-ellipsis-vertical"></i>
+    </button>
+  </div>
+
+  <!-- Chat Messages Area -->
+  <div class="chat-messages-area" id="chat-messages-area">
+    <!-- Messages rendered by JS -->
+  </div>
+
+  <!-- Message Composer -->
+  <div class="chat-composer">
+    <button class="emoji-btn" id="emoji-btn" aria-label="Emoji">
+      <i class="far fa-face-smile"></i>
+    </button>
+    <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+    <button class="attach-btn" id="attach-btn" aria-label="Attach file">
+      <i class="fas fa-paperclip"></i>
+    </button>
+    <button class="send-btn" id="send-btn" aria-label="Send message">
+      <i class="fas fa-paper-plane"></i>
+    </button>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      var params = new URLSearchParams(window.location.search);
+      var chatId = params.get('id') || 'community';
+
+      var CONTACTS = {
+        community: { name: 'Farmer Community', color: '#1B5E3F', icon: 'fa-users', status: 'online' },
+        drarvind: { name: 'Dr. Arvind S.', color: '#40916C', icon: 'fa-user-doctor', status: 'online' },
+        rajesh: { name: 'Rajesh Kumar', color: '#8B6F47', icon: 'fa-user', status: 'last seen today at 10:45 AM' },
+        meera: { name: 'Meera Nair', color: '#2D8659', icon: 'fa-user', status: 'last seen yesterday at 6:30 PM' },
+        gurbachan: { name: 'Gurbachan Singh', color: '#E9B640', icon: 'fa-user', status: 'online' },
+        mahesh: { name: 'Mahesh Patil', color: '#D63031', icon: 'fa-user', status: 'last seen 2h ago' },
+        krishiveyor: { name: 'Krishi Veyor', color: '#52B788', icon: 'fa-tractor', status: 'online' }
+      };
+
+      var contact = CONTACTS[chatId] || CONTACTS.community;
+
+      document.title = 'Farm Assist - ' + contact.name;
+      document.getElementById('chat-contact-name').textContent = contact.name;
+      document.getElementById('chat-status-text').textContent = contact.status;
+      var avatarEl = document.getElementById('chat-avatar');
+      avatarEl.style.background = contact.color;
+      avatarEl.innerHTML = '<i class="fas ' + contact.icon + '"></i>';
+
+      var STORAGE_KEY = 'farm-chat-' + chatId;
+
+      var DEFAULT_MESSAGES = {
+        community: [
+          { id: 1, type: 'incoming', text: 'Namaste everyone! Has anyone tried the new drought-resistant variety of groundnut from ICRISAT?', time: '9:15 AM', date: 'Yesterday' },
+          { id: 2, type: 'outgoing', text: 'Yes Rajesh, I planted it on my 2-acre plot last month. Germination rate was excellent, around 92%.', time: '9:18 AM', date: 'Yesterday' },
+          { id: 3, type: 'incoming', text: 'That is great news! What irrigation schedule are you following for it?', time: '9:20 AM', date: 'Yesterday' },
+          { id: 4, type: 'outgoing', text: 'Drip irrigation every 3 days. The soil moisture sensor shows 60% is the sweet spot. The AI assistant in Farm Assist recommended that.', time: '9:22 AM', date: 'Yesterday' },
+          { id: 5, type: 'incoming', text: 'I need help with my tomato crop. Leaf curl virus is spreading in Plot B. Any organic solution?', time: '10:05 AM', date: 'Today' },
+          { id: 6, type: 'outgoing', text: 'Spray neem oil (5ml/L) + install yellow sticky traps. Also remove infected plants immediately to prevent spread.', time: '10:08 AM', date: 'Today' },
+          { id: 7, type: 'incoming', text: 'Thanks! Also, is there any government subsidy for installing drip irrigation?', time: '10:10 AM', date: 'Today' },
+          { id: 8, type: 'outgoing', text: 'Yes, under PMKSY you can get 55% subsidy for small farmers and 45% for others. Apply through your nearest agriculture office.', time: '10:12 AM', date: 'Today' },
+          { id: 9, type: 'incoming', text: 'Very helpful. I will also check the schemes page in the app. The PM-KISAN installment was also credited yesterday!', time: '10:15 AM', date: 'Today' },
+          { id: 10, type: 'outgoing', text: 'Great! Make sure you complete your eKYC for the next installment. The deadline is coming up soon.', time: '10:17 AM', date: 'Today' },
+          { id: 11, type: 'incoming', text: 'Will do. By the way, the wheat MSP has been announced. ₹2,300/quintal for the rabi season!', time: '10:20 AM', date: 'Today' },
+          { id: 12, type: 'outgoing', text: 'That is a good price. I am planning to sell my stock at the APMC mandi next week. The prices are holding steady right now.', time: '10:22 AM', date: 'Today' }
+        ],
+        drarvind: [
+          { id: 1, type: 'incoming', text: 'Hello! I have reviewed your soil test results for Plot A and Plot C.', time: '8:30 AM', date: 'Yesterday' },
+          { id: 2, type: 'outgoing', text: 'Doctor, what do the results show? I have been noticing some yellowing on the lower leaves.', time: '8:35 AM', date: 'Yesterday' },
+          { id: 3, type: 'incoming', text: 'The nitrogen levels are low at 180 kg/ha. I recommend applying Urea at 110 kg/ha in two splits.', time: '8:38 AM', date: 'Yesterday' },
+          { id: 4, type: 'outgoing', text: 'Should I also add any micronutrients? The cotton crop is at the squaring stage now.', time: '8:40 AM', date: 'Yesterday' },
+          { id: 5, type: 'incoming', text: 'Yes, add Zinc Sulphate at 25 kg/ha. Also, your potassium is borderline. Use MOP at 60 kg/ha before flowering.', time: '8:42 AM', date: 'Yesterday' },
+          { id: 6, type: 'outgoing', text: 'Noted. What about pest management? I saw some bollworm activity last week.', time: '2:10 PM', date: 'Today' },
+          { id: 7, type: 'incoming', text: 'Install pheromone traps (5/acre) and spray Chlorantraniliprole 18.5% at 150 ml/acre. Monitor every 3 days.', time: '2:15 PM', date: 'Today' },
+          { id: 8, type: 'outgoing', text: 'Thank you Doctor! I will follow this schedule and upload the progress photos on the app.', time: '2:18 PM', date: 'Today' }
+        ],
+        rajesh: [
+          { id: 1, type: 'incoming', text: 'Bro, have you checked the soybean prices at Pune mandi today?', time: '7:00 AM', date: 'Yesterday' },
+          { id: 2, type: 'outgoing', text: 'Yes, it is trading at ₹4,850/quintal. Up by ₹120 from yesterday.', time: '7:05 AM', date: 'Yesterday' },
+          { id: 3, type: 'incoming', text: 'Good. I have 15 quintals to sell. Should I wait or sell now?', time: '7:08 AM', date: 'Yesterday' },
+          { id: 4, type: 'outgoing', text: 'Prices usually rise during the supply gap in October. But if you need cash, sell half now and hold the rest.', time: '7:12 AM', date: 'Yesterday' },
+          { id: 5, type: 'incoming', text: 'Smart idea. Also, can you share the link for the tractor rental? My JCB is due for service.', time: '3:30 PM', date: 'Today' },
+          { id: 6, type: 'outgoing', text: 'Check the Equipment section in the app. Mahesh Patil has a JCB available at ₹1,200/hour. Very reliable.', time: '3:35 PM', date: 'Today' },
+          { id: 7, type: 'incoming', text: 'Perfect, I will book it for tomorrow morning. Thanks for the help!', time: '3:38 PM', date: 'Today' }
+        ],
+        meera: [
+          { id: 1, type: 'outgoing', text: 'Hi Meera! How is the organic turmeric cultivation going in Kerala?', time: '11:00 AM', date: 'Yesterday' },
+          { id: 2, type: 'incoming', text: 'Going well! We are using the GI-tagged Lakadong variety. Curcumin content is very high.', time: '11:05 AM', date: 'Yesterday' },
+          { id: 3, type: 'outgoing', text: 'That is amazing. What is the market price for organic turmeric right now?', time: '11:08 AM', date: 'Yesterday' },
+          { id: 4, type: 'incoming', text: 'Around ₹12,000/quintal for dried finger type. We export a lot to Europe through FPO cooperatives.', time: '11:10 AM', date: 'Yesterday' },
+          { id: 5, type: 'outgoing', text: 'Impressive. I am thinking of starting turmeric on 1 acre as a trial. Can you share your source for quality rhizomes?', time: '9:00 AM', date: 'Today' },
+          { id: 6, type: 'incoming', text: 'Contact the IISR Calicut. They have the best planting material. Also check SPICE Board schemes for subsidies.', time: '9:05 AM', date: 'Today' }
+        ],
+        gurbachan: [
+          { id: 1, type: 'incoming', text: 'Sat Sri Akal! My wheat yield this season was 28 quintals per acre. Record harvest!', time: '6:00 PM', date: 'Yesterday' },
+          { id: 2, type: 'outgoing', text: 'That is incredible Gurbachan ji! Which variety did you use?', time: '6:05 PM', date: 'Yesterday' },
+          { id: 3, type: 'incoming', text: 'HD-3226 with zero-till sowing method. Saved 20% on labor and water. The secret is proper seed rate of 40 kg/acre.', time: '6:08 PM', date: 'Yesterday' },
+          { id: 4, type: 'outgoing', text: 'I should try zero-till next season. How is the soil preparation different?', time: '6:12 PM', date: 'Yesterday' },
+          { id: 5, type: 'incoming', text: 'No need for ploughing after paddy. Direct sowing saves time and preserves soil moisture. Use Happy Seeder if available.', time: '4:30 PM', date: 'Today' },
+          { id: 6, type: 'outgoing', text: 'I will definitely look into this. Thanks for sharing your experience, ji!', time: '4:35 PM', date: 'Today' }
+        ],
+        mahesh: [
+          { id: 1, type: 'outgoing', text: 'Hello Mahesh, do you have a JCB available for rent tomorrow?', time: '1:00 PM', date: 'Yesterday' },
+          { id: 2, type: 'incoming', text: 'Yes! I have the backhoe loader free tomorrow from 6 AM. Rate is ₹1,200/hour, minimum 4 hours.', time: '1:05 PM', date: 'Yesterday' },
+          { id: 3, type: 'outgoing', text: 'That works. I need it for land leveling on my 3-acre plot. Should take about 5 hours.', time: '1:08 PM', date: 'Yesterday' },
+          { id: 4, type: 'incoming', text: 'Deal. Send me the farm location on the app. I will bring the machine directly.', time: '1:10 PM', date: 'Yesterday' },
+          { id: 5, type: 'incoming', text: 'Also, I started offering drone spraying services. ₹400/acre for pesticide application. Want to try it?', time: '8:00 AM', date: 'Today' },
+          { id: 6, type: 'outgoing', text: 'Yes! My cotton field needs spraying. How do I book the drone service?', time: '8:05 AM', date: 'Today' },
+          { id: 7, type: 'incoming', text: 'Just book through the Equipment section in the app. I have a DJI Agras T30, covers 10 acres per day.', time: '8:08 AM', date: 'Today' }
+        ],
+        krishiveyor: [
+          { id: 1, type: 'outgoing', text: 'Hi KrishiVeyor! I want to compare fertilizer prices for my wheat crop.', time: '9:30 AM', date: 'Yesterday' },
+          { id: 2, type: 'incoming', text: 'Hello! Based on your 5-acre wheat plot, you will need: Urea 220kg, DAP 100kg, MOP 60kg.', time: '9:33 AM', date: 'Yesterday' },
+          { id: 3, type: 'outgoing', text: 'What is the best price available right now for DAP?', time: '9:35 AM', date: 'Yesterday' },
+          { id: 4, type: 'incoming', text: 'Current rates: Imported DAP at ₹27,000/tonne, Indian at ₹26,500/tonne. Government subsidy covers ₹1,200/tonne.', time: '9:38 AM', date: 'Yesterday' },
+          { id: 5, type: 'outgoing', text: 'Can you suggest an organic alternative that is more cost effective?', time: '11:00 AM', date: 'Today' },
+          { id: 6, type: 'incoming', text: 'For organic: Use Vermicompost (2 tonnes/ha) + Neem cake (500 kg/ha) + Rhizobium culture. Total cost around ₹8,000/ha with 30% better long-term soil health.', time: '11:05 AM', date: 'Today' },
+          { id: 7, type: 'outgoing', text: 'That is very detailed. Please create a complete fertilizer plan for all my plots in the app.', time: '11:08 AM', date: 'Today' },
+          { id: 8, type: 'incoming', text: 'Done! Check the Fertilizer section. I have added a week-by-week schedule with dosage for each plot. Also set reminders for application dates.', time: '11:10 AM', date: 'Today' }
+        ]
+      };
+
+      var messages = [];
+      try {
+        var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved && Array.isArray(saved) && saved.length > 0) {
+          messages = saved;
+        } else {
+          messages = (DEFAULT_MESSAGES[chatId] || DEFAULT_MESSAGES.community).slice();
+        }
+      } catch (e) {
+        messages = (DEFAULT_MESSAGES[chatId] || DEFAULT_MESSAGES.community).slice();
+      }
+
+      function saveMessages() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+        } catch (e) {}
+      }
+
+      function renderMessages() {
+        var area = document.getElementById('chat-messages-area');
+        var html = '';
+        var lastDate = '';
+
+        messages.forEach(function (msg) {
+          if (msg.date && msg.date !== lastDate) {
+            lastDate = msg.date;
+            html += '<div class="chat-date-separator"><span>' + msg.date + '</span></div>';
+          }
+          var isOut = msg.type === 'outgoing';
+          var checkIcon = isOut
+            ? '<span class="msg-status' + (msg.read === false ? ' unread' : '') + '"><i class="fas fa-check-double"></i></span>'
+            : '';
+          html += '<div class="msg-row ' + msg.type + '">' +
+            '<div class="msg-bubble">' +
+              '<div class="msg-text">' + escapeHtml(msg.text) + '</div>' +
+              '<div class="msg-meta">' +
+                '<span class="msg-time">' + msg.time + '</span>' +
+                checkIcon +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        });
+
+        area.innerHTML = html;
+        scrollToBottom();
+      }
+
+      function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+      }
+
+      function scrollToBottom() {
+        var area = document.getElementById('chat-messages-area');
+        setTimeout(function () {
+          area.scrollTop = area.scrollHeight;
+        }, 50);
+      }
+
+      function getCurrentTime() {
+        var now = new Date();
+        var h = now.getHours();
+        var m = now.getMinutes();
+        var ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+      }
+
+      function sendMessage(text) {
+        if (!text || !text.trim()) return;
+        var msg = {
+          id: Date.now(),
+          type: 'outgoing',
+          text: text.trim(),
+          time: getCurrentTime(),
+          date: 'Today',
+          read: true
+        };
+        messages.push(msg);
+        saveMessages();
+        renderMessages();
+        document.getElementById('chat-input').value = '';
+        simulateReply(text.trim());
+      }
+
+      var REPLY_MAP = [
+        { triggers: ['hello', 'hi', 'namaste', 'hey'], replies: [
+          'Namaste! How can I help you with your farming today?',
+          'Hello! Hope your crops are doing well. What do you need?',
+          'Hi there! Ready to help with any farming queries.'
+        ]},
+        { triggers: ['price', 'rates', 'mandi', 'sell'], replies: [
+          'Current market prices look favorable. Check the Market Prices section for live rates at your nearest mandi.',
+          'Rice is at ₹2,300/quintal MSP. Wheat holding steady. I recommend checking the app for real-time updates.',
+          'Good time to sell if you have stored stock. Prices tend to drop after harvest season.'
+        ]},
+        { triggers: ['rain', 'weather', 'storm', 'flood'], replies: [
+          'Heavy rainfall expected in the next 48 hours. Secure your crops and delay any spraying operations.',
+          'Weather forecast shows moderate rain. Ensure proper drainage in your fields. The app weather section has hourly updates.',
+          'Check the Weather section for your farm-specific forecast. Consider protective covers for sensitive crops.'
+        ]},
+        { triggers: ['pest', 'disease', 'insect', 'bug', 'worm'], replies: [
+          'For pest issues, first identify the pest correctly. Take a photo and use the AI Crop Protection tool for instant diagnosis.',
+          'Neem oil spray (5ml/L) works well for most soft-bodied insects. For bollworm, use Chlorantraniliprole.',
+          'Integrated Pest Management is best. Combine biological controls with minimal chemical use. Check Crop Protection section.'
+        ]},
+        { triggers: ['fertilizer', 'urea', 'npk', 'compost'], replies: [
+          'For wheat, apply Urea in 2 splits: 50% at sowing, 50% at tillering stage. Use the Fertilizer calculator in the app.',
+          'Organic alternatives: Vermicompost 2t/ha + Neem cake 500kg/ha gives excellent results with better soil health.',
+          'Government subsidy on fertilizers is available through DBT. Make sure your Aadhaar is linked for direct benefits.'
+        ]},
+        { triggers: ['water', 'irrigation', 'drip'], replies: [
+          'Drip irrigation saves 40-60% water compared to flood irrigation. PMKSY offers 55% subsidy for installation.',
+          'Soil moisture sensors are your best friend. Maintain 55-65% moisture for most crops. The app monitor section tracks this.',
+          'Water early morning (5-7 AM) or late evening to reduce evaporation losses. Avoid midday irrigation.'
+        ]},
+        { triggers: ['subsidy', 'scheme', 'government', 'pmkisan', 'pm-kisan'], replies: [
+          'PM-KISAN provides ₹6,000/year in 3 installments. Make sure your eKYC is complete for the next disbursement.',
+          'Check the Government Schemes section in the app. There are schemes for irrigation, insurance, seeds, and equipment.',
+          'FPO members get additional benefits. Register your group at the District Agriculture Office for collective subsidies.'
+        ]},
+        { triggers: ['tractor', 'equipment', 'drone', 'machine'], replies: [
+          'Check the Equipment rental section. Tractors, JCBs, and now drones are available for hire from verified operators nearby.',
+          'Tractor renting at ₹500-800/hour depending on attachment. Drone spraying at ₹300-500/acre is the future of crop protection.',
+          'Government provides 50-80% subsidy on farm machinery through SMAM portal. Apply online for best rates.'
+        ]},
+        { triggers: ['seed', 'variety', 'plant', 'sow'], replies: [
+          'Use certified seeds from authorized dealers only. Check the Seeds section for variety recommendations based on your region and soil.',
+          'Seed treatment with Thiram at 2g/kg protects against soil-borne diseases. Always do a germination test before bulk sowing.',
+          'High-yielding varieties: HD-3226 for wheat, Pusa Basmati for rice, and JKCH-1091 for cotton are top performers this season.'
+        ]},
+        { triggers: ['soil', 'test', 'ph', 'nutrient'], replies: [
+          'Get your soil tested every 2 years. The nearest lab results are available in the app under the Soil section.',
+          'Ideal pH for most crops is 6.0-7.5. If acidic, apply lime at 2-4 t/ha. For alkaline, use gypsum.',
+          'Soil health card is available free at your Krishi Vigyan Kendra. It gives customized fertilizer recommendations.'
+        ]},
+        { triggers: ['thank', 'thanks', 'helpful'], replies: [
+          'Happy to help! Wishing you a bountiful harvest. Reach out anytime you need farming advice.',
+          'You are welcome! Remember, Farm Assist is always here to support your farming journey.',
+          'Glad I could help. Keep using the app features to maximize your farm productivity!'
+        ]}
+      ];
+
+      var DEFAULT_REPLIES = [
+        'That is a great question! I would recommend checking the relevant section in the Farm Assist app for detailed information.',
+        'Good point. For the best advice on this, try the AI Assistant feature in the app. It provides personalized recommendations.',
+        'I will look into that. In the meantime, you can consult your nearest Krishi Vigyan Kendra for expert guidance.',
+        'Interesting! Let me check with the community. Meanwhile, the app knowledge section has some great resources on this topic.',
+        'That is helpful information for everyone in the group. Keep sharing your farming experiences!',
+        'For specific advice on this, I suggest consulting a certified agriculture officer. You can find contacts in the Help section.'
+      ];
+
+      function simulateReply(userText) {
+        var lower = userText.toLowerCase();
+        var selectedReplies = DEFAULT_REPLIES;
+
+        for (var i = 0; i < REPLY_MAP.length; i++) {
+          var group = REPLY_MAP[i];
+          for (var j = 0; j < group.triggers.length; j++) {
+            if (lower.indexOf(group.triggers[j]) !== -1) {
+              selectedReplies = group.replies;
+              break;
+            }
+          }
+          if (selectedReplies !== DEFAULT_REPLIES) break;
+        }
+
+        var replyText = selectedReplies[Math.floor(Math.random() * selectedReplies.length)];
+        var delay = 1200 + Math.floor(Math.random() * 1500);
+
+        document.getElementById('chat-status-text').textContent = 'typing...';
+        document.getElementById('chat-status-text').style.color = '#E9B640';
+
+        setTimeout(function () {
+          var reply = {
+            id: Date.now(),
+            type: 'incoming',
+            text: replyText,
+            time: getCurrentTime(),
+            date: 'Today'
+          };
+          messages.push(reply);
+          saveMessages();
+          renderMessages();
+
+          document.getElementById('chat-status-text').textContent = contact.status;
+          document.getElementById('chat-status-text').style.color = '';
+
+          if (typeof showToast === 'function') {
+            showToast('New message from ' + contact.name, 'info');
+          }
+        }, delay);
+      }
+
+      document.getElementById('send-btn').addEventListener('click', function () {
+        sendMessage(document.getElementById('chat-input').value);
+      });
+
+      document.getElementById('chat-input').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage(this.value);
+        }
+      });
+
+      document.getElementById('chat-back-btn').addEventListener('click', function () {
+        window.location.href = 'messages.html';
+      });
+
+      document.getElementById('emoji-btn').addEventListener('click', function () {
+        if (typeof showToast === 'function') {
+          showToast('Emoji keyboard coming soon!', 'info');
+        }
+      });
+
+      document.getElementById('attach-btn').addEventListener('click', function () {
+        if (typeof showToast === 'function') {
+          showToast('File attachment coming soon!', 'info');
+        }
+      });
+
+      document.getElementById('chat-more-btn').addEventListener('click', function () {
+        if (typeof showToast === 'function') {
+          showToast('Chat options coming soon!', 'info');
+        }
+      });
+
+      renderMessages();
+
+      document.getElementById('chat-input').focus();
+    })();
+  </script>
+</body>
+</html>

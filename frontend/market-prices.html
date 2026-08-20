@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="market-prices">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Market Prices</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .market-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+    .market-filters .form-select {
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 12px center;
+      padding: 10px 36px 10px 14px; border: 1px solid var(--border-light);
+      border-radius: var(--radius-md); font-size: 13px; font-family: inherit;
+      color: var(--text-primary); cursor: pointer; min-width: 140px; flex: 1 1 140px;
+      transition: border-color 0.2s;
+    }
+    .market-filters .form-select:focus { outline: none; border-color: var(--medium-green); box-shadow: 0 0 0 3px rgba(45,134,89,0.1); }
+    @media (max-width: 640px) { .market-filters .form-select { flex: 1 1 100%; } }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+    <div class="page-header">
+      <div><h1>Live Market Prices</h1><p>Mandi prices, MSP, trends & demand forecasts</p></div>
+      <button class="btn-primary btn-sm" onclick="showToast('Setting price alerts for your crops!','success')"><i class="fas fa-bell"></i> Set Alert</button>
+    </div>
+    <div class="market-filters">
+      <select class="form-select" id="filter-crop" onchange="applyFilters()">
+        <option value="all">All Crops</option>
+        <option value="Rice">Rice</option>
+        <option value="Wheat">Wheat</option>
+        <option value="Maize">Maize</option>
+        <option value="Cotton">Cotton</option>
+        <option value="Sugarcane">Sugarcane</option>
+        <option value="Groundnut">Groundnut</option>
+        <option value="Mustard">Mustard</option>
+        <option value="Tomato">Tomato</option>
+        <option value="Onion">Onion</option>
+        <option value="Potato">Potato</option>
+      </select>
+      <select class="form-select" id="filter-location" onchange="applyFilters()">
+        <option value="all">All Locations</option>
+        <option value="Pune">Pune</option>
+        <option value="Nashik">Nashik</option>
+        <option value="Nagpur">Nagpur</option>
+        <option value="Kolhapur">Kolhapur</option>
+        <option value="Solapur">Solapur</option>
+        <option value="Aurangabad">Aurangabad</option>
+      </select>
+      <select class="form-select" id="filter-market" onchange="applyFilters()">
+        <option value="all">All Markets</option>
+        <option value="Haveli Mandi">Haveli Mandi</option>
+        <option value="Pune Market">Pune Market</option>
+        <option value="Shirur APMC">Shirur APMC</option>
+        <option value="Baramati">Baramati</option>
+        <option value="Daund">Daund</option>
+        <option value="Loni">Loni</option>
+      </select>
+    </div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" onclick="showMarketTab('prices',this)">All Prices</button>
+      <button class="filter-tab" onclick="showMarketTab('msp',this)">MSP 2026</button>
+      <button class="filter-tab" onclick="showMarketTab('trends',this)">Trends</button>
+    </div>
+    <div id="prices-content">
+      <div id="prices-table-area"></div>
+      <div class="grid-3" id="price-comparison" style="margin-top:12px;">
+        <div class="card-premium stat-box">
+          <i class="fas fa-arrow-up" style="color:var(--success);"></i>
+          <div class="stat-box-num" id="highest-price-value">--</div>
+          <div class="stat-box-label" id="highest-price-label">Highest Price</div>
+        </div>
+        <div class="card-premium stat-box">
+          <i class="fas fa-arrow-down" style="color:var(--danger);"></i>
+          <div class="stat-box-num" id="lowest-price-value">--</div>
+          <div class="stat-box-label" id="lowest-price-label">Lowest Price</div>
+        </div>
+        <div class="card-premium stat-box">
+          <i class="fas fa-chart-bar" style="color:var(--info);"></i>
+          <div class="stat-box-num" id="avg-price-value">--</div>
+          <div class="stat-box-label" id="avg-price-label">Average Price</div>
+        </div>
+      </div>
+      <div class="card-premium" style="margin-top:12px;">
+        <h3 style="font-size:15px;margin-bottom:12px;"><i class="fas fa-chart-line"></i> Historical Trend</h3>
+        <div id="trend-chart-placeholder" style="height:120px;background:var(--bg-card-soft);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;">
+          <i class="fas fa-chart-line" style="margin-right:8px;"></i> Trend chart loading...
+        </div>
+      </div>
+    </div>
+    <div id="market-msp-content" style="display:none;">
+      <div class="card-premium">
+        <h3 style="font-size:15px;margin-bottom:12px;"><i class="fas fa-landmark"></i> Minimum Support Price (MSP) 2026</h3>
+        <div class="responsive-table"><table><thead><tr><th>Crop</th><th>MSP (₹/qtl)</th><th>Increase</th></tr></thead><tbody>
+          <tr><td>Paddy (Common)</td><td>₹2,300</td><td style="color:var(--success);">+5.2%</td></tr>
+          <tr><td>Paddy (Grade A)</td><td>₹2,350</td><td style="color:var(--success);">+5.3%</td></tr>
+          <tr><td>Cotton (Medium)</td><td>₹7,100</td><td style="color:var(--success);">+6.5%</td></tr>
+          <tr><td>Cotton (Long)</td><td>₹7,520</td><td style="color:var(--success);">+6.5%</td></tr>
+          <tr><td>Maize</td><td>₹2,100</td><td style="color:var(--success);">+4.3%</td></tr>
+          <tr><td>Wheat</td><td>₹2,275</td><td style="color:var(--success);">+3.5%</td></tr>
+          <tr><td>Sugarcane</td><td>₹340/ton</td><td style="color:var(--success);">+4.0%</td></tr>
+          <tr><td>Groundnut</td><td>₹5,700</td><td style="color:var(--success);">+7.1%</td></tr>
+          <tr><td>Mustard</td><td>₹5,650</td><td style="color:var(--success);">+6.8%</td></tr>
+          <tr><td>Pulses (Toor)</td><td>₹7,300</td><td style="color:var(--success);">+8.2%</td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+    <div id="market-trends-content" style="display:none;">
+      <div class="card-premium">
+        <h3 style="font-size:15px;margin-bottom:12px;"><i class="fas fa-chart-line"></i> Market Trends & Forecast</h3>
+        <div class="alert-strip info"><div class="alert-content"><i class="fas fa-arrow-up" style="color:var(--success);"></i><div><strong>Rice prices trending up</strong><div style="font-size:10px;color:var(--text-muted);">Export demand driving 5% increase expected next month</div></div></div></div>
+        <div class="alert-strip info"><div class="alert-content"><i class="fas fa-arrow-down" style="color:var(--danger);"></i><div><strong>Onion prices may soften</strong><div style="font-size:10px;color:var(--text-muted);">Kharif arrivals expected to increase supply by 20%</div></div></div></div>
+        <div class="alert-strip info"><div class="alert-content"><i class="fas fa-minus" style="color:var(--text-muted);"></i><div><strong>Cotton stable</strong><div style="font-size:10px;color:var(--text-muted);">Mill demand steady, prices expected in current range</div></div></div></div>
+        <div style="margin-top:12px;"><div data-chart="line" data-values="[60,70,55,75,80,72,85,78,82,88,85,92]" data-labels='["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]' style="height:160px;"></div></div>
+      </div>
+    </div>
+
+    <div class="card-premium" style="margin-top:16px;">
+      <h3 style="font-size:15px;margin-bottom:12px;"><i class="fas fa-store"></i> Nearby Markets</h3>
+      <div id="nearby-markets-content">
+        <div class="skeleton-loader" style="height:60px;border-radius:8px;margin-bottom:8px;"></div>
+        <div class="skeleton-loader" style="height:60px;border-radius:8px;"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="js/mockData.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    var mandiLocationMap = {
+      'Haveli Mandi': 'Pune',
+      'Pune Market': 'Pune',
+      'Shirur APMC': 'Pune',
+      'Baramati': 'Pune',
+      'Daund': 'Pune',
+      'Loni': 'Nashik'
+    };
+
+    var liveMarketPrices = null;
+
+    function mapBackendPrices(backendList) {
+      return (backendList || []).map(function (p) {
+        var price = p.avg_price || p.price || 0;
+        return {
+          commodity: p.crop || p.commodity || '',
+          price: price,
+          unit: p.unit || 'quintal',
+          mandi: p.mandi || '',
+          msp: p.msp || 0,
+          change: p.change || '0%',
+          trend: (p.change && p.change.indexOf('-') === 0) ? 'down' : 'up',
+          demand: p.demand || 'Medium'
+        };
+      });
+    }
+
+    function loadMarketPrices() {
+      if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+      return window.API.MarketPrice.getPrices().then(function (res) {
+        if (res && res.prices && res.prices.length) {
+          liveMarketPrices = mapBackendPrices(res.prices);
+        }
+      }).catch(function () { /* keep FarmDB fallback */ });
+    }
+
+    function getFilteredPrices() {
+      var crop = document.getElementById('filter-crop').value;
+      var location = document.getElementById('filter-location').value;
+      var market = document.getElementById('filter-market').value;
+      var all = liveMarketPrices || (window.FarmDB || {}).marketPrices || [];
+      var result = [];
+      for (var i = 0; i < all.length; i++) {
+        var p = all[i];
+        if (crop !== 'all' && p.commodity.indexOf(crop) === -1) continue;
+        if (location !== 'all' && (mandiLocationMap[p.mandi] || '') !== location) continue;
+        if (market !== 'all' && p.mandi !== market) continue;
+        result.push(p);
+      }
+      return result;
+    }
+
+    function updatePriceComparison(prices) {
+      if (!prices || prices.length === 0) {
+        document.getElementById('highest-price-value').textContent = '--';
+        document.getElementById('highest-price-label').textContent = 'No data';
+        document.getElementById('lowest-price-value').textContent = '--';
+        document.getElementById('lowest-price-label').textContent = 'No data';
+        document.getElementById('avg-price-value').textContent = '--';
+        document.getElementById('avg-price-label').textContent = 'No data';
+        return;
+      }
+      var highest = prices[0], lowest = prices[0], sum = 0;
+      for (var i = 0; i < prices.length; i++) {
+        if (prices[i].price > highest.price) highest = prices[i];
+        if (prices[i].price < lowest.price) lowest = prices[i];
+        sum += prices[i].price;
+      }
+      var avg = Math.round(sum / prices.length);
+      document.getElementById('highest-price-value').textContent = '₹' + highest.price.toLocaleString();
+      document.getElementById('highest-price-label').textContent = highest.commodity + ', ' + highest.mandi;
+      document.getElementById('lowest-price-value').textContent = '₹' + lowest.price.toLocaleString();
+      document.getElementById('lowest-price-label').textContent = lowest.commodity + ', ' + lowest.mandi;
+      document.getElementById('avg-price-value').textContent = '₹' + avg.toLocaleString();
+      document.getElementById('avg-price-label').textContent = prices.length + ' commodities';
+    }
+
+    function updateTrendSection(prices) {
+      var el = document.getElementById('trend-chart-placeholder');
+      if (!el) return;
+      if (!prices || prices.length === 0) {
+        el.innerHTML = '<i class="fas fa-chart-line" style="margin-right:8px;"></i> No trend data available';
+        return;
+      }
+      var labels = [];
+      var values = [];
+      var count = prices.length < 8 ? prices.length : 8;
+      for (var i = 0; i < count; i++) {
+        labels.push(prices[i].commodity.length > 6 ? prices[i].commodity.substring(0, 6) : prices[i].commodity);
+        values.push(prices[i].price);
+      }
+      var maxVal = values[0], minVal = values[0];
+      for (var j = 1; j < values.length; j++) {
+        if (values[j] > maxVal) maxVal = values[j];
+        if (values[j] < minVal) minVal = values[j];
+      }
+      var range = maxVal - minVal;
+      if (range === 0) range = 1;
+      var bars = '';
+      for (var k = 0; k < values.length; k++) {
+        var h = ((values[k] - minVal) / range) * 80 + 10;
+        bars += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">';
+        bars += '<div style="width:24px;height:' + h + 'px;background:var(--medium-green);border-radius:4px 4px 0 0;"></div>';
+        bars += '<span style="font-size:8px;color:var(--text-muted);text-align:center;">' + labels[k] + '</span>';
+        bars += '</div>';
+      }
+      el.innerHTML = '<div style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:10px 0;">' + bars + '</div>';
+    }
+
+    function renderPricesTable() {
+      var el = document.getElementById('prices-table-area');
+      if (!el) return;
+      var prices = getFilteredPrices();
+      var displayPrices = prices.length > 15 ? prices.slice(0, 15) : prices;
+      var html = '<div class="search-bar"><i class="fas fa-search"></i><input type="text" placeholder="Search commodity..." oninput="filterPrices(this.value)" id="price-search"></div>';
+      html += '<div class="responsive-table"><table><thead><tr><th>Commodity</th><th>Price</th><th>Change</th><th>Mandi</th><th>Demand</th></tr></thead><tbody id="price-tbody">';
+      for (var i = 0; i < displayPrices.length; i++) {
+        var p = displayPrices[i];
+        var up = p.trend === 'up';
+        html += '<tr class="price-row" onclick="showToast(\'' + p.commodity + ': ₹' + p.price + '/' + p.unit + ' at ' + p.mandi + '. MSP: ₹' + p.msp + '\',\'info\')">';
+        html += '<td><strong>' + p.commodity + '</strong></td>';
+        html += '<td style="font-weight:700;">₹' + p.price.toLocaleString() + '</td>';
+        html += '<td style="color:' + (up ? 'var(--success)' : 'var(--danger)') + ';">' + (up ? '▲' : '▼') + ' ' + p.change + '</td>';
+        html += '<td>' + p.mandi + '</td>';
+        html += '<td><span class="badge ' + (p.demand === 'High' ? 'badge-green' : p.demand === 'Medium' ? 'badge-warning' : 'badge-danger') + '">' + p.demand + '</span></td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+      html += '<div style="display:flex;gap:8px;margin-top:12px;">';
+      html += '<button class="btn-primary btn-sm" onclick="showToast(\'Price alerts set for your tracked crops!\',\'success\')"><i class="fas fa-bell"></i> Set Alert</button>';
+      html += '<button class="btn-secondary btn-sm" onclick="showToast(\'MSP Kharif 2026: Rice ₹2,300, Cotton ₹7,100, Maize ₹2,100, Groundnut ₹5,700/qtl\',\'info\')"><i class="fas fa-landmark"></i> MSP Info</button>';
+      html += '</div>';
+      el.innerHTML = html;
+      updatePriceComparison(displayPrices);
+      updateTrendSection(displayPrices);
+    }
+
+    function applyFilters() {
+      renderPricesTable();
+    }
+
+    function showMarketTab(tab, btn) {
+      var ids = ['prices-content','market-msp-content','market-trends-content'];
+      for (var i = 0; i < ids.length; i++) {
+        document.getElementById(ids[i]).style.display = 'none';
+      }
+      var tabs = document.querySelectorAll('.filter-tab');
+      for (var j = 0; j < tabs.length; j++) {
+        tabs[j].classList.remove('active');
+      }
+      if (btn) btn.classList.add('active');
+      if (tab === 'prices') {
+        document.getElementById('prices-content').style.display = 'block';
+        renderPricesTable();
+      }
+      if (tab === 'msp') document.getElementById('market-msp-content').style.display = 'block';
+      if (tab === 'trends') {
+        document.getElementById('market-trends-content').style.display = 'block';
+        setTimeout(function() { if (typeof initAnalyticsCharts !== 'undefined') initAnalyticsCharts(); }, 200);
+      }
+    }
+
+    function initNearbyMarkets() {
+      var el = document.getElementById('nearby-markets-content');
+      if (!el) return;
+      var markets = [
+        { name: 'Haveli Mandi', distance: '3.2 km', commodities: 'Rice, Cotton, Maize', price: '₹2,350/qtl', trend: 'up' },
+        { name: 'Shirur APMC', distance: '5.8 km', commodities: 'Wheat, Sugarcane, Onion', price: '₹2,280/qtl', trend: 'up' },
+        { name: 'Baramati Market', distance: '8.1 km', commodities: 'Tomato, Potato, Soybean', price: '₹1,350/qtl', trend: 'down' },
+        { name: 'Pune Market Yard', distance: '12.5 km', commodities: 'All commodities', price: '₹2,420/qtl', trend: 'up' },
+        { name: 'Loni Mandi', distance: '15.3 km', commodities: 'Groundnut, Mustard, Chilli', price: '₹5,450/qtl', trend: 'stable' }
+      ];
+      var html = '';
+      for (var i = 0; i < markets.length; i++) {
+        var m = markets[i];
+        var trendIcon = m.trend === 'up' ? '<i class="fas fa-arrow-up" style="color:var(--success);font-size:10px;"></i>' : (m.trend === 'down' ? '<i class="fas fa-arrow-down" style="color:var(--danger);font-size:10px;"></i>' : '<i class="fas fa-minus" style="color:var(--text-muted);font-size:10px;"></i>');
+        html += '<div class="feature-card" style="cursor:default;padding:12px;display:flex;align-items:center;gap:12px;margin-bottom:8px;">' +
+          '<div style="width:36px;height:36px;border-radius:50%;background:var(--primary-green);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-store"></i></div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;font-size:13px;">' + m.name + '</div>' +
+            '<div style="font-size:10px;color:var(--text-muted);">' + m.distance + ' &bull; ' + m.commodities + '</div>' +
+          '</div>' +
+          '<div style="text-align:right;">' +
+            '<div style="font-weight:700;font-size:14px;">' + m.price + '</div>' +
+            '<div>' + trendIcon + ' ' + m.trend + '</div>' +
+          '</div>' +
+        '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    setTimeout(function() { showMarketTab('prices', document.querySelector('.filter-tab')); }, 200);
+    setTimeout(function() { initNearbyMarkets(); }, 300);
+    loadMarketPrices().then(function() {
+      if (liveMarketPrices) {
+        showMarketTab('prices', document.querySelector('.filter-tab'));
+      }
+    });
+  </script>
+</body>
+</html>

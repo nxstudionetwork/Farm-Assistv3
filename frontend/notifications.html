@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="notifications">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Notifications</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .notif-hero {
+      background: linear-gradient(135deg, #0F2E1E 0%, #1B5E3F 60%, #40916C 100%);
+      border-radius: var(--radius-xl);
+      padding: 18px 20px;
+      color: white;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .notif-hero h2 { color: white; font-size: 20px; margin: 0; }
+    .notif-hero p { font-size: 12px; opacity: 0.85; margin: 4px 0 0 0; }
+    .notif-hero-actions { display: flex; gap: 8px; }
+    .notif-hero-btn {
+      width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.2);
+      color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; font-size: 14px;
+    }
+    .notif-hero-btn:hover { background: rgba(255,255,255,0.35); }
+    
+    .notif-filters { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+    .notif-filters::-webkit-scrollbar { display: none; }
+    .notif-filter {
+      padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-light);
+      background: white; color: var(--text-secondary); font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+    }
+    .notif-filter:hover, .notif-filter.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+    
+    .notif-date-header {
+      font-size: 11px; font-weight: 700; color: var(--text-muted); margin: 16px 0 10px 4px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    
+    .notif-card {
+      background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg);
+      padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s;
+      display: flex; gap: 12px; position: relative; overflow: hidden;
+    }
+    .notif-card:hover { box-shadow: var(--shadow-md); border-color: var(--medium-green); }
+    .notif-card.unread { background: #F8FBF8; border-left: 3px solid var(--primary-green); }
+    .notif-card.swiping { transform: translateX(-60px); }
+    .notif-card.swipe-actions {
+      position: absolute; right: 0; top: 0; bottom: 0; width: 60px;
+      display: flex; flex-direction: column; background: #f44336; transform: translateX(100%);
+      transition: transform 0.2s;
+    }
+    .notif-card.swiping .notif-card.swipe-actions { transform: translateX(0); }
+    .swipe-action {
+      flex: 1; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;
+    }
+    
+    .notif-icon {
+      width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .notif-icon.alert { background: #FDECEC; color: #C62828; }
+    .notif-icon.success { background: #E8F5E9; color: #2E7D32; }
+    .notif-icon.info { background: #E3F2FD; color: #1565C0; }
+    .notif-icon.warning { background: #FFF8E1; color: #F57C00; }
+    .notif-icon.community { background: #F3E5F5; color: #7B1FA2; }
+    .notif-icon.weather { background: #E0F7FA; color: #0097A7; }
+    
+    .notif-content { flex: 1; min-width: 0; }
+    .notif-title { font-size: 13px; font-weight: 700; margin-bottom: 3px; line-height: 1.3; }
+    .notif-message { font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .notif-meta { display: flex; gap: 10px; font-size: 10px; color: var(--text-muted); align-items: center; }
+    .notif-time { display: flex; align-items: center; gap: 3px; }
+    .notif-time i { color: var(--medium-green); }
+    .notif-badge {
+      padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 700; text-transform: uppercase;
+    }
+    .notif-badge.urgent { background: #FDECEC; color: #C62828; }
+    .notif-badge.info { background: #E3F2FD; color: #1565C0; }
+    
+    .empty-notifications { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-notifications i { font-size: 48px; opacity: 0.3; margin-bottom: 12px; display: block; }
+    .empty-notifications p { font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+    <div class="notif-hero">
+      <div>
+        <h2><i class="fas fa-bell" style="margin-right:8px;"></i> Notifications</h2>
+        <p id="notif-summary">0 unread notifications</p>
+      </div>
+      <div class="notif-hero-actions">
+        <button class="notif-hero-btn" id="mark-all-read" title="Mark all as read"><i class="fas fa-check-double"></i></button>
+        <button class="notif-hero-btn" id="clear-all" title="Clear all"><i class="fas fa-trash-alt"></i></button>
+      </div>
+    </div>
+
+    <div class="notif-filters" id="notif-filters">
+      <button class="notif-filter active" data-filter="all">All</button>
+      <button class="notif-filter" data-filter="unread">Unread</button>
+      <button class="notif-filter" data-filter="alerts">Alerts</button>
+      <button class="notif-filter" data-filter="weather">Weather</button>
+      <button class="notif-filter" data-filter="community">Community</button>
+      <button class="notif-filter" data-filter="system">System</button>
+    </div>
+
+    <div id="notif-list-container"></div>
+    <div id="empty-notifications" class="empty-notifications" style="display:none;">
+      <i class="fas fa-bell-slash"></i>
+      <p>No notifications yet. Stay tuned for updates!</p>
+    </div>
+
+  </main>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    var notifications = [
+      { id: 1, type: 'alert', title: 'Pest Alert: Pink Bollworm', message: 'Pink bollworm detected in your region. Take preventive measures immediately.', time: new Date(Date.now() - 300000).toISOString(), unread: true, icon: 'fa-bug', iconClass: 'alert', badge: 'urgent' },
+      { id: 2, type: 'weather', title: 'Rain Expected Tomorrow', message: 'Light rain expected in your area tomorrow. Plan irrigation accordingly.', time: new Date(Date.now() - 1800000).toISOString(), unread: true, icon: 'fa-cloud-rain', iconClass: 'weather', badge: 'info' },
+      { id: 3, type: 'community', title: 'New Reply on Your Post', message: 'Rajesh Kumar replied to your question about organic pest control.', time: new Date(Date.now() - 3600000).toISOString(), unread: true, icon: 'fa-comment', iconClass: 'community', badge: null },
+      { id: 4, type: 'success', title: 'Course Completed!', message: 'Congratulations! You completed "Soil Health Management" course.', time: new Date(Date.now() - 7200000).toISOString(), unread: false, icon: 'fa-graduation-cap', iconClass: 'success', badge: null },
+      { id: 5, type: 'system', title: 'Sensor Offline Warning', message: 'Soil moisture sensor at Farm A is offline. Check connection.', time: new Date(Date.now() - 14400000).toISOString(), unread: true, icon: 'fa-wifi', iconClass: 'warning', badge: 'urgent' },
+      { id: 6, type: 'community', title: 'Trending Post', message: 'Your post about vermicompost is trending with 50+ likes!', time: new Date(Date.now() - 28800000).toISOString(), unread: false, icon: 'fa-fire', iconClass: 'community', badge: null },
+      { id: 7, type: 'alert', title: 'Market Price Alert', message: 'Tomato prices increased by 15% in your local mandi.', time: new Date(Date.now() - 43200000).toISOString(), unread: false, icon: 'fa-chart-line', iconClass: 'info', badge: 'info' },
+      { id: 8, type: 'weather', title: 'Heat Wave Warning', message: 'Temperature expected to reach 42°C. Ensure adequate irrigation.', time: new Date(Date.now() - 86400000).toISOString(), unread: false, icon: 'fa-temperature-high', iconClass: 'warning', badge: 'urgent' },
+      { id: 9, type: 'system', title: 'Backup Completed', message: 'Your farm data backup completed successfully at 2:00 AM.', time: new Date(Date.now() - 172800000).toISOString(), unread: false, icon: 'fa-cloud-upload-alt', iconClass: 'success', badge: null },
+      { id: 10, type: 'community', title: 'New Follower', message: 'Priya Sharma started following you.', time: new Date(Date.now() - 259200000).toISOString(), unread: false, icon: 'fa-user-plus', iconClass: 'community', badge: null },
+      { id: 11, type: 'alert', title: 'Fertilizer Reminder', message: 'Time to apply second dose of DAP for your paddy crop.', time: new Date(Date.now() - 345600000).toISOString(), unread: false, icon: 'fa-flask', iconClass: 'warning', badge: null },
+      { id: 12, type: 'system', title: 'Subscription Renewed', message: 'Your Farm Assist Premium subscription renewed successfully.', time: new Date(Date.now() - 432000000).toISOString(), unread: false, icon: 'fa-crown', iconClass: 'success', badge: null }
+    ];
+
+    var currentFilter = 'all';
+    var container = document.getElementById('notif-list-container');
+    var emptyEl = document.getElementById('empty-notifications');
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return '';
+      var diff = Date.now() - new Date(dateStr).getTime();
+      var mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return mins + 'm ago';
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      var days = Math.floor(hrs / 24);
+      if (days < 7) return days + 'd ago';
+      return new Date(dateStr).toLocaleDateString();
+    }
+
+    function getGroupLabel(dateStr) {
+      var date = new Date(dateStr);
+      var today = new Date();
+      var yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      if (date.toDateString() === today.toDateString()) return 'Today';
+      if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+      if (diffDays(date, today) < 7) return 'This Week';
+      return 'Older';
+    }
+
+    function diffDays(d1, d2) {
+      return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+    }
+
+    function updateSummary() {
+      var unread = notifications.filter(function(n) { return n.unread; }).length;
+      document.getElementById('notif-summary').textContent = unread + ' unread notification' + (unread !== 1 ? 's' : '');
+    }
+
+    function renderNotifications() {
+      var filtered = notifications;
+      
+      if (currentFilter === 'unread') {
+        filtered = filtered.filter(function(n) { return n.unread; });
+      } else if (currentFilter !== 'all') {
+        filtered = filtered.filter(function(n) { return n.type === currentFilter; });
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+      
+      var grouped = {};
+      filtered.forEach(function(n) {
+        var group = getGroupLabel(n.time);
+        if (!grouped[group]) grouped[group] = [];
+        grouped[group].push(n);
+      });
+
+      var html = '';
+      var groupOrder = ['Today', 'Yesterday', 'This Week', 'Older'];
+      groupOrder.forEach(function(group) {
+        if (grouped[group]) {
+          html += '<div class="notif-date-header">' + group + '</div>';
+          grouped[group].forEach(function(n) {
+            var badgeHtml = n.badge ? '<span class="notif-badge ' + n.badge + '">' + n.badge + '</span>' : '';
+            html += '<div class="notif-card' + (n.unread ? ' unread' : '') + '" data-id="' + n.id + '">' +
+              '<div class="notif-icon ' + n.iconClass + '"><i class="fas ' + n.icon + '"></i></div>' +
+              '<div class="notif-content">' +
+                '<div class="notif-title">' + n.title + '</div>' +
+                '<div class="notif-message">' + n.message + '</div>' +
+                '<div class="notif-meta">' +
+                  '<span class="notif-time"><i class="far fa-clock"></i> ' + timeAgo(n.time) + '</span>' +
+                  badgeHtml +
+                '</div>' +
+              '</div>' +
+              '<div class="swipe-actions"><div class="swipe-action"><i class="fas fa-trash"></i></div></div>' +
+            '</div>';
+          });
+        }
+      });
+
+      container.innerHTML = html;
+      attachEvents();
+    }
+
+    function attachEvents() {
+      container.querySelectorAll('.notif-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+          var id = parseInt(this.getAttribute('data-id'), 10);
+          var notif = notifications.find(function(n) { return n.id === id; });
+          if (notif && notif.unread) {
+            notif.unread = false;
+            updateSummary();
+            renderNotifications();
+          }
+        });
+
+        var startX = 0;
+        var currentX = 0;
+        
+        card.addEventListener('touchstart', function(e) {
+          startX = e.touches[0].clientX;
+        });
+        
+        card.addEventListener('touchmove', function(e) {
+          currentX = e.touches[0].clientX;
+          var diff = startX - currentX;
+          if (diff > 30) {
+            card.classList.add('swiping');
+          } else {
+            card.classList.remove('swiping');
+          }
+        });
+        
+        card.addEventListener('touchend', function() {
+          var diff = startX - currentX;
+          if (diff > 80) {
+            var id = parseInt(card.getAttribute('data-id'), 10);
+            deleteNotification(id);
+          } else {
+            card.classList.remove('swiping');
+          }
+        });
+      });
+    }
+
+    function deleteNotification(id) {
+      var idx = notifications.findIndex(function(n) { return n.id === id; });
+      if (idx !== -1) {
+        notifications.splice(idx, 1);
+        updateSummary();
+        renderNotifications();
+        if (typeof showToast === 'function') showToast('Notification deleted', 'info');
+      }
+    }
+
+    function markAllRead() {
+      notifications.forEach(function(n) { n.unread = false; });
+      updateSummary();
+      renderNotifications();
+      if (typeof showToast === 'function') showToast('All marked as read', 'success');
+    }
+
+    function clearAll() {
+      notifications = [];
+      updateSummary();
+      renderNotifications();
+      if (typeof showToast === 'function') showToast('All notifications cleared', 'success');
+    }
+
+    document.getElementById('mark-all-read').addEventListener('click', markAllRead);
+    document.getElementById('clear-all').addEventListener('click', clearAll);
+
+    document.querySelectorAll('.notif-filter').forEach(function(filter) {
+      filter.addEventListener('click', function() {
+        document.querySelectorAll('.notif-filter').forEach(function(f) { f.classList.remove('active'); });
+        filter.classList.add('active');
+        currentFilter = filter.getAttribute('data-filter');
+        renderNotifications();
+      });
+    });
+
+    updateSummary();
+    renderNotifications();
+  })();
+  </script>
+</body>
+</html>

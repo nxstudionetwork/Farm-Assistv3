@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Forgot PIN</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    body{padding:0;margin:0;background:#f0f7ee;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+    .auth-container{width:100%;min-height:100vh;display:flex;flex-direction:column;background:#fff}
+    @media(min-width:768px){.auth-container{max-width:420px;min-height:auto;border-radius:32px;box-shadow:0 25px 80px rgba(0,0,0,.08);margin:40px auto;overflow:hidden}}
+    .auth-header{background:linear-gradient(135deg,#1a3c2a,#2d5a3e);padding:32px 24px 28px;text-align:center;position:relative;overflow:hidden}
+    .auth-header::before{content:'';position:absolute;top:-60%;left:-20%;width:140%;height:140%;background:radial-gradient(circle at 30% 50%,rgba(76,175,80,.15) 0%,transparent 60%);pointer-events:none}
+    .auth-header .logo-icon{width:56px;height:56px;background:rgba(255,255,255,.12);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;color:#81c784}
+    .auth-header h1{color:#fff;font-size:22px;font-weight:700;margin:0 0 4px}
+    .auth-header p{color:rgba(255,255,255,.7);font-size:13px;margin:0}
+    .auth-body{padding:24px 24px 32px;flex:1}
+    .step{display:none;animation:fadeUp .3s ease}
+    .step.active{display:block}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .step-title{font-size:16px;font-weight:700;color:#1a2e1a;margin-bottom:4px;text-align:center}
+    .step-desc{font-size:13px;color:#5a7a5a;margin-bottom:18px;text-align:center}
+    .auth-tabs{display:flex;background:#f3f7f2;border-radius:12px;padding:4px;margin-bottom:24px;gap:4px}
+    .auth-tab{flex:1;border:none;background:transparent;padding:10px 0;border-radius:9px;font-size:12px;font-weight:600;color:#7a8f7a;cursor:pointer;transition:all .25s ease;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit}
+    .auth-tab i{font-size:13px}
+    .auth-tab.active{background:#fff;color:#1a3c2a;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .form-group{margin-bottom:18px}
+    .form-group label{display:block;font-size:13px;font-weight:600;color:#2d3e2d;margin-bottom:6px}
+    .input-wrap{position:relative}
+    .input-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#7a9f7a;font-size:15px;pointer-events:none}
+    .input-wrap input{width:100%;padding:13px 14px 13px 42px;border:1.5px solid #e0e8e0;border-radius:12px;font-size:14px;background:#fafcfa;color:#1a2e1a;transition:all .2s ease;box-sizing:border-box;font-family:inherit}
+    .input-wrap input:focus{outline:none;border-color:#4caf50;background:#fff;box-shadow:0 0 0 3px rgba(76,175,80,.1)}
+    .input-wrap input::placeholder{color:#a0b8a0}
+    .otp-section{display:none}.otp-section.show{display:block;animation:fadeUp .3s ease}
+    .otp-grid{display:flex;justify-content:center;gap:10px;margin:16px 0}
+    .otp-grid input{width:48px;height:52px;text-align:center;font-size:20px;font-weight:700;border:1.5px solid #e0e8e0;border-radius:12px;background:#fafcfa;color:#1a2e1a;font-family:inherit}
+    .otp-grid input:focus{outline:none;border-color:#4caf50;box-shadow:0 0 0 3px rgba(76,175,80,.1)}
+    .pin-grid{display:flex;justify-content:center;gap:12px;margin:20px 0}
+    .pin-grid input{width:52px;height:58px;text-align:center;font-size:22px;font-weight:700;border:1.5px solid #e0e8e0;border-radius:12px;background:#fafcfa;color:#1a2e1a;font-family:inherit}
+    .pin-grid input:focus{outline:none;border-color:#4caf50;box-shadow:0 0 0 3px rgba(76,175,80,.1)}
+    .hint{text-align:center;font-size:12px;color:#8a9f8a;margin-bottom:16px}.hint strong{color:#2e7d32}
+    .btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,#1a3c2a,#2d5a3e);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:all .25s ease;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-submit:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(26,60,42,.25)}
+    .btn-submit:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .btn-back{background:none;border:none;color:#5a7a5a;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;margin-bottom:12px;font-family:inherit;padding:0}
+    .btn-back:hover{color:#2e7d32}
+    .auth-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px}
+    .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:#e8efe8}
+    .auth-divider span{font-size:12px;color:#8a9f8a;white-space:nowrap}
+    .auth-footer{text-align:center}
+    .auth-footer a{color:#2e7d32;font-size:13px;font-weight:600;text-decoration:none}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);color:#fff;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.15);z-index:2000;animation:fadeUp .3s ease;display:flex;align-items:center;gap:10px;max-width:90vw}
+    .toast.success{background:#1a3c2a}.toast.danger{background:#c62828}.toast.info{background:#1565c0}
+    .dev-otp-box{display:none;margin-bottom:16px;padding:12px 14px;border:1.5px dashed #ff9800;border-radius:12px;background:#fff8e1;color:#5d4037;animation:fadeUp .3s ease}
+    .dev-otp-box.show{display:block}
+    .dev-otp-box .dev-otp-label{font-size:11px;font-weight:700;color:#e65100;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+    .dev-otp-box .dev-otp-code{font-size:26px;font-weight:800;letter-spacing:8px;color:#0B3D2E;font-variant-numeric:tabular-nums}
+    .dev-otp-box .dev-otp-note{font-size:11px;color:#8a6d3b;margin-top:4px}
+    .success-icon{text-align:center;margin:20px 0}
+    .success-icon i{font-size:60px;color:#4caf50}
+    .profile-preview{text-align:center;padding:12px 0;display:none}.profile-preview.show{display:block;animation:fadeUp .3s ease}
+    .profile-preview .name{font-size:16px;font-weight:700;color:#1a2e1a}.profile-preview .fid{font-size:12px;color:#4caf50;font-weight:600}
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-header">
+      <div class="logo-icon"><i class="fas fa-seedling"></i></div>
+      <h1>Farm Assist</h1>
+      <p>Reset your security PIN</p>
+    </div>
+    <div class="auth-body">
+      <!-- Step 1: Choose recovery method -->
+      <div class="dev-otp-box" id="dev-otp-box" role="status" aria-live="polite">
+        <div class="dev-otp-label"><i class="fas fa-flask" aria-hidden="true"></i> Development Mode Only</div>
+        <div>Your verification code is:</div>
+        <div class="dev-otp-code" id="dev-otp-code">0000</div>
+        <div class="dev-otp-note">This code is shown for local testing only. It is hidden in production when SMS/email providers are configured.</div>
+      </div>
+      <div class="step active" id="step-1">
+        <div class="step-title">Forgot PIN?</div>
+        <div class="step-desc">Choose how you'd like to recover your PIN</div>
+        <div class="auth-tabs" style="margin-bottom:20px">
+          <button class="auth-tab active" data-tab="phone" onclick="switchRecoveryTab('phone')"><i class="fas fa-mobile-screen"></i> Phone</button>
+          <button class="auth-tab" data-tab="email" onclick="switchRecoveryTab('email')"><i class="fas fa-envelope"></i> Email</button>
+        </div>
+        <div id="recovery-phone" class="auth-form active">
+          <div class="form-group">
+            <div class="input-wrap">
+              <i class="fas fa-phone"></i>
+              <input type="tel" id="recovery-phone-input" placeholder="Registered phone number" maxlength="10">
+            </div>
+          </div>
+          <button class="btn-submit" onclick="sendRecoveryOtp('phone')" id="recovery-send-phone">Send OTP <i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div id="recovery-email" class="auth-form">
+          <div class="form-group">
+            <div class="input-wrap">
+              <i class="fas fa-envelope"></i>
+              <input type="email" id="recovery-email-input" placeholder="Registered email address">
+            </div>
+          </div>
+          <button class="btn-submit" onclick="sendRecoveryOtp('email')" id="recovery-send-email">Send OTP <i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+
+      <!-- Step 2: Verify OTP -->
+      <div class="step" id="step-2">
+        <div class="step-title">Verify Identity</div>
+        <div class="step-desc">Enter the OTP sent to your registered phone/email</div>
+        <div class="hint">OTP verified via API</div>
+        <div class="otp-grid">
+          <input type="text" maxlength="1" id="verify-otp-1" oninput="focusNext(this,'verify-otp-2')" inputmode="numeric">
+          <input type="text" maxlength="1" id="verify-otp-2" oninput="focusNext(this,'verify-otp-3')" inputmode="numeric">
+          <input type="text" maxlength="1" id="verify-otp-3" oninput="focusNext(this,'verify-otp-4')" inputmode="numeric">
+          <input type="text" maxlength="1" id="verify-otp-4" oninput="focusNext(this,null);verifyIdentity()" inputmode="numeric">
+        </div>
+        <button class="btn-submit" onclick="verifyIdentity()" id="verify-btn" style="margin-top:12px">Verify <i class="fas fa-check"></i></button>
+        <button class="btn-back" onclick="goStep(1)" style="margin-top:12px"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+
+      <!-- Step 3: Set New PIN -->
+      <div class="step" id="step-3">
+        <div class="step-title">Set New PIN</div>
+        <div class="step-desc">Enter your new 4-digit security PIN</div>
+        <div class="pin-grid">
+          <input type="password" maxlength="1" id="new-pin-1" oninput="focusNext(this,'new-pin-2')" inputmode="numeric">
+          <input type="password" maxlength="1" id="new-pin-2" oninput="focusNext(this,'new-pin-3')" inputmode="numeric">
+          <input type="password" maxlength="1" id="new-pin-3" oninput="focusNext(this,'new-pin-4')" inputmode="numeric">
+          <input type="password" maxlength="1" id="new-pin-4" inputmode="numeric">
+        </div>
+        <button class="btn-submit" onclick="resetPin()" id="reset-pin-btn">Reset PIN <i class="fas fa-key"></i></button>
+        <button class="btn-back" onclick="goStep(2)" style="margin-top:12px"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+
+      <!-- Step 4: Success -->
+      <div class="step" id="step-4">
+        <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="step-title">PIN Reset Successful!</div>
+        <div class="step-desc">Your PIN has been updated. You can now login with your new PIN.</div>
+        <button class="btn-submit" onclick="window.location.href='login.html'" style="margin-top:16px">Go to Login <i class="fas fa-sign-in-alt"></i></button>
+      </div>
+
+      <div class="auth-divider"><span>Remember your PIN?</span></div>
+      <div class="auth-footer">
+        <a href="login.html">Back to Login</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script>
+    var _toastTimer = null;
+    function showToast(msg, type) {
+      var old = document.querySelector('.toast');
+      if (old) old.remove();
+      if (_toastTimer) clearTimeout(_toastTimer);
+      var t = document.createElement('div');
+      t.className = 'toast ' + (type || 'success');
+      t.innerHTML = '<i class="fas fa-' + (type === 'danger' ? 'exclamation-circle' : type === 'info' ? 'info-circle' : 'check-circle') + '"></i> ' + msg;
+      document.body.appendChild(t);
+      _toastTimer = setTimeout(function(){ t.remove(); }, 3500);
+    }
+
+    function focusNext(currentEl, nextId) {
+      if (currentEl.value.length === 1 && nextId) document.getElementById(nextId).focus();
+    }
+
+    function showDevOtp(result) {
+      var code = result && (result.debug_otp || (result.data && result.data.debug_otp));
+      var box = document.getElementById('dev-otp-box');
+      var codeEl = document.getElementById('dev-otp-code');
+      if (!box || !codeEl) return;
+      if (!code) { box.classList.remove('show'); return; }
+      codeEl.textContent = code;
+      box.classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function hideDevOtp() {
+      var box = document.getElementById('dev-otp-box');
+      if (box) box.classList.remove('show');
+    }
+
+    var _recoveryMethod = 'phone';
+    var _recoveryPhone = null;
+    var _recoveryEmail = null;
+    var _otpVerified = false;
+
+    function goStep(n) {
+      document.querySelectorAll('.step').forEach(function(s){ s.classList.remove('active'); });
+      document.getElementById('step-' + n).classList.add('active');
+    }
+
+    function switchRecoveryTab(method) {
+      _recoveryMethod = method;
+      document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelector('.auth-tab[data-tab="' + method + '"]').classList.add('active');
+      document.querySelectorAll('#step-1 .auth-form').forEach(function(f){ f.classList.remove('active'); });
+      document.getElementById('recovery-' + method).classList.add('active');
+    }
+
+    function sendRecoveryOtp(method) {
+      var identifier = null;
+      if (method === 'phone') {
+        identifier = document.getElementById('recovery-phone-input').value.replace(/[^0-9]/g, '');
+        if (identifier.length < 10) { showToast('Enter valid phone number', 'danger'); return; }
+        _recoveryPhone = identifier;
+      } else {
+        identifier = document.getElementById('recovery-email-input').value.trim();
+        if (!identifier || !identifier.includes('@')) { showToast('Enter valid email', 'danger'); return; }
+        _recoveryEmail = identifier;
+      }
+
+      var btnId = method === 'phone' ? 'recovery-send-phone' : 'recovery-send-email';
+      var btn = document.getElementById(btnId);
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+      var otpPromise = method === 'phone' ? AuthService.sendOtp(identifier) : AuthService.sendOtp(null, identifier);
+      otpPromise.then(function(result) {
+        btn.innerHTML = 'OTP Sent <i class="fas fa-check"></i>';
+        showDevOtp(result);
+        showToast('OTP sent to ' + identifier, 'success');
+        goStep(2);
+        document.getElementById('verify-otp-1').focus();
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
+        showToast(err.message || 'Failed to send OTP', 'danger');
+      });
+    }
+
+    function verifyIdentity() {
+      var otp = '';
+      for (var i = 1; i <= 4; i++) otp += document.getElementById('verify-otp-' + i).value;
+      if (otp.length < 4) { showToast('Enter complete OTP', 'danger'); return; }
+
+      var btn = document.getElementById('verify-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+      var phone = _recoveryMethod === 'phone' ? _recoveryPhone : null;
+      var email = _recoveryMethod === 'email' ? _recoveryEmail : null;
+
+      AuthService.verifyOtp(phone, email, otp).then(function(data) {
+        btn.disabled = false;
+        btn.innerHTML = 'Verify <i class="fas fa-check"></i>';
+        _otpVerified = true;
+        showToast('OTP verified!', 'success');
+        goStep(3);
+        document.getElementById('new-pin-1').focus();
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Verify <i class="fas fa-check"></i>';
+        showToast(err.message || 'Invalid OTP', 'danger');
+        for (var i = 1; i <= 4; i++) document.getElementById('verify-otp-' + i).value = '';
+        document.getElementById('verify-otp-1').focus();
+      });
+    }
+
+    function resetPin() {
+      if (!_otpVerified) { showToast('Please verify OTP first', 'danger'); return; }
+      var pin = '';
+      for (var i = 1; i <= 4; i++) pin += document.getElementById('new-pin-' + i).value;
+      if (pin.length < 4) { showToast('Enter complete 4-digit PIN', 'danger'); return; }
+
+      var btn = document.getElementById('reset-pin-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resetting...';
+
+      AuthService.forgotPin(_recoveryPhone, _recoveryEmail, pin).then(function() {
+        btn.disabled = false;
+        btn.innerHTML = 'Reset PIN <i class="fas fa-key"></i>';
+        showToast('PIN reset successful!', 'success');
+        goStep(4);
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Reset PIN <i class="fas fa-key"></i>';
+        showToast(err.message || 'Failed to reset PIN', 'danger');
+      });
+    }
+  </script>
+</body>
+</html>

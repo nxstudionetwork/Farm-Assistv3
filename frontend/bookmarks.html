@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Bookmarks Vault</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <main class="page-container">
+
+    <section class="hero-dashboard" style="background:var(--gradient-primary); margin-bottom:25px;">
+      <h2><i class="fas fa-bookmark"></i> Bookmarks Vault</h2>
+      <p style="font-size:13px; color:rgba(255,255,255,0.9); margin-top:5px;">
+        Access your bookmarked schemes, marketplace products, news articles, and agronomy tutorials in one place.
+      </p>
+    </section>
+
+    <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:12px; margin-bottom:15px;" class="chip-filter-row">
+      <button class="chip-filter active" onclick="filterSaved('all')">All Bookmarks</button>
+      <button class="chip-filter" onclick="filterSaved('seeds')">Products</button>
+      <button class="chip-filter" onclick="filterSaved('news')">News & Schemes</button>
+      <button class="chip-filter" onclick="filterSaved('experts')">Consultants</button>
+    </div>
+
+    <div id="bookmarks-empty-state" style="display:none; text-align:center; padding:50px 30px; background:var(--bg-card-solid); border-radius:20px; border:1px solid var(--border-light); box-shadow:var(--shadow-soft);">
+      <i class="fas fa-folder-open" style="font-size:50px; color:var(--text-muted); margin-bottom:20px;"></i>
+      <h3 style="font-size:18px; margin-bottom:8px;">Your Bookmarks Vault is Empty</h3>
+      <p style="font-size:12px; color:var(--text-secondary); margin-bottom:20px; max-width:300px; margin-left:auto; margin-right:auto;">
+        Bookmark articles, schemes, or seed products while navigating the app to view them catalogued here.
+      </p>
+      <button class="btn-primary" onclick="window.location.href='marketplace.html'">Browse Marketplace</button>
+    </div>
+
+    <div id="bookmarks-container" class="plots-grid"></div>
+
+  </main>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    let activeFilter = 'all';
+    function loadBookmarks() {
+      const container = document.getElementById("bookmarks-container");
+      const emptyState = document.getElementById("bookmarks-empty-state");
+      if (!container) return;
+      container.innerHTML = "";
+      let saved = JSON.parse(localStorage.getItem("farm-bookmarks")) || [];
+      if (saved.length === 0) { saved = ["product-1", "news-3", "expert-1", "product-3"]; localStorage.setItem("farm-bookmarks", JSON.stringify(saved)); }
+      let renderedCount = 0;
+      saved.forEach(key => {
+        const parts = key.split("-"); const type = parts[0]; const id = parseInt(parts[1]);
+        if (type === 'product') {
+          const p = FarmDB.products.find(item => item.id === id);
+          if (p && (activeFilter === 'all' || activeFilter === 'seeds')) {
+            renderedCount++; const card = document.createElement("div"); card.className = "plot-card";
+            card.innerHTML = '<div class="plot-header"><h3 class="plot-title">' + p.name + '</h3><span class="badge-status success">₹' + p.price + '</span></div><p style="font-size:11px; color:var(--text-secondary); margin-top:8px;">' + p.brand + ' • ' + p.category.toUpperCase() + '</p><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><button class="btn-primary" style="padding:6px 12px; font-size:11px;" onclick="window.location.href=\'marketplace.html?id=' + p.id + '\'">Buy Now</button><button class="widget-action-btn" onclick="removeBookmarkDirect(\'' + key + '\')" style="color:var(--danger);"><i class="fas fa-trash-alt"></i></button></div>';
+            container.appendChild(card);
+          }
+        } else if (type === 'news') {
+          const n = FarmDB.news.find(item => item.id === id);
+          if (n && (activeFilter === 'all' || activeFilter === 'news')) {
+            renderedCount++; const card = document.createElement("div"); card.className = "plot-card"; card.style.borderLeft = "4px solid var(--premium-green)";
+            card.innerHTML = '<div class="plot-header"><h3 class="plot-title">' + n.headline + '</h3></div><p style="font-size:11px; color:var(--text-secondary); margin-top:8px;">Source: ' + n.source + ' • Category: ' + n.category.toUpperCase() + '</p><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><button class="btn-secondary" style="padding:6px 12px; font-size:11px;" onclick="window.location.href=\'news.html?id=' + n.id + '\'">Read Article</button><button class="widget-action-btn" onclick="removeBookmarkDirect(\'' + key + '\')" style="color:var(--danger);"><i class="fas fa-trash-alt"></i></button></div>';
+            container.appendChild(card);
+          }
+        } else if (type === 'expert') {
+          const exp = FarmDB.experts.find(item => item.id === id);
+          if (exp && (activeFilter === 'all' || activeFilter === 'experts')) {
+            renderedCount++; const card = document.createElement("div"); card.className = "plot-card";
+            card.innerHTML = '<div class="plot-header"><h3 class="plot-title">' + exp.name + '</h3><span class="badge-status info">' + exp.rating + ' ★</span></div><p style="font-size:11px; color:var(--text-secondary); margin-top:8px;">' + exp.role + ' • Fee: ₹' + exp.cost + '</p><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><button class="btn-primary" style="padding:6px 12px; font-size:11px;" onclick="window.location.href=\'expert.html?id=' + exp.id + '\'">Book Session</button><button class="widget-action-btn" onclick="removeBookmarkDirect(\'' + key + '\')" style="color:var(--danger);"><i class="fas fa-trash-alt"></i></button></div>';
+            container.appendChild(card);
+          }
+        }
+      });
+      if (renderedCount === 0) { emptyState.style.display = "block"; container.style.display = "none"; }
+      else { emptyState.style.display = "none"; container.style.display = "grid"; }
+    }
+    function removeBookmarkDirect(key) {
+      let saved = JSON.parse(localStorage.getItem("farm-bookmarks")) || [];
+      const idx = saved.indexOf(key); if (idx > -1) { saved.splice(idx, 1); localStorage.setItem("farm-bookmarks", JSON.stringify(saved)); showToast("Bookmark deleted", "warning"); loadBookmarks(); }
+    }
+    function filterSaved(cat) {
+      activeFilter = cat; document.querySelectorAll(".chip-filter").forEach(c => c.classList.remove("active")); event.target.classList.add("active"); loadBookmarks();
+    }
+    window.addEventListener("load", loadBookmarks);
+  </script>
+</body>
+</html>

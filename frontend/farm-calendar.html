@@ -1,0 +1,971 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="farm-calendar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Farm Assist - Farm Calendar</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .cal-nav h2{font-size:18px;font-weight:700}
+    .cal-nav button{background:var(--bg-card-soft);border:1px solid var(--border-light);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:14px;transition:all 0.2s}
+    .cal-nav button:hover{background:var(--soft-green);color:var(--primary-green)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:20px}
+    .cal-header{text-align:center;font-size:11px;font-weight:600;color:var(--text-muted);padding:6px 0}
+    .cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-secondary);transition:all 0.15s;position:relative}
+    .cal-day:hover{background:var(--soft-green)}
+    .cal-day.today{background:var(--primary-green);color:white;font-weight:700}
+    .cal-day.other-month{color:var(--text-muted);opacity:0.4}
+    .cal-day.has-event{font-weight:700}
+    .cal-day .event-dot{width:4px;height:4px;border-radius:50%;background:var(--primary-green);position:absolute;bottom:4px}
+    .cal-day.today .event-dot{background:white}
+    .cal-day .event-dots{position:absolute;bottom:3px;display:flex;gap:2px}
+    .cal-day .event-dots span{width:4px;height:4px;border-radius:50%}
+    .event-card{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg-card-soft);border-radius:10px;margin-bottom:8px;border-left:3px solid var(--primary-green);transition:transform 0.2s}
+    .event-card:hover{transform:translateX(3px)}
+    .event-card .event-time{font-size:11px;color:var(--text-muted);min-width:50px}
+    .event-card .event-title{font-size:13px;font-weight:600}
+    .event-card .event-type{font-size:10px;color:var(--text-muted)}
+    .event-card .event-priority{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600}
+    .event-card .event-priority.high{background:rgba(239,68,68,.1);color:#dc2626}
+    .event-card .event-priority.medium{background:rgba(234,179,8,.1);color:#ca8a04}
+    .event-card .event-priority.low{background:rgba(34,197,94,.1);color:#16a34a}
+    .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:20px}
+    .week-col-header{text-align:center;font-size:11px;font-weight:600;color:var(--text-muted);padding:8px 4px;border-bottom:2px solid var(--border-light)}
+    .week-col-header.today{color:var(--primary-green);border-bottom-color:var(--primary-green)}
+    .week-col{min-height:200px;background:var(--bg-card-soft);border-radius:8px;padding:6px;border:1px solid var(--border-light)}
+    .week-col.today{border-color:var(--primary-green);background:var(--soft-green)}
+    .week-event{padding:4px 6px;margin-bottom:4px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;transition:all 0.15s;border-left:3px solid var(--primary-green);background:white}
+    .week-event:hover{transform:translateX(2px)}
+    .week-event .we-time{font-size:9px;color:var(--text-muted);display:block}
+    .day-view-container{margin-bottom:20px}
+    .day-date-header{text-align:center;font-size:16px;font-weight:700;margin-bottom:12px;color:var(--text-primary)}
+    .hour-slot{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border-light);min-height:48px}
+    .hour-slot .hour-label{font-size:11px;color:var(--text-muted);min-width:50px;font-weight:600;text-align:right}
+    .hour-slot .hour-events{flex:1;display:flex;flex-wrap:wrap;gap:4px}
+    .hour-slot .hour-event{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--soft-green);color:var(--primary-green);cursor:pointer;border-left:3px solid var(--primary-green);transition:all 0.15s}
+    .hour-slot .hour-event:hover{transform:translateX(2px)}
+    .agenda-list{margin-bottom:20px}
+    .agenda-item{display:flex;gap:12px;padding:12px 14px;background:white;border-radius:10px;margin-bottom:8px;border:1px solid var(--border-light);border-left:3px solid var(--primary-green);transition:all 0.2s;cursor:pointer}
+    .agenda-item:hover{transform:translateX(3px);box-shadow:var(--shadow-sm)}
+    .agenda-item .agenda-date{font-size:11px;color:var(--text-muted);min-width:80px}
+    .agenda-item .agenda-body{flex:1}
+    .agenda-item .agenda-title{font-size:13px;font-weight:600}
+    .agenda-item .agenda-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .section-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+    .section-icon.tasks{background:var(--soft-green);color:var(--primary-green)}
+    .section-icon.upcoming{background:rgba(59,130,246,.1);color:#2563eb}
+    .section-icon.overdue{background:rgba(239,68,68,.1);color:#dc2626}
+    .section-icon.important{background:rgba(245,158,11,.1);color:#d97706}
+    .empty-cal{text-align:center;padding:30px 10px;color:var(--text-muted);font-size:13px}
+    .event-type-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600}
+    .event-type-badge.sowing{background:rgba(34,197,94,.1);color:#16a34a}
+    .event-type-badge.irrigation{background:rgba(59,130,246,.1);color:#2563eb}
+    .event-type-badge.fertilizer{background:rgba(139,92,246,.1);color:#7c3aed}
+    .event-type-badge.spraying{background:rgba(245,158,11,.1);color:#d97706}
+    .event-type-badge.harvest{background:rgba(249,115,22,.1);color:#ea580c}
+    .event-type-badge.worker{background:rgba(14,165,233,.1);color:#0284c7}
+    .event-type-badge.equipment{background:rgba(168,85,247,.1);color:#9333ea}
+    .important-date-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:6px;border-left:3px solid var(--warning)}
+    .important-date-item .id-date{font-size:11px;color:var(--text-muted);min-width:75px}
+    .important-date-item .id-title{font-size:12px;font-weight:600;flex:1}
+    .important-date-item .id-badge{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600}
+    .important-date-item .id-badge.govt{background:rgba(59,130,246,.1);color:#2563eb}
+    .important-date-item .id-badge.insurance{background:rgba(245,158,11,.1);color:#d97706}
+    .calendar-section{margin-bottom:16px}
+    .day-popup-box{max-width:440px;max-height:85vh;overflow-y:auto;padding:22px}
+    .dp-event-item{display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--bg-card-soft);border-radius:10px;margin-bottom:6px;border-left:3px solid var(--primary-green);cursor:pointer;transition:all 0.15s}
+    .dp-event-item:hover{transform:translateX(2px);background:var(--soft-green)}
+    .dp-empty{text-align:center;padding:20px;color:var(--text-muted);font-size:12px}
+    .dp-empty i{font-size:22px;display:block;margin-bottom:6px;color:var(--text-muted)}
+    .dp-note-saved{border-color:var(--primary-green)!important;box-shadow:0 0 0 3px rgba(45,106,79,0.08)}
+    @media(max-width:540px){.cal-grid{gap:2px}.cal-day{font-size:11px}.week-grid{grid-template-columns:1fr;gap:6px}.week-col{padding:8px;min-height:auto}.week-col-header{text-align:left;padding:8px 4px 4px}}
+  </style>
+</head>
+<body>
+  <main class="page-container">
+
+    <section class="page-header">
+      <div>
+        <h1><i class="fas fa-calendar-days" style="color:var(--premium-green);margin-right:8px"></i> Farm Calendar</h1>
+        <p style="font-size:13px;color:var(--text-secondary)">Plan, schedule, and track important farming activities and events.</p>
+      </div>
+      <button class="btn-primary" onclick="showAddEventModal()"><i class="fas fa-plus"></i> Add Event</button>
+    </section>
+
+    <div class="filter-tabs" role="tablist" aria-label="Calendar views">
+      <button class="filter-tab active" data-view="month" onclick="switchView('month')"><i class="fas fa-calendar"></i> Month</button>
+      <button class="filter-tab" data-view="week" onclick="switchView('week')"><i class="fas fa-calendar-week"></i> Week</button>
+      <button class="filter-tab" data-view="day" onclick="switchView('day')"><i class="fas fa-calendar-day"></i> Day</button>
+      <button class="filter-tab" data-view="agenda" onclick="switchView('agenda')"><i class="fas fa-list"></i> Agenda</button>
+    </div>
+
+    <!-- Month View -->
+    <div id="view-month" class="calendar-section">
+      <div class="cal-nav">
+        <button onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+        <h2 id="cal-month-year">July 2026</h2>
+        <button onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <!-- Week View -->
+    <div id="view-week" class="calendar-section" style="display:none">
+      <div class="cal-nav">
+        <button onclick="changeWeek(-1)"><i class="fas fa-chevron-left"></i></button>
+        <h2 id="week-label">This Week</h2>
+        <button onclick="changeWeek(1)"><i class="fas fa-chevron-right"></i></button>
+      </div>
+      <div class="week-grid" id="week-grid"></div>
+    </div>
+
+    <!-- Day View -->
+    <div id="view-day" class="calendar-section" style="display:none">
+      <div class="cal-nav">
+        <button onclick="changeDay(-1)"><i class="fas fa-chevron-left"></i></button>
+        <h2 id="day-label">Today</h2>
+        <button onclick="changeDay(1)"><i class="fas fa-chevron-right"></i></button>
+      </div>
+      <div class="day-view-container" id="day-view-container"></div>
+    </div>
+
+    <!-- Agenda View -->
+    <div id="view-agenda" class="calendar-section" style="display:none">
+      <div class="cal-nav">
+        <button onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+        <h2 id="agenda-label">All Upcoming Events</h2>
+        <button onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+      </div>
+      <div class="agenda-list" id="agenda-list"></div>
+    </div>
+
+    <!-- Sections below calendar -->
+    <div class="grid-2" style="gap:14px">
+      <div>
+        <div class="card-premium">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div class="section-icon tasks"><i class="fas fa-check-circle"></i></div>
+            <h3 style="font-size:15px;font-weight:700;flex:1">Today's Tasks</h3>
+            <span class="badge" id="today-tasks-count" style="background:var(--soft-green);color:var(--primary-green);font-size:11px;padding:2px 10px;border-radius:10px;font-weight:600">0</span>
+          </div>
+          <div id="today-tasks-list">
+            <div class="empty-cal">No tasks for today</div>
+          </div>
+        </div>
+        <div class="card-premium">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div class="section-icon overdue"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3 style="font-size:15px;font-weight:700;flex:1">Overdue Tasks</h3>
+            <span class="badge" id="overdue-tasks-count" style="background:rgba(239,68,68,.1);color:#dc2626;font-size:11px;padding:2px 10px;border-radius:10px;font-weight:600">0</span>
+          </div>
+          <div id="overdue-tasks-list">
+            <div class="empty-cal">No overdue tasks</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card-premium">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div class="section-icon upcoming"><i class="fas fa-calendar-plus"></i></div>
+            <h3 style="font-size:15px;font-weight:700;flex:1">Upcoming Events</h3>
+            <span class="badge" id="upcoming-count" style="background:rgba(59,130,246,.1);color:#2563eb;font-size:11px;padding:2px 10px;border-radius:10px;font-weight:600">0</span>
+          </div>
+          <div id="upcoming-list">
+            <div class="empty-cal">No upcoming events</div>
+          </div>
+        </div>
+        <div class="card-premium">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div class="section-icon important"><i class="fas fa-star"></i></div>
+            <h3 style="font-size:15px;font-weight:700;flex:1">Important Dates</h3>
+          </div>
+          <div id="important-dates-list">
+            <div class="empty-cal">No important dates</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add Event Modal -->
+  <div class="modal-backdrop" id="event-modal-backdrop" onclick="if(event.target===this)closeEventModal()">
+    <div class="modal-box" style="max-width:460px;padding:24px;border-radius:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h3 style="font-size:16px;font-weight:700"><i class="fas fa-plus-circle" style="color:var(--primary-green);margin-right:6px"></i> Add Event</h3>
+        <button onclick="closeEventModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Event Title</label>
+        <input class="form-input" id="ev-title" placeholder="e.g. Sowing Wheat - Plot A">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="ev-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-input" id="ev-type" style="appearance:auto">
+          <option value="sowing">Sowing</option>
+          <option value="irrigation">Irrigation</option>
+          <option value="fertilizer">Fertilizer Application</option>
+          <option value="spraying">Spraying</option>
+          <option value="harvest">Harvest</option>
+          <option value="worker">Worker Booking</option>
+          <option value="equipment">Equipment Booking</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="ev-description" rows="2" placeholder="Optional details..." style="resize:vertical"></textarea>
+      </div>
+      <div class="grid-2" style="gap:10px">
+        <div class="form-group">
+          <label class="form-label">Farm</label>
+          <select class="form-input" id="ev-farm" style="appearance:auto">
+            <option value="Shiv Sai Farm">Shiv Sai Farm</option>
+            <option value="Plot A - Wheat">Plot A - Wheat</option>
+            <option value="Plot B - Cotton">Plot B - Cotton</option>
+            <option value="Plot C - Vegetables">Plot C - Vegetables</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Crop</label>
+          <select class="form-input" id="ev-crop" style="appearance:auto">
+            <option value="Wheat">Wheat</option>
+            <option value="Cotton">Cotton</option>
+            <option value="Tomato">Tomato</option>
+            <option value="">None</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button onclick="closeEventModal()" class="btn-secondary" style="flex:1">Cancel</button>
+        <button onclick="saveEvent()" class="btn-primary" style="flex:1">Save Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Popup -->
+  <div class="modal-backdrop" id="day-popup-backdrop" onclick="if(event.target===this)closeDayPopup()">
+    <div class="modal-box day-popup-box">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h3 style="font-size:16px;font-weight:700"><i class="fas fa-calendar-day" style="color:var(--primary-green);margin-right:6px"></i> <span id="dp-date-label"></span></h3>
+        <button onclick="closeDayPopup()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)">&times;</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn-primary btn-sm" id="dp-add-event" style="flex:1"><i class="fas fa-plus"></i> Add Event</button>
+        <button class="btn-secondary btn-sm" id="dp-view-day" style="flex:1"><i class="fas fa-calendar-day"></i> Open Day</button>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px"><i class="fas fa-list-check" style="color:var(--primary-green);margin-right:4px"></i> Events &amp; Activities</div>
+      <div id="dp-events-list" style="max-height:220px;overflow-y:auto;margin-bottom:6px"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin:12px 0 6px"><i class="fas fa-sticky-note" style="color:var(--primary-green);margin-right:4px"></i> Farm Note</div>
+      <textarea id="dp-note" class="form-input" rows="2" placeholder="Write a note for this date..." style="resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-primary btn-sm" id="dp-save-note" style="flex:1"><i class="fas fa-save"></i> Save Note</button>
+        <button class="btn-secondary btn-sm" id="dp-clear-note" style="flex:1"><i class="fas fa-trash"></i> Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    var STORAGE_KEY = 'farm-calendar-events';
+    var currentMonth = new Date().getMonth();
+    var currentYear = new Date().getFullYear();
+    var currentView = 'month';
+    var selectedDate = new Date();
+    var currentWeekStart = getWeekStart(new Date());
+    var events = [];
+
+    function pad(n) {
+      return n < 10 ? '0' + n : '' + n;
+    }
+
+    function formatDate(d) {
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    }
+
+    function parseDate(str) {
+      var parts = str.split('-');
+      return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    }
+
+    function getWeekStart(d) {
+      var day = d.getDay();
+      var diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      var start = new Date(d.getFullYear(), d.getMonth(), diff);
+      return start;
+    }
+
+    function formatWeekLabel(start) {
+      var end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return months[start.getMonth()] + ' ' + start.getDate() + ' - ' + months[end.getMonth()] + ' ' + end.getDate() + ', ' + end.getFullYear();
+    }
+
+    function formatDayLabel(d) {
+      var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+    }
+
+    // Generate 18 mock events across current and next month
+    function generateMockEvents() {
+      var now = new Date();
+      var m = now.getMonth();
+      var y = now.getFullYear();
+      var types = ['sowing','irrigation','irrigation','fertilizer','spraying','spraying','harvest','harvest','worker','worker','equipment','sowing','irrigation','fertilizer','spraying','harvest','worker','equipment'];
+      var titles = [
+        'Sowing Wheat - Plot A',
+        'Irrigate Wheat field',
+        'Irrigate Cotton field',
+        'Fertilizer Application - Cotton',
+        'Spraying - Neem Oil (Cotton)',
+        'Spraying - Pesticide (Wheat)',
+        'Harvest Tomatoes - Plot C',
+        'Harvest Wheat - Plot A',
+        'Worker Booking - Harvesting',
+        'Worker Booking - Weeding',
+        'Equipment Booking - Tractor',
+        'Sowing Cotton - Plot B',
+        'Irrigate Tomato plants',
+        'Fertilizer - DAP (Wheat)',
+        'Spraying - Fungicide (Tomato)',
+        'Harvest Cotton - Plot B',
+        'Worker Booking - Irrigation',
+        'Equipment Booking - Sprayer'
+      ];
+      var farms = ['Shiv Sai Farm','Plot A - Wheat','Plot B - Cotton','Plot C - Vegetables','Shiv Sai Farm','Plot A - Wheat','Plot C - Vegetables','Plot A - Wheat','Shiv Sai Farm','Shiv Sai Farm','Shiv Sai Farm','Plot B - Cotton','Plot C - Vegetables','Plot A - Wheat','Plot C - Vegetables','Plot B - Cotton','Shiv Sai Farm','Shiv Sai Farm'];
+      var crops = ['Wheat','Wheat','Cotton','Cotton','Cotton','Wheat','Tomato','Wheat','','','','Cotton','Tomato','Wheat','Tomato','Cotton','',''];
+      var descriptions = [
+        'Sowing winter wheat in Plot A using seed drill',
+        'Drip irrigation for 2 hours in the morning',
+        'Flood irrigation for Cotton field',
+        'Apply NPK 20-20-20, 50kg bag',
+        'Neem oil spray for pest prevention',
+        'Chemical pesticide application for aphid control',
+        'First harvest of the season, expected 200 kg',
+        'Harvesting wheat, expected 500 kg yield',
+        'Need 3 workers for tomato harvesting',
+        'Need 2 workers for manual weeding',
+        'Tractor rental for ploughing Plot B',
+        'Sowing BT Cotton seeds in Plot B',
+        'Drip irrigation for tomato plants, 1 hour',
+        'Apply DAP fertilizer 25kg in Wheat field',
+        'Fungicide spray to prevent blight',
+        'Cotton boll harvesting, expected 300 kg',
+        'Hire 1 worker for irrigation duty',
+        'Power sprayer rental for pesticide application'
+      ];
+
+      var result = [];
+      for (var i = 0; i < types.length; i++) {
+        var dayOffset = (i % 20) - 3 + Math.floor(i / 5) * 2;
+        var eventDate = new Date(y, m, now.getDate() + dayOffset);
+        if (eventDate.getMonth() !== m && eventDate.getMonth() !== ((m + 1) % 12)) {
+          eventDate = new Date(y, m, now.getDate() + dayOffset + 15);
+        }
+        result.push({
+          id: 'mock-' + i,
+          title: titles[i],
+          date: formatDate(eventDate),
+          type: types[i],
+          description: descriptions[i],
+          farm: farms[i],
+          crop: crops[i]
+        });
+      }
+      return result;
+    }
+
+    function loadEvents() {
+      var stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          events = JSON.parse(stored);
+        } catch(e) {
+          events = generateMockEvents();
+        }
+      } else {
+        events = generateMockEvents();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+      }
+      renderCurrentView();
+      renderSections();
+    }
+
+    function saveToStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    }
+
+    function getTypeIcon(type) {
+      var map = {
+        sowing: 'fa-seedling',
+        irrigation: 'fa-droplet',
+        fertilizer: 'fa-flask',
+        spraying: 'fa-spray-can',
+        harvest: 'fa-wheat-awn',
+        worker: 'fa-user-gear',
+        equipment: 'fa-tractor'
+      };
+      return map[type] || 'fa-calendar';
+    }
+
+    function getTypeColor(type) {
+      var map = {
+        sowing: '#16a34a',
+        irrigation: '#2563eb',
+        fertilizer: '#7c3aed',
+        spraying: '#d97706',
+        harvest: '#ea580c',
+        worker: '#0284c7',
+        equipment: '#9333ea'
+      };
+      return map[type] || '#6b7280';
+    }
+
+    function getTypeLabel(type) {
+      var map = {
+        sowing: 'Sowing',
+        irrigation: 'Irrigation',
+        fertilizer: 'Fertilizer',
+        spraying: 'Spraying',
+        harvest: 'Harvest',
+        worker: 'Worker',
+        equipment: 'Equipment'
+      };
+      return map[type] || type;
+    }
+
+    // ==================== MONTH VIEW ====================
+
+    function renderMonthView() {
+      var grid = document.getElementById('cal-grid');
+      var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      document.getElementById('cal-month-year').textContent = monthNames[currentMonth] + ' ' + currentYear;
+
+      var firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      var daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      var today = new Date();
+
+      var html = '';
+      var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      for (var di = 0; di < dayNames.length; di++) {
+        html += '<div class="cal-header">' + dayNames[di] + '</div>';
+      }
+
+      for (var i = 0; i < firstDay; i++) {
+        html += '<div class="cal-day other-month"></div>';
+      }
+
+      for (var d = 1; d <= daysInMonth; d++) {
+        var dateStr = currentYear + '-' + pad(currentMonth + 1) + '-' + pad(d);
+        var isToday = d === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+        var dayEvents = events.filter(function(e) { return e.date === dateStr; });
+        var hasEvent = dayEvents.length > 0;
+        var cls = 'cal-day';
+        if (isToday) cls += ' today';
+        if (dayEvents.length > 0) cls += ' has-event';
+        html += '<div class="' + cls + '" onclick="onDayClick(\'' + dateStr + '\')">' + d;
+        if (hasEvent) {
+          html += '<div class="event-dots">';
+          var dotColors = ['var(--primary-green)','var(--light-green)','#2563eb','#d97706','#7c3aed','#ea580c','#0284c7'];
+          for (var ei = 0; ei < Math.min(dayEvents.length, 4); ei++) {
+            html += '<span style="background:' + dotColors[ei % dotColors.length] + '"></span>';
+          }
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+
+      var totalCells = firstDay + daysInMonth;
+      var remaining = totalCells <= 35 ? 35 - totalCells : 42 - totalCells;
+      if (remaining > 7) remaining = 42 - totalCells;
+      if (remaining < 0) remaining = 42 - totalCells;
+      for (var j = 0; j < remaining; j++) {
+        html += '<div class="cal-day other-month"></div>';
+      }
+      grid.innerHTML = html;
+    }
+
+    function changeMonth(delta) {
+      currentMonth += delta;
+      if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+      if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+      renderMonthView();
+    }
+
+    function onDayClick(dateStr) {
+      selectedDate = parseDate(dateStr);
+      if (currentView === 'month' || currentView === 'agenda') {
+        openDayPopup(dateStr);
+      }
+    }
+
+    // ==================== DAY POPUP ====================
+
+    var NOTES_KEY = 'farm-calendar-notes';
+
+    function readNotes() {
+      try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); } catch (e) { return {}; }
+    }
+
+    function writeNotes(n) {
+      try { localStorage.setItem(NOTES_KEY, JSON.stringify(n)); } catch (e) {}
+    }
+
+    function openDayPopup(dateStr) {
+      var d = parseDate(dateStr);
+      var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      document.getElementById('dp-date-label').textContent = days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+
+      var dayEvents = events.filter(function (e) { return e.date === dateStr; });
+      var list = document.getElementById('dp-events-list');
+      if (dayEvents.length === 0) {
+        list.innerHTML = '<div class="dp-empty"><i class="fas fa-calendar-check"></i>No events scheduled. Add one below!</div>';
+      } else {
+        var html = '';
+        for (var i = 0; i < dayEvents.length; i++) {
+          var ev = dayEvents[i];
+          html += '<div class="dp-event-item" data-id="' + ev.id + '" style="border-left-color:' + getTypeColor(ev.type) + '">';
+          html += '<i class="fas ' + getTypeIcon(ev.type) + '" style="color:' + getTypeColor(ev.type) + '"></i>';
+          html += '<div style="flex:1"><div style="font-size:13px;font-weight:600">' + ev.title + '</div>';
+          html += '<div style="font-size:10px;color:var(--text-muted)"><span class="event-type-badge ' + ev.type + '">' + getTypeLabel(ev.type) + '</span>';
+          if (ev.farm) html += ' &middot; ' + ev.farm;
+          if (ev.crop) html += ' &middot; ' + ev.crop;
+          html += '</div></div></div>';
+        }
+        list.innerHTML = html;
+        list.querySelectorAll('.dp-event-item').forEach(function (el) {
+          el.addEventListener('click', function () {
+            closeDayPopup();
+            showEditEvent(el.getAttribute('data-id'));
+          });
+        });
+      }
+
+      var notes = readNotes();
+      var noteBox = document.getElementById('dp-note');
+      noteBox.value = notes[dateStr] || '';
+      noteBox.classList.toggle('dp-note-saved', !!notes[dateStr]);
+
+      document.getElementById('dp-add-event').setAttribute('data-date', dateStr);
+      document.getElementById('dp-view-day').setAttribute('data-date', dateStr);
+      document.getElementById('dp-save-note').setAttribute('data-date', dateStr);
+      document.getElementById('dp-clear-note').setAttribute('data-date', dateStr);
+
+      document.getElementById('day-popup-backdrop').classList.add('active');
+    }
+
+    function closeDayPopup() {
+      document.getElementById('day-popup-backdrop').classList.remove('active');
+    }
+
+    function bindDayPopup() {
+      document.getElementById('dp-add-event').addEventListener('click', function () {
+        var ds = this.getAttribute('data-date');
+        closeDayPopup();
+        showAddEventModal();
+        document.getElementById('ev-date').value = ds;
+      });
+      document.getElementById('dp-view-day').addEventListener('click', function () {
+        var ds = this.getAttribute('data-date');
+        closeDayPopup();
+        selectedDate = parseDate(ds);
+        switchView('day');
+      });
+      document.getElementById('dp-save-note').addEventListener('click', function () {
+        var ds = this.getAttribute('data-date') || formatDate(selectedDate);
+        var notes = readNotes();
+        notes[ds] = document.getElementById('dp-note').value.trim();
+        writeNotes(notes);
+        document.getElementById('dp-note').classList.add('dp-note-saved');
+        showToast('Note saved for this date', 'success');
+      });
+      document.getElementById('dp-clear-note').addEventListener('click', function () {
+        var ds = this.getAttribute('data-date') || formatDate(selectedDate);
+        var notes = readNotes();
+        delete notes[ds];
+        writeNotes(notes);
+        document.getElementById('dp-note').value = '';
+        document.getElementById('dp-note').classList.remove('dp-note-saved');
+        showToast('Note cleared', 'info');
+      });
+    }
+
+    // ==================== WEEK VIEW ====================
+
+    function renderWeekView() {
+      var grid = document.getElementById('week-grid');
+      document.getElementById('week-label').textContent = formatWeekLabel(currentWeekStart);
+      var dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      var today = new Date();
+
+      var html = '';
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(currentWeekStart);
+        d.setDate(d.getDate() + i);
+        var dateStr = formatDate(d);
+        var isToday = formatDate(d) === formatDate(today);
+        html += '<div class="week-col-header' + (isToday ? ' today' : '') + '">' + dayNames[i] + ' ' + d.getDate() + '</div>';
+      }
+      for (var j = 0; j < 7; j++) {
+        var d2 = new Date(currentWeekStart);
+        d2.setDate(d2.getDate() + j);
+        var dateStr2 = formatDate(d2);
+        var isToday2 = formatDate(d2) === formatDate(today);
+        var dayEvents = events.filter(function(e) { return e.date === dateStr2; });
+        html += '<div class="week-col' + (isToday2 ? ' today' : '') + '">';
+        if (dayEvents.length === 0) {
+          html += '<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:8px 0">No events</div>';
+        } else {
+          for (var k = 0; k < dayEvents.length; k++) {
+            var ev = dayEvents[k];
+            html += '<div class="week-event" style="border-left-color:' + getTypeColor(ev.type) + '" onclick="showEditEvent(\'' + ev.id + '\')">';
+            html += '<span class="we-time"><i class="fas ' + getTypeIcon(ev.type) + '" style="margin-right:3px"></i> ' + getTypeLabel(ev.type) + '</span>';
+            html += ev.title;
+            html += '</div>';
+          }
+        }
+        html += '</div>';
+      }
+      grid.innerHTML = html;
+    }
+
+    function changeWeek(delta) {
+      currentWeekStart.setDate(currentWeekStart.getDate() + delta * 7);
+      renderWeekView();
+    }
+
+    // ==================== DAY VIEW ====================
+
+    function renderDayView() {
+      var container = document.getElementById('day-view-container');
+      document.getElementById('day-label').textContent = formatDayLabel(selectedDate);
+      var dateStr = formatDate(selectedDate);
+      var dayEvents = events.filter(function(e) { return e.date === dateStr; });
+
+      var hours = [];
+      for (var h = 6; h <= 20; h++) {
+        var ampm = h < 12 ? 'AM' : 'PM';
+        var h12 = h <= 12 ? (h === 0 ? 12 : h) : h - 12;
+        hours.push({ hour: h, label: h12 + ':00 ' + ampm });
+      }
+
+      var html = '';
+      for (var i = 0; i < hours.length; i++) {
+        html += '<div class="hour-slot">';
+        html += '<div class="hour-label">' + hours[i].label + '</div>';
+        html += '<div class="hour-events">';
+        var hourEvents = dayEvents;
+        if (hourEvents.length === 0 && i < 2) {
+          if (i === 0) html += '<span style="font-size:12px;color:var(--text-muted)">No events scheduled for today</span>';
+        } else {
+          for (var j = 0; j < hourEvents.length; j++) {
+            var ev = hourEvents[j];
+            html += '<div class="hour-event" style="border-left-color:' + getTypeColor(ev.type) + '" onclick="showEditEvent(\'' + ev.id + '\')">';
+            html += '<i class="fas ' + getTypeIcon(ev.type) + '" style="margin-right:4px"></i> ' + ev.title;
+            html += '</div>';
+          }
+        }
+        html += '</div></div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function changeDay(delta) {
+      selectedDate.setDate(selectedDate.getDate() + delta);
+      renderDayView();
+    }
+
+    // ==================== AGENDA VIEW ====================
+
+    function renderAgendaView() {
+      var list = document.getElementById('agenda-list');
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var today = new Date();
+      var todayStr = formatDate(today);
+
+      var sorted = events.slice().sort(function(a, b) {
+        var da = parseDate(a.date);
+        var db = parseDate(b.date);
+        return da - db;
+      });
+
+      var upcoming = sorted.filter(function(e) { return e.date >= todayStr; });
+      if (upcoming.length === 0) {
+        list.innerHTML = '<div class="empty-cal">No upcoming events</div>';
+        return;
+      }
+
+      var html = '';
+      var lastDate = '';
+      for (var i = 0; i < upcoming.length; i++) {
+        var ev = upcoming[i];
+        var d = parseDate(ev.date);
+        var displayDate = months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+        if (displayDate !== lastDate) {
+          if (lastDate !== '') html += '</div>';
+          html += '<div style="font-size:12px;font-weight:700;color:var(--text-muted);margin:12px 0 6px;padding-left:4px">' + displayDate + '</div>';
+          lastDate = displayDate;
+        }
+        html += '<div class="agenda-item" onclick="showEditEvent(\'' + ev.id + '\')">';
+        html += '<div style="width:4px;border-radius:2px;background:' + getTypeColor(ev.type) + ';flex-shrink:0"></div>';
+        html += '<i class="fas ' + getTypeIcon(ev.type) + '" style="color:' + getTypeColor(ev.type) + ';margin-top:2px"></i>';
+        html += '<div class="agenda-body">';
+        html += '<div class="agenda-title">' + ev.title + '</div>';
+        html += '<div class="agenda-meta"><span class="event-type-badge ' + ev.type + '">' + getTypeLabel(ev.type) + '</span>';
+        if (ev.farm) html += ' &middot; ' + ev.farm;
+        if (ev.crop) html += ' &middot; ' + ev.crop;
+        html += '</div></div></div>';
+      }
+      list.innerHTML = html;
+    }
+
+    // ==================== SECTIONS ====================
+
+    function renderSections() {
+      renderTodayTasks();
+      renderUpcomingEvents();
+      renderOverdueTasks();
+      renderImportantDates();
+    }
+
+    function renderTodayTasks() {
+      var today = new Date();
+      var todayStr = formatDate(today);
+      var todayEvents = events.filter(function(e) { return e.date === todayStr; });
+      var list = document.getElementById('today-tasks-list');
+      var count = document.getElementById('today-tasks-count');
+      count.textContent = todayEvents.length;
+
+      if (todayEvents.length === 0) {
+        list.innerHTML = '<div class="empty-cal">No tasks for today</div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < todayEvents.length; i++) {
+        var ev = todayEvents[i];
+        html += '<div class="event-card" style="border-left-color:' + getTypeColor(ev.type) + ';cursor:pointer" onclick="showEditEvent(\'' + ev.id + '\')">';
+        html += '<div class="event-time">Today</div>';
+        html += '<i class="fas ' + getTypeIcon(ev.type) + '" style="color:' + getTypeColor(ev.type) + '"></i>';
+        html += '<div style="flex:1"><div class="event-title">' + ev.title + '</div>';
+        html += '<div class="event-type">' + getTypeLabel(ev.type) + '</div></div>';
+        html += '</div>';
+      }
+      list.innerHTML = html;
+    }
+
+    function renderUpcomingEvents() {
+      var today = new Date();
+      var todayStr = formatDate(today);
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+      var upcoming = events.filter(function(e) { return e.date >= todayStr; });
+      upcoming.sort(function(a, b) {
+        var da = parseDate(a.date);
+        var db = parseDate(b.date);
+        return da - db;
+      });
+      upcoming = upcoming.slice(0, 5);
+
+      var list = document.getElementById('upcoming-list');
+      var count = document.getElementById('upcoming-count');
+      var upcomingAll = events.filter(function(e) { return e.date >= todayStr; });
+      count.textContent = upcomingAll.length;
+
+      if (upcoming.length === 0) {
+        list.innerHTML = '<div class="empty-cal">No upcoming events</div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < upcoming.length; i++) {
+        var ev = upcoming[i];
+        var d = parseDate(ev.date);
+        var displayDate = months[d.getMonth()] + ' ' + d.getDate();
+        html += '<div class="event-card" style="border-left-color:' + getTypeColor(ev.type) + ';cursor:pointer" onclick="showEditEvent(\'' + ev.id + '\')">';
+        html += '<div class="event-time">' + displayDate + '</div>';
+        html += '<i class="fas ' + getTypeIcon(ev.type) + '" style="color:' + getTypeColor(ev.type) + '"></i>';
+        html += '<div style="flex:1"><div class="event-title">' + ev.title + '</div>';
+        html += '<div class="event-type">' + getTypeLabel(ev.type) + '</div></div>';
+        html += '</div>';
+      }
+      list.innerHTML = html;
+    }
+
+    function renderOverdueTasks() {
+      var today = new Date();
+      var todayStr = formatDate(today);
+      var overdue = events.filter(function(e) { return e.date < todayStr; });
+      overdue.sort(function(a, b) {
+        var da = parseDate(a.date);
+        var db = parseDate(b.date);
+        return db - da;
+      });
+      overdue = overdue.slice(0, 5);
+
+      var list = document.getElementById('overdue-tasks-list');
+      var count = document.getElementById('overdue-tasks-count');
+      count.textContent = overdue.length;
+
+      if (overdue.length === 0) {
+        list.innerHTML = '<div class="empty-cal">No overdue tasks</div>';
+        return;
+      }
+      var html = '';
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      for (var i = 0; i < overdue.length; i++) {
+        var ev = overdue[i];
+        var d = parseDate(ev.date);
+        var displayDate = months[d.getMonth()] + ' ' + d.getDate();
+        html += '<div class="event-card" style="border-left-color:#dc2626;cursor:pointer" onclick="showEditEvent(\'' + ev.id + '\')">';
+        html += '<div class="event-time" style="color:#dc2626">' + displayDate + '</div>';
+        html += '<i class="fas ' + getTypeIcon(ev.type) + '" style="color:#dc2626"></i>';
+        html += '<div style="flex:1"><div class="event-title">' + ev.title + '</div>';
+        html += '<div class="event-type">' + getTypeLabel(ev.type) + '</div></div>';
+        html += '<span class="event-priority high">Overdue</span>';
+        html += '</div>';
+      }
+      list.innerHTML = html;
+    }
+
+    function renderImportantDates() {
+      var list = document.getElementById('important-dates-list');
+      var today = new Date();
+      var todayStr = formatDate(today);
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+      var importantDates = [
+        { title: 'PM-KISAN Installment Due', date: getRelativeDate(5), type: 'govt', desc: '12th installment' },
+        { title: 'PMFBY Insurance Renewal', date: getRelativeDate(12), type: 'insurance', desc: 'Wheat policy' },
+        { title: 'Soil Health Card Expiry', date: getRelativeDate(20), type: 'govt', desc: 'Renew for new season' },
+        { title: 'Kisan Credit Card Interest', date: getRelativeDate(8), type: 'insurance', desc: 'Quarterly payment' },
+        { title: 'Crop Insurance Claim Window', date: getRelativeDate(25), type: 'govt', desc: 'Cotton damage claim' }
+      ];
+
+      function getRelativeDate(days) {
+        var d = new Date(today);
+        d.setDate(d.getDate() + days);
+        return formatDate(d);
+      }
+
+      var html = '';
+      for (var i = 0; i < importantDates.length; i++) {
+        var item = importantDates[i];
+        var d = parseDate(item.date);
+        var displayDate = months[d.getMonth()] + ' ' + d.getDate();
+        var daysDiff = Math.round((parseDate(item.date) - today) / (1000 * 60 * 60 * 24));
+        var daysText = daysDiff === 0 ? 'Today' : daysDiff === 1 ? 'Tomorrow' : 'In ' + daysDiff + ' days';
+        html += '<div class="important-date-item" style="cursor:pointer" onclick="onDayClick(\'' + item.date + '\')">';
+        html += '<div class="id-date"><div>' + displayDate + '</div><div style="font-size:10px;color:var(--text-muted)">' + daysText + '</div></div>';
+        html += '<div class="id-title">' + item.title + '</div>';
+        html += '<span class="id-badge ' + item.type + '">' + (item.type === 'govt' ? 'Govt' : 'Insurance') + '</span>';
+        html += '</div>';
+      }
+      list.innerHTML = html;
+    }
+
+    // ==================== VIEW SWITCHING ====================
+
+    function switchView(view) {
+      currentView = view;
+      document.querySelectorAll('.filter-tab').forEach(function(tab) {
+        tab.classList.remove('active');
+        if (tab.getAttribute('data-view') === view) tab.classList.add('active');
+      });
+      document.getElementById('view-month').style.display = view === 'month' ? '' : 'none';
+      document.getElementById('view-week').style.display = view === 'week' ? '' : 'none';
+      document.getElementById('view-day').style.display = view === 'day' ? '' : 'none';
+      document.getElementById('view-agenda').style.display = view === 'agenda' ? '' : 'none';
+      renderCurrentView();
+    }
+
+    function renderCurrentView() {
+      var view = currentView;
+      if (view === 'month') renderMonthView();
+      else if (view === 'week') renderWeekView();
+      else if (view === 'day') renderDayView();
+      else if (view === 'agenda') renderAgendaView();
+    }
+
+    // ==================== EVENT MODAL ====================
+
+    function showAddEventModal() {
+      var backdrop = document.getElementById('event-modal-backdrop');
+      backdrop.classList.add('active');
+      document.getElementById('ev-title').value = '';
+      document.getElementById('ev-date').value = formatDate(new Date());
+      document.getElementById('ev-type').value = 'sowing';
+      document.getElementById('ev-description').value = '';
+      document.getElementById('ev-farm').value = 'Shiv Sai Farm';
+      document.getElementById('ev-crop').value = 'Wheat';
+    }
+
+    function closeEventModal() {
+      document.getElementById('event-modal-backdrop').classList.remove('active');
+    }
+
+    function showEditEvent(id) {
+      var ev = null;
+      for (var i = 0; i < events.length; i++) {
+        if (events[i].id === id) { ev = events[i]; break; }
+      }
+      if (!ev) return;
+      document.getElementById('ev-title').value = ev.title;
+      document.getElementById('ev-date').value = ev.date;
+      document.getElementById('ev-type').value = ev.type;
+      document.getElementById('ev-description').value = ev.description || '';
+      document.getElementById('ev-farm').value = ev.farm || 'Shiv Sai Farm';
+      document.getElementById('ev-crop').value = ev.crop || '';
+      document.getElementById('event-modal-backdrop').classList.add('active');
+    }
+
+    function saveEvent() {
+      var title = document.getElementById('ev-title').value.trim();
+      var date = document.getElementById('ev-date').value;
+      var type = document.getElementById('ev-type').value;
+      var description = document.getElementById('ev-description').value.trim();
+      var farm = document.getElementById('ev-farm').value;
+      var crop = document.getElementById('ev-crop').value;
+      if (!title || !date) {
+        showToast('Please fill in title and date', 'error');
+        return;
+      }
+      events.push({
+        id: 'ev-' + Date.now(),
+        title: title,
+        date: date,
+        type: type,
+        description: description,
+        farm: farm,
+        crop: crop
+      });
+      saveToStorage();
+      renderCurrentView();
+      renderSections();
+      closeEventModal();
+      showToast('Event added successfully', 'success');
+    }
+
+    // ==================== INIT ====================
+
+    function init() {
+      currentMonth = new Date().getMonth();
+      currentYear = new Date().getFullYear();
+      currentWeekStart = getWeekStart(new Date());
+      selectedDate = new Date();
+      bindDayPopup();
+      loadEvents();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 100); });
+  </script>
+</body>
+</html>

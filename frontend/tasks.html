@@ -1,0 +1,1037 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="tasks">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Farm Assist - Tasks</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .task-card{display:flex;align-items:flex-start;gap:12px;padding:14px;background:white;border-radius:12px;border:1px solid var(--border-light);margin-bottom:8px;transition:all 0.2s;cursor:pointer}
+    .task-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm);border-color:var(--primary-green)}
+    .task-card.completed{opacity:0.6;background:var(--bg-card-soft)}
+    .task-card .check{width:28px;height:28px;border-radius:6px;border:2px solid var(--border-dark);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:2px;transition:all 0.2s}
+    .task-card .check.checked{background:var(--primary-green);border-color:var(--primary-green);color:white}
+    .task-card .task-body{flex:1;min-width:0}
+    .task-card .task-title{font-size:14px;font-weight:600;color:var(--text-primary)}
+    .task-card .task-meta{font-size:11px;color:var(--text-muted);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
+    .task-card .task-desc{font-size:12px;color:var(--text-secondary);margin-top:4px;line-height:1.5}
+    .priority-badge{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase}
+    .priority-badge.high{background:rgba(239,68,68,.1);color:#dc2626}
+    .priority-badge.medium{background:rgba(234,179,8,.1);color:#ca8a04}
+    .priority-badge.low{background:rgba(34,197,94,.1);color:#16a34a}
+    .cat-badge{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600;background:var(--bg-card-soft);color:var(--text-secondary)}
+    .task-filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+    .task-filters button{padding:7px 16px;font-size:11px;font-weight:600;border-radius:20px;border:1px solid var(--border-light);background:transparent;cursor:pointer;transition:all 0.2s;color:var(--text-secondary)}
+    .task-filters button:hover{border-color:var(--primary-green);color:var(--primary-green)}
+    .task-filters button.active{background:var(--primary-green);color:white;border-color:var(--primary-green)}
+
+    .section-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg-card-soft);border-radius:10px;margin:12px 0 8px;cursor:pointer;user-select:none;transition:background 0.2s}
+    .section-header:hover{background:var(--border-light)}
+    .section-header .sec-icon{font-size:12px;color:var(--text-muted);transition:transform 0.2s;width:14px;text-align:center}
+    .section-header .sec-icon.collapsed{transform:rotate(-90deg)}
+    .section-header .sec-title{font-size:13px;font-weight:600;color:var(--text-primary);flex:1}
+    .section-header .sec-count{font-size:11px;color:var(--text-muted);background:var(--border-light);padding:1px 10px;border-radius:10px}
+    .section-header .sec-badge{font-size:9px;padding:2px 10px;border-radius:10px;font-weight:700;text-transform:uppercase}
+    .sec-badge.overdue{background:rgba(239,68,68,.15);color:#dc2626}
+    .sec-badge.today-badge{background:rgba(34,197,94,.15);color:#16a34a}
+    .sec-badge.upcoming-badge{background:rgba(59,130,246,.15);color:#2563eb}
+    .sec-body{padding-left:0}
+    .sec-body.hidden{display:none}
+
+    .search-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;background:white;border:1px solid var(--border-light);border-radius:12px;padding:8px 14px}
+    .search-bar i{color:var(--text-muted);font-size:14px}
+    .search-bar input{border:none;outline:none;flex:1;font-size:13px;background:transparent;color:var(--text-primary)}
+    .search-bar input::placeholder{color:var(--text-muted)}
+
+    .filter-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+    .filter-row select{padding:7px 12px;font-size:12px;border-radius:8px;border:1px solid var(--border-light);background:white;color:var(--text-primary);cursor:pointer;flex:1;min-width:100px}
+    .filter-row select:focus{outline:none;border-color:var(--primary-green)}
+
+    .filter-tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--bg-card-soft);border-radius:10px;padding:4px}
+    .filter-tabs .filter-tab{flex:1;padding:8px;font-size:12px;font-weight:600;border:none;border-radius:8px;background:transparent;cursor:pointer;color:var(--text-secondary);transition:all 0.2s;text-align:center}
+    .filter-tabs .filter-tab.active{background:white;color:var(--primary-green);box-shadow:var(--shadow-sm)}
+
+    .form-group{margin-bottom:12px}
+    .form-label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px}
+    .badge{display:inline-block;padding:2px 8px;font-size:9px;font-weight:600;border-radius:10px}
+
+    .farm-tag{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600;background:rgba(139,92,246,.1);color:#7c3aed}
+    .crop-tag{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600;background:rgba(245,158,11,.1);color:#d97706}
+
+    .proof-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border-light);cursor:pointer;flex-shrink:0}
+    .proof-thumb:hover{opacity:0.8}
+
+    .completed-item{display:flex;align-items:center;gap:10px;padding:12px;background:white;border-radius:10px;border:1px solid var(--border-light);margin-bottom:6px}
+    .completed-item .ci-body{flex:1;min-width:0}
+    .completed-item .ci-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+    .completed-item .ci-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .completed-item .ci-notes{font-size:11px;color:var(--text-secondary);margin-top:3px;font-style:italic}
+
+    .proof-modal-photos{display:flex;gap:10px;margin-bottom:10px}
+    .proof-modal-photos .photo-box{flex:1;padding:20px;border:2px dashed var(--border-light);border-radius:10px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative}
+    .proof-modal-photos .photo-box:hover{border-color:var(--primary-green);background:rgba(34,197,94,.03)}
+    .proof-modal-photos .photo-box i{font-size:24px;color:var(--text-muted);display:block;margin-bottom:6px}
+    .proof-modal-photos .photo-box span{font-size:11px;color:var(--text-muted);display:block}
+    .proof-modal-photos .photo-box input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
+    .proof-modal-photos .photo-box img{max-width:100%;max-height:100px;border-radius:6px;display:none}
+    .proof-modal-photos .photo-box.has-image img{display:block}
+    .proof-modal-photos .photo-box.has-image i,.proof-modal-photos .photo-box.has-image span{display:none}
+
+    .gps-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:10px;font-size:12px;color:var(--text-secondary)}
+    .gps-row i{color:var(--primary-green);font-size:14px}
+    .gps-row .gps-status{flex:1}
+    .gps-row .gps-btn{padding:4px 12px;font-size:10px;font-weight:600;border-radius:6px;border:1px solid var(--primary-green);background:transparent;color:var(--primary-green);cursor:pointer}
+    .gps-row .gps-btn:hover{background:var(--primary-green);color:white}
+
+    .timestamp-row{font-size:11px;color:var(--text-muted);padding:4px 0;margin-bottom:10px}
+
+    .empty-state{text-align:center;padding:40px 20px;color:var(--text-muted)}
+    .empty-state i{font-size:36px;color:#4caf50;margin-bottom:10px;display:block}
+
+    .view-hidden{display:none !important}
+
+    .loading-shimmer{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;height:14px;margin:6px 0}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .ai-suggest-card{background:linear-gradient(135deg,#fff 0%,#F4F9F4 100%);border:1px solid rgba(139,92,246,.2)}
+    .ai-suggest-item{display:flex;align-items:flex-start;gap:10px;padding:10px;background:white;border-radius:10px;margin-bottom:8px;border:1px solid var(--border-light);animation:fadeUp .4s ease both;transition:all .2s}
+    .ai-suggest-item:hover{border-color:var(--premium-green);box-shadow:var(--shadow-sm)}
+    .ai-suggest-item .asi-icon{width:34px;height:34px;border-radius:10px;background:rgba(139,92,246,.1);color:#7c3aed;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
+    .ai-suggest-item .asi-body{flex:1;min-width:0}
+    .ai-suggest-item .asi-title{font-size:13px;font-weight:600}
+    .ai-suggest-item .asi-reason{font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.45}
+    .ai-suggest-item .asi-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .ai-suggest-item .asi-add{padding:5px 14px;border-radius:8px;background:var(--primary-green);color:white;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .2s;flex-shrink:0;margin-top:2px}
+    .ai-suggest-item .asi-add:hover{filter:brightness(1.12)}
+    .ai-suggest-item .asi-add.added{background:var(--text-muted)}
+    .ai-suggest-empty{text-align:center;padding:16px;color:var(--text-muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <main class="page-container">
+    <div class="page-header">
+      <h1><i class="fas fa-list-check"></i> Tasks</h1>
+      <p>Manage and track your farming tasks, reminders, and to-dos</p>
+    </div>
+
+    <div class="page-action-bar">
+      <span class="pab-title">Actions</span>
+      <button class="pab-btn primary" onclick="showAddTask()"><i class="fas fa-plus"></i> Add Task</button>
+      <button class="pab-btn" onclick="window.location.href='farm-calendar.html'"><i class="fas fa-calendar"></i> Calendar</button>
+    </div>
+
+    <div class="search-bar">
+      <i class="fas fa-search"></i>
+      <input type="text" id="search-input" placeholder="Search tasks by name..." oninput="onSearchChange()">
+    </div>
+
+    <div class="filter-row">
+      <select id="filter-status" onchange="onFilterChange()">
+        <option value="all">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="completed">Completed</option>
+        <option value="overdue">Overdue</option>
+      </select>
+      <select id="filter-crop" onchange="onFilterChange()">
+        <option value="all">All Crops</option>
+        <option value="Rice">Rice</option>
+        <option value="Cotton">Cotton</option>
+        <option value="Maize">Maize</option>
+        <option value="Wheat">Wheat</option>
+      </select>
+      <select id="filter-farm" onchange="onFilterChange()">
+        <option value="all">All Farms</option>
+      </select>
+    </div>
+
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-tab="active" onclick="switchTab('active')"><i class="fas fa-tasks"></i> Active Tasks</button>
+      <button class="filter-tab" data-tab="completed" onclick="switchTab('completed')"><i class="fas fa-check-double"></i> Completed Tasks</button>
+    </div>
+
+    <div class="card-premium ai-suggest-card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+        <h3 style="font-size:14px"><i class="fas fa-wand-magic-sparkles" style="color:var(--premium-green);margin-right:6px"></i> AI Suggested Tasks</h3>
+        <button class="pab-btn" id="ai-suggest-refresh" style="padding:5px 12px;font-size:10px;flex-shrink:0"><i class="fas fa-rotate"></i> Refresh</button>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Smart suggestions based on your crops, schedule and weather. Tap <b>Add</b> to create a task.</p>
+      <div id="ai-suggest-list">
+        <div class="loading-shimmer"></div>
+        <div class="loading-shimmer" style="width:75%"></div>
+      </div>
+    </div>
+
+    <div id="active-tasks-view">
+      <div id="tasks-sections"></div>
+    </div>
+
+    <div id="completed-tasks-view" class="view-hidden">
+      <div class="search-bar" style="margin-bottom:10px">
+        <i class="fas fa-search"></i>
+        <input type="text" id="completed-search-input" placeholder="Search completed tasks..." oninput="onCompletedSearchChange()">
+      </div>
+      <div id="completed-tasks-list"></div>
+    </div>
+
+    <div class="card-premium" style="margin-top:16px;text-align:center;padding:20px">
+      <h3 style="font-size:14px;margin-bottom:6px"><i class="fas fa-lightbulb" style="color:#f59e0b"></i> Smart Reminder</h3>
+      <p style="font-size:12px;color:var(--text-muted)">You have <strong id="reminder-count">0</strong> pending tasks. Complete high-priority tasks first for best farm yield.</p>
+    </div>
+  </main>
+
+  <div class="modal-backdrop" id="task-modal" style="display:none" onclick="if(event.target===this)closeModal('task-modal')">
+    <div class="modal-box" style="max-width:440px;padding:20px;border-radius:16px">
+      <h3 style="font-size:16px;margin-bottom:14px"><i class="fas fa-plus-circle" style="color:var(--primary-green)"></i> New Task</h3>
+      <div class="form-group"><label class="form-label">Task Title</label><input class="form-input" id="t-title" placeholder="e.g. Irrigate Wheat Field"></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="t-desc" rows="2"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group"><label class="form-label">Due Date</label><input class="form-input" id="t-date" type="date"></div>
+        <div class="form-group"><label class="form-label">Priority</label><select class="form-select" id="t-priority"><option value="medium">Medium</option><option value="high">High</option><option value="low">Low</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="t-cat"><option>Irrigation</option><option>Fertilizer</option><option>Pest Control</option><option>Harvesting</option><option>Supplies</option><option>Maintenance</option><option>Other</option></select></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group"><label class="form-label">Farm</label><select class="form-select" id="t-farm"><option>North Field</option><option>South Field</option><option>East Field</option><option>West Field</option><option>Greenhouse A</option></select></div>
+        <div class="form-group"><label class="form-label">Crop</label><select class="form-select" id="t-crop"><option>Rice</option><option>Cotton</option><option>Maize</option><option>Wheat</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-secondary btn-sm" onclick="closeModal('task-modal')" style="flex:1;padding:10px;border-radius:10px">Cancel</button>
+        <button class="btn-primary btn-sm" onclick="saveTask()" style="flex:1;padding:10px;border-radius:10px">Add Task</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="proof-modal" style="display:none" onclick="if(event.target===this)closeProofModal()">
+    <div class="modal-box" style="max-width:460px;padding:20px;border-radius:16px">
+      <h3 style="font-size:16px;margin-bottom:14px"><i class="fas fa-camera" style="color:var(--primary-green)"></i> Add Proof of Completion</h3>
+      <div id="proof-task-name" style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:10px"></div>
+      <div class="proof-modal-photos">
+        <div class="photo-box" id="proof-upload-box">
+          <i class="fas fa-image"></i>
+          <span>Upload Photo</span>
+          <input type="file" accept="image/*" id="proof-photo-upload" onchange="onProofPhotoUpload(event)">
+          <img id="proof-upload-preview">
+        </div>
+        <div class="photo-box" id="proof-capture-box">
+          <i class="fas fa-camera"></i>
+          <span>Capture Photo</span>
+          <input type="file" accept="image/*" capture="environment" id="proof-photo-capture" onchange="onProofPhotoCapture(event)">
+          <img id="proof-capture-preview">
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="proof-notes" rows="2" placeholder="Add any notes about this task..."></textarea></div>
+      <div class="gps-row">
+        <i class="fas fa-map-marker-alt"></i>
+        <span class="gps-status" id="gps-status">Location not available</span>
+        <button class="gps-btn" id="gps-btn" onclick="getGPSLocation()"><i class="fas fa-sync-alt"></i> Get Location</button>
+      </div>
+      <div class="timestamp-row" id="proof-timestamp"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn-secondary btn-sm" onclick="closeProofModal()" style="flex:1;padding:10px;border-radius:10px">Cancel</button>
+        <button class="btn-primary btn-sm" onclick="saveProof()" style="flex:1;padding:10px;border-radius:10px"><i class="fas fa-save"></i> Save Proof</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="js/mockData.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    var tasks = [];
+    var currentTab = 'active';
+    var searchQuery = '';
+    var completedSearchQuery = '';
+    var filterStatus = 'all';
+    var filterCrop = 'all';
+    var filterFarm = 'all';
+    var pendingProofTaskId = null;
+    var proofPhotoData = null;
+
+    function getDateStr(offset) {
+      var d = new Date();
+      d.setDate(d.getDate() + offset);
+      var y = d.getFullYear();
+      var m = ('0' + (d.getMonth() + 1)).slice(-2);
+      var day = ('0' + d.getDate()).slice(-2);
+      return y + '-' + m + '-' + day;
+    }
+
+    function formatDateDisplay(dateStr) {
+      if (!dateStr) return 'No date';
+      var parts = dateStr.split('-');
+      if (parts.length !== 3) return dateStr;
+      var d = new Date(parts[0], parts[1] - 1, parts[2]);
+      var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+    }
+
+    function isOverdue(dateStr) {
+      if (!dateStr) return false;
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+      var parts = dateStr.split('-');
+      var d = new Date(parts[0], parts[1] - 1, parts[2]);
+      return d < today;
+    }
+
+    function isSameDay(dateStr, offset) {
+      if (!dateStr) return false;
+      var target = new Date();
+      target.setDate(target.getDate() + offset);
+      target.setHours(0, 0, 0, 0);
+      var parts = dateStr.split('-');
+      var d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() === target.getTime();
+    }
+
+    function isAfterDay(dateStr, offset) {
+      if (!dateStr) return false;
+      var target = new Date();
+      target.setDate(target.getDate() + offset);
+      target.setHours(23, 59, 59, 999);
+      var parts = dateStr.split('-');
+      var d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setHours(0, 0, 0, 0);
+      return d > target;
+    }
+
+    function getSectionDateLabel(offset) {
+      var d = new Date();
+      d.setDate(d.getDate() + offset);
+      var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return months[d.getMonth()] + ' ' + d.getDate();
+    }
+
+    function generateMockTasks() {
+      var farms = ['North Field', 'South Field', 'East Field', 'West Field', 'Greenhouse A'];
+      var crops = ['Rice', 'Cotton', 'Maize', 'Wheat'];
+      var categories = ['Irrigation', 'Fertilizer', 'Pest Control', 'Harvesting', 'Supplies', 'Maintenance'];
+      var priorities = ['high', 'medium', 'low'];
+
+      var mockList = [
+        { title: 'Irrigate Rice Field', desc: 'Flood irrigate the north rice paddies', due: getDateStr(-1), pri: 'high', cat: 'Irrigation', status: 'pending', farm: 'North Field', crop: 'Rice' },
+        { title: 'Apply Fertilizer to Cotton', desc: 'Apply NPK 20-10-10 to south cotton rows', due: getDateStr(-1), pri: 'medium', cat: 'Fertilizer', status: 'completed', farm: 'South Field', crop: 'Cotton' },
+        { title: 'Check Pest Traps', desc: 'Inspect pheromone traps in maize field', due: getDateStr(-1), pri: 'low', cat: 'Pest Control', status: 'completed', farm: 'East Field', crop: 'Maize' },
+        { title: 'Harvest Maize Section B', desc: 'Mechanical harvest of section B, east field', due: getDateStr(-1), pri: 'high', cat: 'Harvesting', status: 'pending', farm: 'East Field', crop: 'Maize' },
+
+        { title: 'Water Greenhouse Seedlings', desc: 'Mist irrigate rice seedlings in greenhouse', due: getDateStr(0), pri: 'high', cat: 'Irrigation', status: 'pending', farm: 'Greenhouse A', crop: 'Rice' },
+        { title: 'Spray Pesticide Wheat', desc: 'Apply fungicide to west wheat field', due: getDateStr(0), pri: 'medium', cat: 'Pest Control', status: 'completed', farm: 'West Field', crop: 'Wheat' },
+        { title: 'Inspect Irrigation System', desc: 'Check drip lines and sprinklers', due: getDateStr(0), pri: 'medium', cat: 'Maintenance', status: 'pending', farm: 'North Field', crop: 'Rice' },
+        { title: 'Apply Urea to Wheat', desc: 'Top dress urea 46-0-0 on wheat', due: getDateStr(0), pri: 'high', cat: 'Fertilizer', status: 'pending', farm: 'West Field', crop: 'Wheat' },
+        { title: 'Collect Soil Samples', desc: 'Take samples from south field for testing', due: getDateStr(0), pri: 'low', cat: 'Maintenance', status: 'completed', farm: 'South Field', crop: 'Cotton' },
+
+        { title: 'Transplant Rice Seedlings', desc: 'Transplant from greenhouse to north field', due: getDateStr(1), pri: 'high', cat: 'Harvesting', status: 'pending', farm: 'North Field', crop: 'Rice' },
+        { title: 'Repair Fence East Boundary', desc: 'Fix broken fence posts along east edge', due: getDateStr(1), pri: 'medium', cat: 'Maintenance', status: 'pending', farm: 'East Field', crop: 'Maize' },
+        { title: 'Order Fertilizer Supplies', desc: 'Order urea and DAP for next season', due: getDateStr(1), pri: 'low', cat: 'Supplies', status: 'pending', farm: 'Greenhouse A', crop: 'Rice' },
+
+        { title: 'Prune Fruit Trees', desc: 'Prune mango and guava trees near south field', due: getDateStr(3), pri: 'medium', cat: 'Maintenance', status: 'pending', farm: 'South Field', crop: 'Cotton' },
+        { title: 'Prepare Harvest Equipment', desc: 'Service combine harvester and tractors', due: getDateStr(4), pri: 'high', cat: 'Supplies', status: 'pending', farm: 'West Field', crop: 'Wheat' },
+        { title: 'Apply Herbicide Maize Field', desc: 'Pre-emergent herbicide on east maize rows', due: getDateStr(5), pri: 'medium', cat: 'Pest Control', status: 'pending', farm: 'East Field', crop: 'Maize' },
+        { title: 'Irrigate Cotton Field', desc: 'Drip irrigate south cotton field', due: getDateStr(6), pri: 'medium', cat: 'Irrigation', status: 'completed', farm: 'South Field', crop: 'Cotton' },
+        { title: 'Monitor Grain Moisture', desc: 'Check moisture levels in stored wheat', due: getDateStr(7), pri: 'low', cat: 'Maintenance', status: 'pending', farm: 'West Field', crop: 'Wheat' },
+
+        { title: 'Fix Water Pump', desc: 'Repair broken pump at north well', due: getDateStr(-4), pri: 'high', cat: 'Maintenance', status: 'pending', farm: 'North Field', crop: 'Rice' },
+        { title: 'Weed Control West Field', desc: 'Manual weeding of wheat field', due: getDateStr(-3), pri: 'medium', cat: 'Pest Control', status: 'pending', farm: 'West Field', crop: 'Wheat' },
+        { title: 'Clean Storage Shed', desc: 'Organize tools and equipment in shed', due: getDateStr(-5), pri: 'low', cat: 'Maintenance', status: 'pending', farm: 'Greenhouse A', crop: 'Rice' }
+      ];
+
+      return mockList.map(function(m, i) {
+        return {
+          id: 't' + (i + 1),
+          title: m.title,
+          description: m.desc,
+          dueDate: m.due,
+          priority: m.pri,
+          status: m.status,
+          category: m.cat,
+          farm: m.farm,
+          crop: m.crop
+        };
+      });
+    }
+
+    var activeCycleId = null;
+
+    function loadTasks() {
+      var mock = window.AppMockData ? AppMockData.tasks : null;
+      if (mock && mock.length) {
+        tasks = mock.map(function(t) {
+          return {
+            id: t.id, title: t.title, description: t.description, dueDate: t.dueDate,
+            priority: t.priority, status: t.status, category: t.category,
+            farm: t.farm || 'North Field', crop: t.crop || 'Rice'
+          };
+        });
+      } else {
+        tasks = generateMockTasks();
+      }
+      populateFarmFilter();
+      renderAll();
+      renderAISuggestions();
+      loadBackendTasks();
+    }
+
+    function loadBackendTasks() {
+      if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+      return window.API.Crop.listTasks().then(function (list) {
+        if (list && list.length) {
+          tasks = list.map(function (t) {
+            return {
+              id: t.id || t.task_id,
+              taskId: t.task_id || t.id,
+              title: t.title,
+              description: t.description || '',
+              dueDate: (t.due_date || '').substring(0, 10),
+              priority: t.priority || 'medium',
+              status: t.status === 'completed' ? 'completed' : 'pending',
+              category: t.category || 'General',
+              farm: '',
+              crop: ''
+            };
+          });
+          populateFarmFilter();
+          renderAll();
+        }
+      }).catch(function () { /* keep mock fallback */ });
+    }
+
+    function loadCycleId() {
+      activeCycleId = null;
+      if (!window.API || !localStorage.getItem('fa-auth-token')) return Promise.resolve(null);
+      return window.API.Crop.listCycles().then(function (cycles) {
+        if (cycles && cycles.length) activeCycleId = cycles[0].id || cycles[0].cycle_id;
+        return activeCycleId;
+      }).catch(function () { return null; });
+    }
+
+    // ==================== AI SUGGESTED TASKS ====================
+
+    var AI_SUGGEST_KEY = 'fa-ai-suggest-accepted';
+
+    function getAcceptedSuggestions() {
+      try { return JSON.parse(localStorage.getItem(AI_SUGGEST_KEY) || '[]'); } catch (e) { return []; }
+    }
+
+    function acceptSuggestion(id) {
+      var acc = getAcceptedSuggestions();
+      if (acc.indexOf(id) === -1) acc.push(id);
+      try { localStorage.setItem(AI_SUGGEST_KEY, JSON.stringify(acc)); } catch (e) {}
+    }
+
+    function generateAISuggestions() {
+      var pool = [
+        { id: 'ai-1', title: 'Pre-irrigate before heatwave', cat: 'Irrigation', pri: 'high', farm: 'North Field', crop: 'Rice', icon: 'fa-droplet', reason: 'Temperature is expected to cross 38\u00b0C tomorrow. Early-morning irrigation prevents heat stress in rice.' },
+        { id: 'ai-2', title: 'Schedule pest spray window', cat: 'Pest Control', pri: 'medium', farm: 'South Field', crop: 'Cotton', icon: 'fa-bug', reason: 'Pheromone trap counts crossed the economic threshold in the south cotton block.' },
+        { id: 'ai-3', title: 'Order DAP before sowing', cat: 'Supplies', pri: 'low', farm: 'West Field', crop: 'Wheat', icon: 'fa-box-open', reason: 'DAP stock is below 25 kg and the wheat sowing window opens in about 2 weeks.' },
+        { id: 'ai-4', title: 'Inspect drip filters after rain', cat: 'Maintenance', pri: 'medium', farm: 'Greenhouse A', crop: 'Rice', icon: 'fa-gears', reason: 'Recent muddy water can clog emitters - flush filters to keep irrigation uniformity high.' },
+        { id: 'ai-5', title: 'Book harvest labour in advance', cat: 'Harvesting', pri: 'high', farm: 'East Field', crop: 'Maize', icon: 'fa-users', reason: 'Maize section B reaches maturity in 5 days; labour is scarce on weekends.' },
+        { id: 'ai-6', title: 'Set market-price alert for Tomato', cat: 'Supplies', pri: 'low', farm: 'Greenhouse A', crop: 'Rice', icon: 'fa-chart-line', reason: 'Tomato mandi rates are trending up 8% this week - lock in a good selling window.' }
+      ];
+      var accepted = getAcceptedSuggestions();
+      return pool.filter(function (s) { return accepted.indexOf(s.id) === -1; }).slice(0, 3);
+    }
+
+    function renderAISuggestions() {
+      var listEl = document.getElementById('ai-suggest-list');
+      if (!listEl) return;
+      listEl.innerHTML = '<div class="loading-shimmer"></div><div class="loading-shimmer" style="width:75%"></div>';
+      setTimeout(function () {
+        var items = generateAISuggestions();
+        if (!items.length) {
+          listEl.innerHTML = '<div class="ai-suggest-empty"><i class="fas fa-check-circle" style="font-size:20px;display:block;margin-bottom:6px;color:var(--primary-green)"></i>All caught up! Tap Refresh for fresh ideas.</div>';
+          return;
+        }
+        var html = '';
+        items.forEach(function (s, idx) {
+          html += '<div class="ai-suggest-item" style="animation-delay:' + (idx * 0.08) + 's">';
+          html += '<div class="asi-icon"><i class="fas ' + s.icon + '"></i></div>';
+          html += '<div class="asi-body">';
+          html += '<div class="asi-title">' + s.title + '</div>';
+          html += '<div class="asi-reason"><i class="fas fa-lightbulb" style="color:#f59e0b;margin-right:3px;font-size:9px"></i>' + s.reason + '</div>';
+          html += '<div class="asi-meta">';
+          html += '<span class="priority-badge ' + s.pri + '">' + s.pri + '</span>';
+          html += '<span class="farm-tag"><i class="fas fa-tractor" style="font-size:8px"></i> ' + s.farm + '</span>';
+          html += '<span class="crop-tag"><i class="fas fa-seedling" style="font-size:8px"></i> ' + s.crop + '</span>';
+          html += '<span class="cat-badge">' + s.cat + '</span>';
+          html += '</div></div>';
+          html += '<button class="asi-add" data-id="' + s.id + '"><i class="fas fa-plus"></i> Add</button>';
+          html += '</div>';
+        });
+        listEl.innerHTML = html;
+
+        listEl.querySelectorAll('.asi-add').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var id = btn.getAttribute('data-id');
+            var item = null;
+            for (var i = 0; i < items.length; i++) {
+              if (items[i].id === id) { item = items[i]; break; }
+            }
+            if (!item) return;
+            acceptSuggestion(id);
+            var newTask = {
+              id: 't' + Date.now(),
+              title: item.title,
+              description: item.reason,
+              dueDate: getDateStr(1),
+              priority: item.pri,
+              status: 'pending',
+              category: item.cat,
+              farm: item.farm,
+              crop: item.crop
+            };
+            tasks.unshift(newTask);
+            btn.classList.add('added');
+            btn.innerHTML = '<i class="fas fa-check"></i> Added';
+            btn.disabled = true;
+            renderAll();
+            showToast('AI task added to your list', 'success');
+          });
+        });
+      }, 900);
+    }
+
+    function populateFarmFilter() {
+      var select = document.getElementById('filter-farm');
+      var farmSet = {};
+      tasks.forEach(function(t) { if (t.farm) farmSet[t.farm] = true; });
+      var farmList = Object.keys(farmSet);
+      farmList.sort();
+      farmList.forEach(function(f) {
+        var opt = document.createElement('option');
+        opt.value = f;
+        opt.textContent = f;
+        select.appendChild(opt);
+      });
+      var savedFarm = '';
+      try { savedFarm = localStorage.getItem('fa-selected-farm') || ''; } catch (e) {}
+      if (savedFarm) select.value = savedFarm;
+    }
+
+    function filterTasks(taskList) {
+      return taskList.filter(function(t) {
+        if (filterStatus === 'pending' && t.status !== 'pending') return false;
+        if (filterStatus === 'completed' && t.status !== 'completed') return false;
+        if (filterStatus === 'overdue' && !(t.status !== 'completed' && isOverdue(t.dueDate))) return false;
+        if (filterCrop !== 'all' && t.crop !== filterCrop) return false;
+        if (filterFarm !== 'all' && t.farm !== filterFarm) return false;
+        if (searchQuery && t.title.toLowerCase().indexOf(searchQuery.toLowerCase()) === -1) return false;
+        return true;
+      });
+    }
+
+    function getSections() {
+      var filtered = filterTasks(tasks);
+      var sections = [
+        { key: 'pending', label: 'Pending', icon: 'fa-exclamation-triangle', badge: 'overdue', badgeText: 'OVERDUE' },
+        { key: 'yesterday', label: 'Yesterday', dateLabel: getSectionDateLabel(-1), icon: 'fa-calendar-day' },
+        { key: 'today', label: 'Today', dateLabel: getSectionDateLabel(0), icon: 'fa-calendar-day', badge: 'today-badge', badgeText: 'TODAY' },
+        { key: 'tomorrow', label: 'Tomorrow', dateLabel: getSectionDateLabel(1), icon: 'fa-calendar-day' },
+        { key: 'upcoming', label: 'Upcoming', icon: 'fa-calendar-week' }
+      ];
+
+      var result = [];
+      for (var si = 0; si < sections.length; si++) {
+        var sec = sections[si];
+        var sectionTasks = [];
+        for (var ti = 0; ti < filtered.length; ti++) {
+          var t = filtered[ti];
+          if (sec.key === 'pending') {
+            if (t.status !== 'completed' && isOverdue(t.dueDate)) {
+              sectionTasks.push(t);
+            }
+          } else if (sec.key === 'yesterday') {
+            if (isSameDay(t.dueDate, -1)) {
+              sectionTasks.push(t);
+            }
+          } else if (sec.key === 'today') {
+            if (isSameDay(t.dueDate, 0)) {
+              sectionTasks.push(t);
+            }
+          } else if (sec.key === 'tomorrow') {
+            if (isSameDay(t.dueDate, 1)) {
+              sectionTasks.push(t);
+            }
+          } else if (sec.key === 'upcoming') {
+            if (isAfterDay(t.dueDate, 1)) {
+              sectionTasks.push(t);
+            }
+          }
+        }
+        if (sectionTasks.length > 0) {
+          result.push({
+            key: sec.key,
+            label: sec.label,
+            dateLabel: sec.dateLabel || '',
+            icon: sec.icon || '',
+            badge: sec.badge || '',
+            badgeText: sec.badgeText || '',
+            tasks: sectionTasks
+          });
+        }
+      }
+      return result;
+    }
+
+    function renderAll() {
+      renderSections();
+      renderCompletedTasks();
+      updateReminderCount();
+    }
+
+    function renderSections() {
+      var container = document.getElementById('tasks-sections');
+      var sections = getSections();
+
+      if (!sections.length) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i>No tasks found. Great work!</div>';
+        return;
+      }
+
+      var html = '';
+      for (var si = 0; si < sections.length; si++) {
+        var sec = sections[si];
+        var badgeHtml = '';
+        if (sec.badge) {
+          badgeHtml = '<span class="sec-badge ' + sec.badge + '">' + sec.badgeText + '</span>';
+        }
+        var dateHtml = sec.dateLabel ? '<span style="font-size:11px;color:var(--text-muted);margin-left:4px">(' + sec.dateLabel + ')</span>' : '';
+        html += '<div class="task-section">';
+        html += '<div class="section-header" onclick="toggleSection(this)">';
+        html += '<i class="fas ' + sec.icon + ' sec-icon" style="font-size:12px;color:var(--text-muted)"></i>';
+        html += '<span class="sec-title">' + sec.label + dateHtml + '</span>';
+        html += badgeHtml;
+        html += '<span class="sec-count">' + sec.tasks.length + '</span>';
+        html += '<i class="fas fa-chevron-down sec-icon" style="font-size:10px;color:var(--text-muted)"></i>';
+        html += '</div>';
+        html += '<div class="sec-body">';
+
+        for (var ti = 0; ti < sec.tasks.length; ti++) {
+          html += renderTaskCard(sec.tasks[ti]);
+        }
+
+        html += '</div></div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function renderTaskCard(t) {
+      var done = t.status === 'completed';
+      var proofData = getProofData(t.id);
+      var hasProof = proofData !== null;
+      var proofThumbHtml = '';
+      if (done && hasProof && proofData.photo) {
+        proofThumbHtml = '<img src="' + proofData.photo + '" class="proof-thumb" onclick="event.stopPropagation();viewProof(\'' + t.id + '\')" title="View proof">';
+      } else if (done && hasProof) {
+        proofThumbHtml = '<span class="proof-thumb" style="display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--bg-card-soft)" onclick="event.stopPropagation();viewProof(\'' + t.id + '\')" title="View proof"><i class="fas fa-check-circle" style="color:var(--primary-green)"></i></span>';
+      }
+
+      var html = '<div class="task-card' + (done ? ' completed' : '') + '">';
+      html += '<div class="check' + (done ? ' checked' : '') + '" onclick="event.stopPropagation();toggleTask(\'' + t.id + '\')">' + (done ? '<i class="fas fa-check" style="font-size:10px"></i>' : '') + '</div>';
+      html += '<div class="task-body">';
+      html += '<div class="task-title">' + t.title + '</div>';
+      html += '<div class="task-meta">';
+      html += '<span class="cat-badge">' + t.category + '</span>';
+      html += '<span class="priority-badge ' + t.priority + '">' + t.priority + '</span>';
+      html += '<span class="farm-tag"><i class="fas fa-tractor" style="font-size:8px"></i> ' + (t.farm || 'N/A') + '</span>';
+      html += '<span class="crop-tag"><i class="fas fa-seedling" style="font-size:8px"></i> ' + (t.crop || 'N/A') + '</span>';
+      html += '<span>Due: ' + formatDateDisplay(t.dueDate) + '</span>';
+      html += '</div>';
+      if (t.description) html += '<div class="task-desc">' + t.description + '</div>';
+      html += '</div>';
+      html += proofThumbHtml;
+      html += '</div>';
+
+      return html;
+    }
+
+    function toggleSection(header) {
+      var body = header.nextElementSibling;
+      if (body.classList.contains('hidden')) {
+        body.classList.remove('hidden');
+        header.querySelectorAll('.sec-icon')[1].style.transform = 'rotate(0deg)';
+      } else {
+        body.classList.add('hidden');
+        header.querySelectorAll('.sec-icon')[1].style.transform = 'rotate(-90deg)';
+      }
+    }
+
+    function updateReminderCount() {
+      var count = 0;
+      for (var i = 0; i < tasks.length; i++) {
+        if (tasks[i].status === 'pending') count++;
+      }
+      document.getElementById('reminder-count').textContent = count;
+    }
+
+    function toggleTask(id) {
+      var task = null;
+      for (var i = 0; i < tasks.length; i++) {
+        if (tasks[i].id === id) {
+          task = tasks[i];
+          break;
+        }
+      }
+      if (!task) return;
+
+      if (task.status === 'completed') {
+        task.status = 'pending';
+        removeProofData(id);
+        renderAll();
+        if (task.taskId && window.API && localStorage.getItem('fa-auth-token')) {
+          window.API.Crop.updateTask(task.taskId, { status: 'pending' }).catch(function () {});
+        }
+      } else {
+        pendingProofTaskId = id;
+        showProofModal(task);
+      }
+    }
+
+    function showProofModal(task) {
+      var modal = document.getElementById('proof-modal');
+      document.getElementById('proof-task-name').textContent = task.title;
+      document.getElementById('proof-notes').value = '';
+      document.getElementById('gps-status').textContent = 'Location not available';
+      document.getElementById('proof-timestamp').textContent = 'Timestamp: ' + formatDateDisplay(getDateStr(0)) + ' ' + new Date().toLocaleTimeString();
+      document.getElementById('proof-upload-preview').style.display = 'none';
+      document.getElementById('proof-capture-preview').style.display = 'none';
+      document.getElementById('proof-upload-box').classList.remove('has-image');
+      document.getElementById('proof-capture-box').classList.remove('has-image');
+      proofPhotoData = null;
+      getGPSLocation();
+      modal.style.display = 'flex';
+    }
+
+    function closeProofModal() {
+      document.getElementById('proof-modal').style.display = 'none';
+      pendingProofTaskId = null;
+      proofPhotoData = null;
+    }
+
+    function onProofPhotoUpload(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        proofPhotoData = e.target.result;
+        var preview = document.getElementById('proof-upload-preview');
+        preview.src = proofPhotoData;
+        preview.style.display = 'block';
+        document.getElementById('proof-upload-box').classList.add('has-image');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function onProofPhotoCapture(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        proofPhotoData = e.target.result;
+        var preview = document.getElementById('proof-capture-preview');
+        preview.src = proofPhotoData;
+        preview.style.display = 'block';
+        document.getElementById('proof-capture-box').classList.add('has-image');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function getGPSLocation() {
+      var statusEl = document.getElementById('gps-status');
+      var btn = document.getElementById('gps-btn');
+      if (!navigator.geolocation) {
+        statusEl.textContent = 'GPS not supported on this device';
+        return;
+      }
+      statusEl.textContent = 'Getting location...';
+      btn.disabled = true;
+      btn.textContent = 'Locating...';
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          var lat = pos.coords.latitude.toFixed(6);
+          var lng = pos.coords.longitude.toFixed(6);
+          statusEl.textContent = 'Lat: ' + lat + ', Lng: ' + lng;
+          statusEl.style.color = 'var(--primary-green)';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+          window._proofLat = lat;
+          window._proofLng = lng;
+        },
+        function(err) {
+          statusEl.textContent = 'Location not available (' + err.message + ')';
+          statusEl.style.color = 'var(--text-muted)';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-sync-alt"></i> Retry';
+          window._proofLat = null;
+          window._proofLng = null;
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+
+    function saveProof() {
+      if (!pendingProofTaskId) return;
+      var notes = document.getElementById('proof-notes').value.trim();
+      var timestamp = new Date().toISOString();
+      var proof = {
+        photo: proofPhotoData || null,
+        notes: notes || '',
+        latitude: window._proofLat || null,
+        longitude: window._proofLng || null,
+        timestamp: timestamp
+      };
+      saveProofData(pendingProofTaskId, proof);
+
+      for (var i = 0; i < tasks.length; i++) {
+        if (tasks[i].id === pendingProofTaskId) {
+          tasks[i].status = 'completed';
+          var backendId = tasks[i].taskId || null;
+          break;
+        }
+      }
+
+      closeProofModal();
+      renderAll();
+      showToast('Task completed with proof!', 'success');
+
+      if (backendId && window.API && localStorage.getItem('fa-auth-token')) {
+        window.API.Crop.updateTask(backendId, { status: 'completed' }).catch(function () {
+          /* proof saved locally; server sync retried next load */
+        });
+      }
+    }
+
+    function saveProofData(taskId, data) {
+      var allProofs = {};
+      try {
+        var stored = localStorage.getItem('farm_task_proofs');
+        if (stored) allProofs = JSON.parse(stored);
+      } catch(e) {}
+      allProofs[taskId] = data;
+      localStorage.setItem('farm_task_proofs', JSON.stringify(allProofs));
+    }
+
+    function getProofData(taskId) {
+      try {
+        var stored = localStorage.getItem('farm_task_proofs');
+        if (!stored) return null;
+        var allProofs = JSON.parse(stored);
+        return allProofs[taskId] || null;
+      } catch(e) { return null; }
+    }
+
+    function removeProofData(taskId) {
+      try {
+        var stored = localStorage.getItem('farm_task_proofs');
+        if (!stored) return;
+        var allProofs = JSON.parse(stored);
+        delete allProofs[taskId];
+        localStorage.setItem('farm_task_proofs', JSON.stringify(allProofs));
+      } catch(e) {}
+    }
+
+    function viewProof(taskId) {
+      var proof = getProofData(taskId);
+      if (!proof) {
+        showToast('No proof data found', 'error');
+        return;
+      }
+      var task = null;
+      for (var i = 0; i < tasks.length; i++) {
+        if (tasks[i].id === taskId) { task = tasks[i]; break; }
+      }
+      var info = 'Task: ' + (task ? task.title : 'Unknown') + '\n';
+      info += 'Completed: ' + (proof.timestamp ? new Date(proof.timestamp).toLocaleString() : 'N/A') + '\n';
+      info += 'Notes: ' + (proof.notes || 'None') + '\n';
+      if (proof.latitude && proof.longitude) {
+        info += 'Location: ' + proof.latitude + ', ' + proof.longitude;
+      } else {
+        info += 'Location: Not available';
+      }
+      if (proof.photo) {
+        var w = window.open('', '_blank');
+        w.document.write('<html><head><title>Proof - ' + (task ? task.title : 'Task') + '</title>');
+        w.document.write('<meta name="viewport" content="width=device-width,initial-scale=1">');
+        w.document.write('<style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;padding:20px;background:#f5f5f5}img{max-width:100%;max-height:70vh;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.1)}.info{max-width:500px;margin-top:16px;text-align:center;line-height:1.8;font-size:14px;color:#333}</style></head>');
+        w.document.write('<body><img src="' + proof.photo + '"><div class="info">');
+        w.document.write('<strong>' + (task ? task.title : 'Unknown Task') + '</strong><br>');
+        w.document.write('Completed: ' + (proof.timestamp ? new Date(proof.timestamp).toLocaleString() : 'N/A') + '<br>');
+        w.document.write('Notes: ' + (proof.notes || 'None') + '<br>');
+        if (proof.latitude && proof.longitude) {
+          w.document.write('Location: ' + proof.latitude + ', ' + proof.longitude);
+        } else {
+          w.document.write('Location: Not available');
+        }
+        w.document.write('</div></body></html>');
+        w.document.close();
+      } else {
+        alert(info);
+      }
+    }
+
+    function renderCompletedTasks() {
+      var container = document.getElementById('completed-tasks-list');
+      var completed = [];
+      for (var i = 0; i < tasks.length; i++) {
+        if (tasks[i].status === 'completed') {
+          completed.push(tasks[i]);
+        }
+      }
+      if (completedSearchQuery) {
+        var q = completedSearchQuery.toLowerCase();
+        completed = completed.filter(function(t) {
+          return t.title.toLowerCase().indexOf(q) !== -1;
+        });
+      }
+      if (!completed.length) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-check-double"></i>No completed tasks yet.</div>';
+        return;
+      }
+      completed.sort(function(a, b) {
+        var pa = getProofData(a.id);
+        var pb = getProofData(b.id);
+        var ta = pa && pa.timestamp ? pa.timestamp : a.dueDate;
+        var tb = pb && pb.timestamp ? pb.timestamp : b.dueDate;
+        if (ta < tb) return 1;
+        if (ta > tb) return -1;
+        return 0;
+      });
+      var html = '';
+      for (var ci = 0; ci < completed.length; ci++) {
+        var t = completed[ci];
+        var proof = getProofData(t.id);
+        var thumbHtml = '';
+        if (proof && proof.photo) {
+          thumbHtml = '<img src="' + proof.photo + '" class="proof-thumb" onclick="viewProof(\'' + t.id + '\')" title="View proof" style="width:40px;height:40px">';
+        } else {
+          thumbHtml = '<span class="proof-thumb" style="display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--bg-card-soft);width:40px;height:40px"><i class="fas fa-check-circle" style="color:var(--primary-green)"></i></span>';
+        }
+        var completedDate = proof && proof.timestamp ? new Date(proof.timestamp).toLocaleDateString() : formatDateDisplay(t.dueDate);
+        var notesText = proof && proof.notes ? proof.notes : 'No notes';
+        html += '<div class="completed-item">';
+        html += thumbHtml;
+        html += '<div class="ci-body">';
+        html += '<div class="ci-title">' + t.title + '</div>';
+        html += '<div class="ci-meta">Completed: ' + completedDate + ' &middot; ' + (t.farm || 'N/A') + ' &middot; ' + (t.crop || 'N/A') + '</div>';
+        html += '<div class="ci-notes"><i class="fas fa-quote-left" style="font-size:8px;opacity:0.5"></i> ' + notesText + '</div>';
+        html += '</div>';
+        html += '<span class="cat-badge">' + t.category + '</span>';
+        html += '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      var buttons = document.querySelectorAll('.filter-tab');
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('active');
+        if (buttons[i].getAttribute('data-tab') === tab) {
+          buttons[i].classList.add('active');
+        }
+      }
+      if (tab === 'active') {
+        document.getElementById('active-tasks-view').classList.remove('view-hidden');
+        document.getElementById('completed-tasks-view').classList.add('view-hidden');
+      } else {
+        document.getElementById('active-tasks-view').classList.add('view-hidden');
+        document.getElementById('completed-tasks-view').classList.remove('view-hidden');
+        renderCompletedTasks();
+      }
+    }
+
+    function onSearchChange() {
+      searchQuery = document.getElementById('search-input').value;
+      renderSections();
+      updateReminderCount();
+    }
+
+    function onCompletedSearchChange() {
+      completedSearchQuery = document.getElementById('completed-search-input').value;
+      renderCompletedTasks();
+    }
+
+    function onFilterChange() {
+      filterStatus = document.getElementById('filter-status').value;
+      filterCrop = document.getElementById('filter-crop').value;
+      filterFarm = document.getElementById('filter-farm').value;
+      renderSections();
+      updateReminderCount();
+    }
+
+    function showAddTask() {
+      document.getElementById('t-title').value = '';
+      document.getElementById('t-desc').value = '';
+      document.getElementById('t-date').value = getDateStr(0);
+      document.getElementById('t-priority').value = 'medium';
+      document.getElementById('t-cat').value = 'Irrigation';
+      document.getElementById('t-farm').value = 'North Field';
+      document.getElementById('t-crop').value = 'Rice';
+      document.getElementById('task-modal').style.display = 'flex';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function saveTask() {
+      var title = document.getElementById('t-title').value.trim();
+      if (!title) { showToast('Please enter a task title', 'error'); return; }
+      var newTask = {
+        id: 't' + Date.now(),
+        title: title,
+        description: document.getElementById('t-desc').value.trim(),
+        dueDate: document.getElementById('t-date').value || 'No date',
+        priority: document.getElementById('t-priority').value,
+        status: 'pending',
+        category: document.getElementById('t-cat').value,
+        farm: document.getElementById('t-farm').value,
+        crop: document.getElementById('t-crop').value
+      };
+
+      function applyLocal() {
+        tasks.unshift(newTask);
+        renderAll();
+        closeModal('task-modal');
+        showToast('Task added successfully', 'success');
+      }
+
+      if (window.API && localStorage.getItem('fa-auth-token')) {
+        var cyclePromise = activeCycleId ? Promise.resolve(activeCycleId) : loadCycleId();
+        return cyclePromise.then(function (cycleId) {
+          if (!cycleId) { applyLocal(); return; }
+          var payload = {
+            crop_cycle_id: cycleId,
+            title: title,
+            description: newTask.description || null,
+            category: newTask.category || null,
+            due_date: newTask.dueDate === 'No date' ? null : newTask.dueDate,
+            priority: newTask.priority
+          };
+          return window.API.Crop.createTask(payload).then(function (created) {
+            if (created && created.id) newTask.id = created.id || newTask.id;
+            if (created && created.task_id) newTask.id = created.task_id;
+            applyLocal();
+          }).catch(function (err) {
+            showToast((err && err.message) || 'Failed to save task', 'error');
+            applyLocal();
+          });
+        });
+      }
+      applyLocal();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        loadTasks();
+        loadCycleId();
+        var refreshBtn = document.getElementById('ai-suggest-refresh');
+        if (refreshBtn) {
+          refreshBtn.addEventListener('click', function() { renderAISuggestions(); });
+        }
+      }, 200);
+    });
+  </script>
+</body>
+</html>

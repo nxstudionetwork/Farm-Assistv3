@@ -1,0 +1,700 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="expert">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Expert Hub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .expert-hub-hero { background: var(--gradient-primary); border-radius: var(--radius-xl); padding: 24px; color: white; margin-bottom: 16px; }
+    .filter-icons { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding: 4px 0; }
+    .filter-icon-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border-light); background: white; color: var(--text-secondary); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; box-shadow: var(--shadow-sm); }
+    .filter-icon-btn:hover, .filter-icon-btn.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+    .expert-card { background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; transition: all 0.25s; }
+    .expert-card:hover { box-shadow: var(--shadow-md); border-color: var(--medium-green); transform: translateY(-2px); }
+    .expert-card-top { display: flex; gap: 14px; }
+    .expert-avatar { width: 60px; height: 60px; border-radius: 16px; background: var(--primary-green); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; font-family: 'Outfit', sans-serif; flex-shrink: 0; }
+    .expert-info { flex: 1; min-width: 0; }
+    .expert-info h4 { font-size: 15px; font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+    .expert-qual { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+    .expert-spec { font-size: 11px; color: var(--primary-green); font-weight: 600; margin-bottom: 4px; }
+    .expert-stars { font-size: 12px; color: var(--warning); display: flex; align-items: center; gap: 4px; }
+    .expert-stars small { color: var(--text-muted); font-weight: 400; }
+    .expert-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 8px; font-size: 11px; color: var(--text-secondary); }
+    .expert-meta i { color: var(--medium-green); width: 14px; }
+    .expert-avail { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; display: inline-block; }
+    .expert-avail.today { background: #E8F5E9; color: #2E7D32; }
+    .expert-avail.tomorrow { background: #FFF8E1; color: #F57F17; }
+    .expert-avail.week { background: #E3F2FD; color: #1565C0; }
+    .expert-fee { font-size: 16px; font-weight: 800; color: var(--primary-green); }
+    .expert-fee small { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+    .expert-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); }
+    .expert-actions .btn-primary, .expert-actions .btn-secondary { flex: 1; font-size: 11px; padding: 8px 10px; }
+    .expert-actions .btn-sm { padding: 8px 12px; }
+    .section-title { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .section-title i { color: var(--primary-green); }
+    .about-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
+    .review-item { padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+    .review-item:last-child { border-bottom: none; }
+    .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .review-header b { font-size: 13px; }
+    .review-header span { font-size: 11px; color: var(--warning); }
+    .review-text { font-size: 12px; color: var(--text-secondary); }
+    .working-hours { font-size: 13px; color: var(--text-secondary); }
+    .working-hours div { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border-light); }
+    .working-hours div:last-child { border-bottom: none; }
+    .success-toast { position: fixed; top: 80px; right: 16px; background: white; border-left: 4px solid var(--success); padding: 14px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); font-size: 13px; font-weight: 500; z-index: 3000; display: flex; align-items: center; gap: 10px; transform: translateX(120%); transition: transform 0.35s ease; max-width: 340px; }
+    .success-toast.show { transform: translateX(0); }
+    .success-toast i { font-size: 18px; color: var(--success); }
+    .modal-box.expert-modal { max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 24px; }
+    .modal-box h3 { font-size: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .modal-box h3 i { color: var(--primary-green); }
+    .modal-close-btn { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-card-soft); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; transition: all 0.2s; }
+    .modal-close-btn:hover { background: var(--danger); color: white; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
+    .book-summary { background: var(--soft-green); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+    .book-summary .expert-avatar { width: 44px; height: 44px; font-size: 16px; }
+    .book-summary-info h4 { font-size: 14px; }
+    .book-summary-info p { font-size: 11px; color: var(--text-secondary); }
+    .search-bar-wrapper { position: relative; margin-bottom: 16px; }
+    .search-bar-wrapper input { padding-left: 38px; }
+    .search-bar-wrapper i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+    @media (max-width: 480px) { .expert-actions { flex-wrap: wrap; } .expert-actions .btn-primary, .expert-actions .btn-secondary { min-width: 100px; } }
+    .badge-custom { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; background: var(--soft-green); color: var(--primary-green); }
+    .experts-grid { display: grid; grid-template-columns: 1fr; gap: 0; }
+    @media (min-width: 640px) { .experts-grid { grid-template-columns: 1fr 1fr; gap: 12px; } .expert-actions { flex-direction: column; } }
+    @media (min-width: 768px) and (max-width: 1023px) { .experts-grid { grid-template-columns: 1fr 1fr; } }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+
+    <!-- Hero / Header -->
+    <div class="expert-hub-hero">
+      <h2 style="font-size:22px; margin-bottom:4px; color:white;">Expert Hub</h2>
+      <p style="font-size:13px; opacity:0.85; margin-bottom:16px;">Connect with agriculture experts for personalized guidance.</p>
+      <div class="search-bar-wrapper" style="margin-bottom:0;">
+        <i class="fas fa-search"></i>
+        <input type="text" id="expert-search" placeholder="Search experts by name, specialization, or location..." class="form-input" style="width:100%; padding:12px 14px 12px 40px; font-size:13px; border-radius:12px; border:none;">
+      </div>
+    </div>
+
+    <!-- Quick filter icons -->
+    <div class="filter-icons" id="expert-filter-icons">
+      <button class="filter-icon-btn" data-filter="booked" title="Booked Appointments"><i class="fas fa-calendar-check"></i></button>
+      <button class="filter-icon-btn" data-filter="recommended" title="Recommended"><i class="fas fa-thumbs-up"></i></button>
+      <button class="filter-icon-btn" data-filter="starred" title="Starred"><i class="fas fa-star"></i></button>
+      <button class="filter-icon-btn" data-filter="known" title="Known"><i class="fas fa-user-check"></i></button>
+    </div>
+
+    <!-- Filter dropdown + results count -->
+    <div class="flex-between" style="margin-bottom:12px;">
+      <select id="expert-category-filter" class="form-select" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-light); font-size:12px; background:white;">
+        <option value="all">All</option>
+        <option value="Crop Disease">Crop Disease</option>
+        <option value="Crop Growth">Crop Growth</option>
+        <option value="Soil">Soil</option>
+        <option value="Irrigation">Irrigation</option>
+        <option value="Pest Control">Pest Control</option>
+        <option value="Organic Farming">Organic Farming</option>
+        <option value="Finance">Finance</option>
+        <option value="Other">Other</option>
+      </select>
+      <span id="expert-count" style="font-size:12px; color:var(--text-muted); font-weight:600;">10 experts</span>
+    </div>
+
+    <!-- Expert Cards Container -->
+    <div id="expert-list" class="experts-grid"></div>
+
+  </main>
+
+  <!-- Detail Modal -->
+  <div class="modal-backdrop" id="detail-modal">
+    <div class="modal-box expert-modal" style="position:relative;">
+      <button class="modal-close-btn" onclick="closeDetailModal()"><i class="fas fa-times"></i></button>
+      <div id="detail-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Booking Modal -->
+  <div class="modal-backdrop" id="booking-modal">
+    <div class="modal-box expert-modal" style="position:relative;">
+      <button class="modal-close-btn" onclick="closeBookingModal()"><i class="fas fa-times"></i></button>
+      <div id="booking-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Success Toast -->
+  <div class="success-toast" id="success-toast">
+    <i class="fas fa-check-circle"></i>
+    <span id="toast-message">Appointment booked successfully!</span>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+
+  <script>
+  (function () {
+    'use strict';
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+
+    function rupee(n) {
+      return '\u20B9' + Number(n).toLocaleString('en-IN');
+    }
+
+    function stars(rating) {
+      var r = Math.round(parseFloat(rating));
+      var out = '';
+      for (var i = 1; i <= 5; i++) {
+        out += '<i class="fa' + (i <= r ? 's' : 'r') + ' fa-star"></i>';
+      }
+      return out;
+    }
+
+    function getInitials(name) {
+      if (!name) return 'EX';
+      var parts = name.trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
+    // ---- Expert Data ----
+    var experts = [
+      {
+        id: 1,
+        name: 'Dr. Arvind Sharma',
+        qualification: 'PhD Plant Pathology',
+        experience: '15 years',
+        specialization: 'Crop Disease',
+        languages: 'Hindi, English',
+        location: 'Delhi, India',
+        rating: 4.8,
+        reviews: 124,
+        availability: 'Available Today',
+        fee: 499,
+        about: 'Dr. Arvind Sharma is a senior plant pathologist with over 15 years of experience in diagnosing and managing crop diseases. He has worked with ICAR and has helped thousands of farmers across North India improve crop yield through disease management.',
+        workingHours: { Monday: '9:00 AM - 5:00 PM', Tuesday: '9:00 AM - 5:00 PM', Wednesday: '9:00 AM - 5:00 PM', Thursday: '9:00 AM - 5:00 PM', Friday: '9:00 AM - 5:00 PM', Saturday: '10:00 AM - 2:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Ramesh Kumar', rating: 5, text: 'Excellent diagnosis! My wheat crop recovered within a week.', date: '2 weeks ago' },
+          { author: 'Suresh Patel', rating: 4, text: 'Very knowledgeable. Gave detailed treatment plan.', date: '1 month ago' }
+        ],
+        availClass: 'today'
+      },
+      {
+        id: 2,
+        name: 'Dr. Priya Mehta',
+        qualification: 'MSc Soil Science',
+        experience: '12 years',
+        specialization: 'Soil',
+        languages: 'Hindi, English, Marathi',
+        location: 'Pune, India',
+        rating: 4.9,
+        reviews: 98,
+        availability: 'Available Tomorrow',
+        fee: 399,
+        about: 'Dr. Priya Mehta is a soil scientist specializing in soil health analysis, nutrient management, and sustainable farming practices. She has consulted for over 2000 farms across Maharashtra.',
+        workingHours: { Monday: '10:00 AM - 6:00 PM', Tuesday: '10:00 AM - 6:00 PM', Wednesday: '10:00 AM - 6:00 PM', Thursday: '10:00 AM - 6:00 PM', Friday: '10:00 AM - 6:00 PM', Saturday: '10:00 AM - 4:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Anita Deshmukh', rating: 5, text: 'My soil quality improved significantly after following her advice.', date: '1 week ago' },
+          { author: 'Vijay Pawar', rating: 5, text: 'Very practical recommendations. Highly recommended.', date: '3 weeks ago' }
+        ],
+        availClass: 'tomorrow'
+      },
+      {
+        id: 3,
+        name: 'Dr. Rajesh Gupta',
+        qualification: 'PhD Agronomy',
+        experience: '18 years',
+        specialization: 'Crop Growth',
+        languages: 'Hindi, English',
+        location: 'Lucknow, India',
+        rating: 4.7,
+        reviews: 156,
+        availability: 'Available Today',
+        fee: 599,
+        about: 'Dr. Rajesh Gupta is an agronomy expert with extensive experience in crop growth optimization, yield enhancement, and precision farming techniques. He has published over 30 research papers.',
+        workingHours: { Monday: '8:00 AM - 4:00 PM', Tuesday: '8:00 AM - 4:00 PM', Wednesday: '8:00 AM - 4:00 PM', Thursday: '8:00 AM - 4:00 PM', Friday: '8:00 AM - 4:00 PM', Saturday: '9:00 AM - 1:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Dinesh Yadav', rating: 5, text: 'My paddy yield increased by 40% after his recommendations.', date: '5 days ago' },
+          { author: 'Manoj Singh', rating: 4, text: 'Detailed analysis and very patient with all my questions.', date: '2 weeks ago' }
+        ],
+        availClass: 'today'
+      },
+      {
+        id: 4,
+        name: 'Dr. Sunita Verma',
+        qualification: 'MSc Entomology',
+        experience: '10 years',
+        specialization: 'Pest Control',
+        languages: 'Hindi, English, Punjabi',
+        location: 'Chandigarh, India',
+        rating: 4.6,
+        reviews: 87,
+        availability: 'Available Tomorrow',
+        fee: 349,
+        about: 'Dr. Sunita Verma is an entomologist specializing in integrated pest management (IPM). She helps farmers identify pest problems early and implement eco-friendly control measures.',
+        workingHours: { Monday: '9:00 AM - 5:00 PM', Tuesday: '9:00 AM - 5:00 PM', Wednesday: '9:00 AM - 5:00 PM', Thursday: '9:00 AM - 5:00 PM', Friday: '9:00 AM - 5:00 PM', Saturday: '10:00 AM - 2:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Gurpreet Singh', rating: 5, text: 'Saved my cotton crop from pink bollworm. Very effective treatment.', date: '1 week ago' },
+          { author: 'Ravi Sharma', rating: 4, text: 'Great knowledge of organic pest control methods.', date: '3 weeks ago' }
+        ],
+        availClass: 'tomorrow'
+      },
+      {
+        id: 5,
+        name: 'Dr. Anand Joshi',
+        qualification: 'PhD Irrigation Engineering',
+        experience: '20 years',
+        specialization: 'Irrigation',
+        languages: 'English, Hindi, Marathi, Gujarati',
+        location: 'Surat, India',
+        rating: 4.9,
+        reviews: 203,
+        availability: 'This Week',
+        fee: 699,
+        about: 'Dr. Anand Joshi is a leading irrigation engineer with two decades of experience in designing efficient irrigation systems. He specializes in drip irrigation, sprinkler systems, and water conservation techniques.',
+        workingHours: { Monday: '9:00 AM - 6:00 PM', Tuesday: '9:00 AM - 6:00 PM', Wednesday: '9:00 AM - 6:00 PM', Thursday: '9:00 AM - 6:00 PM', Friday: '9:00 AM - 6:00 PM', Saturday: '9:00 AM - 3:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Kiran Patel', rating: 5, text: 'Designed a complete drip system for my farm. Water savings are amazing!', date: '3 days ago' },
+          { author: 'Hariom Tiwari', rating: 5, text: 'Very professional. Explained everything in detail.', date: '2 weeks ago' },
+          { author: 'Mohan Lal', rating: 4, text: 'Good consultation, practical advice for my farm.', date: '1 month ago' }
+        ],
+        availClass: 'week'
+      },
+      {
+        id: 6,
+        name: 'Dr. Lakshmi Nair',
+        qualification: 'PhD Organic Agriculture',
+        experience: '14 years',
+        specialization: 'Organic Farming',
+        languages: 'English, Hindi, Malayalam, Tamil',
+        location: 'Coimbatore, India',
+        rating: 4.8,
+        reviews: 112,
+        availability: 'Available Today',
+        fee: 449,
+        about: 'Dr. Lakshmi Nair is an organic farming expert passionate about sustainable agriculture. She has helped over 500 farms transition to certified organic farming practices.',
+        workingHours: { Monday: '8:00 AM - 5:00 PM', Tuesday: '8:00 AM - 5:00 PM', Wednesday: '8:00 AM - 5:00 PM', Thursday: '8:00 AM - 5:00 PM', Friday: '8:00 AM - 5:00 PM', Saturday: '8:00 AM - 12:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Sivakumar', rating: 5, text: 'Helped me get organic certification. Her knowledge is incredible.', date: '1 week ago' },
+          { author: 'Geetha Rani', rating: 5, text: 'My farm is now fully organic thanks to her guidance.', date: '1 month ago' }
+        ],
+        availClass: 'today'
+      },
+      {
+        id: 7,
+        name: 'Dr. Vikram Rathore',
+        qualification: 'MBA Agri-Business',
+        experience: '16 years',
+        specialization: 'Finance',
+        languages: 'Hindi, English',
+        location: 'Jaipur, India',
+        rating: 4.5,
+        reviews: 78,
+        availability: 'Available Tomorrow',
+        fee: 549,
+        about: 'Dr. Vikram Rathore is an agri-finance expert who helps farmers with financial planning, loan applications, government scheme navigation, and farm profitability analysis.',
+        workingHours: { Monday: '10:00 AM - 6:00 PM', Tuesday: '10:00 AM - 6:00 PM', Wednesday: '10:00 AM - 6:00 PM', Thursday: '10:00 AM - 6:00 PM', Friday: '10:00 AM - 6:00 PM', Saturday: '10:00 AM - 2:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Bhanwar Singh', rating: 5, text: 'Helped me get a PM-KISAN loan. Very knowledgeable about schemes.', date: '2 weeks ago' },
+          { author: 'Deepak Sharma', rating: 4, text: 'Good financial advice. Helped me plan my farm budget.', date: '1 month ago' }
+        ],
+        availClass: 'tomorrow'
+      },
+      {
+        id: 8,
+        name: 'Dr. Meera Iyer',
+        qualification: 'PhD Horticulture',
+        experience: '11 years',
+        specialization: 'Crop Growth',
+        languages: 'English, Hindi, Tamil, Kannada',
+        location: 'Bangalore, India',
+        rating: 4.7,
+        reviews: 94,
+        availability: 'This Week',
+        fee: 399,
+        about: 'Dr. Meera Iyer is a horticulture specialist focusing on fruit and vegetable crop growth optimization. She has extensive experience with greenhouse cultivation and precision nutrient management.',
+        workingHours: { Monday: '9:00 AM - 5:00 PM', Tuesday: '9:00 AM - 5:00 PM', Wednesday: '9:00 AM - 5:00 PM', Thursday: '9:00 AM - 5:00 PM', Friday: '9:00 AM - 5:00 PM', Saturday: '9:00 AM - 1:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Shashi Kumar', rating: 5, text: 'My tomato yield doubled after following her advice!', date: '1 week ago' },
+          { author: 'Lakshmi Devi', rating: 4, text: 'Very thorough analysis of my vegetable farm.', date: '3 weeks ago' }
+        ],
+        availClass: 'week'
+      },
+      {
+        id: 9,
+        name: 'Dr. Farhan Ali',
+        qualification: 'MSc Plant Pathology',
+        experience: '9 years',
+        specialization: 'Crop Disease',
+        languages: 'Hindi, English, Urdu',
+        location: 'Patna, India',
+        rating: 4.6,
+        reviews: 67,
+        availability: 'Available Today',
+        fee: 299,
+        about: 'Dr. Farhan Ali specializes in early detection and treatment of crop diseases. He has worked extensively in Bihar and Eastern UP helping farmers combat fungal and bacterial infections.',
+        workingHours: { Monday: '8:00 AM - 4:00 PM', Tuesday: '8:00 AM - 4:00 PM', Wednesday: '8:00 AM - 4:00 PM', Thursday: '8:00 AM - 4:00 PM', Friday: '8:00 AM - 4:00 PM', Saturday: '8:00 AM - 12:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Amar Nath', rating: 5, text: 'Quick diagnosis and affordable treatment plan.', date: '4 days ago' },
+          { author: 'Sita Devi', rating: 4, text: 'Very helpful and patient with all my questions.', date: '2 weeks ago' }
+        ],
+        availClass: 'today'
+      },
+      {
+        id: 10,
+        name: 'Dr. Kavita Desai',
+        qualification: 'PhD Soil Microbiology',
+        experience: '13 years',
+        specialization: 'Soil',
+        languages: 'English, Hindi, Gujarati',
+        location: 'Ahmedabad, India',
+        rating: 4.8,
+        reviews: 143,
+        availability: 'Available Tomorrow',
+        fee: 499,
+        about: 'Dr. Kavita Desai is a soil microbiologist specializing in soil health restoration, bio-fertilizers, and microbial consortiums for improved crop productivity. She has consulted for over 3000 farms.',
+        workingHours: { Monday: '9:00 AM - 6:00 PM', Tuesday: '9:00 AM - 6:00 PM', Wednesday: '9:00 AM - 6:00 PM', Thursday: '9:00 AM - 6:00 PM', Friday: '9:00 AM - 6:00 PM', Saturday: '9:00 AM - 2:00 PM', Sunday: 'Closed' },
+        reviewsList: [
+          { author: 'Jignesh Patel', rating: 5, text: 'My soil test was very detailed. Her bio-fertilizer recommendation worked wonders.', date: '1 week ago' },
+          { author: 'Rekha Ben', rating: 5, text: 'Wonderful expert! My farm soil is now much healthier.', date: '3 weeks ago' },
+          { author: 'Prakash Joshi', rating: 4, text: 'Very professional and knowledgeable.', date: '2 months ago' }
+        ],
+        availClass: 'tomorrow'
+      }
+    ];
+
+    var currentFilter = 'all';
+    var currentCategory = 'all';
+    var currentQuery = '';
+    var currentBookedExpert = null;
+
+    // ---- Render Expert Cards ----
+    function renderExperts() {
+      var list = document.getElementById('expert-list');
+      if (!list) return;
+
+      var filtered = experts.filter(function (e) {
+        if (currentCategory !== 'all' && e.specialization !== currentCategory) return false;
+        if (currentQuery) {
+          var q = currentQuery.toLowerCase();
+          var nameMatch = e.name.toLowerCase().indexOf(q) !== -1;
+          var specMatch = e.specialization.toLowerCase().indexOf(q) !== -1;
+          var locMatch = e.location.toLowerCase().indexOf(q) !== -1;
+          var langMatch = e.languages.toLowerCase().indexOf(q) !== -1;
+          var qualMatch = e.qualification.toLowerCase().indexOf(q) !== -1;
+          if (!nameMatch && !specMatch && !locMatch && !langMatch && !qualMatch) return false;
+        }
+        return true;
+      });
+
+      // Quick filter logic
+      if (currentFilter === 'booked') {
+        filtered = filtered.filter(function (e) { return e.availClass === 'today'; });
+      } else if (currentFilter === 'recommended') {
+        filtered = filtered.filter(function (e) { return e.rating >= 4.7; });
+      } else if (currentFilter === 'starred') {
+        filtered = filtered.filter(function (e) { return e.rating >= 4.8; });
+      } else if (currentFilter === 'known') {
+        filtered = filtered.filter(function (e) { return e.reviews >= 100; });
+      }
+
+      var countEl = document.getElementById('expert-count');
+      if (countEl) countEl.textContent = filtered.length + ' expert' + (filtered.length === 1 ? '' : 's');
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-user-md"></i><h4>No experts found</h4><p>Try adjusting your filters or search terms.</p></div>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(function (e) {
+        var availLabel = e.availability;
+        var starsHtml = stars(e.rating);
+        var initials = getInitials(e.name);
+        return '' +
+          '<div class="expert-card" data-id="' + e.id + '">' +
+            '<div class="expert-card-top">' +
+              '<div class="expert-avatar">' + esc(initials) + '</div>' +
+              '<div class="expert-info">' +
+                '<h4>' + esc(e.name) + ' <span class="badge badge-green">Expert</span></h4>' +
+                '<div class="expert-qual">' + esc(e.qualification) + ' &bull; ' + esc(e.experience) + '</div>' +
+                '<div class="expert-spec"><i class="fas fa-flask"></i> ' + esc(e.specialization) + '</div>' +
+                '<div class="expert-stars">' + starsHtml + ' <b>' + e.rating + '</b> <small>(' + e.reviews + ' reviews)</small></div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="expert-meta">' +
+              '<span><i class="fas fa-language"></i> ' + esc(e.languages) + '</span>' +
+              '<span><i class="fas fa-map-marker-alt"></i> ' + esc(e.location) + '</span>' +
+            '</div>' +
+            '<div class="flex-between">' +
+              '<span class="expert-avail ' + e.availClass + '"><i class="fas fa-circle"></i> ' + esc(availLabel) + '</span>' +
+              '<span class="expert-fee">' + rupee(e.fee) + ' <small>/ consult</small></span>' +
+            '</div>' +
+            '<div class="expert-actions">' +
+              '<button class="btn-secondary btn-sm" onclick="window._openDetail(' + e.id + ')"><i class="fas fa-eye"></i> View Details</button>' +
+              '<button class="btn-secondary btn-sm" onclick="window._openMessage(' + e.id + ')"><i class="fas fa-comment-dots"></i> Message</button>' +
+              '<button class="btn-primary btn-sm" onclick="window._openBooking(' + e.id + ')"><i class="fas fa-calendar-check"></i> Book</button>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    // ---- Detail Modal ----
+    window._openDetail = function (id) {
+      var e = null;
+      for (var i = 0; i < experts.length; i++) {
+        if (experts[i].id === id) { e = experts[i]; break; }
+      }
+      if (!e) return;
+
+      var starsHtml = stars(e.rating);
+      var initials = getInitials(e.name);
+      var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      var hoursHtml = '';
+      for (var d = 0; d < days.length; d++) {
+        var day = days[d];
+        var time = e.workingHours[day] || 'Closed';
+        hoursHtml += '<div><span>' + day + '</span><span>' + time + '</span></div>';
+      }
+      var reviewsHtml = '';
+      for (var r = 0; r < e.reviewsList.length; r++) {
+        var rev = e.reviewsList[r];
+        reviewsHtml += '' +
+          '<div class="review-item">' +
+            '<div class="review-header"><b>' + esc(rev.author) + '</b><span>' + stars(rev.rating) + '</span></div>' +
+            '<div class="review-text">' + esc(rev.text) + '</div>' +
+            '<small style="color:var(--text-muted);font-size:10px;">' + esc(rev.date) + '</small>' +
+          '</div>';
+      }
+
+      var content = '' +
+        '<div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;">' +
+          '<div class="expert-avatar" style="width:72px;height:72px;font-size:28px;">' + esc(initials) + '</div>' +
+          '<div>' +
+            '<h3 style="font-size:18px;margin-bottom:2px;">' + esc(e.name) + '</h3>' +
+            '<div style="font-size:12px;color:var(--text-muted);">' + esc(e.qualification) + ' &bull; ' + esc(e.experience) + '</div>' +
+            '<div class="expert-stars" style="margin-top:4px;">' + starsHtml + ' <b>' + e.rating + '</b> <small>(' + e.reviews + ' reviews)</small></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="section-title"><i class="fas fa-user-circle"></i> About</div>' +
+        '<div class="about-text">' + esc(e.about) + '</div>' +
+        '<div class="section-title"><i class="fas fa-star"></i> Reviews (' + e.reviewsList.length + ')</div>' +
+        reviewsHtml +
+        '<div class="section-title" style="margin-top:12px;"><i class="fas fa-clock"></i> Working Hours</div>' +
+        '<div class="working-hours">' + hoursHtml + '</div>' +
+        '<div style="display:flex;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border-light);">' +
+          '<button class="btn-secondary" onclick="closeDetailModal()" style="flex:1;">Close</button>' +
+          '<button class="btn-primary" onclick="closeDetailModal();window._openBooking(' + e.id + ');" style="flex:1;"><i class="fas fa-calendar-check"></i> Book Appointment</button>' +
+        '</div>';
+
+      document.getElementById('detail-modal-content').innerHTML = content;
+      openModal('detail-modal');
+    };
+
+    // ---- Booking Modal ----
+    window._openBooking = function (id) {
+      var e = null;
+      for (var i = 0; i < experts.length; i++) {
+        if (experts[i].id === id) { e = experts[i]; break; }
+      }
+      if (!e) return;
+      currentBookedExpert = e;
+
+      var initials = getInitials(e.name);
+      var tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      var minDate = tomorrow.toISOString().slice(0, 10);
+
+      var content = '' +
+        '<div class="book-summary">' +
+          '<div class="expert-avatar" style="width:44px;height:44px;font-size:16px;">' + esc(initials) + '</div>' +
+          '<div class="book-summary-info">' +
+            '<h4>' + esc(e.name) + '</h4>' +
+            '<p>' + esc(e.specialization) + ' &bull; ' + esc(e.qualification) + '</p>' +
+          '</div>' +
+        '</div>' +
+        '<form id="booking-form" novalidate>' +
+          '<div class="form-group">' +
+            '<label>Select Date</label>' +
+            '<input type="date" class="form-input" id="booking-date" min="' + minDate + '" value="' + minDate + '">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Time Slot</label>' +
+            '<select class="form-select" id="booking-time">' +
+              '<option value="Morning 9-12">Morning (9:00 AM - 12:00 PM)</option>' +
+              '<option value="Afternoon 12-3">Afternoon (12:00 PM - 3:00 PM)</option>' +
+              '<option value="Evening 3-6">Evening (3:00 PM - 6:00 PM)</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Consultation Type</label>' +
+            '<select class="form-select" id="booking-type">' +
+              '<option value="Video">Video Call</option>' +
+              '<option value="Audio">Audio Call</option>' +
+              '<option value="Chat">Chat</option>' +
+              '<option value="In-person">In-person</option>' +
+            '</select>' +
+          '</div>' +
+          '<div style="background:var(--soft-green);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">' +
+            '<span style="font-size:13px;font-weight:600;color:var(--text-secondary);">Consultation Fee</span>' +
+            '<span style="font-size:20px;font-weight:800;color:var(--primary-green);">' + rupee(e.fee) + '</span>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Notes (optional)</label>' +
+            '<textarea class="form-textarea" id="booking-notes" rows="3" placeholder="Describe your issue or any questions for the expert..." style="width:100%;padding:10px 14px;border:1px solid var(--border-medium);border-radius:var(--radius-sm);font-size:13px;resize:vertical;"></textarea>' +
+          '</div>' +
+        '</form>' +
+        '<div style="display:flex;gap:10px;padding-top:8px;">' +
+          '<button class="btn-secondary" style="flex:1;" onclick="closeBookingModal()">Cancel</button>' +
+          '<button class="btn-primary" style="flex:1;" onclick="confirmBooking()"><i class="fas fa-check"></i> Confirm Booking</button>' +
+        '</div>';
+
+      document.getElementById('booking-modal-content').innerHTML = content;
+      openModal('booking-modal');
+    };
+
+    window.confirmBooking = function () {
+      var date = document.getElementById('booking-date');
+      var time = document.getElementById('booking-time');
+      var type = document.getElementById('booking-type');
+      var notes = document.getElementById('booking-notes');
+      if (!date || !time || !type) return;
+
+      var msg = 'Appointment booked with ' + esc(currentBookedExpert.name) + ' on ' + date.value + ' (' + time.value + ') via ' + type.value + '.';
+      showToast(msg);
+      closeBookingModal();
+    };
+
+    window._openMessage = function (id) {
+      var e = null;
+      for (var i = 0; i < experts.length; i++) {
+        if (experts[i].id === id) { e = experts[i]; break; }
+      }
+      if (!e) return;
+      showToast('Opening chat with ' + e.name + '...');
+    };
+
+    // ---- Modal Controls ----
+    function openModal(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    window.closeDetailModal = function () {
+      var el = document.getElementById('detail-modal');
+      if (!el) return;
+      el.classList.remove('active');
+      document.body.style.overflow = '';
+    };
+
+    window.closeBookingModal = function () {
+      var el = document.getElementById('booking-modal');
+      if (!el) return;
+      el.classList.remove('active');
+      document.body.style.overflow = '';
+    };
+
+    // ---- Click outside to close modals ----
+    document.addEventListener('click', function (e) {
+      var dm = document.getElementById('detail-modal');
+      var bm = document.getElementById('booking-modal');
+      if (dm && dm.classList.contains('active') && e.target === dm) closeDetailModal();
+      if (bm && bm.classList.contains('active') && e.target === bm) closeBookingModal();
+    });
+
+    // ---- Escape key to close modals ----
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        closeDetailModal();
+        closeBookingModal();
+      }
+    });
+
+    // ---- Toast ----
+    function showToast(msg) {
+      var el = document.getElementById('success-toast');
+      var msgEl = document.getElementById('toast-message');
+      if (!el || !msgEl) return;
+      msgEl.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(el._timeout);
+      el._timeout = setTimeout(function () {
+        el.classList.remove('show');
+      }, 3500);
+    }
+
+    // ---- Bind UI Controls ----
+    function bindUI() {
+      // Search
+      var search = document.getElementById('expert-search');
+      if (search) {
+        var timer;
+        search.addEventListener('input', function () {
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            currentQuery = search.value;
+            renderExperts();
+          }, 250);
+        });
+      }
+
+      // Category filter
+      var cat = document.getElementById('expert-category-filter');
+      if (cat) {
+        cat.addEventListener('change', function () {
+          currentCategory = cat.value;
+          renderExperts();
+        });
+      }
+
+      // Quick filter icons
+      var iconBtns = document.querySelectorAll('.filter-icon-btn');
+      for (var i = 0; i < iconBtns.length; i++) {
+        (function (btn) {
+          btn.addEventListener('click', function () {
+            var filter = btn.getAttribute('data-filter');
+            if (currentFilter === filter) {
+              currentFilter = 'all';
+              btn.classList.remove('active');
+            } else {
+              for (var j = 0; j < iconBtns.length; j++) iconBtns[j].classList.remove('active');
+              currentFilter = filter;
+              btn.classList.add('active');
+            }
+            renderExperts();
+          });
+        })(iconBtns[i]);
+      }
+    }
+
+    // ---- Init ----
+    function init() {
+      if (!document.getElementById('expert-list')) return;
+      renderExperts();
+      bindUI();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+  })();
+  </script>
+</body>
+</html>

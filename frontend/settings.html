@@ -1,0 +1,643 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="settings">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Farm Assist - Settings</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* Android-style Settings */
+    .settings-card-body { padding: 0; }
+    .settings-card-body .settings-list { box-shadow: none; border: none; margin-bottom: 0; border-radius: 0; }
+    .settings-card-body .settings-row:last-child { border-bottom: none; }
+    .settings-card-body .settings-row { border-bottom: 1px solid var(--border-light); }
+    .settings-row.no-hover:hover { background: transparent; }
+    .settings-row-static { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-light); background: white; }
+    .settings-row-static:last-child { border-bottom: none; }
+    .settings-row-static:active { background: #f5f5f5; }
+    .settings-section-title { font-size: 14px; font-weight: 600; padding: 24px 20px 8px; display: flex; align-items: center; gap: 10px; color: var(--primary-green); text-transform: uppercase; letter-spacing: 0.5px; }
+    .settings-section-title i { color: var(--primary-green); }
+    .settings-action-row { padding: 16px 20px; border-top: 1px solid var(--border-light); display: flex; gap: 8px; flex-wrap: wrap; background: white; }
+    .settings-inline-form { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .settings-inline-form .form-input { flex: 1; min-width: 0; }
+    .settings-field-group { padding: 16px 20px; border-bottom: 1px solid var(--border-light); background: white; }
+    .settings-field-group:last-child { border-bottom: none; }
+    .settings-field-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
+    .settings-field-row { display: flex; align-items: center; gap: 8px; }
+    .settings-field-row .form-input { flex: 1; }
+    .session-item, .device-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-light); font-size: 14px; background: white; }
+    .session-item:last-child, .device-item:last-child { border-bottom: none; }
+    .session-item:active, .device-item:active { background: #f5f5f5; }
+    .session-info, .device-info { display: flex; flex-direction: column; gap: 2px; }
+    .session-device { font-weight: 500; color: var(--text-primary); }
+    .session-meta { font-size: 12px; color: var(--text-muted); }
+    .session-current { font-size: 10px; background: var(--soft-green); color: var(--primary-green); padding: 3px 8px; border-radius: 12px; font-weight: 600; }
+    .connected-device-item { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border-light); background: white; }
+    .connected-device-item:last-child { border-bottom: none; }
+    .connected-device-item:active { background: #f5f5f5; }
+    .connected-device-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: var(--soft-green); color: var(--primary-green); flex-shrink: 0; }
+    .connected-device-info { flex: 1; }
+    .connected-device-name { font-size: 14px; font-weight: 500; }
+    .connected-device-status { font-size: 12px; color: var(--text-muted); }
+    .permission-checkbox-row { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border-light); background: white; }
+    .permission-checkbox-row:last-child { border-bottom: none; }
+    .permission-checkbox-row:active { background: #f5f5f5; }
+    .permission-checkbox-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary-green); }
+    .permission-checkbox-row label { font-size: 14px; color: var(--text-primary); cursor: pointer; }
+    .danger-text { color: var(--danger); }
+    .mt-8 { margin-top: 8px; }
+    .text-center { text-align: center; }
+    .version-display { padding: 16px 20px; text-align: center; font-size: 13px; color: var(--text-muted); background: white; }
+    .select-styled { width: 100%; padding: 12px 16px; border: 1px solid var(--border-medium); border-radius: 12px; background: white; color: var(--text-primary); font-size: 14px; transition: border-color 0.2s, box-shadow 0.2s; appearance: auto; cursor: pointer; }
+    .select-styled:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); outline: none; }
+    .language-preview { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    
+    /* Android-style navigation items */
+    .settings-nav-item { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: white; border-bottom: 1px solid var(--border-light); cursor: pointer; }
+    .settings-nav-item:last-child { border-bottom: none; }
+    .settings-nav-item:active { background: #f5f5f5; }
+    .settings-nav-left { display: flex; align-items: center; gap: 12px; }
+    .settings-nav-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: var(--soft-green); color: var(--primary-green); }
+    .settings-nav-text { display: flex; flex-direction: column; }
+    .settings-nav-title { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+    .settings-nav-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .settings-nav-chevron { color: var(--text-muted); font-size: 14px; }
+    
+    /* Toggle switch styling */
+    .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 28px; }
+    .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    input:checked + .slider { background-color: var(--primary-green); }
+    input:checked + .slider:before { transform: translateX(22px); }
+  </style>
+</head>
+<body>
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-gear"></i> Settings</h1>
+        <p>Manage your account, preferences, and privacy</p>
+      </div>
+    </div>
+
+    <!-- 1. ACCOUNT -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-user"></i> Account</div>
+      <div class="settings-card-body">
+        <div class="settings-field-group">
+          <div class="settings-field-label">Full Name</div>
+          <div class="settings-field-row">
+            <input class="form-input" type="text" id="acc-name" placeholder="Your name" value="Loading...">
+            <button class="btn-primary btn-sm" onclick="saveAccountField('name')"><i class="fas fa-save"></i> Save</button>
+          </div>
+        </div>
+        <div class="settings-field-group">
+          <div class="settings-field-label">Email Address</div>
+          <div class="settings-field-row">
+            <input class="form-input" type="email" id="acc-email" placeholder="your@email.com" value="Loading...">
+            <button class="btn-primary btn-sm" onclick="saveAccountField('email')"><i class="fas fa-save"></i> Save</button>
+          </div>
+        </div>
+        <div class="settings-field-group">
+          <div class="settings-field-label">Phone Number</div>
+          <div class="settings-field-row">
+            <input class="form-input" type="tel" id="acc-phone" placeholder="+91XXXXXXXXXX" value="Loading...">
+            <button class="btn-primary btn-sm" onclick="saveAccountField('phone')"><i class="fas fa-save"></i> Save</button>
+          </div>
+        </div>
+        <div class="settings-field-group">
+          <div class="settings-field-label">PIN / Password</div>
+          <div class="settings-field-row">
+            <input class="form-input" type="password" id="acc-pin" placeholder="Enter new PIN" value="">
+            <button class="btn-primary btn-sm" onclick="changePin()"><i class="fas fa-key"></i> Update</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. SECURITY -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-shield-halved"></i> Security</div>
+      <div class="settings-card-body">
+        <div style="padding:12px 20px 4px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;">Active Sessions</div>
+        <div id="sessions-container">
+          <div class="session-item">
+            <div class="session-info">
+              <span class="session-device"><i class="fas fa-laptop"></i> Chrome on Windows</span>
+              <span class="session-meta">IP: 192.168.1.1 &middot; Last active: Now</span>
+            </div>
+            <span class="session-current">Current</span>
+          </div>
+        </div>
+        <div style="padding:12px 20px 4px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;">Devices</div>
+        <div id="devices-container">
+          <div class="device-item">
+            <div class="device-info">
+              <span class="session-device"><i class="fas fa-mobile-screen"></i> OnePlus 12 (Android 14)</span>
+              <span class="session-meta">Last login: 2 days ago</span>
+            </div>
+          </div>
+        </div>
+        <div class="settings-action-row">
+          <button class="btn-secondary btn-sm" onclick="logoutAllDevices()"><i class="fas fa-right-from-bracket"></i> Logout All Devices</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. PRIVACY -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-eye-slash"></i> Privacy</div>
+      <div class="settings-card-body">
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left">
+            <i class="fas fa-location-dot"></i>
+            <div>
+              <div class="settings-title">Location Services</div>
+              <div class="settings-subtitle">Allow Farm Assist to access your location</div>
+            </div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="privacy-location" checked onchange="savePrivacySetting('location', this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left">
+            <i class="fas fa-user"></i>
+            <div>
+              <div class="settings-title">Profile Visibility</div>
+              <div class="settings-subtitle">Allow other farmers to see your profile</div>
+            </div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="privacy-profile" checked onchange="savePrivacySetting('profile', this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="padding:12px 20px 4px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;">Data Permissions</div>
+        <div class="permission-checkbox-row">
+          <input type="checkbox" id="perm-analytics" checked onchange="savePrivacySetting('analytics', this.checked)">
+          <label for="perm-analytics">Share anonymous usage analytics to improve the app</label>
+        </div>
+        <div class="permission-checkbox-row">
+          <input type="checkbox" id="perm-crop-data" checked onchange="savePrivacySetting('cropData', this.checked)">
+          <label for="perm-crop-data">Share crop data with local agricultural department</label>
+        </div>
+        <div class="permission-checkbox-row">
+          <input type="checkbox" id="perm-market" onchange="savePrivacySetting('marketAlerts', this.checked)">
+          <label for="perm-market">Receive personalized market price recommendations</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. NOTIFICATIONS -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-bell"></i> Notifications</div>
+      <div class="settings-card-body">
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-cloud-sun"></i><div><div class="settings-title">Weather Alerts</div><div class="settings-subtitle">Rain, storm, heatwave warnings</div></div></div>
+          <label class="switch"><input type="checkbox" id="notif-weather" checked onchange="saveNotifSetting('weather', this.checked)"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-list-check"></i><div><div class="settings-title">Task Reminders</div><div class="settings-subtitle">Sowing, irrigation, harvest reminders</div></div></div>
+          <label class="switch"><input type="checkbox" id="notif-tasks" checked onchange="saveNotifSetting('tasks', this.checked)"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-chart-line"></i><div><div class="settings-title">Market Prices</div><div class="settings-subtitle">Mandi price fluctuations & alerts</div></div></div>
+          <label class="switch"><input type="checkbox" id="notif-market" checked onchange="saveNotifSetting('market', this.checked)"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-comment-dots"></i><div><div class="settings-title">Messages</div><div class="settings-subtitle">New messages & community replies</div></div></div>
+          <label class="switch"><input type="checkbox" id="notif-messages" checked onchange="saveNotifSetting('messages', this.checked)"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-landmark"></i><div><div class="settings-title">Government Alerts</div><div class="settings-subtitle">New schemes, deadlines & policy updates</div></div></div>
+          <label class="switch"><input type="checkbox" id="notif-govt" checked onchange="saveNotifSetting('govt', this.checked)"><span class="slider"></span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. LANGUAGE -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-language"></i> Language</div>
+      <div class="settings-card-body">
+        <div style="padding:12px 20px;">
+          <div class="settings-field-label">App Language</div>
+          <select class="select-styled" id="lang-select" onchange="changeLanguage(this.value)">
+            <option value="en">English</option>
+            <option value="hi">Hindi (à¤¹à¤¿à¤‚à¤¦à¥€)</option>
+            <option value="mr">Marathi (à¤®à¤°à¤¾à¤ à¥€)</option>
+            <option value="ta">Tamil (à®¤à®®à®¿à®´à¯)</option>
+            <option value="te">Telugu (à°¤à±†à°²à±à°—à±)</option>
+            <option value="bn">Bengali (à¦¬à¦¾à¦‚à¦²à¦¾)</option>
+            <option value="gu">Gujarati (àª—à«àªœàª°àª¾àª¤à«€)</option>
+          </select>
+          <div class="language-preview" id="lang-preview">Selected language will apply across the app</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. VOICE ASSISTANT -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-microphone"></i> Voice Assistant</div>
+      <div class="settings-card-body">
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left">
+            <i class="fas fa-robot"></i>
+            <div>
+              <div class="settings-title">Enable Voice Assistant</div>
+              <div class="settings-subtitle">Use voice commands to navigate and control Farm Assist</div>
+            </div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="voice-toggle" onchange="saveVoiceSetting(this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. OFFLINE SYNC -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-cloud-arrow-down"></i> Offline Sync</div>
+      <div class="settings-card-body">
+        <div class="settings-row-static" style="cursor:default;">
+          <div>
+            <div class="settings-title">Last Synced</div>
+            <div class="settings-subtitle" id="last-sync-time">Checking...</div>
+          </div>
+          <button class="btn-primary btn-sm" onclick="syncNow()"><i class="fas fa-rotate"></i> Sync Now</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. PREFERENCES -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-sliders"></i> Preferences</div>
+      <div class="settings-card-body">
+        <div style="padding:12px 20px;">
+          <div class="settings-field-label">Default Measurement Units</div>
+          <select class="select-styled" id="units-select" onchange="saveUnits(this.value)">
+            <option value="metric">Metric (kg, acres, litres)</option>
+            <option value="imperial">Imperial (lbs, acres, gallons)</option>
+          </select>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left">
+            <i class="fas fa-chart-simple"></i>
+            <div>
+              <div class="settings-title">Weekly Farm Summary</div>
+              <div class="settings-subtitle">Get a weekly summary of tasks, weather and market prices</div>
+            </div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="weekly-summary-toggle" onchange="saveWeeklySummary(this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="settings-row-static" style="cursor:default;">
+          <div>
+            <div class="settings-title">Cached Data</div>
+            <div class="settings-subtitle" id="cache-info">Calculating...</div>
+          </div>
+          <button class="btn-secondary btn-sm" onclick="clearCache()"><i class="fas fa-broom"></i> Clear</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. CONNECTED DEVICES -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-link"></i> Connected Devices</div>
+      <div class="settings-card-body">
+        <div id="connected-devices-container">
+          <div class="connected-device-item">
+            <div class="connected-device-icon"><i class="fas fa-satellite-dish"></i></div>
+            <div class="connected-device-info">
+              <div class="connected-device-name">Weather Station #WS-1024</div>
+              <div class="connected-device-status"><i class="fas fa-circle" style="color:var(--success);font-size:8px;"></i> Connected &middot; Last data: 2 min ago</div>
+            </div>
+            <button class="btn-secondary btn-sm" onclick="disconnectDevice('WS-1024')"><i class="fas fa-unlink"></i></button>
+          </div>
+          <div class="connected-device-item">
+            <div class="connected-device-icon"><i class="fas fa-water"></i></div>
+            <div class="connected-device-info">
+              <div class="connected-device-name">Soil Sensor Array #SS-042</div>
+              <div class="connected-device-status"><i class="fas fa-circle" style="color:var(--success);font-size:8px;"></i> Connected &middot; Last data: 5 min ago</div>
+            </div>
+            <button class="btn-secondary btn-sm" onclick="disconnectDevice('SS-042')"><i class="fas fa-unlink"></i></button>
+          </div>
+          <div class="connected-device-item">
+            <div class="connected-device-icon"><i class="fas fa-helicopter"></i></div>
+            <div class="connected-device-info">
+              <div class="connected-device-name">Drone DJI Agras T50</div>
+              <div class="connected-device-status"><i class="fas fa-circle" style="color:var(--warning);font-size:8px;"></i> Last seen 3 hours ago</div>
+            </div>
+            <button class="btn-secondary btn-sm" onclick="disconnectDevice('T50')"><i class="fas fa-unlink"></i></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. DATA & PRIVACY -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-database"></i> Data & Privacy</div>
+      <div class="settings-card-body">
+        <div class="settings-action-row">
+          <button class="btn-primary btn-sm" onclick="exportData()"><i class="fas fa-arrow-up-from-bracket"></i> Export My Data</button>
+          <button class="btn-secondary btn-sm danger-text" onclick="deleteAccount()"><i class="fas fa-trash-can"></i> Delete Account</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. HELP & SUPPORT -->
+    <section class="card-premium" style="padding:0;cursor:pointer;" onclick="window.location.href='help.html'">
+      <div class="settings-section-title" style="padding:15px 20px;">
+        <i class="fas fa-circle-question" style="color:var(--premium-green, #2D8659);"></i> Help & Support
+        <i class="fas fa-chevron-right" style="margin-left:auto;color:var(--text-muted);font-size:14px;"></i>
+      </div>
+    </section>
+
+    <!-- 11. APP VERSION -->
+    <section class="card-premium" style="padding:0;">
+      <div class="version-display">
+        <i class="fas fa-rotate"></i> Version <strong>2.5.0</strong> (Build 2026.07)
+      </div>
+    </section>
+
+    <!-- 12. LOGOUT -->
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-action-row" style="justify-content:center;">
+        <button class="btn-primary" style="background:var(--danger);box-shadow:0 2px 10px rgba(214,48,49,0.25);" onclick="handleLogout()">
+          <i class="fas fa-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  (function() {
+    var langMap = {
+      en: 'English',
+      hi: 'Hindi (à¤¹à¤¿à¤‚à¤¦à¥€)',
+      mr: 'Marathi (à¤®à¤°à¤¾à¤ à¥€)',
+      ta: 'Tamil (à®¤à®®à®¿à®´à¯)',
+      te: 'Telugu (à°¤à±†à°²à±à°—à±)',
+      bn: 'Bengali (à¦¬à¦¾à¦‚à¦²à¦¾)',
+      gu: 'Gujarati (àª—à«àªœàª°àª¾àª¤à«€)'
+    };
+
+    function loadSettings() {
+      var user = UserStore.getCurrentUser();
+      if (user) {
+        if (document.getElementById('acc-name')) document.getElementById('acc-name').value = user.full_name || '';
+        if (document.getElementById('acc-email')) document.getElementById('acc-email').value = user.email || '';
+        if (document.getElementById('acc-phone')) document.getElementById('acc-phone').value = user.phone_number || '';
+        var lang = user.preferred_language || 'en';
+        if (document.getElementById('lang-select')) document.getElementById('lang-select').value = lang;
+        updateLangPreview(lang);
+      }
+
+      var savedLang = localStorage.getItem('fa-language');
+      if (savedLang && document.getElementById('lang-select')) {
+        document.getElementById('lang-select').value = savedLang;
+        updateLangPreview(savedLang);
+      }
+
+      var voiceEnabled = localStorage.getItem('fa-voice-enabled');
+      if (voiceEnabled !== null && document.getElementById('voice-toggle')) {
+        document.getElementById('voice-toggle').checked = voiceEnabled === 'true';
+      }
+
+      var lastSync = localStorage.getItem('fa-last-sync');
+      if (lastSync && document.getElementById('last-sync-time')) {
+        document.getElementById('last-sync-time').textContent = lastSync;
+      } else {
+        if (document.getElementById('last-sync-time')) document.getElementById('last-sync-time').textContent = 'Never synced';
+      }
+
+      var privacyLocation = localStorage.getItem('fa-privacy-location');
+      if (privacyLocation !== null && document.getElementById('privacy-location')) {
+        document.getElementById('privacy-location').checked = privacyLocation === 'true';
+      }
+      var privacyProfile = localStorage.getItem('fa-privacy-profile');
+      if (privacyProfile !== null && document.getElementById('privacy-profile')) {
+        document.getElementById('privacy-profile').checked = privacyProfile === 'true';
+      }
+      var permAnalytics = localStorage.getItem('fa-perm-analytics');
+      if (permAnalytics !== null && document.getElementById('perm-analytics')) {
+        document.getElementById('perm-analytics').checked = permAnalytics === 'true';
+      }
+      var permCropData = localStorage.getItem('fa-perm-crop-data');
+      if (permCropData !== null && document.getElementById('perm-crop-data')) {
+        document.getElementById('perm-crop-data').checked = permCropData === 'true';
+      }
+      var permMarket = localStorage.getItem('fa-perm-market');
+      if (permMarket !== null && document.getElementById('perm-market')) {
+        document.getElementById('perm-market').checked = permMarket === 'true';
+      }
+
+      var notifKeys = ['weather', 'tasks', 'market', 'messages', 'govt'];
+      for (var i = 0; i < notifKeys.length; i++) {
+        var key = notifKeys[i];
+        var saved = localStorage.getItem('fa-notif-' + key);
+        var el = document.getElementById('notif-' + key);
+        if (saved !== null && el) {
+          el.checked = saved === 'true';
+        }
+      }
+
+      var savedUnits = localStorage.getItem('fa-units');
+      if (savedUnits && document.getElementById('units-select')) {
+        document.getElementById('units-select').value = savedUnits;
+      }
+      var savedWeekly = localStorage.getItem('fa-weekly-summary');
+      if (savedWeekly !== null && document.getElementById('weekly-summary-toggle')) {
+        document.getElementById('weekly-summary-toggle').checked = savedWeekly === 'true';
+      }
+      var cacheInfo = document.getElementById('cache-info');
+      if (cacheInfo) {
+        try {
+          if (navigator.storage && navigator.storage.estimate) {
+            navigator.storage.estimate().then(function(est) {
+              cacheInfo.textContent = Math.max(1, Math.round((est.usage || 0) / 1024 / 1024)) + ' MB used';
+            }).catch(function() { cacheInfo.textContent = '~12 MB used'; });
+          } else {
+            cacheInfo.textContent = '~12 MB used';
+          }
+        } catch (e) {
+          cacheInfo.textContent = '~12 MB used';
+        }
+      }
+    }
+
+    function updateLangPreview(lang) {
+      var el = document.getElementById('lang-preview');
+      if (!el) return;
+      var name = langMap[lang] || lang;
+      el.textContent = 'Current: ' + name;
+    }
+
+    window.saveAccountField = function(field) {
+      var value = '';
+      if (field === 'name') value = document.getElementById('acc-name').value.trim();
+      else if (field === 'email') value = document.getElementById('acc-email').value.trim();
+      else if (field === 'phone') value = document.getElementById('acc-phone').value.trim();
+
+      if (!value) {
+        showToast('Please enter a value', 'warning');
+        return;
+      }
+
+      var payload = {};
+      if (field === 'name') payload.full_name = value;
+      else if (field === 'email') payload.email = value;
+      else if (field === 'phone') payload.phone_number = value;
+
+      API.Profile.update(payload).then(function() {
+        var user = UserStore.getCurrentUser();
+        if (user) {
+          if (field === 'name') user.full_name = value;
+          else if (field === 'email') user.email = value;
+          else if (field === 'phone') user.phone_number = value;
+          localStorage.setItem('fa-current-user-data', JSON.stringify(user));
+          localStorage.setItem('user-name', user.full_name || 'Farmer');
+        }
+        showToast(field.charAt(0).toUpperCase() + field.slice(1) + ' updated successfully', 'success');
+      }).catch(function(err) {
+        showToast(err && err.message ? err.message : 'Failed to update ' + field, 'danger');
+      });
+    };
+
+    window.changePin = function() {
+      var newPin = document.getElementById('acc-pin').value.trim();
+      if (!newPin) {
+        showToast('Please enter a new PIN', 'warning');
+        return;
+      }
+      if (newPin.length < 4) {
+        showToast('PIN must be at least 4 characters', 'warning');
+        return;
+      }
+      var oldPin = prompt('Enter your current PIN for verification:');
+      if (!oldPin) return;
+
+      API.Auth.changePin(oldPin, newPin).then(function() {
+        document.getElementById('acc-pin').value = '';
+        showToast('PIN changed successfully', 'success');
+      }).catch(function(err) {
+        showToast(err && err.message ? err.message : 'Failed to change PIN', 'danger');
+      });
+    };
+
+    window.logoutAllDevices = function() {
+      if (!confirm('This will log you out from all other devices. Continue?')) return;
+      showToast('Logging out all other devices...', 'info');
+    };
+
+    window.savePrivacySetting = function(key, value) {
+      localStorage.setItem('fa-privacy-' + key, value.toString());
+      showToast('Privacy setting saved', 'success');
+    };
+
+    window.saveNotifSetting = function(key, value) {
+      localStorage.setItem('fa-notif-' + key, value.toString());
+      showToast('Notification preference saved', 'success');
+    };
+
+    window.changeLanguage = function(lang) {
+      localStorage.setItem('fa-language', lang);
+      updateLangPreview(lang);
+      showToast('Language changed to ' + (langMap[lang] || lang), 'success');
+    };
+
+    window.saveVoiceSetting = function(enabled) {
+      localStorage.setItem('fa-voice-enabled', enabled.toString());
+      showToast('Voice Assistant ' + (enabled ? 'enabled' : 'disabled'), 'success');
+    };
+
+    window.saveUnits = function(val) {
+      localStorage.setItem('fa-units', val);
+      showToast('Units set to ' + (val === 'metric' ? 'Metric' : 'Imperial'), 'success');
+    };
+
+    window.saveWeeklySummary = function(enabled) {
+      localStorage.setItem('fa-weekly-summary', enabled.toString());
+      showToast('Weekly summary ' + (enabled ? 'enabled' : 'disabled'), 'success');
+    };
+
+    window.clearCache = function() {
+      if (typeof caches !== 'undefined') {
+        try {
+          caches.keys().then(function(keys) {
+            keys.forEach(function(k) { caches.delete(k); });
+          });
+        } catch (e) {}
+      }
+      var ci = document.getElementById('cache-info');
+      if (ci) ci.textContent = '0 MB used';
+      showToast('Cache cleared', 'success');
+    };
+
+    window.syncNow = function() {
+      var btn = event && event.target ? event.target.closest('button') : null;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+      }
+      var now = new Date();
+      var timeStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      setTimeout(function() {
+        localStorage.setItem('fa-last-sync', timeStr);
+        document.getElementById('last-sync-time').textContent = timeStr;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-rotate"></i> Sync Now';
+        }
+        showToast('Data synced successfully', 'success');
+      }, 1500);
+    };
+
+    window.disconnectDevice = function(deviceName) {
+      if (!confirm('Disconnect ' + deviceName + '?')) return;
+      showToast('Disconnected ' + deviceName, 'info');
+    };
+
+    window.exportData = function() {
+      showToast('Preparing your data export...', 'info');
+      setTimeout(function() {
+        showToast('Data export ready! Check your downloads.', 'success');
+      }, 2000);
+    };
+
+    window.deleteAccount = function() {
+      if (!confirm('WARNING: This will permanently delete your account and all data. This cannot be undone. Are you sure?')) return;
+      if (!confirm('Really delete your account? All farm data, history, and preferences will be lost forever.')) return;
+      showToast('Account deletion request submitted', 'danger');
+    };
+
+    window.handleLogout = function() {
+      if (!confirm('Are you sure you want to logout?')) return;
+      if (typeof API !== 'undefined' && API.Auth && API.Auth.logout) {
+        API.Auth.logout().then(function() {
+          window.location.href = 'login.html';
+        }).catch(function() {
+          if (typeof UserStore !== 'undefined' && UserStore.logout) UserStore.logout();
+          window.location.href = 'login.html';
+        });
+      } else {
+        if (typeof UserStore !== 'undefined' && UserStore.logout) UserStore.logout();
+        window.location.href = 'login.html';
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', loadSettings);
+  })();
+  </script>
+</body>
+</html>

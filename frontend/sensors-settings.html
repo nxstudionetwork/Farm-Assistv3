@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="sensors-settings">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Farm Assist - Sensor Settings</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .connection-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .flow-step {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .flow-step.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .step-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .step-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border-light);
+      transition: all 0.3s;
+    }
+    .step-dot.active {
+      background: var(--primary-green);
+      transform: scale(1.2);
+    }
+    .step-dot.completed {
+      background: var(--success);
+    }
+    .sensor-type-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 480px) {
+      .sensor-type-grid { grid-template-columns: 1fr; }
+    }
+    .sensor-type-card {
+      background: white;
+      border: 2px solid var(--border-light);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .sensor-type-card:hover {
+      border-color: var(--primary-green);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(45,106,79,0.15);
+    }
+    .sensor-type-card.selected {
+      border-color: var(--primary-green);
+      background: var(--soft-green);
+    }
+    .sensor-type-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      background: var(--soft-green);
+      color: var(--primary-green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin: 0 auto 12px;
+    }
+    .sensor-type-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .sensor-type-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .pairing-animation {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .pairing-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 4px solid var(--border-light);
+      border-top-color: var(--primary-green);
+      margin: 0 auto 20px;
+      animation: spin 1.5s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .pairing-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      color: var(--primary-green);
+    }
+    .bluetooth-scan-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bluetooth-device {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: white;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .bluetooth-device:hover {
+      border-color: var(--primary-green);
+      background: var(--soft-green);
+    }
+    .bluetooth-device-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--soft-green);
+      color: var(--primary-green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .bluetooth-device-info {
+      flex: 1;
+    }
+    .bluetooth-device-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .bluetooth-device-mac {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .bluetooth-device-signal {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .config-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .config-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .config-field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .config-field input,
+    .config-field select {
+      padding: 12px 16px;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      font-size: 14px;
+      background: white;
+      color: var(--text-primary);
+    }
+    .config-field input:focus,
+    .config-field select:focus {
+      border-color: var(--primary-green);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(45,106,79,0.1);
+    }
+    .success-animation {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--success);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin: 0 auto 20px;
+      animation: successPop 0.5s ease;
+    }
+    @keyframes successPop {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .sensor-list-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: white;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+    .sensor-list-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: var(--soft-green);
+      color: var(--primary-green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .sensor-list-info {
+      flex: 1;
+    }
+    .sensor-list-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .sensor-list-status {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .sensor-list-status.online {
+      color: var(--success);
+    }
+    .sensor-list-status.offline {
+      color: var(--danger);
+    }
+    .sensor-list-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .sensor-list-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border-light);
+      background: white;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .sensor-list-btn:hover {
+      background: var(--soft-green);
+      color: var(--primary-green);
+      border-color: var(--primary-green);
+    }
+    .sensor-list-btn.danger:hover {
+      background: #fee;
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+  </style>
+</head>
+<body>
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-microchip"></i> Sensor Settings</h1>
+        <p>Connect and manage your farm sensors</p>
+      </div>
+    </div>
+
+    <!-- Add New Sensor Section -->
+    <section class="card-premium" style="margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 15px; margin: 0;"><i class="fas fa-plus-circle" style="color: var(--primary-green); margin-right: 6px;"></i> Add New Sensor</h3>
+        <button class="btn-primary btn-sm" onclick="startConnectionFlow()"><i class="fas fa-link"></i> Connect Sensor</button>
+      </div>
+    </section>
+
+    <!-- Connection Flow Modal -->
+    <section class="card-premium" id="connection-flow-modal" style="display: none; margin-bottom: 16px;">
+      <div class="step-indicator">
+        <div class="step-dot active" data-step="1"></div>
+        <div class="step-dot" data-step="2"></div>
+        <div class="step-dot" data-step="3"></div>
+        <div class="step-dot" data-step="4"></div>
+      </div>
+
+      <!-- Step 1: Select Sensor Type -->
+      <div class="flow-step active" data-step="1">
+        <h3 style="font-size: 16px; margin-bottom: 16px; text-align: center;">Select Sensor Type</h3>
+        <div class="sensor-type-grid">
+          <div class="sensor-type-card" onclick="selectSensorType(this, 'soil')">
+            <div class="sensor-type-icon"><i class="fas fa-layer-group"></i></div>
+            <div class="sensor-type-title">Soil Sensor</div>
+            <div class="sensor-type-desc">Moisture, temperature, pH</div>
+          </div>
+          <div class="sensor-type-card" onclick="selectSensorType(this, 'weather')">
+            <div class="sensor-type-icon"><i class="fas fa-cloud-sun"></i></div>
+            <div class="sensor-type-title">Weather Station</div>
+            <div class="sensor-type-desc">Temp, humidity, rainfall</div>
+          </div>
+          <div class="sensor-type-card" onclick="selectSensorType(this, 'water')">
+            <div class="sensor-type-icon"><i class="fas fa-water"></i></div>
+            <div class="sensor-type-title">Water Level</div>
+            <div class="sensor-type-desc">Tank, pond, well level</div>
+          </div>
+          <div class="sensor-type-card" onclick="selectSensorType(this, 'camera')">
+            <div class="sensor-type-icon"><i class="fas fa-camera"></i></div>
+            <div class="sensor-type-title">Crop Camera</div>
+            <div class="sensor-type-desc">Growth monitoring</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Bluetooth Pairing -->
+      <div class="flow-step" data-step="2">
+        <h3 style="font-size: 16px; margin-bottom: 16px; text-align: center;">Connect via Bluetooth</h3>
+        <div class="pairing-animation" id="pairing-animation">
+          <div class="pairing-circle"></div>
+          <div class="pairing-icon"><i class="fas fa-bluetooth-b"></i></div>
+          <p style="margin-top: 20px; color: var(--text-muted);">Searching for nearby sensors...</p>
+        </div>
+        <div class="bluetooth-scan-list" id="bluetooth-devices" style="display: none;">
+          <div class="bluetooth-device" onclick="selectBluetoothDevice(this, 'FA-SENSOR-001')">
+            <div class="bluetooth-device-icon"><i class="fas fa-microchip"></i></div>
+            <div class="bluetooth-device-info">
+              <div class="bluetooth-device-name">FarmAssist Sensor #001</div>
+              <div class="bluetooth-device-mac">AA:BB:CC:DD:EE:FF</div>
+            </div>
+            <div class="bluetooth-device-signal"><i class="fas fa-signal" style="color: var(--success);"></i> Strong</div>
+          </div>
+          <div class="bluetooth-device" onclick="selectBluetoothDevice(this, 'FA-SENSOR-002')">
+            <div class="bluetooth-device-icon"><i class="fas fa-microchip"></i></div>
+            <div class="bluetooth-device-info">
+              <div class="bluetooth-device-name">FarmAssist Sensor #002</div>
+              <div class="bluetooth-device-mac">11:22:33:44:55:66</div>
+            </div>
+            <div class="bluetooth-device-signal"><i class="fas fa-signal" style="color: var(--warning);"></i> Medium</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Configure Sensor -->
+      <div class="flow-step" data-step="3">
+        <h3 style="font-size: 16px; margin-bottom: 16px; text-align: center;">Configure Sensor</h3>
+        <div class="config-form">
+          <div class="config-field">
+            <label>Sensor Name</label>
+            <input type="text" id="sensor-name" placeholder="e.g., North Field Soil Sensor">
+          </div>
+          <div class="config-field">
+            <label>Assign to Farm</label>
+            <select id="sensor-farm">
+              <option value="">Select Farm</option>
+              <option value="farm1">Main Farm - 5 Acres</option>
+              <option value="farm2">North Plot - 2 Acres</option>
+              <option value="farm3">South Field - 3 Acres</option>
+            </select>
+          </div>
+          <div class="config-field">
+            <label>Location in Farm</label>
+            <input type="text" id="sensor-location" placeholder="e.g., Near irrigation pump">
+          </div>
+          <div class="config-field">
+            <label>Data Update Interval</label>
+            <select id="sensor-interval">
+              <option value="5">Every 5 minutes</option>
+              <option value="15">Every 15 minutes</option>
+              <option value="30">Every 30 minutes</option>
+              <option value="60">Every 1 hour</option>
+            </select>
+          </div>
+          <div class="config-field">
+            <label>Alert Thresholds</label>
+            <input type="text" id="sensor-thresholds" placeholder="e.g., Moisture below 30%">
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Success -->
+      <div class="flow-step" data-step="4">
+        <div class="success-animation">
+          <div class="success-icon"><i class="fas fa-check"></i></div>
+          <h3 style="font-size: 18px; margin-bottom: 8px;">Sensor Connected!</h3>
+          <p style="color: var(--text-muted); margin-bottom: 20px;">Your sensor is now configured and ready to use.</p>
+          <div style="background: var(--soft-green); padding: 16px; border-radius: 12px; text-align: left;">
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">SENSOR DETAILS</div>
+            <div style="font-size: 14px; font-weight: 500;" id="success-sensor-name">North Field Soil Sensor</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" id="success-sensor-id">ID: FA-SENSOR-001</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Buttons -->
+      <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: center;">
+        <button class="btn-secondary" id="flow-back-btn" onclick="prevStep()" style="display: none;"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn-primary" id="flow-next-btn" onclick="nextStep()" style="display: none;">Next <i class="fas fa-arrow-right"></i></button>
+        <button class="btn-primary" id="flow-finish-btn" onclick="finishConnection()" style="display: none;">Finish <i class="fas fa-check"></i></button>
+        <button class="btn-secondary" id="flow-cancel-btn" onclick="cancelConnection()">Cancel</button>
+      </div>
+    </section>
+
+    <!-- Connected Sensors List -->
+    <section class="card-premium">
+      <h3 style="font-size: 15px; margin-bottom: 16px;"><i class="fas fa-list" style="color: var(--primary-green); margin-right: 6px;"></i> Connected Sensors</h3>
+      <div id="connected-sensors-list">
+        <div class="sensor-list-item">
+          <div class="sensor-list-icon"><i class="fas fa-layer-group"></i></div>
+          <div class="sensor-list-info">
+            <div class="sensor-list-name">North Field Soil Sensor</div>
+            <div class="sensor-list-status online"><i class="fas fa-circle" style="font-size: 8px;"></i> Online • Last sync: 2 min ago</div>
+          </div>
+          <div class="sensor-list-actions">
+            <button class="sensor-list-btn" title="Configure"><i class="fas fa-cog"></i></button>
+            <button class="sensor-list-btn" title="Calibrate"><i class="fas fa-sliders-h"></i></button>
+            <button class="sensor-list-btn danger" title="Disconnect"><i class="fas fa-unlink"></i></button>
+          </div>
+        </div>
+        <div class="sensor-list-item">
+          <div class="sensor-list-icon"><i class="fas fa-cloud-sun"></i></div>
+          <div class="sensor-list-info">
+            <div class="sensor-list-name">Main Weather Station</div>
+            <div class="sensor-list-status online"><i class="fas fa-circle" style="font-size: 8px;"></i> Online • Last sync: 5 min ago</div>
+          </div>
+          <div class="sensor-list-actions">
+            <button class="sensor-list-btn" title="Configure"><i class="fas fa-cog"></i></button>
+            <button class="sensor-list-btn" title="Calibrate"><i class="fas fa-sliders-h"></i></button>
+            <button class="sensor-list-btn danger" title="Disconnect"><i class="fas fa-unlink"></i></button>
+          </div>
+        </div>
+        <div class="sensor-list-item">
+          <div class="sensor-list-icon"><i class="fas fa-water"></i></div>
+          <div class="sensor-list-info">
+            <div class="sensor-list-name">Pond Water Level</div>
+            <div class="sensor-list-status offline"><i class="fas fa-circle" style="font-size: 8px;"></i> Offline • Last sync: 2 hours ago</div>
+          </div>
+          <div class="sensor-list-actions">
+            <button class="sensor-list-btn" title="Configure"><i class="fas fa-cog"></i></button>
+            <button class="sensor-list-btn" title="Calibrate"><i class="fas fa-sliders-h"></i></button>
+            <button class="sensor-list-btn danger" title="Disconnect"><i class="fas fa-unlink"></i></button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    var currentStep = 1;
+    var selectedSensorType = null;
+    var selectedBluetoothDevice = null;
+
+    function startConnectionFlow() {
+      currentStep = 1;
+      selectedSensorType = null;
+      selectedBluetoothDevice = null;
+      document.getElementById('connection-flow-modal').style.display = 'block';
+      updateFlowUI();
+    }
+
+    function cancelConnection() {
+      document.getElementById('connection-flow-modal').style.display = 'none';
+      resetFlow();
+    }
+
+    function resetFlow() {
+      currentStep = 1;
+      selectedSensorType = null;
+      selectedBluetoothDevice = null;
+      document.querySelectorAll('.sensor-type-card').forEach(function(card) {
+        card.classList.remove('selected');
+      });
+      document.querySelectorAll('.bluetooth-device').forEach(function(device) {
+        device.style.borderColor = 'var(--border-light)';
+        device.style.background = 'white';
+      });
+      document.getElementById('sensor-name').value = '';
+      document.getElementById('sensor-farm').value = '';
+      document.getElementById('sensor-location').value = '';
+      document.getElementById('sensor-interval').value = '5';
+      document.getElementById('sensor-thresholds').value = '';
+    }
+
+    function selectSensorType(card, type) {
+      document.querySelectorAll('.sensor-type-card').forEach(function(c) {
+        c.classList.remove('selected');
+      });
+      card.classList.add('selected');
+      selectedSensorType = type;
+      setTimeout(function() {
+        nextStep();
+      }, 300);
+    }
+
+    function selectBluetoothDevice(device, deviceId) {
+      document.querySelectorAll('.bluetooth-device').forEach(function(d) {
+        d.style.borderColor = 'var(--border-light)';
+        d.style.background = 'white';
+      });
+      device.style.borderColor = 'var(--primary-green)';
+      device.style.background = 'var(--soft-green)';
+      selectedBluetoothDevice = deviceId;
+      setTimeout(function() {
+        nextStep();
+      }, 300);
+    }
+
+    function nextStep() {
+      if (currentStep < 4) {
+        currentStep++;
+        updateFlowUI();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateFlowUI();
+      }
+    }
+
+    function updateFlowUI() {
+      // Update step indicators
+      document.querySelectorAll('.step-dot').forEach(function(dot, index) {
+        dot.classList.remove('active', 'completed');
+        if (index + 1 === currentStep) {
+          dot.classList.add('active');
+        } else if (index + 1 < currentStep) {
+          dot.classList.add('completed');
+        }
+      });
+
+      // Show/hide steps
+      document.querySelectorAll('.flow-step').forEach(function(step) {
+        step.classList.remove('active');
+        if (parseInt(step.getAttribute('data-step')) === currentStep) {
+          step.classList.add('active');
+        }
+      });
+
+      // Show/hide buttons
+      document.getElementById('flow-back-btn').style.display = currentStep > 1 ? 'inline-flex' : 'none';
+      document.getElementById('flow-next-btn').style.display = currentStep < 3 ? 'inline-flex' : 'none';
+      document.getElementById('flow-finish-btn').style.display = currentStep === 3 ? 'inline-flex' : 'none';
+
+      // Special handling for step 2 (Bluetooth scanning)
+      if (currentStep === 2) {
+        document.getElementById('pairing-animation').style.display = 'block';
+        document.getElementById('bluetooth-devices').style.display = 'none';
+        setTimeout(function() {
+          document.getElementById('pairing-animation').style.display = 'none';
+          document.getElementById('bluetooth-devices').style.display = 'flex';
+        }, 2000);
+      }
+
+      // Special handling for step 4 (success)
+      if (currentStep === 4) {
+        var sensorName = document.getElementById('sensor-name').value || 'New Sensor';
+        document.getElementById('success-sensor-name').textContent = sensorName;
+        document.getElementById('success-sensor-id').textContent = 'ID: ' + (selectedBluetoothDevice || 'FA-SENSOR-NEW');
+      }
+    }
+
+    function finishConnection() {
+      var sensorName = document.getElementById('sensor-name').value || 'New Sensor';
+      var farm = document.getElementById('sensor-farm').value || 'Unassigned';
+      
+      // Add to connected sensors list
+      var list = document.getElementById('connected-sensors-list');
+      var iconMap = {
+        'soil': 'fa-layer-group',
+        'weather': 'fa-cloud-sun',
+        'water': 'fa-water',
+        'camera': 'fa-camera'
+      };
+      var icon = iconMap[selectedSensorType] || 'fa-microchip';
+      
+      var html = '<div class="sensor-list-item">' +
+        '<div class="sensor-list-icon"><i class="fas ' + icon + '"></i></div>' +
+        '<div class="sensor-list-info">' +
+        '<div class="sensor-list-name">' + sensorName + '</div>' +
+        '<div class="sensor-list-status online"><i class="fas fa-circle" style="font-size: 8px;"></i> Online • Just connected</div>' +
+        '</div>' +
+        '<div class="sensor-list-actions">' +
+        '<button class="sensor-list-btn" title="Configure"><i class="fas fa-cog"></i></button>' +
+        '<button class="sensor-list-btn" title="Calibrate"><i class="fas fa-sliders-h"></i></button>' +
+        '<button class="sensor-list-btn danger" title="Disconnect"><i class="fas fa-unlink"></i></button>' +
+        '</div>' +
+        '</div>';
+      
+      list.insertAdjacentHTML('afterbegin', html);
+      
+      // Move to success step
+      currentStep = 4;
+      updateFlowUI();
+      
+      // Hide modal after delay
+      setTimeout(function() {
+        cancelConnection();
+      }, 3000);
+    }
+
+    // Expose functions globally
+    window.startConnectionFlow = startConnectionFlow;
+    window.cancelConnection = cancelConnection;
+    window.selectSensorType = selectSensorType;
+    window.selectBluetoothDevice = selectBluetoothDevice;
+    window.nextStep = nextStep;
+    window.prevStep = prevStep;
+    window.finishConnection = finishConnection;
+  })();
+  </script>
+</body>
+</html>

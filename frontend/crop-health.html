@@ -1,0 +1,879 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="crop-health">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Crop Health</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root {
+      --crop-green: #1B5E3F;
+      --crop-light: #E8F5E9;
+      --alert-red: #D32F2F;
+      --alert-orange: #E65100;
+      --alert-bg: #FFF3E0;
+      --warning-bg: #FFF8E1;
+      --shimmer: linear-gradient(90deg, #eef3ee 25%, #e0eae0 50%, #eef3ee 75%);
+    }
+    .health-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    @media (max-width: 640px) { .health-stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    .health-stat {
+      background: white; border-radius: var(--radius-md); padding: 16px; text-align: center;
+      border: 1px solid var(--border-light); transition: all 0.25s;
+    }
+    .health-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .health-stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin: 0 auto 8px; }
+    .health-stat-icon.green { background: var(--crop-light); color: var(--crop-green); }
+    .health-stat-icon.red { background: #FFEBEE; color: var(--alert-red); }
+    .health-stat-icon.orange { background: var(--alert-bg); color: var(--alert-orange); }
+    .health-stat-icon.blue { background: #E3F2FD; color: #1565C0; }
+    .health-stat-num { font-size: 24px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
+    .health-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .upload-zone {
+      border: 2px dashed var(--medium-green); border-radius: var(--radius-md);
+      padding: 40px 20px; text-align: center; cursor: pointer;
+      background: rgba(45, 134, 89, 0.04); transition: all 0.3s; margin-bottom: 16px;
+    }
+    .upload-zone:hover, .upload-zone.dragover { background: rgba(45, 134, 89, 0.1); border-color: var(--crop-green); }
+    .upload-zone i { font-size: 48px; color: var(--medium-green); margin-bottom: 12px; }
+    .upload-zone h3 { font-size: 16px; color: var(--text-primary); margin-bottom: 4px; }
+    .upload-zone p { font-size: 12px; color: var(--text-muted); }
+    .upload-zone .supported { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    .upload-zone .supported span { display: inline-block; background: var(--soft-green); padding: 2px 10px; border-radius: 12px; margin: 2px 4px; font-weight: 500; color: var(--crop-green); }
+
+    .shimmer-box {
+      background: var(--shimmer); background-size: 200% 100%;
+      animation: shimmerScan 1.4s infinite; border-radius: var(--radius-md);
+      height: 120px; margin-bottom: 12px;
+    }
+    @keyframes shimmerScan { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    .result-card {
+      background: var(--bg-card-soft); border-radius: var(--radius-md); padding: 16px;
+      border: 1px solid var(--border-light); margin-bottom: 12px;
+    }
+    .result-card .result-disease { font-size: 18px; font-weight: 700; color: var(--alert-red); margin-bottom: 4px; }
+    .result-card .result-disease.healthy { color: var(--crop-green); }
+    .result-card .result-confidence { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+    .result-card .result-confidence strong { color: var(--text-primary); }
+    .result-card .result-section { margin-top: 10px; }
+    .result-card .result-section h4 { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .result-card .result-section p { font-size: 13px; color: var(--text-primary); line-height: 1.5; }
+    .result-card .result-section ul { list-style: none; padding: 0; }
+    .result-card .result-section ul li { font-size: 13px; color: var(--text-primary); padding: 3px 0 3px 16px; position: relative; }
+    .result-card .result-section ul li::before { content: '\2022'; position: absolute; left: 0; color: var(--medium-green); }
+    .result-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .result-tag.organic { background: var(--crop-light); color: var(--crop-green); }
+    .result-tag.conventional { background: #E3F2FD; color: #1565C0; }
+
+    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table th { text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 10px; border-bottom: 2px solid var(--border-light); }
+    .history-table td { font-size: 13px; color: var(--text-primary); padding: 10px; border-bottom: 1px solid var(--border-light); }
+    .history-table tr:hover td { background: var(--bg-card-soft); }
+    .history-table .crop-cell { display: flex; align-items: center; gap: 8px; }
+    .history-table .crop-cell i { font-size: 16px; color: var(--medium-green); }
+
+    .tip-card {
+      display: flex; gap: 12px; padding: 14px; border-radius: var(--radius-md);
+      border: 1px solid var(--border-light); margin-bottom: 10px;
+      transition: all 0.2s; cursor: default;
+    }
+    .tip-card:hover { border-color: var(--medium-green); box-shadow: var(--shadow-sm); }
+    .tip-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--crop-light); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--crop-green); flex-shrink: 0; }
+    .tip-content { flex: 1; }
+    .tip-content h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .tip-content p { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+    .file-info { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--soft-green); border-radius: var(--radius-sm); margin-bottom: 12px; }
+    .file-info i { font-size: 20px; color: var(--crop-green); }
+    .file-info span { font-size: 13px; color: var(--text-primary); flex: 1; }
+    .file-info .remove-file { color: var(--alert-red); cursor: pointer; font-size: 14px; }
+
+    .stat-box {
+      background: white; border-radius: var(--radius-md); padding: 20px 16px; text-align: center;
+      border: 1px solid var(--border-light); transition: all 0.25s;
+    }
+    .stat-box:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600; line-height: 1.4;
+    }
+    .badge-success { background: var(--crop-light); color: var(--crop-green); }
+    .badge-warning { background: var(--warning-bg); color: #E65100; }
+    .badge-danger { background: #FFEBEE; color: var(--alert-red); }
+    .badge-info { background: #E3F2FD; color: #1565C0; }
+
+    .responsive-table { overflow-x: auto; }
+
+    .timeline { position: relative; padding-left: 32px; }
+    .timeline::before {
+      content: ''; position: absolute; left: 11px; top: 4px; bottom: 4px;
+      width: 2px; background: var(--border-light);
+    }
+    .timeline-item {
+      position: relative; padding: 0 0 20px 16px; border-left: 2px solid var(--border-light);
+      margin-left: 0; transition: all 0.2s;
+    }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-item::before {
+      content: ''; position: absolute; left: -7px; top: 4px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--medium-green); border: 2px solid white; box-shadow: 0 0 0 2px var(--medium-green);
+    }
+    .timeline-item.resolved::before { background: var(--crop-green); box-shadow: 0 0 0 2px var(--crop-green); }
+    .timeline-item.active::before { background: var(--alert-red); box-shadow: 0 0 0 2px var(--alert-red); }
+    .timeline-item.observing::before { background: #E65100; box-shadow: 0 0 0 2px #E65100; }
+    .timeline-date { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+    .timeline-crop { font-size: 12px; color: var(--text-secondary); }
+    .timeline-disease { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 2px 0; }
+    .timeline-status { margin-top: 4px; }
+
+    .alert-strip {
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      border-radius: var(--radius-sm); margin-bottom: 10px; font-size: 13px;
+    }
+    .alert-strip.warning { background: var(--warning-bg); border-left: 3px solid #E65100; }
+    .alert-strip.info { background: #E3F2FD; border-left: 3px solid #1565C0; }
+    .alert-strip.success { background: var(--crop-light); border-left: 3px solid var(--crop-green); }
+    .alert-content { flex: 1; }
+    .alert-strip i { font-size: 16px; }
+
+    .form-select {
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 12px center;
+      padding: 10px 36px 10px 14px; border: 1px solid var(--border-light);
+      border-radius: var(--radius-md); font-size: 14px; font-family: inherit;
+      color: var(--text-primary); cursor: pointer; width: 100%; max-width: 320px;
+      transition: border-color 0.2s;
+    }
+    .form-select:focus { outline: none; border-color: var(--medium-green); box-shadow: 0 0 0 3px rgba(45,134,89,0.1); }
+
+    .feature-card {
+      background: white; border-radius: var(--radius-md); padding: 16px;
+      border: 1px solid var(--border-light); text-align: center; transition: all 0.25s;
+      cursor: default;
+    }
+    .feature-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .feature-card i { font-size: 28px; color: var(--medium-green); margin-bottom: 8px; }
+    .feature-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .feature-card p { font-size: 12px; color: var(--text-secondary); }
+
+    .health-score-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+    .health-score-ring svg { transform: rotate(-90deg); }
+    .health-score-text { position: absolute; display: flex; flex-direction: column; align-items: center; }
+    .health-score-text .score { font-size: 32px; font-weight: 800; line-height: 1; }
+    .health-score-text .label { font-size: 11px; color: var(--text-muted); }
+
+    @media (max-width: 480px) {
+      .health-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .health-stat { padding: 12px; }
+      .health-stat-num { font-size: 20px; }
+      .timeline { padding-left: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-leaf" style="color:var(--primary-green);margin-right:8px;"></i>Crop Health</h1>
+        <p>Monitor crop health, diagnose diseases, and track treatments.</p>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label style="font-size:13px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;"><i class="fas fa-filter" style="margin-right:6px;"></i>Filter by Crop</label>
+      <select class="form-select" id="crop-filter">
+        <option value="all">All Crops</option>
+        <option value="Paddy">Paddy</option>
+        <option value="Tomato">Tomato</option>
+        <option value="Banana">Banana</option>
+        <option value="Jasmine">Jasmine</option>
+        <option value="Cotton">Cotton</option>
+        <option value="Wheat">Wheat</option>
+        <option value="Maize">Maize</option>
+      </select>
+    </div>
+
+    <div class="card-premium" id="current-health-section" style="margin-bottom:20px;">
+      <h3 style="margin-bottom:16px;"><i class="fas fa-heartbeat" style="color:var(--primary-green);margin-right:8px;"></i> Current Health Overview</h3>
+
+      <div class="alert-strip info" id="filter-notice" style="display:none;">
+        <i class="fas fa-info-circle"></i>
+        <div class="alert-content" id="filter-notice-text">Showing data for selected crop.</div>
+      </div>
+
+      <div class="grid-2" style="gap:20px;align-items:center;">
+        <div style="text-align:center;padding:10px 0;">
+          <div class="health-score-ring" id="health-score-container">
+            <svg width="130" height="130" viewBox="0 0 130 130">
+              <circle cx="65" cy="65" r="54" fill="none" stroke="#e8f5e9" stroke-width="10"/>
+              <circle cx="65" cy="65" r="54" fill="none" stroke="var(--crop-green)" stroke-width="10"
+                stroke-dasharray="339.29" stroke-dashoffset="61.07" stroke-linecap="round" id="health-score-circle"/>
+            </svg>
+            <div class="health-score-text">
+              <div class="score" style="color:var(--crop-green);" id="health-score-value">82</div>
+              <div class="label">/ 100</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <span style="font-size:14px;font-weight:600;color:var(--text-secondary);">Overall Status:</span>
+            <span class="badge badge-success" id="overall-status-badge" style="font-size:13px;padding:4px 14px;"><i class="fas fa-check-circle"></i> Good</span>
+          </div>
+        </div>
+        <div>
+          <div class="grid-2" style="gap:12px;">
+            <div class="stat-box">
+              <div class="health-stat-icon green"><i class="fas fa-exclamation-triangle"></i></div>
+              <div class="health-stat-num" id="active-diseases-count">3</div>
+              <div class="health-stat-label">Active Diseases</div>
+            </div>
+            <div class="stat-box">
+              <div class="health-stat-icon orange"><i class="fas fa-bug"></i></div>
+              <div class="health-stat-num" id="pest-alerts-count">2</div>
+              <div class="health-stat-label">Pest Alerts</div>
+            </div>
+          </div>
+          <div class="alert-strip success" style="margin-top:12px;margin-bottom:0;">
+            <i class="fas fa-seedling"></i>
+            <div class="alert-content">No immediate critical issues. Routine monitoring recommended.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-3" style="gap:10px;margin-bottom:20px;">
+      <div class="feature-card" id="action-scan-crop" style="cursor:pointer;">
+        <i class="fas fa-camera"></i>
+        <h4>Scan Crop</h4>
+        <p>Use AI to analyze crop images for disease detection</p>
+      </div>
+      <div class="feature-card" id="action-upload-image" style="cursor:pointer;">
+        <i class="fas fa-upload"></i>
+        <h4>Upload Image</h4>
+        <p>Upload crop images for expert analysis</p>
+      </div>
+      <div class="feature-card" id="action-view-history" style="cursor:pointer;">
+        <i class="fas fa-history"></i>
+        <h4>View History</h4>
+        <p>Browse past diagnoses and treatment records</p>
+      </div>
+    </div>
+
+    <div class="card-premium" id="scan-section" style="margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3><i class="fas fa-camera" style="color:var(--primary-green);margin-right:8px;"></i> Scan Crop</h3>
+      </div>
+
+      <div class="upload-zone" id="upload-zone">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <h3>Upload an image for AI analysis</h3>
+        <p>Drag & drop or click to browse</p>
+        <div class="supported">
+          <span><i class="fas fa-leaf"></i> Leaf images</span>
+          <span><i class="fas fa-bug"></i> Pest images</span>
+          <span><i class="fas fa-tree"></i> Crop images</span>
+        </div>
+        <input type="file" id="file-input" accept="image/*" style="display:none;">
+      </div>
+
+      <div id="file-info-container"></div>
+
+      <div id="scan-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-primary" id="scan-btn" disabled><i class="fas fa-microchip"></i> Scan with AI</button>
+      </div>
+
+      <div id="scan-loading" class="u-hidden" style="margin-top:16px;">
+        <div class="shimmer-box"></div>
+        <div class="shimmer-box" style="height:60px;"></div>
+        <p style="text-align:center;font-size:13px;color:var(--text-muted);margin-top:8px;"><i class="fas fa-spinner fa-spin"></i> AI is analyzing your crop image...</p>
+      </div>
+
+      <div id="scan-results" class="u-hidden" style="margin-top:16px;"></div>
+
+      <div id="disclaimer" class="u-hidden" style="margin-top:12px;padding:10px 14px;background:var(--warning-bg);border-radius:var(--radius-sm);border-left:3px solid var(--warning);">
+        <p style="font-size:12px;color:var(--text-secondary);"><i class="fas fa-info-circle" style="color:var(--warning);margin-right:6px;"></i> AI results are suggestions, not guaranteed diagnoses. Consult an expert for confirmation.</p>
+      </div>
+    </div>
+
+    <div class="card-premium" id="health-history-section" style="margin-bottom:20px;">
+      <h3 style="margin-bottom:16px;"><i class="fas fa-history" style="color:var(--primary-green);margin-right:8px;"></i> Health History</h3>
+      <div id="health-timeline-container">
+        <div class="timeline" id="health-timeline"></div>
+      </div>
+    </div>
+
+    <div class="card-premium" id="treatment-history-section" style="margin-bottom:20px;">
+      <h3 style="margin-bottom:16px;"><i class="fas fa-notes-medical" style="color:var(--primary-green);margin-right:8px;"></i> Treatment History</h3>
+      <div class="responsive-table">
+        <table class="history-table" id="treatment-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Crop</th>
+              <th>Disease</th>
+              <th>Method</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="treatment-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card-premium">
+      <h3 style="margin-bottom:16px;"><i class="fas fa-lightbulb" style="color:var(--primary-green);margin-right:8px;"></i> Health Tips</h3>
+      <div class="tip-card">
+        <div class="tip-icon"><i class="fas fa-cloud-sun"></i></div>
+        <div class="tip-content">
+          <h4>Monsoon Care for Paddy</h4>
+          <p>Ensure proper drainage to prevent waterlogging. Apply fungicides preventively to avoid blast disease. Monitor for leaf folder pests during humid conditions.</p>
+        </div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon"><i class="fas fa-temperature-high"></i></div>
+        <div class="tip-content">
+          <h4>Summer Management for Vegetables</h4>
+          <p>Use mulch to retain soil moisture and reduce weed growth. Install shade nets for heat-sensitive crops. Irrigate early morning or evening to minimize evaporation.</p>
+        </div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon"><i class="fas fa-droplet"></i></div>
+        <div class="tip-content">
+          <h4>Preventive Measures for All Crops</h4>
+          <p>Rotate crops annually to break pest cycles. Maintain proper spacing for air circulation. Remove and destroy infected plant debris promptly. Use certified disease-free seeds.</p>
+        </div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon"><i class="fas fa-flask"></i></div>
+        <div class="tip-content">
+          <h4>Best Practices for Fertilizer Application</h4>
+          <p>Conduct soil tests before applying fertilizers. Apply nitrogen in split doses for better uptake. Use organic amendments like compost to improve soil health and disease resistance.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="js/mockData.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+
+  <script>
+  (function() {
+    'use strict';
+
+    var MOCK_RESULTS = {
+      rice: {
+        disease: 'Rice Blast (Magnaporthe grisea)',
+        healthy: false,
+        confidence: 94.2,
+        symptoms: 'Diamond-shaped lesions with gray centers and reddish-brown borders on leaves. Infected panicles show blank grains.',
+        organic: ['Apply neem oil spray (5ml/L) weekly', 'Use Trichoderma viride as seed treatment', 'Maintain proper spacing for airflow'],
+        conventional: ['Apply Tricyclazole 75% WP @ 1g/L water', 'Foliar spray of Carbendazim 50% WP @ 1g/L', 'Seed treatment with Pyroquilon'],
+        prevention: ['Use resistant varieties like Pusa Basmati', 'Avoid excess nitrogen fertilization', 'Keep fields clean of weed hosts']
+      },
+      wheat: {
+        disease: 'Yellow Rust (Puccinia striiformis)',
+        healthy: false,
+        confidence: 91.8,
+        symptoms: 'Yellow to orange pustules arranged in stripes on leaves. Affected leaves turn yellow and dry up prematurely.',
+        organic: ['Spray sour buttermilk (1:10 dilution)', 'Apply cow urine solution (1:20)', 'Grow trap crops around field border'],
+        conventional: ['Propiconazole 25% EC @ 1ml/L water', 'Tebuconazole 50% EW @ 1ml/L', 'Alternate fungicide classes to avoid resistance'],
+        prevention: ['Plant rust-resistant varieties', 'Avoid late sowing', 'Remove volunteer plants and alternate hosts']
+      },
+      tomato: {
+        disease: 'Late Blight (Phytophthora infestans)',
+        healthy: false,
+        confidence: 96.5,
+        symptoms: 'Water-soaked lesions on leaves, stems, and fruits. White fuzzy growth on undersides during humid conditions.',
+        organic: ['Copper oxychloride 50% WP @ 3g/L', 'Bordeaux mixture (1:1:100)', 'Neem cake soil application'],
+        conventional: ['Metalaxyl + Mancozeb @ 2g/L', 'Chlorothalonil 75% WP @ 2g/L', 'Dimethomorph 50% SC @ 1ml/L'],
+        prevention: ['Use certified disease-free transplants', 'Improve air circulation through pruning', 'Avoid overhead irrigation']
+      },
+      maize: {
+        disease: 'Northern Corn Leaf Blight',
+        healthy: false,
+        confidence: 88.3,
+        symptoms: 'Large, elliptical, grayish-green to tan lesions on leaves. Lesions may coalesce causing complete leaf blighting.',
+        organic: ['Apply compost tea as foliar spray', 'Use Bacillus subtilis bio-fungicide', 'Intercrop with legumes'],
+        conventional: ['Mancozeb 75% WP @ 2.5g/L', 'Propiconazole 25% EC @ 1ml/L', 'Azoxystrobin 23% SC @ 1ml/L'],
+        prevention: ['Plant resistant hybrids', 'Practice crop rotation with non-hosts', 'Deep plow to bury crop residue']
+      },
+      cotton: {
+        disease: 'Cotton Leaf Curl Virus',
+        healthy: false,
+        confidence: 87.1,
+        symptoms: 'Leaf curling, vein thickening, stunted growth. Leaves become leathery and brittle with reduced boll formation.',
+        organic: ['Neem oil spray to control whitefly vector', 'Yellow sticky traps for monitoring', 'Apply vermicompost for plant vigor'],
+        conventional: ['Imidacloprid 17.8% SL @ 0.5ml/L for vector control', 'Acetamiprid 20% SP @ 0.5g/L', 'Remove and destroy infected plants'],
+        prevention: ['Use virus-tolerant Bt cotton varieties', 'Maintain border rows of trap crops', 'Control whitefly populations early']
+      },
+      healthy: {
+        disease: 'No Disease Detected',
+        healthy: true,
+        confidence: 99.8,
+        symptoms: 'Your crop appears healthy with normal growth patterns and no visible signs of disease or pest damage.',
+        organic: ['Continue regular organic fertilization', 'Maintain proper irrigation schedule', 'Apply neem cake as soil conditioner'],
+        conventional: ['Maintain balanced NPK fertilization', 'Regular monitoring for early detection', 'Keep field records for reference'],
+        prevention: ['Continue current management practices', 'Schedule regular scouting every week', 'Maintain field hygiene and sanitation']
+      }
+    };
+
+    var ALL_DIAGNOSES = [
+      { date: 'Jul 28, 2026', crop: 'Paddy', disease: 'Blast Disease', status: 'Active', isPest: false },
+      { date: 'Jul 26, 2026', crop: 'Paddy', disease: 'Leaf Folder', status: 'Observing', isPest: true },
+      { date: 'Jul 25, 2026', crop: 'Tomato', disease: 'Late Blight', status: 'Resolved', isPest: false },
+      { date: 'Jul 22, 2026', crop: 'Cotton', disease: 'Bollworm', status: 'Active', isPest: true },
+      { date: 'Jul 20, 2026', crop: 'Banana', disease: 'Panama Wilt', status: 'Observing', isPest: false },
+      { date: 'Jul 18, 2026', crop: 'Jasmine', disease: 'Bud Worm', status: 'Active', isPest: true },
+      { date: 'Jul 15, 2026', crop: 'Wheat', disease: 'Yellow Rust', status: 'Resolved', isPest: false },
+      { date: 'Jul 12, 2026', crop: 'Maize', disease: 'Northern Corn Leaf Blight', status: 'Resolved', isPest: false },
+      { date: 'Jul 10, 2026', crop: 'Paddy', disease: 'Sheath Blight', status: 'Resolved', isPest: false },
+      { date: 'Jul 8, 2026', crop: 'Cotton', disease: 'Leaf Curl Virus', status: 'Resolved', isPest: false },
+      { date: 'Jul 5, 2026', crop: 'Tomato', disease: 'Early Blight', status: 'Resolved', isPest: false },
+      { date: 'Jul 2, 2026', crop: 'Jasmine', disease: 'Leaf Spot', status: 'Resolved', isPest: false }
+    ];
+
+    var ALL_TREATMENTS = [
+      { date: 'Jul 27, 2026', crop: 'Paddy', disease: 'Blast Disease', method: 'Fungicide Spray (Tricyclazole)', result: 'In Progress' },
+      { date: 'Jul 26, 2026', crop: 'Paddy', disease: 'Leaf Folder', method: 'Insecticide Application', result: 'Monitoring' },
+      { date: 'Jul 24, 2026', crop: 'Tomato', disease: 'Late Blight', method: 'Copper-based Fungicide Spray', result: 'Resolved' },
+      { date: 'Jul 21, 2026', crop: 'Cotton', disease: 'Bollworm', method: 'Insecticide Spray (Emamectin)', result: 'In Progress' },
+      { date: 'Jul 19, 2026', crop: 'Banana', disease: 'Panama Wilt', method: 'Soil Treatment & Fungicide Drench', result: 'Monitoring' },
+      { date: 'Jul 17, 2026', crop: 'Jasmine', disease: 'Bud Worm', method: 'Neem Oil Foliar Spray', result: 'In Progress' },
+      { date: 'Jul 14, 2026', crop: 'Wheat', disease: 'Yellow Rust', method: 'Propiconazole Foliar Spray', result: 'Resolved' },
+      { date: 'Jul 11, 2026', crop: 'Maize', disease: 'Northern Corn Leaf Blight', method: 'Mancozeb Application', result: 'Resolved' },
+      { date: 'Jul 9, 2026', crop: 'Paddy', disease: 'Sheath Blight', method: 'Hexaconazole Spray', result: 'Resolved' },
+      { date: 'Jul 7, 2026', crop: 'Cotton', disease: 'Leaf Curl Virus', method: 'Vector Control & Roguing', result: 'Resolved' }
+    ];
+
+    var uploadZone = document.getElementById('upload-zone');
+    var fileInput = document.getElementById('file-input');
+    var fileInfoContainer = document.getElementById('file-info-container');
+    var scanBtn = document.getElementById('scan-btn');
+    var scanLoading = document.getElementById('scan-loading');
+    var scanResults = document.getElementById('scan-results');
+    var disclaimer = document.getElementById('disclaimer');
+    var selectedFile = null;
+    var currentResult = null;
+    var currentFilter = 'all';
+
+    function getStatusBadgeClass(status) {
+      if (status === 'Resolved') return 'badge-success';
+      if (status === 'Active') return 'badge-danger';
+      if (status === 'Observing') return 'badge-warning';
+      if (status === 'In Progress') return 'badge-warning';
+      if (status === 'Monitoring') return 'badge-info';
+      if (status === 'Controlled') return 'badge-info';
+      return 'badge-info';
+    }
+
+    function getTimelineClass(status) {
+      if (status === 'Resolved') return 'resolved';
+      if (status === 'Active') return 'active';
+      if (status === 'Observing') return 'observing';
+      return 'observing';
+    }
+
+    function getCropTypeFromFile(filename) {
+      var name = filename.toLowerCase();
+      if (name.includes('rice') || name.includes('paddy')) return 'rice';
+      if (name.includes('wheat')) return 'wheat';
+      if (name.includes('tomato')) return 'tomato';
+      if (name.includes('maize') || name.includes('corn')) return 'maize';
+      if (name.includes('cotton')) return 'cotton';
+      var types = ['rice', 'wheat', 'tomato', 'maize', 'cotton'];
+      return types[Math.floor(Math.random() * types.length)];
+    }
+
+    function getCropDisplayName(cropKey) {
+      var names = { rice: 'Rice', wheat: 'Wheat', tomato: 'Tomato', maize: 'Maize', cotton: 'Cotton' };
+      return names[cropKey] || cropKey;
+    }
+
+    function filterData() {
+      var filteredDiag = [];
+      var filteredTreat = [];
+      if (currentFilter === 'all') {
+        filteredDiag = ALL_DIAGNOSES.slice();
+        filteredTreat = ALL_TREATMENTS.slice();
+      } else {
+        for (var i = 0; i < ALL_DIAGNOSES.length; i++) {
+          if (ALL_DIAGNOSES[i].crop === currentFilter) {
+            filteredDiag.push(ALL_DIAGNOSES[i]);
+          }
+        }
+        for (var j = 0; j < ALL_TREATMENTS.length; j++) {
+          if (ALL_TREATMENTS[j].crop === currentFilter) {
+            filteredTreat.push(ALL_TREATMENTS[j]);
+          }
+        }
+      }
+      return { diagnoses: filteredDiag, treatments: filteredTreat };
+    }
+
+    function computeHealthStats(filteredDiag) {
+      var activeCount = 0;
+      var observingCount = 0;
+      var resolvedCount = 0;
+      var pestCount = 0;
+      for (var i = 0; i < filteredDiag.length; i++) {
+        var d = filteredDiag[i];
+        if (d.status === 'Active') activeCount++;
+        else if (d.status === 'Observing') observingCount++;
+        else if (d.status === 'Resolved') resolvedCount++;
+        if (d.isPest) pestCount++;
+      }
+      var healthScore = Math.round(100 - (activeCount * 4) - (observingCount * 3));
+      if (healthScore < 0) healthScore = 0;
+      if (healthScore > 100) healthScore = 100;
+      var statusText = 'Good';
+      var statusClass = 'badge-success';
+      if (healthScore >= 80) {
+        statusText = 'Good';
+        statusClass = 'badge-success';
+      } else if (healthScore >= 60) {
+        statusText = 'Moderate';
+        statusClass = 'badge-warning';
+      } else {
+        statusText = 'Critical';
+        statusClass = 'badge-danger';
+      }
+      return {
+        healthScore: healthScore,
+        statusText: statusText,
+        statusClass: statusClass,
+        activeCount: activeCount,
+        pestCount: pestCount
+      };
+    }
+
+    function renderCurrentHealth(stats) {
+      var scoreEl = document.getElementById('health-score-value');
+      var statusBadge = document.getElementById('overall-status-badge');
+      var activeEl = document.getElementById('active-diseases-count');
+      var pestEl = document.getElementById('pest-alerts-count');
+      var circleEl = document.getElementById('health-score-circle');
+
+      scoreEl.textContent = stats.healthScore;
+
+      var iconHtml = '';
+      if (stats.statusText === 'Good') iconHtml = '<i class="fas fa-check-circle"></i> ';
+      else if (stats.statusText === 'Moderate') iconHtml = '<i class="fas fa-exclamation-circle"></i> ';
+      else iconHtml = '<i class="fas fa-times-circle"></i> ';
+      statusBadge.className = 'badge ' + stats.statusClass;
+      statusBadge.style.cssText = 'font-size:13px;padding:4px 14px;';
+      statusBadge.innerHTML = iconHtml + stats.statusText;
+
+      activeEl.textContent = stats.activeCount;
+      pestEl.textContent = stats.pestCount;
+
+      var circumference = 2 * Math.PI * 54;
+      var offset = circumference * (1 - stats.healthScore / 100);
+      circleEl.setAttribute('stroke-dasharray', circumference);
+      circleEl.setAttribute('stroke-dashoffset', offset);
+
+      var color = 'var(--crop-green)';
+      if (stats.healthScore < 60) color = '#D32F2F';
+      else if (stats.healthScore < 80) color = '#E65100';
+      circleEl.setAttribute('stroke', color);
+      scoreEl.style.color = color;
+    }
+
+    function renderTimeline(filteredDiag) {
+      var container = document.getElementById('health-timeline');
+      if (filteredDiag.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px;"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;opacity:0.5;"></i> No diagnoses found for this crop.</div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < filteredDiag.length; i++) {
+        var d = filteredDiag[i];
+        var tlClass = getTimelineClass(d.status);
+        var badgeClass = getStatusBadgeClass(d.status);
+        html += '<div class="timeline-item ' + tlClass + '">' +
+          '<div class="timeline-date">' + d.date + '</div>' +
+          '<div class="timeline-crop"><i class="fas fa-seedling" style="margin-right:4px;color:var(--medium-green);"></i>' + d.crop + '</div>' +
+          '<div class="timeline-disease">' + d.disease + '</div>' +
+          '<div class="timeline-status"><span class="badge ' + badgeClass + '">' + d.status + '</span></div>' +
+        '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function renderTreatmentTable(filteredTreat) {
+      var tbody = document.getElementById('treatment-body');
+      if (filteredTreat.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px;"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;opacity:0.5;"></i> No treatments recorded for this crop.</td></tr>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < filteredTreat.length; i++) {
+        var t = filteredTreat[i];
+        var badgeClass = getStatusBadgeClass(t.result);
+        html += '<tr>' +
+          '<td>' + t.date + '</td>' +
+          '<td><div class="crop-cell"><i class="fas fa-seedling"></i>' + t.crop + '</div></td>' +
+          '<td>' + t.disease + '</td>' +
+          '<td>' + t.method + '</td>' +
+          '<td><span class="badge ' + badgeClass + '">' + t.result + '</span></td>' +
+        '</tr>';
+      }
+      tbody.innerHTML = html;
+    }
+
+    function updateFilterNotice() {
+      var notice = document.getElementById('filter-notice');
+      var text = document.getElementById('filter-notice-text');
+      if (currentFilter === 'all') {
+        notice.style.display = 'none';
+      } else {
+        notice.style.display = 'flex';
+        text.textContent = 'Showing data for ' + currentFilter + '.';
+      }
+    }
+
+    function refreshAll() {
+      var filtered = filterData();
+      var stats = computeHealthStats(filtered.diagnoses);
+      renderCurrentHealth(stats);
+      renderTimeline(filtered.diagnoses);
+      renderTreatmentTable(filtered.treatments);
+      updateFilterNotice();
+    }
+
+    document.getElementById('crop-filter').addEventListener('change', function(e) {
+      currentFilter = e.target.value;
+      refreshAll();
+    });
+
+    document.getElementById('action-scan-crop').addEventListener('click', function() {
+      var section = document.getElementById('scan-section');
+      if (section) {
+        window.scrollTo({ top: section.offsetTop - 80, behavior: 'smooth' });
+      }
+    });
+
+    document.getElementById('action-upload-image').addEventListener('click', function() {
+      var section = document.getElementById('scan-section');
+      if (section) {
+        window.scrollTo({ top: section.offsetTop - 80, behavior: 'smooth' });
+        setTimeout(function() {
+          fileInput.click();
+        }, 400);
+      }
+    });
+
+    document.getElementById('action-view-history').addEventListener('click', function() {
+      var section = document.getElementById('health-history-section');
+      if (section) {
+        window.scrollTo({ top: section.offsetTop - 80, behavior: 'smooth' });
+      }
+    });
+
+    function handleFile(file) {
+      if (!file) return;
+      selectedFile = file;
+      var html = '<div class="file-info">' +
+        '<i class="fas fa-file-image"></i>' +
+        '<span>' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)</span>' +
+        '<span class="remove-file" id="remove-file"><i class="fas fa-times-circle"></i></span>' +
+      '</div>';
+      fileInfoContainer.innerHTML = html;
+      document.getElementById('remove-file').addEventListener('click', function(e) {
+        e.stopPropagation();
+        resetScan();
+      });
+      scanBtn.disabled = false;
+    }
+
+    function resetScan() {
+      selectedFile = null;
+      currentResult = null;
+      fileInfoContainer.innerHTML = '';
+      scanBtn.disabled = true;
+      scanLoading.classList.add('u-hidden');
+      scanResults.classList.add('u-hidden');
+      scanResults.innerHTML = '';
+      disclaimer.classList.add('u-hidden');
+      fileInput.value = '';
+    }
+
+    function showResults(result, cropType) {
+      scanResults.classList.remove('u-hidden');
+      disclaimer.classList.remove('u-hidden');
+
+      var diseaseClass = result.healthy ? 'healthy' : '';
+      var statusBadge = result.healthy
+        ? '<span class="badge badge-success">Healthy</span>'
+        : '<span class="badge badge-danger">Disease Detected</span>';
+
+      var organicList = result.organic.map(function(t) { return '<li>' + t + '</li>'; }).join('');
+      var conventionalList = result.conventional.map(function(t) { return '<li>' + t + '</li>'; }).join('');
+      var preventionList = result.prevention.map(function(t) { return '<li>' + t + '</li>'; }).join('');
+
+      var html =
+        '<div class="result-card">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+            '<div>' +
+              '<div class="result-disease ' + diseaseClass + '">' + result.disease + '</div>' +
+              '<div class="result-confidence"><strong>Confidence:</strong> ' + result.confidence + '% ' + statusBadge + '</div>' +
+            '</div>' +
+            '<div><i class="fas fa-leaf" style="font-size:24px;color:var(--medium-green);opacity:0.5;"></i></div>' +
+          '</div>' +
+          '<div class="result-section">' +
+            '<h4><i class="fas fa-notes-medical" style="margin-right:4px;"></i> Symptoms</h4>' +
+            '<p>' + result.symptoms + '</p>' +
+          '</div>' +
+          '<div class="result-section">' +
+            '<h4><i class="fas fa-seedling" style="margin-right:4px;"></i> Organic Treatment</h4>' +
+            '<ul>' + organicList + '</ul>' +
+          '</div>' +
+          '<div class="result-section">' +
+            '<h4><i class="fas fa-flask" style="margin-right:4px;"></i> Conventional Treatment</h4>' +
+            '<ul>' + conventionalList + '</ul>' +
+          '</div>' +
+          '<div class="result-section">' +
+            '<h4><i class="fas fa-shield-alt" style="margin-right:4px;"></i> Prevention Tips</h4>' +
+            '<ul>' + preventionList + '</ul>' +
+          '</div>' +
+          '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
+            '<button class="btn-primary btn-sm" id="save-history-btn"><i class="fas fa-save"></i> Save to History</button>' +
+            '<button class="btn-secondary btn-sm" id="scan-again-btn"><i class="fas fa-redo"></i> Scan Another</button>' +
+          '</div>' +
+        '</div>';
+
+      scanResults.innerHTML = html;
+
+      document.getElementById('save-history-btn').addEventListener('click', function() {
+        var history = [];
+        try { history = JSON.parse(localStorage.getItem('crop-health-history') || '[]'); } catch (e) {}
+        var today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        var status = result.healthy ? 'Resolved' : 'Monitoring';
+        history.unshift({
+          date: today,
+          crop: getCropDisplayName(cropType),
+          disease: result.disease,
+          confidence: result.confidence,
+          status: status
+        });
+        localStorage.setItem('crop-health-history', JSON.stringify(history));
+        if (window.showToast) window.showToast('Scan saved to history!', 'success');
+      });
+
+      document.getElementById('scan-again-btn').addEventListener('click', function() {
+        resetScan();
+        window.scrollTo({ top: document.getElementById('scan-section').offsetTop - 80, behavior: 'smooth' });
+      });
+
+      currentResult = { result: result, cropType: cropType };
+    }
+
+    uploadZone.addEventListener('click', function() {
+      fileInput.click();
+    });
+
+    uploadZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', function() {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      var files = e.dataTransfer.files;
+      if (files.length > 0) handleFile(files[0]);
+    });
+
+    fileInput.addEventListener('change', function() {
+      if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
+    });
+
+    function buildMockResult(cropType) {
+      var isHealthy = Math.random() < 0.15;
+      var resultKey = isHealthy ? 'healthy' : cropType;
+      var result = MOCK_RESULTS[resultKey] || MOCK_RESULTS.healthy;
+      if (!isHealthy && resultKey !== 'healthy') {
+        var variance = (Math.random() * 6 - 3);
+        result = JSON.parse(JSON.stringify(MOCK_RESULTS[resultKey]));
+        result.confidence = Math.min(99.9, Math.max(70, result.confidence + variance));
+        result.confidence = Math.round(result.confidence * 10) / 10;
+      }
+      return result;
+    }
+
+    function mapBackendDiagnosis(diagnosis, cropType) {
+      var issues = (diagnosis && diagnosis.possible_issues) || [];
+      var recs = (diagnosis && diagnosis.recommendations) || [];
+      var issueNames = issues.map(function (i) { return i.issue; }).join(', ');
+      var organic = [];
+      var conventional = [];
+      var prevention = [];
+      recs.forEach(function (r, idx) {
+        if (idx % 3 === 0) organic.push(r);
+        else if (idx % 3 === 1) conventional.push(r);
+        else prevention.push(r);
+      });
+      return {
+        healthy: false,
+        disease: issueNames || 'Possible Crop Issue',
+        confidence: issues.length ? 82 : 55,
+        symptoms: (diagnosis && diagnosis.symptoms) || 'Symptoms observed in ' + getCropDisplayName(cropType) + ' crop.',
+        organic: organic.length ? organic : ['Monitor crop regularly for symptom changes'],
+        conventional: conventional.length ? conventional : ['Consult a local agricultural expert for field diagnosis'],
+        prevention: prevention.length ? prevention : ['Maintain field hygiene and regular scouting'],
+        backend: true
+      };
+    }
+
+    scanBtn.addEventListener('click', function() {
+      if (!selectedFile) return;
+      scanLoading.classList.remove('u-hidden');
+      scanResults.classList.add('u-hidden');
+      scanResults.innerHTML = '';
+      disclaimer.classList.add('u-hidden');
+      scanBtn.disabled = true;
+
+      var cropType = getCropTypeFromFile(selectedFile.name);
+
+      function finish(result) {
+        scanLoading.classList.add('u-hidden');
+        showResults(result, cropType);
+        scanBtn.disabled = false;
+      }
+
+      if (window.API && localStorage.getItem('fa-auth-token')) {
+        var symptoms = 'Signs of disease in ' + getCropDisplayName(cropType) + ' crop. ' +
+          (selectedFile.name ? 'Image: ' + selectedFile.name : '');
+        return window.API.AI.diagnose(symptoms, selectedFile.name || null).then(function (res) {
+          if (res && res.diagnosis) {
+            finish(mapBackendDiagnosis(res.diagnosis, cropType));
+          } else {
+            finish(buildMockResult(cropType));
+          }
+        }).catch(function () {
+          finish(buildMockResult(cropType));
+        });
+      }
+
+      setTimeout(function() {
+        finish(buildMockResult(cropType));
+      }, 2000);
+    });
+
+    refreshAll();
+  })();
+  </script>
+</body>
+</html>

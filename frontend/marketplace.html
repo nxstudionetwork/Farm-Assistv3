@@ -1,0 +1,671 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="marketplace">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Marketplace</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .mk-action-bar { display: flex; gap: 6px; margin-bottom: 16px; }
+    .mk-action-btn { width: 44px; height: 44px; border-radius: 12px; background: white; border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; position: relative; }
+    .mk-action-btn:hover { border-color: var(--primary-green); color: var(--primary-green); background: var(--soft-green); }
+    .mk-action-btn .tooltip-text { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--primary-dark); color: white; font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .mk-action-btn:hover .tooltip-text { opacity: 1; }
+    .mk-section-toggle { display: none; }
+    .mk-section-toggle.active { display: block; animation: fadeUp 0.3s ease; }
+    .product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .product-grid { grid-template-columns: 1fr; } }
+    .prod-card { background: white; border-radius: var(--radius-md); padding: 14px; border: 1px solid var(--border-light); transition: all 0.25s; cursor: default; }
+    .prod-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--primary-green); }
+    .prod-img { width: 100%; height: 110px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 32px; color: #fff; margin-bottom: 8px; }
+    .prod-name { font-size: 13px; font-weight: 700; margin-bottom: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .prod-meta { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+    .prod-meta i { margin-right: 3px; }
+    .prod-price-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+    .prod-price { font-size: 16px; font-weight: 800; color: var(--primary-green); }
+    .prod-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .prod-actions button { flex: 1; padding: 6px 10px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; }
+    .wish-btn { background: var(--bg-card-soft); color: var(--text-secondary); }
+    .wish-btn:hover { color: var(--danger); }
+    .wish-btn.active { background: #FFF0F0; color: var(--danger); }
+    .sell-form { display: flex; flex-direction: column; gap: 12px; }
+    .sell-form-row { display: flex; gap: 10px; }
+    .sell-form-row .form-group { flex: 1; }
+    .form-group { margin-bottom: 0; }
+    .form-select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; transition: border-color 0.2s; }
+    .form-select:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
+    .form-textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; transition: border-color 0.2s; resize: vertical; min-height: 70px; }
+    .form-textarea:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
+    .photo-upload { border: 2px dashed var(--border-medium); border-radius: var(--radius-sm); padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 12px; color: var(--text-muted); }
+    .photo-upload:hover { border-color: var(--primary-green); color: var(--primary-green); }
+    .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+    .status-badge.success { background: var(--soft-green); color: var(--primary-green); }
+    .status-badge.warning { background: var(--sun-soft); color: #A67C00; }
+    .status-badge.danger { background: #FFF0F0; color: var(--danger); }
+    .status-badge.info { background: var(--sky-soft); color: #2D6A4F; }
+    .compare-table td, .compare-table th { text-align: center; vertical-align: middle; }
+    .compare-table td:first-child { text-align: left; font-weight: 600; color: var(--text-secondary); }
+    .wishlist-empty, .compare-empty, .orders-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+    .wishlist-empty i, .compare-empty i, .orders-empty i { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+    .wishlist-empty h4, .compare-empty h4, .orders-empty h4 { font-size: 15px; color: var(--text-secondary); margin-bottom: 4px; }
+    .active-listing-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border-light); border-radius: var(--radius-md); margin-bottom: 8px; background: white; transition: all 0.2s; }
+    .active-listing-card:hover { border-color: var(--primary-green); box-shadow: var(--shadow-sm); }
+    .listing-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--soft-green); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--primary-green); flex-shrink: 0; }
+    .listing-info { flex: 1; min-width: 0; }
+    .listing-info h4 { font-size: 13px; font-weight: 600; }
+    .listing-info p { font-size: 11px; color: var(--text-muted); }
+    .listing-price { font-size: 16px; font-weight: 800; color: var(--primary-green); }
+  </style>
+</head>
+<body>
+
+<main class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h1><i class="fas fa-store-alt"></i> Marketplace</h1>
+      <p>Buy produce, sell crops, compare & save</p>
+    </div>
+  </div>
+
+  <div class="mk-action-bar">
+    <button class="mk-action-btn" onclick="Marketplace.openSellModal()" title="Sell Crop" aria-label="Sell Crop">
+      <i class="fas fa-seedling"></i>
+      <span class="tooltip-text">Sell Crop</span>
+    </button>
+    <button class="mk-action-btn" onclick="Marketplace.toggleSection('orders')" title="Orders" aria-label="Orders">
+      <i class="fas fa-truck"></i>
+      <span class="tooltip-text">Orders</span>
+    </button>
+    <button class="mk-action-btn" onclick="Marketplace.toggleSection('compare')" title="Compare Products" aria-label="Compare Products">
+      <i class="fas fa-not-equal"></i>
+      <span class="tooltip-text">Compare</span>
+    </button>
+    <button class="mk-action-btn" onclick="Marketplace.toggleSection('wishlist')" title="Wishlist" aria-label="Wishlist">
+      <i class="fas fa-heart"></i>
+      <span class="tooltip-text">Wishlist</span>
+    </button>
+  </div>
+
+  <div class="market-search">
+    <i class="fas fa-search"></i>
+    <input type="text" placeholder="Search rice, mangoes, vegetables, grains..." id="mk-search-input">
+  </div>
+
+  <div class="category-slider">
+    <button class="category-chip active" data-filter="all">All</button>
+    <button class="category-chip" data-filter="Grains">Grains</button>
+    <button class="category-chip" data-filter="Fruits">Fruits</button>
+    <button class="category-chip" data-filter="Vegetables">Vegetables</button>
+    <button class="category-chip" data-filter="Dairy">Dairy</button>
+    <button class="category-chip" data-filter="Poultry">Poultry</button>
+    <button class="category-chip" data-filter="Others">Others</button>
+  </div>
+
+  <div id="mk-sections-container">
+    <div id="mk-section-products" class="mk-section-toggle active">
+      <section class="card-premium" style="padding:15px 10px;">
+        <h3 style="font-size:16px; margin-left:10px; margin-bottom:15px;"><i class="fas fa-store-alt" style="color:var(--premium-green); margin-right:8px;"></i> Farm Produce & Goods</h3>
+        <div id="mk-product-grid" class="product-grid"></div>
+      </section>
+    </div>
+
+    <div id="mk-section-orders" class="mk-section-toggle">
+      <section class="card-premium">
+        <h2 style="font-size:18px; margin-bottom:15px;"><i class="fas fa-truck" style="color:var(--premium-green); margin-right:8px;"></i> My Orders</h2>
+        <div id="mk-orders-content"></div>
+      </section>
+    </div>
+
+    <div id="mk-section-compare" class="mk-section-toggle">
+      <section class="card-premium">
+        <h2 style="font-size:18px; margin-bottom:15px;"><i class="fas fa-not-equal" style="color:var(--premium-green); margin-right:8px;"></i> Compare Products</h2>
+        <div id="mk-compare-content">
+          <div class="compare-empty">
+            <i class="fas fa-not-equal"></i>
+            <h4>No products selected</h4>
+            <p>Click the compare icon on product cards to add them here</p>
+          </div>
+        </div>
+      </section>
+      <section class="card-premium" id="mk-compare-results" style="display:none;">
+        <div class="responsive-table">
+          <table class="compare-table">
+            <thead id="compare-thead"></thead>
+            <tbody id="compare-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div id="mk-section-wishlist" class="mk-section-toggle">
+      <section class="card-premium">
+        <h2 style="font-size:18px; margin-bottom:15px;"><i class="fas fa-heart" style="color:var(--premium-green); margin-right:8px;"></i> My Wishlist</h2>
+        <div id="mk-wishlist-content"></div>
+      </section>
+    </div>
+
+    <div id="mk-section-listings" class="mk-section-toggle">
+      <section class="card-premium">
+        <h2 style="font-size:18px; margin-bottom:15px;"><i class="fas fa-seedling" style="color:var(--premium-green); margin-right:8px;"></i> My Active Listings</h2>
+        <div id="mk-listings-content"></div>
+      </section>
+    </div>
+  </div>
+
+</main>
+
+<div class="modal-backdrop" id="sell-modal-backdrop">
+  <div class="modal-box" style="max-width:520px; max-height:90vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="font-size:16px;"><i class="fas fa-seedling" style="color:var(--premium-green);margin-right:8px;"></i> Sell Your Crop</h3>
+      <button onclick="Marketplace.closeSellModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">&times;</button>
+    </div>
+    <form class="sell-form" id="sell-form" onsubmit="return Marketplace.submitSellListing(event)">
+      <div class="sell-form-row">
+        <div class="form-group">
+          <label class="form-label">Crop Name</label>
+          <input class="form-input" type="text" id="sell-crop-name" placeholder="e.g. Basmati Rice" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Variety</label>
+          <input class="form-input" type="text" id="sell-variety" placeholder="e.g. Pusa 1121">
+        </div>
+      </div>
+      <div class="sell-form-row">
+        <div class="form-group">
+          <label class="form-label">Quantity</label>
+          <input class="form-input" type="number" id="sell-qty" placeholder="e.g. 10" min="0.1" step="0.1" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit</label>
+          <select class="form-select" id="sell-unit">
+            <option value="kg">Kg</option>
+            <option value="quintal">Quintal</option>
+            <option value="ton">Ton</option>
+          </select>
+        </div>
+      </div>
+      <div class="sell-form-row">
+        <div class="form-group">
+          <label class="form-label">Quality Grade</label>
+          <select class="form-select" id="sell-grade">
+            <option value="Grade A">Grade A</option>
+            <option value="Grade B">Grade B</option>
+            <option value="Grade C">Grade C</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Expected Price (per unit)</label>
+          <input class="form-input" type="number" id="sell-price" placeholder="e.g. 2500" min="1" required>
+        </div>
+      </div>
+      <div class="sell-form-row">
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input class="form-input" type="text" id="sell-location" placeholder="e.g. Sangli, Maharashtra" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Harvest Date</label>
+          <input class="form-input" type="date" id="sell-harvest-date" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Delivery</label>
+        <div style="display:flex;gap:10px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;"><input type="radio" name="delivery" value="pickup" checked> Pickup</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;"><input type="radio" name="delivery" value="delivery"> Delivery</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Photos</label>
+        <div class="photo-upload" onclick="document.getElementById('sell-photos').click()">
+          <i class="fas fa-camera" style="font-size:20px;display:block;margin-bottom:4px;"></i>
+          Click to upload photos
+        </div>
+        <input type="file" id="sell-photos" accept="image/*" multiple style="display:none;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="sell-description" placeholder="Describe your crop, growing practices, certifications..."></textarea>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;"><i class="fas fa-check"></i> Submit Listing</button>
+    </form>
+  </div>
+</div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="js/mockData.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var CATEGORIES = ['All', 'Grains', 'Fruits', 'Vegetables', 'Dairy', 'Poultry', 'Others'];
+
+  var PRODUCTS = [
+    { id: 1, name: 'Premium Basmati Rice (1 ton lot)', category: 'Grains', price: 45000, unit: 'ton', seller: 'Punjab Grain Exports', rating: 4.7, location: 'Amritsar, Punjab', icon: 'fa-seedling', color: '#2D8659' },
+    { id: 2, name: 'Fresh Alphonso Mangoes (Box)', category: 'Fruits', price: 1200, unit: 'box', seller: 'Ratnagiri Farms', rating: 4.8, location: 'Ratnagiri, MH', icon: 'fa-apple-alt', color: '#E9B640' },
+    { id: 3, name: 'Organic Vegetables Basket', category: 'Vegetables', price: 450, unit: 'basket', seller: 'GreenLeaf Organics', rating: 4.5, location: 'Pune, MH', icon: 'fa-carrot', color: '#52B788' },
+    { id: 4, name: 'Fresh Cow Milk (Daily)', category: 'Dairy', price: 56, unit: 'L', seller: 'Shree Gokul Dairy', rating: 4.6, location: 'Anand, GJ', icon: 'fa-glass-whiskey', color: '#40916C' },
+    { id: 5, name: 'Country Chicken (Live)', category: 'Poultry', price: 350, unit: 'kg', seller: 'Desi Poultry Farm', rating: 4.3, location: 'Namakkal, TN', icon: 'fa-drumstick-bite', color: '#8B6F47' },
+    { id: 6, name: 'Wheat Grain (Bulk 50kg)', category: 'Grains', price: 2200, unit: 'bag', seller: 'MP Agro Products', rating: 4.4, location: 'Indore, MP', icon: 'fa-wheat-alt', color: '#B8860B' },
+    { id: 7, name: 'Raw Wild Honey (1kg Jar)', category: 'Others', price: 850, unit: 'jar', seller: 'Himalayan Honey Co', rating: 4.9, location: 'Dehradun, UK', icon: 'fa-droplet', color: '#D4A017' },
+    { id: 8, name: 'Fresh Turmeric Root (5kg)', category: 'Vegetables', price: 650, unit: 'pack', seller: 'Sangli Spice Farms', rating: 4.2, location: 'Sangli, MH', icon: 'fa-spa', color: '#E8751A' },
+    { id: 9, name: 'Sugarcane (Bundle 10pcs)', category: 'Others', price: 300, unit: 'bundle', seller: 'UP Sugarcane Coop', rating: 4.1, location: 'Saharanpur, UP', icon: 'fa-tree', color: '#6B8E23' },
+    { id: 10, name: 'Potato Sack (50kg)', category: 'Vegetables', price: 1400, unit: 'sack', seller: 'Agra Cold Storage', rating: 4.3, location: 'Agra, UP', icon: 'fa-cube', color: '#A67C00' },
+    { id: 11, name: 'Buffalo Ghee (1L Tin)', category: 'Dairy', price: 650, unit: 'L', seller: 'Gir Ghee Products', rating: 4.7, location: 'Rajkot, GJ', icon: 'fa-oil-can', color: '#F5A623' },
+    { id: 12, name: 'Fresh Fish (Rohu, 5kg)', category: 'Others', price: 750, unit: 'kg', seller: 'Bengal Fishery', rating: 4.0, location: 'Kolkata, WB', icon: 'fa-fish', color: '#74B9FF' }
+  ];
+
+  var allProducts = PRODUCTS.slice();
+  var wishlistItems = JSON.parse(localStorage.getItem('fa-mk-wishlist') || '[]');
+  var compareItems = [];
+  var sellListings = JSON.parse(localStorage.getItem('fa-mk-listings') || '[]');
+
+  function mapBackendCategory(p) {
+    var hay = (p.name + ' ' + (p.description || '') + ' ' + (p.category || '')).toLowerCase();
+    if (hay.indexOf('seed') !== -1) return 'Grains';
+    if (hay.indexOf('mango') !== -1 || hay.indexOf('fruit') !== -1 || hay.indexOf('banana') !== -1) return 'Fruits';
+    if (hay.indexOf('tomato') !== -1 || hay.indexOf('vegetable') !== -1 || hay.indexOf('brinjal') !== -1 || hay.indexOf('chilli') !== -1 || hay.indexOf('onion') !== -1 || hay.indexOf('potato') !== -1) return 'Vegetables';
+    if (hay.indexOf('milk') !== -1 || hay.indexOf('ghee') !== -1 || hay.indexOf('dairy') !== -1) return 'Dairy';
+    if (hay.indexOf('chicken') !== -1 || hay.indexOf('poultry') !== -1 || hay.indexOf('egg') !== -1) return 'Poultry';
+    return 'Others';
+  }
+
+  function loadBackendProducts() {
+    if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+    API.Marketplace.listProducts().then(function (res) {
+      var items = (res && res.items) || [];
+      if (!items.length) return;
+      var colors = ['#2D8659', '#E9B640', '#52B788', '#40916C', '#B8860B', '#D4A017', '#6B8E23', '#A67C00'];
+      allProducts = items.map(function (p, idx) {
+        return {
+          id: p.product_id || p.id,
+          name: p.name,
+          category: mapBackendCategory(p),
+          price: p.price,
+          unit: p.unit || 'piece',
+          seller: p.brand || 'Farm Assist Store',
+          rating: p.rating || 0,
+          location: 'Verified Seller',
+          icon: 'fa-seedling',
+          color: colors[idx % colors.length]
+        };
+      });
+      filterAndRender();
+      renderWishlist();
+    }).catch(function () {});
+  }
+
+  var ORDERS = [
+    { id: 'ORD-1001', items: 'Premium Basmati Rice (1 ton)', total: 45000, status: 'Shipped', date: '22 Jul 2026' },
+    { id: 'ORD-1002', items: 'Organic Vegetables Basket x2', total: 900, status: 'Delivered', date: '15 Jul 2026' },
+    { id: 'ORD-1003', items: 'Fresh Cow Milk (10L)', total: 560, status: 'Processing', date: '28 Jul 2026' },
+    { id: 'ORD-1004', items: 'Country Chicken (2kg)', total: 700, status: 'Cancelled', date: '10 Jul 2026' }
+  ];
+
+  var activeSection = 'products';
+
+  function formatPrice(val) {
+    var num = parseFloat(val) || 0;
+    return '\u20B9' + num.toLocaleString('en-IN');
+  }
+
+  function starHtml(rating) {
+    var r = parseFloat(rating) || 0;
+    var full = Math.floor(r);
+    var half = (r - full >= 0.5) ? 1 : 0;
+    var empty = 5 - full - half;
+    var s = '';
+    for (var i = 0; i < full; i++) { s += '<i class="fas fa-star" style="font-size:9px;"></i>'; }
+    if (half) { s += '<i class="fas fa-star-half-alt" style="font-size:9px;"></i>'; }
+    for (var i = 0; i < empty; i++) { s += '<i class="far fa-star" style="font-size:9px;"></i>'; }
+    return s + ' <span style="font-size:9px;color:var(--text-muted);margin-left:2px;">' + r.toFixed(1) + '</span>';
+  }
+
+  function renderProducts(items) {
+    var grid = document.getElementById('mk-product-grid');
+    if (!grid) return;
+    if (!items || items.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;"><div style="font-size:48px;color:var(--text-muted);opacity:0.5;margin-bottom:12px;"><i class="fas fa-search"></i></div><h4 style="font-size:16px;color:var(--text-secondary);margin-bottom:4px;">No products found</h4><p style="font-size:12px;color:var(--text-muted);">Try a different search or category</p></div>';
+      return;
+    }
+    grid.innerHTML = items.map(function (p) {
+      var inWish = wishlistItems.indexOf(p.id) !== -1;
+      var inComp = compareItems.indexOf(p.id) !== -1;
+      var wishActive = inWish ? 'active' : '';
+      var compDisabled = compareItems.length >= 3 || inComp ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : '';
+      var safeName = p.name.replace(/'/g, "\\'");
+      return '<div class="prod-card">' +
+        '<div class="prod-img" style="background:' + p.color + ';"><i class="fas ' + p.icon + '"></i></div>' +
+        '<div class="prod-name">' + p.name + '</div>' +
+        '<div class="prod-meta"><i class="fas fa-store"></i>' + p.seller + ' &middot; <i class="fas fa-map-marker-alt"></i>' + p.location + '</div>' +
+        '<div>' + starHtml(p.rating) + '</div>' +
+        '<div class="prod-price-row">' +
+          '<span class="prod-price">' + formatPrice(p.price) + ' <span style="font-size:10px;color:var(--text-muted);font-weight:400;">/ ' + p.unit + '</span></span>' +
+        '</div>' +
+        '<div class="prod-actions">' +
+          '<button class="btn-primary btn-sm" onclick="Marketplace.addToCart(\'' + safeName + '\',' + p.price + ')"><i class="fas fa-shopping-cart"></i> Cart</button>' +
+          '<button class="wish-btn btn-sm ' + wishActive + '" onclick="Marketplace.toggleWishlist(' + p.id + ',\'' + safeName + '\')"><i class="fas fa-heart"></i></button>' +
+          '<button class="btn-secondary btn-sm" onclick="Marketplace.toggleCompare(' + p.id + ',\'' + safeName + '\')" ' + compDisabled + '><i class="fas fa-not-equal"></i></button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function filterAndRender() {
+    var filter = getActiveFilter();
+    var query = getSearchQuery();
+    var filtered = allProducts;
+    if (filter !== 'all') {
+      filtered = filtered.filter(function (p) { return p.category === filter; });
+    }
+    if (query) {
+      filtered = filtered.filter(function (p) {
+        return p.name.toLowerCase().indexOf(query) !== -1 ||
+               p.category.toLowerCase().indexOf(query) !== -1 ||
+               p.seller.toLowerCase().indexOf(query) !== -1 ||
+               p.location.toLowerCase().indexOf(query) !== -1;
+      });
+    }
+    renderProducts(filtered);
+  }
+
+  function getActiveFilter() {
+    var active = document.querySelector('.category-chip.active');
+    return active ? active.getAttribute('data-filter') : 'all';
+  }
+
+  function getSearchQuery() {
+    var input = document.getElementById('mk-search-input');
+    return input ? input.value.toLowerCase().trim() : '';
+  }
+
+  function saveWishlist() {
+    localStorage.setItem('fa-mk-wishlist', JSON.stringify(wishlistItems));
+    renderWishlist();
+    filterAndRender();
+  }
+
+  function renderWishlist() {
+    var container = document.getElementById('mk-wishlist-content');
+    if (!container) return;
+    if (wishlistItems.length === 0) {
+      container.innerHTML = '<div class="wishlist-empty"><i class="fas fa-heart"></i><h4>Your wishlist is empty</h4><p>Click the heart icon on products to save them here</p></div>';
+      return;
+    }
+    var wished = allProducts.filter(function (p) { return wishlistItems.indexOf(p.id) !== -1; });
+    var html = '<div class="grid-2">';
+    wished.forEach(function (p) {
+      var safeName = p.name.replace(/'/g, "\\'");
+      html += '<div class="price-card" style="cursor:default;">' +
+        '<div class="price-info">' +
+          '<div class="price-icon" style="background:' + p.color + ';color:#fff;"><i class="fas ' + p.icon + '"></i></div>' +
+          '<div><div class="price-crop">' + p.name + '</div><div style="font-size:10px;color:var(--text-muted);">' + p.seller + '</div></div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span style="font-weight:700;color:var(--primary-green);font-size:14px;">' + formatPrice(p.price) + '</span>' +
+          '<button class="btn-danger btn-sm" style="background:none;color:var(--danger);border:1px solid var(--danger);padding:4px 8px;border-radius:6px;cursor:pointer;" onclick="Marketplace.toggleWishlist(' + p.id + ',\'' + safeName + '\')"><i class="fas fa-trash-can"></i></button>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  function renderOrders() {
+    var container = document.getElementById('mk-orders-content');
+    if (!container) return;
+    var html = '<div class="responsive-table"><table><thead><tr><th>Order ID</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead><tbody>';
+    ORDERS.forEach(function (o) {
+      var statusClass = 'info';
+      if (o.status === 'Delivered') statusClass = 'success';
+      else if (o.status === 'Cancelled') statusClass = 'danger';
+      else if (o.status === 'Processing') statusClass = 'warning';
+      html += '<tr>' +
+        '<td style="font-weight:600;">' + o.id + '</td>' +
+        '<td>' + o.items + '</td>' +
+        '<td style="font-weight:700;color:var(--primary-green);">' + formatPrice(o.total) + '</td>' +
+        '<td><span class="status-badge ' + statusClass + '">' + o.status + '</span></td>' +
+        '<td>' + o.date + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  }
+
+  function renderCompare() {
+    var container = document.getElementById('mk-compare-content');
+    var results = document.getElementById('mk-compare-results');
+    if (!container || !results) return;
+    if (compareItems.length < 2) {
+      container.style.display = 'block';
+      results.style.display = 'none';
+      container.innerHTML = '<div class="compare-empty"><i class="fas fa-not-equal"></i><h4>Select 2-3 products to compare</h4><p>Click the compare icon on product cards (minimum 2 needed)</p></div>';
+      return;
+    }
+    container.style.display = 'none';
+    results.style.display = 'block';
+    var prods = compareItems.map(function (id) { return allProducts.filter(function (p) { return p.id === id; })[0]; }).filter(Boolean);
+    var thead = document.getElementById('compare-thead');
+    var tbody = document.getElementById('compare-tbody');
+    if (!thead || !tbody) return;
+    var headHtml = '<tr><th style="text-align:left;">Feature</th>';
+    prods.forEach(function (p) {
+      headHtml += '<th><div style="font-size:13px;font-weight:700;">' + p.name + '</div><div style="font-size:10px;color:var(--text-muted);font-weight:400;">' + p.seller + '</div></th>';
+    });
+    headHtml += '</tr>';
+    thead.innerHTML = headHtml;
+
+    var rows = [
+      { label: 'Price', val: function (p) { return formatPrice(p.price) + ' / ' + p.unit; } },
+      { label: 'Rating', val: function (p) { return starHtml(p.rating); } },
+      { label: 'Seller', val: function (p) { return p.seller; } },
+      { label: 'Location', val: function (p) { return p.location; } },
+      { label: 'Category', val: function (p) { return p.category; } }
+    ];
+    var bodyHtml = '';
+    rows.forEach(function (row) {
+      bodyHtml += '<tr><td>' + row.label + '</td>';
+      prods.forEach(function (p) {
+        bodyHtml += '<td>' + row.val(p) + '</td>';
+      });
+      bodyHtml += '</tr>';
+    });
+    bodyHtml += '<tr><td style="border-bottom:none;">Action</td>';
+    prods.forEach(function (p) {
+      bodyHtml += '<td style="border-bottom:none;"><button class="btn-danger btn-sm" style="background:none;color:var(--danger);border:1px solid var(--danger);padding:4px 10px;border-radius:6px;cursor:pointer;" onclick="Marketplace.removeCompare(' + p.id + ')"><i class="fas fa-times"></i> Remove</button></td>';
+    });
+    bodyHtml += '</tr>';
+    tbody.innerHTML = bodyHtml;
+  }
+
+  function renderListings() {
+    var container = document.getElementById('mk-listings-content');
+    if (!container) return;
+    if (sellListings.length === 0) {
+      container.innerHTML = '<div class="wishlist-empty"><i class="fas fa-seedling"></i><h4>No active listings</h4><p>Click the Sell Crop icon above to create your first listing</p></div>';
+      return;
+    }
+    var html = '';
+    sellListings.forEach(function (l, idx) {
+      var gradeClass = 'success';
+      if (l.grade === 'Grade C') gradeClass = 'danger';
+      else if (l.grade === 'Grade B') gradeClass = 'warning';
+      html += '<div class="active-listing-card">' +
+        '<div class="listing-icon"><i class="fas fa-seedling"></i></div>' +
+        '<div class="listing-info">' +
+          '<h4>' + l.crop + ' (' + l.variety + ')</h4>' +
+          '<p>' + l.qty + ' ' + l.unit + ' &middot; ' + l.location + ' &middot; <span class="status-badge ' + gradeClass + '">' + l.grade + '</span></p>' +
+        '</div>' +
+        '<div class="listing-price">' + formatPrice(l.price) + '<span style="font-size:10px;font-weight:400;color:var(--text-muted);">/' + l.unit + '</span></div>' +
+      '</div>';
+    });
+    container.innerHTML = html;
+  }
+
+  function toggleSection(name) {
+    var sections = ['products', 'orders', 'compare', 'wishlist', 'listings'];
+    sections.forEach(function (s) {
+      var el = document.getElementById('mk-section-' + s);
+      if (el) {
+        if (s === name) {
+          el.classList.add('active');
+        } else {
+          el.classList.remove('active');
+        }
+      }
+    });
+    activeSection = name;
+    if (name === 'orders') renderOrders();
+    if (name === 'compare') renderCompare();
+    if (name === 'wishlist') renderWishlist();
+    if (name === 'listings') renderListings();
+    if (typeof showToast === 'function') {
+      var labels = { products: 'Showing products', orders: 'Showing orders', compare: 'Showing compare', wishlist: 'Showing wishlist', listings: 'Showing listings' };
+      showToast(labels[name] || 'Marketplace', 'info');
+    }
+  }
+
+  function addToCart(name, price) {
+    if (typeof showToast === 'function') {
+      showToast(name + ' added to cart! ' + formatPrice(price), 'success');
+    }
+  }
+
+  function toggleWishlist(id, name) {
+    var idx = wishlistItems.indexOf(id);
+    if (idx !== -1) {
+      wishlistItems.splice(idx, 1);
+      if (typeof showToast === 'function') showToast(name + ' removed from wishlist', 'warning');
+    } else {
+      wishlistItems.push(id);
+      if (typeof showToast === 'function') showToast(name + ' added to wishlist', 'success');
+    }
+    saveWishlist();
+  }
+
+  function toggleCompare(id, name) {
+    var idx = compareItems.indexOf(id);
+    if (idx !== -1) {
+      compareItems.splice(idx, 1);
+      if (typeof showToast === 'function') showToast(name + ' removed from compare', 'warning');
+    } else {
+      if (compareItems.length >= 3) {
+        if (typeof showToast === 'function') showToast('Maximum 3 products can be compared', 'warning');
+        return;
+      }
+      compareItems.push(id);
+      if (typeof showToast === 'function') showToast(name + ' added to compare', 'success');
+    }
+    filterAndRender();
+    renderCompare();
+  }
+
+  function removeCompare(id) {
+    var p = allProducts.filter(function (x) { return x.id === id; })[0];
+    if (p) toggleCompare(id, p.name);
+  }
+
+  function openSellModal() {
+    document.getElementById('sell-modal-backdrop').classList.add('active');
+  }
+
+  function closeSellModal() {
+    document.getElementById('sell-modal-backdrop').classList.remove('active');
+  }
+
+  function submitSellListing(e) {
+    e.preventDefault();
+    var crop = document.getElementById('sell-crop-name').value.trim();
+    var variety = document.getElementById('sell-variety').value.trim();
+    var qty = parseFloat(document.getElementById('sell-qty').value);
+    var unit = document.getElementById('sell-unit').value;
+    var grade = document.getElementById('sell-grade').value;
+    var price = parseFloat(document.getElementById('sell-price').value);
+    var location = document.getElementById('sell-location').value.trim();
+    var harvest = document.getElementById('sell-harvest-date').value;
+    var delivery = document.querySelector('input[name="delivery"]:checked');
+    var deliveryVal = delivery ? delivery.value : 'pickup';
+    var desc = document.getElementById('sell-description').value.trim();
+    if (!crop || !qty || !price || !location || !harvest) {
+      if (typeof showToast === 'function') showToast('Please fill all required fields', 'danger');
+      return false;
+    }
+    var listing = {
+      id: Date.now(),
+      crop: crop,
+      variety: variety || 'Standard',
+      qty: qty,
+      unit: unit,
+      grade: grade,
+      price: price,
+      location: location,
+      harvest: harvest,
+      delivery: deliveryVal,
+      description: desc,
+      date: new Date().toLocaleDateString('en-IN')
+    };
+    sellListings.push(listing);
+    localStorage.setItem('fa-mk-listings', JSON.stringify(sellListings));
+    closeSellModal();
+    document.getElementById('sell-form').reset();
+    if (typeof showToast === 'function') showToast(crop + ' listing submitted successfully!', 'success');
+    toggleSection('listings');
+    renderListings();
+    return false;
+  }
+
+  function init() {
+    renderProducts(allProducts);
+    renderWishlist();
+    renderListings();
+    loadBackendProducts();
+
+    document.querySelectorAll('.category-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        document.querySelectorAll('.category-chip').forEach(function (c) { c.classList.remove('active'); });
+        chip.classList.add('active');
+        filterAndRender();
+      });
+    });
+
+    var searchInput = document.getElementById('mk-search-input');
+    if (searchInput) {
+      var debounce = null;
+      searchInput.addEventListener('input', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () { filterAndRender(); }, 250);
+      });
+    }
+
+    document.getElementById('sell-modal-backdrop').addEventListener('click', function (e) {
+      if (e.target === this) closeSellModal();
+    });
+  }
+
+  window.Marketplace = {
+    addToCart: addToCart,
+    toggleWishlist: toggleWishlist,
+    toggleCompare: toggleCompare,
+    removeCompare: removeCompare,
+    toggleSection: toggleSection,
+    openSellModal: openSellModal,
+    closeSellModal: closeSellModal,
+    submitSellListing: submitSellListing
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="dashboard">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Dashboard</title>
+  <meta name="description" content="Farm Assist - India's Agriculture Super App">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Farm Assist">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Farm Assist">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="assets/icons/apple-touch-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="assets/icons/apple-touch-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="assets/icons/apple-touch-icon-167x167.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon-180x180.png">
+  <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192x192.png">
+  <meta name="msapplication-TileColor" content="#0B3D2E">
+  <meta name="msapplication-TileImage" content="assets/icons/icon-144x144.png">
+  <script>
+    (function () {
+      try {
+        var done = localStorage.getItem('fa-splash-done');
+        var loggedIn = localStorage.getItem('fa-auth') === 'true' && !!localStorage.getItem('fa-auth-token');
+        if (!done && !loggedIn) {
+          window.location.replace('splash.html');
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .dash-stat{position:relative;display:block;text-decoration:none;padding:14px 10px;text-align:center;background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s}
+    .dash-stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--medium-green)}
+    .dash-stat .icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:16px;transition:transform .25s cubic-bezier(.16,1,.3,1)}
+    .dash-stat:hover .icon{transform:scale(1.15) rotate(-5deg)}
+    .dash-stat .value{font-size:20px;font-weight:800;color:var(--text-primary)}
+    .dash-stat .label{font-size:10px;color:var(--text-muted);margin-top:2px}
+    .dash-arrow{position:absolute;top:8px;right:8px;font-size:9px;color:var(--text-muted);opacity:0;transform:translateX(-4px);transition:all .2s}
+    .dash-stat:hover .dash-arrow{opacity:1;transform:translateX(0);color:var(--primary-green)}
+    .quick-action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+    .qa-tile{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all .25s cubic-bezier(.16,1,.3,1);min-height:96px;padding:12px 10px;border:1px solid var(--border-light);border-radius:14px;background:#fff;text-align:center}
+    .qa-tile:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--medium-green)}
+    .qa-tile .qa-tile-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;transition:transform .25s cubic-bezier(.16,1,.3,1)}
+    .qa-tile:hover .qa-tile-icon{transform:scale(1.15)}
+    .qa-tile:active{transform:scale(.96)}
+    .qa-label{font-size:11px;font-weight:700;line-height:1.2;color:var(--text-secondary);word-break:break-word}
+    .clickable-row{cursor:pointer;transition:background .2s,border-radius .2s}
+    .clickable-row:hover{background:var(--bg-card-soft)}
+    .alert-item{display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;margin-bottom:8px}
+    .alert-item.rain{background:rgba(244,67,54,0.05);border-left:3px solid #f44336}
+    .alert-item.pest{background:rgba(255,152,0,0.05);border-left:3px solid #FF9800}
+    .alert-item.scheme{background:rgba(33,150,243,0.05);border-left:3px solid #2196F3}
+    .task-item{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:6px}
+    .gov-card{padding:12px;background:var(--bg-card-soft);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s}
+    .gov-card:hover{transform:translateY(-1px)}
+    .gov-card .name{font-size:13px;font-weight:700;color:var(--text-primary)}
+    .gov-card .benefit{font-size:11px;color:var(--text-secondary)}
+    .gov-card .deadline{font-size:10px;color:var(--danger);font-weight:600}
+    .empty-state{text-align:center;padding:24px;color:var(--text-muted);font-size:13px}
+    .loading-shimmer{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;height:16px;margin:4px 0}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    @media(max-width:768px){#dash-stats,#dash-stats-2{grid-template-columns:repeat(2,1fr)!important}.quick-action-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:480px){#dash-stats,#dash-stats-2{gap:8px;margin-bottom:14px}.hero-dashboard{padding:16px}.hero-header{flex-direction:row;align-items:center;gap:8px}.hero-welcome h2{font-size:18px}.hero-actions{display:flex;gap:8px}.hero-actions .btn-ai-ask,.hero-actions .btn-farm-view{flex:1 1 auto;justify-content:center;padding:9px 10px;font-size:11px}.quick-action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.qa-tile{min-height:88px;padding:10px 8px}.qa-label{font-size:10px}.page-action-bar .pab-title{flex:0 0 auto;white-space:nowrap}}
+    @media(max-width:340px){.hero-header{flex-direction:column;align-items:flex-start}.hero-welcome h2{font-size:16px}.quick-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:480px){.fb-tabs-grid{grid-template-columns:repeat(2,1fr)!important}.fb-previews-grid{grid-template-columns:repeat(2,1fr)!important}}
+  </style>
+</head>
+<body>
+  <main class="page-container">
+    <section class="hero-dashboard">
+      <div class="hero-header">
+        <div class="hero-welcome">
+          <h2 id="farmer-name-display">Farmer</h2>
+          <p id="farm-location-display">Loading your farm...</p>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="text-align:right;color:white">
+            <div style="font-size:12px;font-weight:700" id="farmer-id-display">Loading...</div>
+            <div style="font-size:9px;opacity:.8">Farmer ID</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px 15px;font-size:12px;color:white;display:flex;align-items:center;gap:10px;margin-top:15px">
+        <i class="fas fa-robot"></i>
+        <span id="ai-briefing">Loading AI briefing...</span>
+      </div>
+      <div class="hero-actions" style="margin-top:15px">
+        <button class="btn-ai-ask" onclick="window.location.href='ai.html'"><i class="fas fa-robot"></i> AI Assist</button>
+        <button class="btn-farm-view" onclick="window.location.href='farm.html'"><i class="fas fa-tractor"></i> My Farm</button>
+      </div>
+    </section>
+
+    <div class="page-action-bar" role="toolbar" aria-label="Dashboard quick actions">
+      <span class="pab-title">Quick Actions</span>
+      <button class="pab-btn primary" onclick="window.location.href='farm.html'"><i class="fas fa-plus"></i> Add Farm</button>
+      <button class="pab-btn" onclick="window.location.href='farm-calendar.html'"><i class="fas fa-calendar"></i> Calendar</button>
+      <button class="pab-btn" onclick="window.location.href='farm.html#operations'"><i class="fas fa-users"></i> Operations</button>
+      <button class="pab-btn" onclick="window.location.href='marketplace.html'"><i class="fas fa-shopping-bag"></i> Market</button>
+      <button class="pab-btn" onclick="window.location.href='weather.html'"><i class="fas fa-cloud-sun"></i> Weather</button>
+    </div>
+
+    <div id="dash-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+      <a class="dash-stat" href="farm.html"><i class="fas fa-arrow-right dash-arrow"></i><div class="icon" style="background:rgba(76,175,80,.1);color:#4caf50"><i class="fas fa-tractor"></i></div><div class="value" id="stat-farms">--</div><div class="label">Total Farms</div></a>
+      <a class="dash-stat" href="farm.html"><i class="fas fa-arrow-right dash-arrow"></i><div class="icon" style="background:rgba(33,150,243,.1);color:#2196f3"><i class="fas fa-expand"></i></div><div class="value" id="stat-area">--</div><div class="label">Total Land</div></a>
+      <a class="dash-stat" href="crop-health.html"><i class="fas fa-arrow-right dash-arrow"></i><div class="icon" style="background:rgba(255,152,0,.1);color:#ff9800"><i class="fas fa-seedling"></i></div><div class="value" id="stat-crops">--</div><div class="label">Active Crops</div></a>
+      <a class="dash-stat" href="tasks.html"><i class="fas fa-arrow-right dash-arrow"></i><div class="icon" style="background:rgba(156,39,176,.1);color:#9c27b0"><i class="fas fa-list-check"></i></div><div class="value" id="stat-tasks">--</div><div class="label">Today's Tasks</div></a>
+    </div>
+
+    <div id="dash-stats-2" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+      <a class="dash-stat" href="finance.html"><i class="fas fa-arrow-right dash-arrow"></i><div class="icon" style="background:rgba(76,175,80,.1);color:#4caf50"><i class="fas fa-arrow-down"></i></div><div class="value" id="stat-income">--</div><div class="label">Income</div></a>
+      <a class="dash-stat" href="finance.html"><i class="fas fa-arrow-right dash-arrow"></i><div class="icon" style="background:rgba(244,67,54,.1);color:#f44336"><i class="fas fa-arrow-up"></i></div><div class="value" id="stat-expenses">--</div><div class="label">Expenses</div></a>
+      <a class="dash-stat" href="finance.html"><i class="fas fa-arrow-right dash-arrow"></i><div class="icon" style="background:rgba(33,150,243,.1);color:#2196f3"><i class="fas fa-chart-line"></i></div><div class="value" id="stat-profit">--</div><div class="label">Profit/Loss</div></a>
+      <a class="dash-stat" href="farm-calendar.html"><i class="fas fa-arrow-right dash-arrow"></i><div class="icon" style="background:rgba(255,193,7,.1);color:#ffc107"><i class="fas fa-wheat-awn"></i></div><div class="value" id="stat-harvest">--</div><div class="label">Upcoming</div></a>
+    </div>
+
+    <div class="quick-action-grid" aria-label="Quick actions navigation">
+      <div class="qa-tile" onclick="window.location.href='farm-calendar.html'">
+        <div class="qa-tile-icon" style="background:rgba(76,175,80,.1)"><i class="fas fa-calendar-days" style="color:#4caf50;font-size:14px"></i></div>
+        <div class="qa-label">Calendar</div>
+      </div>
+      <div class="qa-tile" onclick="window.location.href='farmbuzz.html'">
+        <div class="qa-tile-icon" style="background:rgba(255,193,7,.1)"><i class="fas fa-film" style="color:#ffc107;font-size:14px"></i></div>
+        <div class="qa-label">FarmBuzz</div>
+      </div>
+      <div class="qa-tile" onclick="window.location.href='techniques.html'">
+        <div class="qa-tile-icon" style="background:rgba(139,195,74,.1)"><i class="fas fa-book-open" style="color:#689f38;font-size:14px"></i></div>
+        <div class="qa-label">Techniques</div>
+      </div>
+      <div class="qa-tile" onclick="window.location.href='weather.html'">
+        <div class="qa-tile-icon" style="background:rgba(244,67,54,.1)"><i class="fas fa-cloud-sun" style="color:#f44336;font-size:14px"></i></div>
+        <div class="qa-label">Weather</div>
+      </div>
+      <div class="qa-tile" onclick="window.location.href='marketplace.html'">
+        <div class="qa-tile-icon" style="background:rgba(255,152,0,.1)"><i class="fas fa-store" style="color:#ff9800;font-size:14px"></i></div>
+        <div class="qa-label">Market</div>
+      </div>
+      <div class="qa-tile" onclick="window.location.href='tasks.html'">
+        <div class="qa-tile-icon" style="background:rgba(33,150,243,.1)"><i class="fas fa-list-check" style="color:#2196f3;font-size:14px"></i></div>
+        <div class="qa-label">Tasks</div>
+      </div>
+    </div>
+
+    <style>
+      .farm-techniques-section{margin-bottom:16px}
+      .farm-techniques-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+      .farm-techniques-header h3{font-size:15px;margin:0}
+      .farm-techniques-subtitle{font-size:11px;color:var(--text-muted);margin-bottom:12px}
+      .farm-techniques-scroll{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:8px;scrollbar-width:none}
+      .farm-techniques-scroll::-webkit-scrollbar{display:none}
+      .farm-tech-card{flex:0 0 140px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 10px;background:#fff;border:1px solid var(--border-light);border-radius:14px;box-shadow:var(--shadow-sm);cursor:pointer;transition:all .25s cubic-bezier(.16,1,.3,1);text-decoration:none}
+      .farm-tech-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--medium-green)}
+      .farm-tech-card:active{transform:scale(.96)}
+      .farm-tech-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:8px;transition:transform .25s cubic-bezier(.16,1,.3,1)}
+      .farm-tech-card:hover .farm-tech-icon{transform:scale(1.15)}
+      .farm-tech-name{font-size:11px;font-weight:700;color:var(--text-secondary);line-height:1.2;margin-bottom:3px}
+      .farm-tech-desc{font-size:9px;color:var(--text-muted);line-height:1.3}
+      @media(min-width:600px){
+        .farm-techniques-scroll{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));overflow-x:visible;scroll-snap-type:none;padding-bottom:0}
+      }
+      @media(min-width:769px){
+        .farm-techniques-scroll{grid-template-columns:repeat(5,1fr)}
+      }
+    </style>
+
+    <div class="farm-techniques-section">
+      <div class="farm-techniques-header">
+        <span style="font-size:18px">🌾</span>
+        <h3>Farm Techniques</h3>
+      </div>
+      <div class="farm-techniques-subtitle">Expert guidance for every stage of your farming journey</div>
+      <div class="farm-techniques-scroll">
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(76,175,80,.12);color:#388e3c"><i class="fas fa-seedling"></i></div>
+          <div class="farm-tech-name">Soil Preparation</div>
+          <div class="farm-tech-desc">Land preparation, testing, and enrichment</div>
+        </a>
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(139,195,74,.12);color:#689f38"><i class="fas fa-wheat-awn"></i></div>
+          <div class="farm-tech-name">Seed Selection</div>
+          <div class="farm-tech-desc">Choosing quality seeds for better yield</div>
+        </a>
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(104,159,56,.12);color:#558b2f"><i class="fas fa-hand-holding-seedling"></i></div>
+          <div class="farm-tech-name">Sowing Techniques</div>
+          <div class="farm-tech-desc">Modern and traditional sowing methods</div>
+        </a>
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(33,150,243,.12);color:#1976d2"><i class="fas fa-droplet"></i></div>
+          <div class="farm-tech-name">Irrigation</div>
+          <div class="farm-tech-desc">Water management and irrigation systems</div>
+        </a>
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(0,150,136,.12);color:#00796b"><i class="fas fa-flask"></i></div>
+          <div class="farm-tech-name">Fertilization</div>
+          <div class="farm-tech-desc">Organic and chemical fertilizer guidance</div>
+        </a>
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(244,67,54,.12);color:#c62828"><i class="fas fa-bug"></i></div>
+          <div class="farm-tech-name">Pest Management</div>
+          <div class="farm-tech-desc">Integrated pest control strategies</div>
+        </a>
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(156,39,176,.12);color:#7b1fa2"><i class="fas fa-shield-halved"></i></div>
+          <div class="farm-tech-name">Disease Prevention</div>
+          <div class="farm-tech-desc">Crop disease identification and prevention</div>
+        </a>
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(46,125,50,.12);color:#2e7d32"><i class="fas fa-leaf"></i></div>
+          <div class="farm-tech-name">Organic Farming</div>
+          <div class="farm-tech-desc">Chemical-free sustainable practices</div>
+        </a>
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(255,152,0,.12);color:#e65100"><i class="fas fa-tractor"></i></div>
+          <div class="farm-tech-name">Harvesting</div>
+          <div class="farm-tech-desc">Optimal harvesting timing and methods</div>
+        </a>
+        <a href="ai.html" class="farm-tech-card">
+          <div class="farm-tech-icon" style="background:rgba(121,85,72,.12);color:#5d4037"><i class="fas fa-warehouse"></i></div>
+          <div class="farm-tech-name">Post-Harvest</div>
+          <div class="farm-tech-desc">Storage, processing, and market linkage</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="card-premium widget-card" style="margin-bottom:16px">
+      <div onclick="window.location.href='weather.html'" style="cursor:pointer">
+        <h3 style="font-size:14px;margin-bottom:10px"><i class="fas fa-cloud-sun" style="color:var(--primary-green);margin-right:6px"></i> Today's Weather</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:24px;font-weight:800;color:var(--text-primary)" id="weather-temp">--</div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-secondary)" id="weather-desc">Loading...</div>
+          </div>
+          <i class="fas fa-cloud-sun" style="font-size:28px;color:var(--primary-green)" id="weather-icon"></i>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text-muted)">
+          <span><i class="fas fa-droplet"></i> <span id="weather-humidity">--</span></span>
+          <span><i class="fas fa-wind"></i> <span id="weather-wind">--</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-premium" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:15px"><i class="fas fa-calendar-check" style="color:var(--primary-green);margin-right:6px"></i> Today's Tasks</h3>
+        <span style="font-size:11px;color:var(--primary-green);font-weight:600;cursor:pointer" onclick="window.location.href='tasks.html'">View All</span>
+      </div>
+      <div id="dash-tasks-list"><div class="loading-shimmer"></div><div class="loading-shimmer" style="width:70%"></div><div class="loading-shimmer" style="width:85%"></div></div>
+    </div>
+
+    <div class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px;margin-bottom:12px"><i class="fas fa-landmark" style="color:var(--primary-green);margin-right:6px"></i> Government Schemes</h3>
+      <div id="dash-schemes-list"><div class="loading-shimmer"></div><div class="loading-shimmer" style="width:70%"></div></div>
+    </div>
+
+    <div class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px;margin-bottom:12px"><i class="fas fa-chart-line" style="color:var(--primary-green);margin-right:6px"></i> Market Highlights</h3>
+      <div id="dash-market-list"><div class="loading-shimmer"></div><div class="loading-shimmer" style="width:70%"></div></div>
+    </div>
+
+    <div class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px;margin-bottom:12px"><i class="fas fa-clock-rotate-left" style="color:var(--primary-green);margin-right:6px"></i> Recent Activity</h3>
+      <div id="dash-activity-list"><div class="loading-shimmer"></div><div class="loading-shimmer" style="width:70%"></div></div>
+    </div>
+
+    <div class="card-premium" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:15px"><i class="fas fa-robot" style="color:var(--primary-green);margin-right:6px"></i> AI Recommendations</h3>
+        <span style="font-size:11px;color:var(--primary-green);font-weight:600;cursor:pointer" onclick="window.location.href='ai.html'">Ask AI</span>
+      </div>
+      <div id="dash-ai-recs"><div class="loading-shimmer"></div><div class="loading-shimmer" style="width:80%"></div></div>
+    </div>
+
+    <div class="card-premium" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:15px"><i class="fas fa-receipt" style="color:var(--primary-green);margin-right:6px"></i> Recent Expenses</h3>
+        <span style="font-size:11px;color:var(--primary-green);font-weight:600;cursor:pointer" onclick="window.location.href='finance.html'">View All</span>
+      </div>
+      <div id="dash-expenses-list"><div class="loading-shimmer"></div><div class="loading-shimmer" style="width:70%"></div></div>
+    </div>
+
+    <div class="card-premium" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:15px"><i class="fas fa-film" style="color:#7c3aed;margin-right:6px"></i> FarmBuzz Community</h3>
+        <span style="font-size:11px;color:#7c3aed;font-weight:600;cursor:pointer" onclick="window.location.href='farmbuzz.html'">Open FarmBuzz</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px" class="fb-tabs-grid">
+        <div class="clickable-row" onclick="window.location.href='farmbuzz.html#fb-home'" style="background:#f3f0ff;border-radius:12px;padding:10px 6px;text-align:center">
+          <div style="font-size:16px;color:#7c3aed"><i class="fas fa-house"></i></div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-top:4px">Feed</div>
+        </div>
+        <div class="clickable-row" onclick="window.location.href='farmbuzz.html#fb-shorts'" style="background:#ecfdf3;border-radius:12px;padding:10px 6px;text-align:center">
+          <div style="font-size:16px;color:#2D8659"><i class="fas fa-clapperboard"></i></div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-top:4px">Shorts</div>
+        </div>
+        <div class="clickable-row" onclick="window.location.href='farmbuzz.html#fb-trends'" style="background:#fff4e5;border-radius:12px;padding:10px 6px;text-align:center">
+          <div style="font-size:16px;color:#FF9800"><i class="fas fa-fire"></i></div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-top:4px">Trends</div>
+        </div>
+        <div class="clickable-row" onclick="window.location.href='farmbuzz.html#fb-post'" style="background:#e8f4fd;border-radius:12px;padding:10px 6px;text-align:center">
+          <div style="font-size:16px;color:#0288d1"><i class="fas fa-pen-to-square"></i></div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-top:4px">Post</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px" class="fb-previews-grid">
+        <div class="clickable-row" onclick="window.location.href='farmbuzz.html#fb-shorts'" style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:4/5">
+          <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=400&q=60" alt="Shorts preview" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+          <div style="position:absolute;left:6px;bottom:6px;right:6px;color:#fff;font-size:9px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6)">Tractor Life</div>
+        </div>
+        <div class="clickable-row" onclick="window.location.href='farmbuzz.html#fb-shorts'" style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:4/5">
+          <img src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=400&q=60" alt="Shorts preview" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+          <div style="position:absolute;left:6px;bottom:6px;right:6px;color:#fff;font-size:9px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6)">Drip Setup</div>
+        </div>
+        <div class="clickable-row" onclick="window.location.href='farmbuzz.html#fb-shorts'" style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:4/5">
+          <img src="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=400&q=60" alt="Shorts preview" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+          <div style="position:absolute;left:6px;bottom:6px;right:6px;color:#fff;font-size:9px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6)">Harvest</div>
+        </div>
+      </div>
+      <div class="clickable-row" onclick="window.location.href='farmbuzz.html#fb-trends'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light)">
+        <div style="width:32px;height:32px;border-radius:8px;background:rgba(124,58,237,.1);display:flex;align-items:center;justify-content:center"><i class="fas fa-fire" style="color:#7c3aed;font-size:14px"></i></div>
+        <div style="flex:1"><div style="font-size:12px;font-weight:600">#DripIrrigation</div><div style="font-size:10px;color:var(--text-muted)">Trending in FarmBuzz now</div></div>
+        <i class="fas fa-chevron-right" style="color:var(--text-muted);font-size:11px"></i>
+      </div>
+      <div class="clickable-row" onclick="window.location.href='farmbuzz.html#fb-trends'" style="display:flex;align-items:center;gap:10px;padding:8px 0">
+        <div style="width:32px;height:32px;border-radius:8px;background:rgba(217,119,6,.1);display:flex;align-items:center;justify-content:center"><i class="fas fa-wand-magic-sparkles" style="color:#d97706;font-size:14px"></i></div>
+        <div style="flex:1"><div style="font-size:12px;font-weight:600">#ShortTricks</div><div style="font-size:10px;color:var(--text-muted)">One-minute farmer tricks trending</div></div>
+        <i class="fas fa-chevron-right" style="color:var(--text-muted);font-size:11px"></i>
+      </div>
+    </div>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px;margin-bottom:12px"><i class="fas fa-triangle-exclamation" style="color:#FF9800;margin-right:6px"></i> Important Alerts</h3>
+      <div id="dash-alerts">
+        <div class="alert-item rain clickable-row" onclick="window.location.href='weather.html'"><i class="fas fa-cloud-rain" style="color:#f44336;font-size:16px;margin-top:2px"></i><div><div style="font-size:13px;font-weight:600">Weather Alert</div><div style="font-size:11px;color:var(--text-muted)">Check the forecast for your area</div></div></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/pwa.js"></script>
+  <script>
+    function formatCurrency(amt) {
+      if (amt == null || isNaN(amt)) return '₹0';
+      if (amt >= 10000000) return '₹' + (amt / 10000000).toFixed(1) + 'Cr';
+      if (amt >= 100000) return '₹' + (amt / 100000).toFixed(1) + 'L';
+      if (amt >= 1000) return '₹' + (amt / 1000).toFixed(1) + 'K';
+      return '₹' + amt;
+    }
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return '';
+      var diff = Date.now() - new Date(dateStr).getTime();
+      var mins = Math.floor(diff / 60000);
+      if (mins < 60) return mins + 'm ago';
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      var days = Math.floor(hrs / 24);
+      return days + 'd ago';
+    }
+
+    function getTimeBasedGreeting() {
+      var hour = new Date().getHours();
+      if (hour < 12) return 'Good morning';
+      if (hour < 17) return 'Good afternoon';
+      return 'Good evening';
+    }
+
+    function loadDashboard() {
+      var user = window.UserStore ? UserStore.getCurrentUser() : null;
+      if (user) {
+        var name = user.full_name || user.fullName || 'Farmer';
+        var firstName = name.split(' ')[0];
+        var greeting = getTimeBasedGreeting();
+        document.getElementById('farmer-name-display').textContent = greeting + ', ' + firstName;
+        document.getElementById('farmer-id-display').textContent = user.farmer_id || 'Loading...';
+        var addr = user.address || {};
+        var loc = [addr.village, addr.district, addr.state].filter(Boolean).join(', ');
+        document.getElementById('farm-location-display').textContent = loc || 'Your Farm Location';
+        if (window.UserStore) UserStore.hydrate();
+      } else {
+        document.getElementById('farmer-name-display').textContent = 'Welcome, Farmer';
+        document.getElementById('farmer-id-display').textContent = 'FA-XXXXXXX';
+        document.getElementById('farm-location-display').textContent = 'Set up your farm profile';
+      }
+
+      API.Farm.list().then(function(farms) {
+        var farmList = Array.isArray(farms) ? farms : (farms && farms.items ? farms.items : []);
+        document.getElementById('stat-farms').textContent = farmList.length;
+        var totalArea = 0;
+        farmList.forEach(function(f) { totalArea += parseFloat(f.total_area) || 0; });
+        document.getElementById('stat-area').textContent = totalArea > 0 ? totalArea.toFixed(1) + ' ac' : '--';
+      }).catch(function() { 
+        document.getElementById('stat-farms').textContent = '0';
+        document.getElementById('stat-area').textContent = '--';
+      });
+
+      API.Crop.listCycles().then(function(cycles) {
+        var list = Array.isArray(cycles) ? cycles : (cycles && cycles.items ? cycles.items : []);
+        var active = list.filter(function(c) { return c.status === 'active'; });
+        document.getElementById('stat-crops').textContent = active.length || list.length;
+        var upcoming = list.filter(function(c) { return c.target_harvest_date; });
+        if (upcoming.length) {
+          document.getElementById('stat-harvest').textContent = upcoming.length;
+        } else {
+          document.getElementById('stat-harvest').textContent = '--';
+        }
+      }).catch(function() { 
+        document.getElementById('stat-crops').textContent = '0';
+        document.getElementById('stat-harvest').textContent = '--';
+      });
+
+      API.Crop.listTasks().then(function(tasks) {
+        var list = Array.isArray(tasks) ? tasks : (tasks && tasks.items ? tasks.items : []);
+        var pending = list.filter(function(t) { return t.status === 'pending'; });
+        document.getElementById('stat-tasks').textContent = pending.length || list.length;
+
+        var container = document.getElementById('dash-tasks-list');
+        if (!list.length) {
+          container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="font-size:24px;color:#4caf50;margin-bottom:8px;display:block"></i>No pending tasks. Enjoy your day!</div>';
+          return;
+        }
+        var html = '';
+        var shown = list.filter(function(t) { return t.status === 'pending'; }).slice(0, 5);
+        if (shown.length === 0) {
+          container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="font-size:24px;color:#4caf50;margin-bottom:8px;display:block"></i>No pending tasks. Enjoy your day!</div>';
+          return;
+        }
+        shown.forEach(function(t) {
+          var catIcons = { 'Fertilizer': 'fa-spray-can', 'Irrigation': 'fa-droplet', 'Pest Control': 'fa-bug', 'Harvesting': 'fa-wheat-awn', 'Seeding': 'fa-seedling' };
+          var icon = catIcons[t.category] || 'fa-clipboard-check';
+          var color = t.priority === 'high' ? '#f44336' : t.priority === 'medium' ? '#ff9800' : '#4caf50';
+          html += '<div class="task-item clickable-row" onclick="window.location.href=\'tasks.html\'">';
+          html += '<i class="fas ' + icon + '" style="color:' + color + ';font-size:16px"></i>';
+          html += '<div style="flex:1"><div style="font-size:13px;font-weight:600">' + (t.title || 'Task') + '</div>';
+          html += '<div style="font-size:10px;color:var(--text-muted)">' + (t.category || '') + (t.due_date ? ' | Due: ' + t.due_date : '') + '</div></div>';
+          html += '<span style="font-size:9px;padding:3px 8px;border-radius:6px;background:' + (t.priority === 'high' ? 'rgba(244,67,54,.1);color:#c62828' : 'rgba(255,152,0,.1);color:#e65100') + '">' + (t.priority || 'normal') + '</span>';
+          html += '</div>';
+        });
+        container.innerHTML = html;
+      }).catch(function() { 
+        document.getElementById('stat-tasks').textContent = '0';
+        document.getElementById('dash-tasks-list').innerHTML = '<div class="empty-state">Unable to load tasks</div>';
+      });
+
+      API.Finance.getSummary().then(function(summary) {
+        if (summary) {
+          document.getElementById('stat-income').textContent = formatCurrency(summary.total_income);
+          document.getElementById('stat-expenses').textContent = formatCurrency(summary.total_expenses);
+          var profit = (summary.total_income || 0) - (summary.total_expenses || 0);
+          document.getElementById('stat-profit').textContent = formatCurrency(profit);
+          document.getElementById('stat-profit').style.color = profit >= 0 ? '#4caf50' : '#f44336';
+        } else {
+          document.getElementById('stat-income').textContent = '₹0';
+          document.getElementById('stat-expenses').textContent = '₹0';
+          document.getElementById('stat-profit').textContent = '₹0';
+        }
+      }).catch(function() {
+        document.getElementById('stat-income').textContent = '₹0';
+        document.getElementById('stat-expenses').textContent = '₹0';
+        document.getElementById('stat-profit').textContent = '₹0';
+      });
+
+      API.Crop.listJournal().then(function(entries) {
+        var list = Array.isArray(entries) ? entries : (entries && entries.items ? entries.items : []);
+        var container = document.getElementById('dash-activity-list');
+        if (!list.length) { container.innerHTML = '<div class="empty-state" style="font-size:12px;color:var(--text-muted)">No farm activity yet. Log activities from your farm journal.</div>'; return; }
+        var html = '';
+        list.slice(0, 4).forEach(function(e) {
+          html += '<div class="activity-item clickable-row" onclick="window.location.href=\'farm.html#journal\'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light)">';
+          html += '<div style="width:32px;height:32px;border-radius:8px;background:rgba(59,130,246,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-notebook" style="color:#3b82f6;font-size:14px"></i></div>';
+          html += '<div style="flex:1"><div style="font-size:12px;font-weight:600">' + (e.activity || 'Farm activity') + '</div>';
+          html += '<div style="font-size:10px;color:var(--text-muted)">' + timeAgo(e.entry_date || e.created_at) + '</div></div>';
+          html += '</div>';
+        });
+        container.innerHTML = html;
+      }).catch(function() { document.getElementById('dash-activity-list').innerHTML = '<div class="empty-state" style="font-size:12px;color:var(--text-muted)">No farm activity yet</div>'; });
+
+      API.Finance.listTransactions('limit=8').then(function(txns) {
+        var list = Array.isArray(txns) ? txns : (txns && txns.items ? txns.items : []);
+        var container = document.getElementById('dash-expenses-list');
+        var expenses = list.filter(function(t) { return t.type === 'expense' || (t.category && String(t.category).toLowerCase().indexOf('expense') > -1); });
+        if (!expenses.length) { container.innerHTML = '<div class="empty-state" style="font-size:12px;color:var(--text-muted)">No expenses recorded yet. Track spending in Finance.</div>'; return; }
+        var html = '';
+        expenses.slice(0, 4).forEach(function(t) {
+          html += '<div class="clickable-row" onclick="window.location.href=\'finance.html\'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light)">';
+          html += '<div style="width:32px;height:32px;border-radius:8px;background:rgba(244,67,54,.1);display:flex;align-items:center;justify-content:center"><i class="fas fa-receipt" style="color:#f44336;font-size:14px"></i></div>';
+          html += '<div style="flex:1"><div style="font-size:12px;font-weight:600">' + (t.description || t.category || 'Expense') + '</div>';
+          html += '<div style="font-size:10px;color:var(--text-muted)">' + (t.transaction_date || '') + '</div></div>';
+          html += '<strong style="font-size:13px;color:#f44336">' + formatCurrency(t.amount) + '</strong>';
+          html += '</div>';
+        });
+        container.innerHTML = html;
+      }).catch(function() { document.getElementById('dash-expenses-list').innerHTML = '<div class="empty-state" style="font-size:12px;color:var(--text-muted)">No expenses recorded yet</div>'; });
+
+      API.Government.listSchemes({}).then(function(schemes) {
+        var list = Array.isArray(schemes) ? schemes : (schemes && schemes.items ? schemes.items : []);
+        var container = document.getElementById('dash-schemes-list');
+        if (!list.length) { container.innerHTML = '<div class="empty-state">No schemes available</div>'; return; }
+        var html = '';
+        list.slice(0, 4).forEach(function(s) {
+          html += '<div class="gov-card" onclick="window.location.href=\'schemes.html\'">';
+          html += '<div class="name">' + (s.name || 'Scheme') + '</div>';
+          html += '<div class="benefit">' + (s.benefits || s.description || '').substring(0, 80) + '</div>';
+          if (s.application_deadline) html += '<div class="deadline"><i class="fas fa-clock"></i> Deadline: ' + s.application_deadline + '</div>';
+          html += '</div>';
+        });
+        container.innerHTML = html;
+      }).catch(function() { document.getElementById('dash-schemes-list').innerHTML = '<div class="empty-state">Unable to load schemes</div>'; });
+
+      API.Marketplace.listProducts({}).then(function(products) {
+        var list = Array.isArray(products) ? products : (products && products.items ? products.items : []);
+        var container = document.getElementById('dash-market-list');
+        if (!list.length) { container.innerHTML = '<div class="empty-state">No products available</div>'; return; }
+        var html = '<div style="display:flex;flex-direction:column;gap:8px">';
+        list.slice(0, 4).forEach(function(p) {
+          html += '<div class="clickable-row" onclick="window.location.href=\'market-prices.html\'" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light)">';
+          html += '<span style="font-size:12px;font-weight:600">' + (p.name || 'Product') + '</span>';
+          html += '<strong style="font-size:12px;color:var(--primary-green)">₹' + (p.price || 0) + '/' + (p.unit || 'unit') + '</strong>';
+          html += '</div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      }).catch(function() { document.getElementById('dash-market-list').innerHTML = '<div class="empty-state">Unable to load market data</div>'; });
+
+      API.AI.getRecommendations().then(function(recs) {
+        var list = Array.isArray(recs) ? recs : [];
+        var container = document.getElementById('dash-ai-recs');
+        if (!list.length) {
+          container.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);line-height:1.6"><i class="fas fa-lightbulb" style="color:#ffc107;margin-right:4px"></i> Maintain current crop rotation for optimal soil health. Consider adding organic compost to improve yield.</div>';
+          return;
+        }
+        var html = '';
+        list.slice(0, 3).forEach(function(r) {
+          var priColor = r.priority === 'high' ? '#f44336' : r.priority === 'medium' ? '#ff9800' : '#4caf50';
+          html += '<div style="padding:10px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:6px;border-left:3px solid ' + priColor + '">';
+          html += '<div style="font-size:12px;font-weight:600">' + (r.title || 'Recommendation') + '</div>';
+          html += '<div style="font-size:11px;color:var(--text-muted)">' + (r.description || '').substring(0, 100) + '</div>';
+          html += '</div>';
+        });
+        container.innerHTML = html;
+      }).catch(function() {
+        document.getElementById('dash-ai-recs').innerHTML = '<div style="font-size:12px;color:var(--text-secondary);line-height:1.6"><i class="fas fa-lightbulb" style="color:#ffc107;margin-right:4px"></i> Maintain current crop rotation for optimal soil health.</div>';
+      });
+
+      API.Weather.getCurrent(17.0575, 79.282).then(function(w) {
+        if (w) {
+          document.getElementById('weather-temp').textContent = (w.temperature || '--') + '°C';
+          document.getElementById('weather-desc').textContent = w.weather_condition || w.description || 'Partly Cloudy';
+          document.getElementById('weather-humidity').textContent = (w.humidity || '--') + '% Humidity';
+          document.getElementById('weather-wind').textContent = (w.wind_speed || '--') + ' km/h';
+          var iconMap = { 'Clear': 'fa-sun', 'Clouds': 'fa-cloud', 'Rain': 'fa-cloud-rain', 'Drizzle': 'fa-cloud-drizzle', 'Thunderstorm': 'fa-bolt', 'Snow': 'fa-snowflake', 'Mist': 'fa-smog', 'Fog': 'fa-smog' };
+          var cond = (w.weather_condition || '').toLowerCase();
+          var iconClass = 'fa-cloud-sun';
+          Object.keys(iconMap).forEach(function(k) { if (cond.indexOf(k.toLowerCase()) > -1) iconClass = iconMap[k]; });
+          document.getElementById('weather-icon').className = 'fas ' + iconClass;
+        }
+      }).catch(function() {
+        document.getElementById('weather-temp').textContent = '28°C';
+        document.getElementById('weather-desc').textContent = 'Partly Cloudy';
+      });
+
+      document.getElementById('ai-briefing').textContent = 'Weather looks good for farming today. Check your crop schedule for pending tasks.';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(loadDashboard, 300);
+    });
+  </script>
+</body>
+</html>

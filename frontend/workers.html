@@ -1,0 +1,866 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="workers">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Workers You Can Hire</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root { --av-gap: 12px; --av-radius: 12px; }
+    .page-header { margin-bottom: 16px; }
+    .page-header h1 { font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .page-header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    .breadcrumb { font-size: 12px; margin-bottom: 12px; }
+    .breadcrumb a { color: var(--text-muted); }
+    .breadcrumb .bc-sep { color: var(--text-muted); margin: 0 6px; }
+    .breadcrumb .bc-current { color: var(--primary-green); font-weight: 600; }
+    .search-bar { position: relative; margin-bottom: 12px; }
+    .search-bar input { width: 100%; padding: 12px 16px 12px 40px; border: 1px solid var(--border-light); border-radius: var(--av-radius); font-size: 14px; outline: none; background: white; }
+    .search-bar input:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(27,94,63,0.08); }
+    .search-bar i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+    .filter-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
+    .filter-tabs::-webkit-scrollbar { display: none; }
+    .filter-tab { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-light); background: white; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .filter-tab.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+    .filter-tab i { margin-right: 4px; }
+    .toolbar-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .toolbar-row .form-select { flex: 1; min-width: 140px; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 13px; background: white; color: var(--text-primary); }
+    .icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-light); background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 14px; color: var(--text-muted); flex-shrink: 0; }
+    .icon-btn:hover { border-color: var(--medium-green); color: var(--primary-green); background: var(--soft-green); }
+    .icon-btn.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+    .sort-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .sort-row select { padding: 6px 10px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 12px; background: white; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--av-gap); }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--av-gap); }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--av-gap); }
+    @media (max-width: 640px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+    @media (min-width: 641px) and (max-width: 900px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    .card-premium { background: white; border-radius: var(--av-radius); padding: 16px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-light); transition: all 0.25s; }
+    .card-premium:hover { box-shadow: var(--shadow-md); border-color: var(--medium-green); }
+    .feature-card { background: white; border-radius: var(--av-radius); padding: 16px; border: 1px solid var(--border-light); transition: all 0.25s; }
+    .feature-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .price-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--border-light); border-radius: var(--radius-md); margin-bottom: 8px; transition: all 0.2s; }
+    .price-card:hover { border-color: var(--medium-green); background: var(--bg-card-soft); }
+    .btn-primary { background: linear-gradient(135deg, #0F2E1E, #1B5E3F); color: white; border: none; padding: 10px 20px; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; justify-content: center; box-shadow: 0 2px 10px rgba(15,46,30,0.18); }
+    .btn-primary:hover { filter: brightness(1.12); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .btn-secondary { background: var(--bg-card-soft); color: var(--text-primary); border: 1px solid var(--border-light); padding: 10px 20px; border-radius: var(--radius-sm); font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+    .btn-secondary:hover { border-color: var(--medium-green); color: var(--primary-green); }
+    .btn-sm { padding: 6px 14px; font-size: 11px; border-radius: var(--radius-sm); }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+    .badge.avail-available { background: rgba(76,175,80,0.12); color: #2e7d32; }
+    .badge.avail-today { background: rgba(33,150,243,0.12); color: #1565c0; }
+    .badge.avail-tomorrow { background: rgba(255,152,0,0.12); color: #e65100; }
+    .badge.avail-week { background: rgba(156,39,176,0.12); color: #7b1fa2; }
+    .form-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; transition: border-color 0.2s; }
+    .form-input:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
+    .form-select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; transition: border-color 0.2s; }
+    .form-select:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
+    .form-textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; transition: border-color 0.2s; resize: vertical; font-family: inherit; }
+    .form-textarea:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-backdrop.active { display: flex; }
+    .modal-box { background: white; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 24px; position: relative; }
+    .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); z-index: 1; }
+    .worker-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: 700; flex-shrink: 0; }
+    .worker-avatar-lg { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 700; flex-shrink: 0; }
+    .worker-name { font-size: 15px; font-weight: 700; }
+    .worker-rating { display: flex; align-items: center; gap: 2px; font-size: 12px; }
+    .worker-rating i { color: #FFB300; font-size: 11px; }
+    .worker-rating .star-empty { color: #ddd; }
+    .worker-price { font-size: 17px; font-weight: 800; color: var(--primary-green); }
+    .worker-price small { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+    .worker-actions { display: flex; gap: 6px; margin-top: 10px; }
+    .worker-actions .btn-primary, .worker-actions .btn-secondary { padding: 7px 12px; font-size: 11px; border-radius: 8px; flex: 1; }
+    .avail-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .avail-available .avail-dot { background: #4CAF50; }
+    .avail-today .avail-dot { background: #2196F3; }
+    .avail-tomorrow .avail-dot { background: #FF9800; }
+    .avail-week .avail-dot { background: #9C27B0; }
+    .booking-summary { background: rgba(27,94,63,0.04); border: 1px solid rgba(27,94,63,0.15); border-radius: 12px; padding: 16px; margin: 16px 0; }
+    .booking-summary .line { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid rgba(27,94,63,0.08); }
+    .booking-summary .line:last-child { border-bottom: none; }
+    .booking-summary .total { font-size: 18px; font-weight: 800; color: var(--primary-green); padding-top: 8px; border-top: 2px solid var(--primary-green); margin-top: 4px; }
+    .profile-section { margin-bottom: 14px; }
+    .profile-section h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text-primary); }
+    .profile-history-item { padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; }
+    .profile-history-item:last-child { border-bottom: none; }
+    .profile-history-item .farm { font-weight: 600; }
+    .profile-review-item { padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; }
+    .profile-review-item:last-child { border-bottom: none; }
+    .profile-review-item .reviewer { font-weight: 600; color: var(--text-primary); }
+    .profile-review-item .review-text { color: var(--text-secondary); margin-top: 2px; }
+    .map-placeholder { height: 120px; background: linear-gradient(135deg, #D8F3DC, #B7E4C7); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary-green); font-size: 13px; font-weight: 600; }
+    .map-placeholder i { font-size: 24px; margin-right: 8px; }
+    .toast-wrapper { position: fixed; top: 72px; right: 16px; z-index: 2200; display: flex; flex-direction: column; gap: 8px; max-width: 340px; }
+    .toast-msg { background: white; border-left: 4px solid var(--primary-green); padding: 12px 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); color: var(--text-primary); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateX(40px); transition: all 0.3s; }
+    .toast-msg.show { opacity: 1; transform: translateX(0); }
+    .toast-msg.hide { opacity: 0; transform: translateX(40px); }
+    .toast-msg.success { border-left-color: #2D6A4F; }
+    .toast-msg.danger { border-left-color: #D63031; }
+    .toast-msg.warning { border-left-color: #E9B640; }
+    .toast-msg.info { border-left-color: #40916C; }
+    @media (max-width: 640px) { .modal-box { padding: 18px; } }
+    .star-btn { cursor: pointer; transition: color 0.2s; }
+    .star-btn:hover { color: #FFB300; }
+    .star-btn.active { color: #FFB300; }
+  </style>
+</head>
+<body>
+
+<main class="page-container" style="padding-top:var(--topbar-height);padding-bottom:calc(var(--bottomnav-height)+24px);">
+
+
+  <div class="page-header">
+    <h1><i class="fas fa-hard-hat" style="color:var(--primary-green);"></i> Workers You Can Hire</h1>
+    <p>Find and hire skilled workers for harvesting, planting, irrigation, spraying, and other farm activities.</p>
+  </div>
+
+  <div class="search-bar">
+    <i class="fas fa-search"></i>
+    <input type="text" id="searchInput" placeholder="Search workers by name or skill..." oninput="applyFilters()">
+  </div>
+
+  <div class="toolbar-row">
+    <select class="form-select" id="workTypeFilter" onchange="applyFilters()">
+      <option value="all">All Work Types</option>
+      <option value="Harvesting">Harvesting</option>
+      <option value="Planting">Planting</option>
+      <option value="Seeding">Seeding</option>
+      <option value="Weeding">Weeding</option>
+      <option value="Irrigation">Irrigation</option>
+      <option value="Spraying">Spraying</option>
+      <option value="General Farm Work">General Farm Work</option>
+    </select>
+    <button class="icon-btn" id="starredFilterBtn" onclick="toggleStarredFilter()" title="Starred Workers">
+      <i class="fas fa-star"></i>
+    </button>
+    <button class="icon-btn" id="bookedFilterBtn" onclick="toggleBookedFilter()" title="Booked Workers">
+      <i class="fas fa-calendar-check"></i>
+    </button>
+  </div>
+
+  <div class="sort-row">
+    <span id="resultCount" style="font-size:13px;font-weight:600;color:var(--text-secondary);">12 workers found</span>
+    <select id="sortSelect" onchange="applyFilters()">
+      <option value="nearest">Nearest</option>
+      <option value="price-low">Lowest Price</option>
+      <option value="highest-rated">Highest Rated</option>
+      <option value="available-now">Available Now</option>
+    </select>
+  </div>
+
+  <div class="grid-2" id="workerGrid"></div>
+
+</main>
+
+<div class="modal-backdrop" id="detailModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeDetailModal()"><i class="fas fa-times"></i></button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="bookingModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeBookingModal()"><i class="fas fa-times"></i></button>
+    <div id="bookingContent"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="messageModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeMessageModal()"><i class="fas fa-times"></i></button>
+    <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;"><i class="fas fa-comment"></i> Send Message</h3>
+    <p id="messageWorkerName" style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;"></p>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Subject</label>
+      <input type="text" class="form-input" id="messageSubject" placeholder="e.g. Availability for next week...">
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Your Message</label>
+      <textarea class="form-textarea" id="messageBody" rows="4" placeholder="Write your message here..."></textarea>
+    </div>
+    <button class="btn-primary u-full" onclick="sendMessage()"><i class="fas fa-paper-plane"></i> Send Message</button>
+  </div>
+</div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="js/mockData.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+var workers = [
+  {
+    id: 1, name: "Mahesh Yadav", skills: ["Rice Harvesting", "Wheat Cutting", "Threshing", "Manual Labor"],
+    experience: 8, location: "Nashik, Maharashtra", distance: 3,
+    rating: 4.8, reviews: 94, hourly: 120,
+    availability: "Available", color: "#1B5E3F",
+    bio: "Experienced harvest worker with 8 years in rice and wheat fields. Known for efficiency and reliability.",
+    history: [
+      { farm: "Sharma Farms, Nashik", work: "Rice Harvesting", duration: "2 weeks", year: "2025" },
+      { farm: "Patel Agriculture, Pune", work: "Wheat Cutting", duration: "1 week", year: "2025" },
+      { farm: "Desai Estate, Nashik", work: "Threshing", duration: "3 days", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Ramesh P.", text: "Very hardworking and completed the harvest on time.", rating: 5 },
+      { reviewer: "Suresh V.", text: "Skilled worker, knows the job well.", rating: 5 }
+    ],
+    languages: ["Hindi", "Marathi"]
+  },
+  {
+    id: 2, name: "Suresh Kumar", skills: ["Tractor Driving", "Ploughing", "Tillage", "Machine Repair"],
+    experience: 12, location: "Indore, Madhya Pradesh", distance: 5,
+    rating: 4.6, reviews: 156, hourly: 500,
+    availability: "Tomorrow", color: "#5D4037",
+    bio: "Expert tractor operator with 12 years of experience handling all types of farm machinery and equipment.",
+    history: [
+      { farm: "Gupta Agro, Indore", work: "Tractor Ploughing", duration: "5 days", year: "2025" },
+      { farm: "Verma Farms, Bhopal", work: "Land Preparation", duration: "1 week", year: "2025" },
+      { farm: "Raj Farm House, Indore", work: "Tillage Work", duration: "3 days", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Amit G.", text: "Excellent tractor operator. Completed ploughing quickly.", rating: 5 },
+      { reviewer: "Vikas V.", text: "Professional and punctual.", rating: 4 }
+    ],
+    languages: ["Hindi", "English"]
+  },
+  {
+    id: 3, name: "Priya Devi", skills: ["Drip Irrigation", "Sprinkler Setup", "Canal Work", "Water Management"],
+    experience: 6, location: "Lucknow, Uttar Pradesh", distance: 2,
+    rating: 4.9, reviews: 127, hourly: 150,
+    availability: "Available", color: "#2D8659",
+    bio: "Irrigation specialist with expertise in modern drip systems and traditional canal management for rice fields.",
+    history: [
+      { farm: "Yadav Farms, Lucknow", work: "Drip Irrigation Setup", duration: "4 days", year: "2025" },
+      { farm: "Singh Estate, Kanpur", work: "Sprinkler Installation", duration: "2 days", year: "2025" },
+      { farm: "Devi Agro, Lucknow", work: "Canal Maintenance", duration: "1 week", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Anita S.", text: "Set up our entire drip system. Very knowledgeable.", rating: 5 },
+      { reviewer: "Rajesh Y.", text: "Great work on the sprinkler installation.", rating: 5 }
+    ],
+    languages: ["Hindi", "English"]
+  },
+  {
+    id: 4, name: "Ramesh Singh", skills: ["Pesticide Spraying", "Fertilizer Application", "Drone Spraying", "Safety Protocols"],
+    experience: 5, location: "Jaipur, Rajasthan", distance: 8,
+    rating: 4.3, reviews: 62, hourly: 200,
+    availability: "This Week", color: "#E65100",
+    bio: "Certified crop spraying professional experienced with both manual and drone-based spraying techniques.",
+    history: [
+      { farm: "Singh Agro, Jaipur", work: "Pesticide Spraying", duration: "3 days", year: "2025" },
+      { farm: "Meena Farms, Ajmer", work: "Fertilizer Application", duration: "2 days", year: "2025" },
+      { farm: "Rajput Estate, Jaipur", work: "Drone Spraying", duration: "1 day", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Meena K.", text: "Good spraying work. Crop looks healthy now.", rating: 4 },
+      { reviewer: "Rajput S.", text: "Knowledgeable about pesticides.", rating: 4 }
+    ],
+    languages: ["Hindi", "Rajasthani"]
+  },
+  {
+    id: 5, name: "Gurbachan Lal", skills: ["Harvester Operation", "Thresher", "Baler", "Maintenance"],
+    experience: 15, location: "Amritsar, Punjab", distance: 4,
+    rating: 4.7, reviews: 203, hourly: 300,
+    availability: "Today", color: "#283593",
+    bio: "Veteran equipment operator with 15 years running combine harvesters, threshers, and balers across Punjab.",
+    history: [
+      { farm: "Kaur Farms, Amritsar", work: "Combine Harvesting", duration: "2 weeks", year: "2025" },
+      { farm: "Gill Estate, Ludhiana", work: "Baling Work", duration: "5 days", year: "2025" },
+      { farm: "Singh Agro, Jalandhar", work: "Thresher Operation", duration: "1 week", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Kaur J.", text: "Very experienced operator. Handled the combine well.", rating: 5 },
+      { reviewer: "Gill M.", text: "Reliable and skilled. Will hire again.", rating: 5 }
+    ],
+    languages: ["Punjabi", "Hindi"]
+  },
+  {
+    id: 6, name: "Meera Bai", skills: ["Team Management", "Rice Harvesting", "Quality Control", "Labor Coordination"],
+    experience: 10, location: "Raipur, Chhattisgarh", distance: 6,
+    rating: 4.5, reviews: 89, hourly: 180,
+    availability: "Available", color: "#7B1FA2",
+    bio: "Experienced team lead managing a crew of 8-10 harvest workers. Specializes in quality rice harvesting.",
+    history: [
+      { farm: "Wardha Farms, Raipur", work: "Team Harvesting", duration: "3 weeks", year: "2025" },
+      { farm: "Agarwal Agro, Bilaspur", work: "Quality Supervision", duration: "1 week", year: "2025" },
+      { farm: "Patel Estate, Raipur", work: "Labor Coordination", duration: "2 weeks", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Wardha R.", text: "Managed the team very well. Great output.", rating: 5 },
+      { reviewer: "Agarwal P.", text: "Good supervisor. Quality improved.", rating: 4 }
+    ],
+    languages: ["Hindi", "Chhattisgarhi"]
+  },
+  {
+    id: 7, name: "Arjun Patel", skills: ["Cattle Care", "Milking", "Fodder Management", "Animal Health"],
+    experience: 7, location: "Anand, Gujarat", distance: 3,
+    rating: 4.4, reviews: 73, hourly: 160,
+    availability: "Tomorrow", color: "#4E342E",
+    bio: "Dedicated livestock worker experienced in dairy cattle care, milking operations, and basic animal health.",
+    history: [
+      { farm: "Patel Dairy, Anand", work: "Cattle Care", duration: "6 months", year: "2025" },
+      { farm: "Gujarat Milk Farm", work: "Milking Operations", duration: "3 months", year: "2025" },
+      { farm: "Mehta Dairy, Vadodara", work: "Fodder Management", duration: "2 months", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Patel D.", text: "Good with cows. Milking was done properly.", rating: 5 },
+      { reviewer: "Mehta K.", text: "Hardworking and honest.", rating: 4 }
+    ],
+    languages: ["Gujarati", "Hindi"]
+  },
+  {
+    id: 8, name: "Sunil Sharma", skills: ["Tractor", "Rotavator", "Seed Drill", "GPS Guided Systems"],
+    experience: 9, location: "Karnal, Haryana", distance: 7,
+    rating: 4.8, reviews: 118, hourly: 250,
+    availability: "Available", color: "#0D47A1",
+    bio: "Modern farm equipment specialist experienced with GPS-guided tractors and precision farming tools.",
+    history: [
+      { farm: "Sharma Agro, Karnal", work: "Precision Planting", duration: "1 week", year: "2025" },
+      { farm: "Haryana Farms, Panipat", work: "Rotavator Operation", duration: "4 days", year: "2025" },
+      { farm: "Singh Estate, Ambala", work: "Seed Drill Setup", duration: "3 days", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Sharma A.", text: "Precision planting was excellent. Seeds sprouted well.", rating: 5 },
+      { reviewer: "Verma R.", text: "Knows GPS equipment very well.", rating: 5 }
+    ],
+    languages: ["Hindi", "English"]
+  },
+  {
+    id: 9, name: "Anita Kumari", skills: ["Vegetable Planting", "Nursery Management", "Transplanting", "Bed Preparation"],
+    experience: 4, location: "Patna, Bihar", distance: 9,
+    rating: 4.2, reviews: 45, hourly: 100,
+    availability: "This Week", color: "#00897B",
+    bio: "Skilled planting worker with expertise in vegetable nursery management and transplanting.",
+    history: [
+      { farm: "Kumar Farms, Patna", work: "Vegetable Planting", duration: "1 week", year: "2025" },
+      { farm: "Devi Agro, Muzaffarpur", work: "Nursery Management", duration: "5 days", year: "2025" },
+      { farm: "Singh Estate, Patna", work: "Bed Preparation", duration: "3 days", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Kumar S.", text: "Good planting work. Saplings are doing well.", rating: 4 },
+      { reviewer: "Devi M.", text: "Knows nursery work well.", rating: 4 }
+    ],
+    languages: ["Hindi", "Bhojpuri"]
+  },
+  {
+    id: 10, name: "Vikram Singh", skills: ["General Farm Labor", "Fencing", "Clearing", "Loading"],
+    experience: 6, location: "Kanpur, Uttar Pradesh", distance: 5,
+    rating: 4.6, reviews: 81, hourly: 130,
+    availability: "Available", color: "#6A1B9A",
+    bio: "Reliable general farm worker skilled in fencing, clearing, loading, and all types of manual farm labor.",
+    history: [
+      { farm: "Singh Agro, Kanpur", work: "General Labor", duration: "2 weeks", year: "2025" },
+      { farm: "Verma Farms, Lucknow", work: "Fencing", duration: "1 week", year: "2025" },
+      { farm: "Patel Estate, Kanpur", work: "Loading & Transport", duration: "4 days", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Verma R.", text: "Very strong worker. Got the fencing done fast.", rating: 5 },
+      { reviewer: "Patel A.", text: "Reliable and hardworking.", rating: 4 }
+    ],
+    languages: ["Hindi"]
+  },
+  {
+    id: 11, name: "Lakshmi Bai", skills: ["Weeding", "Hoeing", "Mulching", "Soil Preparation"],
+    experience: 5, location: "Hyderabad, Telangana", distance: 4,
+    rating: 4.5, reviews: 58, hourly: 110,
+    availability: "Today", color: "#AD1457",
+    bio: "Expert weeding specialist with years of experience in manual and mechanical weed control for various crops.",
+    history: [
+      { farm: "Reddy Farms, Hyderabad", work: "Weeding", duration: "1 week", year: "2025" },
+      { farm: "Rao Estate, Medak", work: "Mulching", duration: "4 days", year: "2025" },
+      { farm: "Naidu Agro, Hyderabad", work: "Soil Preparation", duration: "3 days", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Reddy K.", text: "Excellent weeding work. Fields are clean.", rating: 5 },
+      { reviewer: "Naidu S.", text: "Very thorough in her work.", rating: 4 }
+    ],
+    languages: ["Telugu", "Hindi"]
+  },
+  {
+    id: 12, name: "Deepak Verma", skills: ["Seed Selection", "Sowing", "Seed Treatment", "Row Planting"],
+    experience: 8, location: "Bhopal, Madhya Pradesh", distance: 6,
+    rating: 4.7, reviews: 94, hourly: 140,
+    availability: "Tomorrow", color: "#2E7D32",
+    bio: "Seeding expert with deep knowledge of seed treatment, proper sowing techniques, and row planting methods.",
+    history: [
+      { farm: "Verma Agro, Bhopal", work: "Seed Sowing", duration: "1 week", year: "2025" },
+      { farm: "Patel Farms, Indore", work: "Seed Treatment", duration: "3 days", year: "2025" },
+      { farm: "Sharma Estate, Bhopal", work: "Row Planting", duration: "5 days", year: "2024" }
+    ],
+    reviews: [
+      { reviewer: "Patel S.", text: "Seeds germinated very well after his treatment.", rating: 5 },
+      { reviewer: "Sharma R.", text: "Very knowledgeable about seeding techniques.", rating: 5 }
+    ],
+    languages: ["Hindi", "English"]
+  }
+];
+
+var currentWorker = null;
+var currentDetailWorker = null;
+var currentBookedWorkerId = null;
+var currentFilter = "all";
+var starredFilterActive = false;
+var bookedFilterActive = false;
+var starredWorkers = [];
+var bookedWorkers = [];
+
+function loadStarred() {
+  try {
+    starredWorkers = JSON.parse(localStorage.getItem("fa-starred-workers") || "[]");
+  } catch (e) {
+    starredWorkers = [];
+  }
+}
+
+function loadBookedWorkers() {
+  try {
+    var bookings = JSON.parse(localStorage.getItem("fa-worker-bookings") || "[]");
+    bookedWorkers = bookings.map(function(b) { return b.workerId; });
+  } catch (e) {
+    bookedWorkers = [];
+  }
+}
+
+function saveStarred() {
+  localStorage.setItem("fa-starred-workers", JSON.stringify(starredWorkers));
+}
+
+function getInitials(name) {
+  var parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function getStarsHTML(rating) {
+  var html = "";
+  var full = Math.floor(rating);
+  var half = rating - full >= 0.5 ? 1 : 0;
+  var empty = 5 - full - half;
+  for (var i = 0; i < full; i++) {
+    html += '<i class="fas fa-star"></i>';
+  }
+  if (half) {
+    html += '<i class="fas fa-star-half-alt"></i>';
+  }
+  for (var i = 0; i < empty; i++) {
+    html += '<i class="far fa-star" style="color:#ddd;"></i>';
+  }
+  return html;
+}
+
+function getAvailClass(avail) {
+  var map = { "Available": "avail-available", "Today": "avail-today", "Tomorrow": "avail-tomorrow", "This Week": "avail-week" };
+  return map[avail] || "avail-available";
+}
+
+function getWorkType(skills) {
+  var s = skills.join(" ").toLowerCase();
+  if (s.indexOf("harvest") !== -1 || s.indexOf("thresh") !== -1) return "Harvesting";
+  if (s.indexOf("tractor") !== -1 || s.indexOf("plough") !== -1 || s.indexOf("tillage") !== -1) return "Planting";
+  if (s.indexOf("seed") !== -1 || s.indexOf("sow") !== -1) return "Seeding";
+  if (s.indexOf("weed") !== -1 || s.indexOf("hoe") !== -1 || s.indexOf("mulch") !== -1) return "Weeding";
+  if (s.indexOf("irrigat") !== -1 || s.indexOf("drip") !== -1 || s.indexOf("sprinkler") !== -1 || s.indexOf("canal") !== -1 || s.indexOf("water") !== -1) return "Irrigation";
+  if (s.indexOf("spray") !== -1 || s.indexOf("pesticide") !== -1 || s.indexOf("fertiliz") !== -1 || s.indexOf("drone") !== -1) return "Spraying";
+  if (s.indexOf("cattle") !== -1 || s.indexOf("milk") !== -1 || s.indexOf("livestock") !== -1 || s.indexOf("animal") !== -1 || s.indexOf("fodder") !== -1) return "General Farm Work";
+  if (s.indexOf("fenc") !== -1 || s.indexOf("clear") !== -1 || s.indexOf("load") !== -1 || s.indexOf("general") !== -1 || s.indexOf("labor") !== -1) return "General Farm Work";
+  if (s.indexOf("plant") !== -1 || s.indexOf("nursery") !== -1 || s.indexOf("transplant") !== -1 || s.indexOf("bed") !== -1) return "Planting";
+  if (s.indexOf("harvester") !== -1 || s.indexOf("baler") !== -1 || s.indexOf("maintenance") !== -1 || s.indexOf("rotavator") !== -1) return "Harvesting";
+  if (s.indexOf("team") !== -1 || s.indexOf("quality") !== -1 || s.indexOf("coordination") !== -1) return "Harvesting";
+  if (s.indexOf("gps") !== -1) return "Planting";
+  return "General Farm Work";
+}
+
+function renderWorkers(list) {
+  var grid = document.getElementById("workerGrid");
+  document.getElementById("resultCount").textContent = list.length + " worker" + (list.length !== 1 ? "s" : "") + " found";
+  if (list.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--text-muted);"><i class="fas fa-search" style="font-size:32px;margin-bottom:8px;display:block;"></i>No workers found matching your criteria.</div>';
+    return;
+  }
+  var html = "";
+  for (var i = 0; i < list.length; i++) {
+    var w = list[i];
+    var initials = getInitials(w.name);
+    var stars = getStarsHTML(w.rating);
+    var availClass = getAvailClass(w.availability);
+    var skillsStr = w.skills.join(", ");
+    var isStarred = starredWorkers.indexOf(w.id) !== -1;
+    var starIcon = isStarred ? "fas" : "far";
+    html += '<div class="card-premium worker-card">';
+    html += '<div style="display:flex;gap:10px;align-items:flex-start;">';
+    html += '<div class="worker-avatar" style="background:' + w.color + ';">' + initials + '</div>';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;">';
+    html += '<div class="worker-name">' + w.name + '</div>';
+    html += '<span class="star-btn ' + (isStarred ? "active" : "") + '" onclick="event.stopPropagation();toggleStar(' + w.id + ')" title="Star this worker"><i class="' + starIcon + ' fa-star"></i></span>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--text-secondary);margin:2px 0;">' + skillsStr + '</div>';
+    html += '<div class="worker-rating" style="margin:4px 0;">' + stars + ' <span style="margin-left:4px;">' + w.rating + '</span> <span style="color:var(--text-muted);font-weight:400;font-size:11px;">(' + w.reviews + ' reviews)</span></div>';
+    html += '<div style="display:flex;gap:8px;font-size:11px;color:var(--text-muted);flex-wrap:wrap;">';
+    html += '<span><i class="fas fa-briefcase"></i> ' + w.experience + ' yr' + (w.experience !== 1 ? "s" : "") + '</span>';
+    html += '<span><i class="fas fa-map-marker-alt"></i> ' + w.location + '</span>';
+    html += '</div>';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">';
+    html += '<span class="badge ' + availClass + '"><span class="avail-dot"></span> ' + w.availability + '</span>';
+    html += '<span class="worker-price">\u20B9' + w.hourly + '<small>/hr</small></span>';
+    html += '</div>';
+    html += '<div class="worker-actions">';
+    html += '<button class="btn-secondary btn-sm" onclick="event.stopPropagation();openDetailModal(' + w.id + ')"><i class="fas fa-eye"></i> View</button>';
+    html += '<button class="btn-secondary btn-sm" onclick="event.stopPropagation();openMessageModal(' + w.id + ')"><i class="fas fa-comment"></i> Message</button>';
+    html += '<button class="btn-primary btn-sm" onclick="event.stopPropagation();openBookingModal(' + w.id + ')"><i class="fas fa-calendar-check"></i> Book</button>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function applyFilters() {
+  var search = document.getElementById("searchInput").value.toLowerCase().trim();
+  var sort = document.getElementById("sortSelect").value;
+  var workType = document.getElementById("workTypeFilter").value;
+  var filtered = [];
+  for (var i = 0; i < workers.length; i++) {
+    var w = workers[i];
+    if (starredFilterActive) {
+      if (starredWorkers.indexOf(w.id) === -1) continue;
+    }
+    if (bookedFilterActive) {
+      if (bookedWorkers.indexOf(w.id) === -1) continue;
+    }
+    if (workType !== "all") {
+      var wt = getWorkType(w.skills);
+      if (wt !== workType) continue;
+    }
+    if (search) {
+      var haystack = (w.name + " " + w.skills.join(" ") + " " + w.location).toLowerCase();
+      if (haystack.indexOf(search) === -1) continue;
+    }
+    filtered.push(w);
+  }
+  if (sort === "price-low") {
+    filtered.sort(function(a, b) { return a.hourly - b.hourly; });
+  } else if (sort === "highest-rated") {
+    filtered.sort(function(a, b) { return b.rating - a.rating; });
+  } else if (sort === "nearest") {
+    filtered.sort(function(a, b) { return a.distance - b.distance; });
+  } else if (sort === "available-now") {
+    var order = { "Available": 0, "Today": 1, "Tomorrow": 2, "This Week": 3 };
+    filtered.sort(function(a, b) { return (order[a.availability] || 99) - (order[b.availability] || 99); });
+  }
+  renderWorkers(filtered);
+}
+
+function toggleStar(id) {
+  var idx = starredWorkers.indexOf(id);
+  if (idx === -1) {
+    starredWorkers.push(id);
+  } else {
+    starredWorkers.splice(idx, 1);
+  }
+  saveStarred();
+  applyFilters();
+}
+
+function toggleStarredFilter() {
+  starredFilterActive = !starredFilterActive;
+  document.getElementById("starredFilterBtn").classList.toggle("active", starredFilterActive);
+  applyFilters();
+}
+
+function toggleBookedFilter() {
+  bookedFilterActive = !bookedFilterActive;
+  document.getElementById("bookedFilterBtn").classList.toggle("active", bookedFilterActive);
+  if (bookedFilterActive) {
+    loadBookedWorkers();
+  }
+  applyFilters();
+}
+
+function openDetailModal(id) {
+  var w = null;
+  for (var i = 0; i < workers.length; i++) {
+    if (workers[i].id === id) { w = workers[i]; break; }
+  }
+  if (!w) return;
+  currentDetailWorker = w;
+  var initials = getInitials(w.name);
+  var stars = getStarsHTML(w.rating);
+  var skillsStr = w.skills.join(", ");
+  var historyHtml = "";
+  for (var i = 0; i < w.history.length; i++) {
+    var h = w.history[i];
+    historyHtml += '<div class="profile-history-item"><span class="farm">' + h.farm + '</span><br><span style="color:var(--text-muted);font-size:11px;">' + h.work + ' \u00B7 ' + h.duration + ' \u00B7 ' + h.year + '</span></div>';
+  }
+  var reviewsHtml = "";
+  for (var i = 0; i < w.reviews.length; i++) {
+    var r = w.reviews[i];
+    var rStars = getStarsHTML(r.rating);
+    reviewsHtml += '<div class="profile-review-item"><span class="reviewer">' + r.reviewer + '</span> <span style="color:#FFB300;font-size:11px;">' + rStars + '</span><div class="review-text">' + r.text + '</div></div>';
+  }
+  var langsHtml = w.languages.join(", ");
+  var html = '';
+  html += '<div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;">';
+  html += '<div class="worker-avatar-lg" style="background:' + w.color + ';">' + initials + '</div>';
+  html += '<div><div style="font-size:18px;font-weight:800;">' + w.name + '</div>';
+  html += '<div class="worker-rating" style="margin-top:4px;">' + stars + ' <span>' + w.rating + '</span> <span style="color:var(--text-muted);font-weight:400;">(' + w.reviews + ' reviews)</span></div></div></div>';
+  html += '<div class="profile-section"><h4><i class="fas fa-info-circle"></i> About</h4><p style="font-size:13px;color:var(--text-secondary);">' + w.bio + '</p></div>';
+  html += '<div class="profile-section"><h4><i class="fas fa-cogs"></i> Skills</h4><p style="font-size:13px;color:var(--text-secondary);">' + skillsStr + '</p></div>';
+  html += '<div class="profile-section"><h4><i class="fas fa-briefcase"></i> Work History</h4>' + historyHtml + '</div>';
+  html += '<div class="profile-section"><h4><i class="fas fa-star"></i> Reviews</h4>' + reviewsHtml + '</div>';
+  html += '<div class="profile-section"><h4><i class="fas fa-language"></i> Languages</h4><p style="font-size:13px;color:var(--text-secondary);">' + langsHtml + '</p></div>';
+  html += '<div class="profile-section"><h4><i class="fas fa-map-marker-alt"></i> Location</h4><div class="map-placeholder"><i class="fas fa-map"></i> ' + w.location + '</div></div>';
+  html += '<div style="display:flex;gap:10px;margin-top:16px;">';
+  html += '<button class="btn-primary" style="flex:1;" onclick="closeDetailModal();openBookingModal(' + w.id + ')"><i class="fas fa-calendar-check"></i> Book Now</button>';
+  html += '<button class="btn-secondary" style="flex:1;" onclick="closeDetailModal();openMessageModal(' + w.id + ')"><i class="fas fa-comment"></i> Message</button></div>';
+  document.getElementById("detailContent").innerHTML = html;
+  document.getElementById("detailModal").classList.add("active");
+}
+
+function closeDetailModal() {
+  document.getElementById("detailModal").classList.remove("active");
+}
+
+function openBookingModal(id) {
+  var w = null;
+  for (var i = 0; i < workers.length; i++) {
+    if (workers[i].id === id) { w = workers[i]; break; }
+  }
+  if (!w) return;
+  currentWorker = w;
+  currentBookedWorkerId = id;
+  var initials = getInitials(w.name);
+  var today = new Date().toISOString().split("T")[0];
+  var html = '';
+  html += '<h3 style="font-size:17px;font-weight:800;margin-bottom:4px;"><i class="fas fa-calendar-check" style="color:var(--primary-green);"></i> Book Worker</h3>';
+  html += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;margin-top:12px;">';
+  html += '<div class="worker-avatar" style="background:' + w.color + ';width:44px;height:44px;font-size:16px;">' + initials + '</div>';
+  html += '<div><div style="font-weight:700;">' + w.name + '</div><div style="font-size:12px;color:var(--text-muted);">\u20B9' + w.hourly + '/hr</div></div></div>';
+  html += '<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Select Date</label><input type="date" class="form-input" id="bookingDate" value="' + today + '"></div>';
+  html += '<div style="display:flex;gap:10px;margin-bottom:12px;">';
+  html += '<div class="form-group" style="flex:1;margin-bottom:0;"><label class="form-label">Start Time</label><select class="form-select" id="bookingStartTime" onchange="calcBookingCost()"><option value="">Select...</option>';
+  var times = ["6:00 AM","7:00 AM","8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM"];
+  for (var i = 0; i < times.length; i++) {
+    html += '<option value="' + times[i] + '">' + times[i] + '</option>';
+  }
+  html += '</select></div>';
+  html += '<div class="form-group" style="flex:1;margin-bottom:0;"><label class="form-label">End Time</label><select class="form-select" id="bookingEndTime" onchange="calcBookingCost()"><option value="">Select...</option>';
+  for (var i = 0; i < times.length; i++) {
+    html += '<option value="' + times[i] + '">' + times[i] + '</option>';
+  }
+  html += '</select></div></div>';
+  html += '<div id="bookingCostSummary" class="booking-summary">';
+  html += '<div class="line"><span>Hours</span><span id="calcHours">0</span></div>';
+  html += '<div class="line"><span>Hourly Rate</span><span>\u20B9' + w.hourly + '</span></div>';
+  html += '<div class="line"><span>Subtotal</span><span id="calcSubtotal">\u20B90</span></div>';
+  html += '<div class="line"><span>GST (18%)</span><span id="calcGST">\u20B90</span></div>';
+  html += '<div class="line total"><span>Total Amount</span><span id="calcTotal">\u20B90</span></div>';
+  html += '</div>';
+  html += '<button class="btn-primary u-full" onclick="confirmBooking()"><i class="fas fa-check"></i> Confirm Booking</button>';
+  document.getElementById("bookingContent").innerHTML = html;
+  document.getElementById("bookingModal").classList.add("active");
+}
+
+function closeBookingModal() {
+  document.getElementById("bookingModal").classList.remove("active");
+}
+
+function timeToHours(t) {
+  if (!t) return 0;
+  var parts = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!parts) return 0;
+  var h = parseInt(parts[1], 10);
+  var m = parseInt(parts[2], 10);
+  var ampm = parts[3].toUpperCase();
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return h + m / 60;
+}
+
+function calcBookingCost() {
+  var startStr = document.getElementById("bookingStartTime").value;
+  var endStr = document.getElementById("bookingEndTime").value;
+  if (!startStr || !endStr || !currentWorker) return;
+  var startH = timeToHours(startStr);
+  var endH = timeToHours(endStr);
+  var hours = endH - startH;
+  if (hours <= 0) {
+    document.getElementById("calcHours").textContent = "0";
+    document.getElementById("calcSubtotal").textContent = "\u20B90";
+    document.getElementById("calcGST").textContent = "\u20B90";
+    document.getElementById("calcTotal").textContent = "\u20B90";
+    return;
+  }
+  var subtotal = hours * currentWorker.hourly;
+  var gst = subtotal * 0.18;
+  var total = subtotal + gst;
+  document.getElementById("calcHours").textContent = hours.toFixed(1);
+  document.getElementById("calcSubtotal").textContent = "\u20B9" + Math.round(subtotal).toLocaleString();
+  document.getElementById("calcGST").textContent = "\u20B9" + Math.round(gst).toLocaleString();
+  document.getElementById("calcTotal").textContent = "\u20B9" + Math.round(total).toLocaleString();
+}
+
+function confirmBooking() {
+  if (!currentWorker) return;
+  var date = document.getElementById("bookingDate").value;
+  var startTime = document.getElementById("bookingStartTime").value;
+  var endTime = document.getElementById("bookingEndTime").value;
+  var startH = timeToHours(startTime);
+  var endH = timeToHours(endTime);
+  var hours = endH - startH;
+  if (!date || !startTime || !endTime || hours <= 0) {
+    alert("Please select a date, start time, and end time.");
+    return;
+  }
+  var subtotal = hours * currentWorker.hourly;
+  var gst = subtotal * 0.18;
+  var total = subtotal + gst;
+  var bookingId = "WB-" + Date.now().toString(36).toUpperCase();
+  var booking = {
+    id: bookingId,
+    workerId: currentWorker.id,
+    workerName: currentWorker.name,
+    date: date,
+    startTime: startTime,
+    endTime: endTime,
+    hours: hours,
+    hourlyRate: currentWorker.hourly,
+    subtotal: Math.round(subtotal),
+    gst: Math.round(gst),
+    total: Math.round(total),
+    createdAt: new Date().toISOString()
+  };
+  var localBookings = JSON.parse(localStorage.getItem("fa-worker-bookings") || "[]");
+  localBookings.push(booking);
+  localStorage.setItem("fa-worker-bookings", JSON.stringify(localBookings));
+  closeBookingModal();
+  showToastMsg("Worker Booked Successfully!");
+  loadBookedWorkers();
+  if (bookedFilterActive) applyFilters();
+}
+
+function showToastMsg(msg, type) {
+  type = type || "success";
+  var container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+  var toast = document.createElement("div");
+  toast.className = "toast-msg " + type;
+  var icons = { success: "fa-check-circle", danger: "fa-exclamation-circle", warning: "fa-exclamation-triangle", info: "fa-info-circle" };
+  var icon = icons[type] || icons.success;
+  toast.innerHTML = '<i class="fas ' + icon + '"></i><span>' + msg + '</span>';
+  container.appendChild(toast);
+  requestAnimationFrame(function() { toast.classList.add("show"); });
+  setTimeout(function() {
+    toast.classList.remove("show");
+    toast.classList.add("hide");
+    setTimeout(function() { toast.remove(); }, 300);
+  }, 3000);
+}
+
+function openMessageModal(id) {
+  var w = null;
+  for (var i = 0; i < workers.length; i++) {
+    if (workers[i].id === id) { w = workers[i]; break; }
+  }
+  if (!w) return;
+  currentWorker = w;
+  document.getElementById("messageWorkerName").textContent = "To: " + w.name;
+  document.getElementById("messageSubject").value = "";
+  document.getElementById("messageBody").value = "";
+  document.getElementById("messageModal").classList.add("active");
+}
+
+function closeMessageModal() {
+  document.getElementById("messageModal").classList.remove("active");
+}
+
+function sendMessage() {
+  if (!currentWorker) return;
+  var subject = document.getElementById("messageSubject").value.trim();
+  var body = document.getElementById("messageBody").value.trim();
+  if (!subject || !body) {
+    alert("Please enter both a subject and message.");
+    return;
+  }
+  var msg = {
+    id: "MSG-" + Date.now().toString(36).toUpperCase(),
+    workerId: currentWorker.id,
+    workerName: currentWorker.name,
+    subject: subject,
+    body: body,
+    sentAt: new Date().toISOString()
+  };
+  var inbox = JSON.parse(localStorage.getItem("fa-worker-messages") || "[]");
+  inbox.push(msg);
+  localStorage.setItem("fa-worker-messages", JSON.stringify(inbox));
+  closeMessageModal();
+  showToastMsg("Message sent to " + currentWorker.name + " successfully!");
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll(".modal-backdrop").forEach(function(m) {
+    m.addEventListener("click", function(e) {
+      if (e.target === m) m.classList.remove("active");
+    });
+  });
+  loadStarred();
+  loadBookedWorkers();
+  if (window.API && window.API.Worker && window.API.Worker.list) {
+    API.Worker.list().then(function(res) {
+      var items = [];
+      if (res && Array.isArray(res.items)) {
+        items = res.items;
+      } else if (res && Array.isArray(res)) {
+        items = res;
+      }
+      if (items.length > 0) {
+        workers = items.map(mapApiWorker);
+      }
+      applyFilters();
+    }).catch(function() {
+      applyFilters();
+    });
+  } else {
+    applyFilters();
+  }
+});
+
+function mapApiWorker(api) {
+  var skills = api.skills || [];
+  if (typeof skills === "string") {
+    try { skills = JSON.parse(skills); } catch (e) { skills = skills.split(",").map(function(s) { return s.trim(); }); }
+  }
+  var loc = [api.village, api.district, api.state].filter(Boolean).join(", ") || "Unknown";
+  var availOptions = ["Available", "Today", "Tomorrow", "This Week"];
+  return {
+    id: api.id,
+    name: api.full_name || "Unknown Worker",
+    skills: skills,
+    experience: api.experience_years || 0,
+    location: loc,
+    distance: 0,
+    rating: api.rating || 0,
+    reviews: api.total_reviews || 0,
+    hourly: api.hourly_rate || 0,
+    availability: availOptions[Math.floor(Math.random() * availOptions.length)],
+    color: ["#1B5E3F","#5D4037","#E65100","#283593","#7B1FA2","#4E342E","#0D47A1","#00897B","#6A1B9A","#AD1457","#2E7D32"][Math.floor(Math.random() * 11)],
+    bio: api.bio || "Professional farm worker.",
+    history: [],
+    reviews: [],
+    languages: ["Hindi"],
+    _apiId: api.id
+  };
+}
+</script>
+</body>
+</html>

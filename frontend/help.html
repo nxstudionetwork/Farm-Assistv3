@@ -1,0 +1,843 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Help & Support</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .form-select{width:100%;padding:10px 14px;border:1px solid var(--border-medium);border-radius:var(--radius-sm);background:white;color:var(--text-primary);font-size:13px;transition:border-color .2s,box-shadow .2s}
+    .form-select:focus{border-color:var(--primary-green);box-shadow:0 0 0 3px rgba(45,106,79,.1)}
+    .form-textarea{width:100%;padding:10px 14px;border:1px solid var(--border-medium);border-radius:var(--radius-sm);background:white;color:var(--text-primary);font-size:13px;transition:border-color .2s;resize:vertical;min-height:80px;font-family:inherit;line-height:1.5}
+    .form-textarea:focus{border-color:var(--primary-green);box-shadow:0 0 0 3px rgba(45,106,79,.1)}
+
+    .help-subtitle{font-size:13px;color:var(--text-muted);margin-top:-10px;margin-bottom:16px}
+
+    /* Quick Help Category Cards */
+    .help-cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+    @media(max-width:768px){.help-cat-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:480px){.help-cat-grid{grid-template-columns:1fr}}
+    .help-cat-card{background:white;border-radius:var(--radius-md);padding:16px;border:1px solid var(--border-light);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;text-align:center}
+    .help-cat-card:hover{border-color:var(--medium-green);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+    .help-cat-card .cat-icon{width:48px;height:48px;border-radius:50%;background:var(--soft-green);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--primary-green);margin-bottom:10px;flex-shrink:0}
+    .help-cat-card h4{font-size:13px;font-weight:600;margin-bottom:4px}
+    .help-cat-card p{font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.4;flex:1}
+
+    /* FAQ */
+    .faq-item{border-bottom:1px solid var(--border-light);padding:14px 0}
+    .faq-item:last-child{border-bottom:none}
+    .faq-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:12px}
+    .faq-header h4{font-size:13px;font-weight:600;flex:1}
+    .faq-chevron{transition:transform .25s ease;color:var(--text-muted);font-size:12px;flex-shrink:0}
+    .faq-chevron.open{transform:rotate(180deg)}
+    .faq-answer{max-height:0;overflow:hidden;transition:max-height .35s ease,padding .25s ease;font-size:12.5px;color:var(--text-secondary);line-height:1.7}
+    .faq-answer.open{max-height:300px;padding-top:10px}
+
+    /* Guide Viewer */
+    #guide-viewer{display:none;animation:guideSlideIn .35s ease}
+    #guide-viewer.active{display:block}
+    @keyframes guideSlideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+    .guide-back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--primary-green);font-size:13px;font-weight:600;cursor:pointer;padding:8px 0;margin-bottom:12px;transition:opacity .2s}
+    .guide-back:hover{opacity:.7}
+    .guide-title{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+    .guide-title i{color:var(--primary-green)}
+    .guide-layout{display:flex;gap:20px}
+    .guide-toc{width:220px;flex-shrink:0;background:white;border-radius:var(--radius-md);border:1px solid var(--border-light);padding:14px;height:fit-content;position:sticky;top:80px}
+    .guide-toc h5{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+    .guide-toc-item{display:block;padding:6px 10px;font-size:12px;color:var(--text-secondary);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;margin-bottom:2px;text-decoration:none}
+    .guide-toc-item:hover,.guide-toc-item.active{background:var(--soft-green);color:var(--primary-green);font-weight:600}
+    .guide-content{flex:1;min-width:0}
+    .guide-section{margin-bottom:24px}
+    .guide-section h3{font-size:15px;font-weight:700;margin-bottom:10px;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+    .guide-section h3 i{color:var(--primary-green);font-size:16px}
+    .guide-section p{font-size:13px;color:var(--text-secondary);line-height:1.75;margin-bottom:10px}
+    .guide-section ol,.guide-section ul{padding-left:20px;margin-bottom:10px}
+    .guide-section li{font-size:13px;color:var(--text-secondary);line-height:1.75;margin-bottom:6px}
+    .guide-tip{background:var(--soft-green);border-left:3px solid var(--primary-green);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:12px 14px;margin:12px 0;font-size:12.5px;color:var(--text-primary);line-height:1.6}
+    .guide-tip i{color:var(--primary-green);margin-right:6px}
+    @media(max-width:900px){.guide-toc{display:none}}
+    @media(max-width:480px){.guide-layout{flex-direction:column;gap:12px}}
+
+    /* Contact Form (inline) */
+    .contact-fields{margin-bottom:0}
+
+    /* Tickets */
+    .ticket-card{border:1px solid var(--border-light);border-radius:var(--radius-md);padding:14px;margin-bottom:10px;background:white;transition:all .2s;cursor:pointer}
+    .ticket-card:hover{border-color:var(--medium-green);box-shadow:var(--shadow-sm)}
+    .ticket-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px}
+    .ticket-id{font-size:11px;color:var(--text-muted);font-weight:600}
+    .ticket-subject{font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+    .ticket-meta{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .ticket-meta span{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px}
+    .ticket-meta span i{font-size:10px}
+    .ticket-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;flex-shrink:0}
+    .ticket-badge.open{background:#E3F2FD;color:#1565C0}
+    .ticket-badge.in_progress{background:#FFF3E0;color:#E65100}
+    .ticket-badge.resolved{background:var(--soft-green);color:var(--primary-green)}
+    .ticket-badge.closed{background:#F5F5F5;color:#757575}
+    .ticket-detail{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-light);font-size:12.5px;color:var(--text-secondary);line-height:1.6}
+    .ticket-detail.open{display:block}
+    .ticket-detail .reply-box{background:var(--soft-green);border-radius:var(--radius-sm);padding:12px;margin-top:10px}
+    .ticket-detail .reply-box strong{color:var(--text-primary);display:block;margin-bottom:4px;font-size:12px}
+
+    /* Emergency */
+    .emergency-card{background:linear-gradient(135deg,#FFF5F5,#FFFFFF);border:1px solid #FFCDD2;border-radius:var(--radius-lg);padding:20px;text-align:center}
+    .emergency-card .em-icon{width:56px;height:56px;border-radius:50%;background:#FFEBEE;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:24px;color:var(--danger)}
+    .emergency-card h3{font-size:16px;margin-bottom:8px}
+    .emergency-card .em-number{font-size:22px;font-weight:800;color:var(--danger);margin-bottom:4px;display:block}
+    .emergency-card .em-label{font-size:11px;color:var(--text-muted);margin-bottom:12px;display:block}
+    .emergency-card .em-note{font-size:11px;color:var(--text-muted);margin-top:8px;font-style:italic}
+
+    /* Feedback */
+    .feedback-btns{display:flex;gap:10px;flex-wrap:wrap}
+    @media(max-width:480px){.feedback-btns{flex-direction:column}}
+
+    /* Main content wrapper for guide toggle */
+    #main-content{transition:opacity .3s ease}
+    #main-content.hidden{display:none}
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <h1><i class="fas fa-headset"></i> Help & Support</h1>
+    </div>
+    <p class="help-subtitle">Find answers, step-by-step guides, and get direct support for Farm Assist.</p>
+
+    <!-- ============ MAIN CONTENT (hidden when guide is open) ============ -->
+    <div id="main-content">
+
+      <!-- QUICK HELP CATEGORIES -->
+      <section class="card-premium">
+        <h3 style="font-size:16px;margin-bottom:14px;">
+          <i class="fas fa-bolt" style="color:var(--premium-green);margin-right:8px;"></i> Quick Help
+        </h3>
+        <div class="help-cat-grid">
+          <div class="help-cat-card" onclick="openGuide('getting-started')">
+            <div class="cat-icon"><i class="fas fa-rocket"></i></div>
+            <h4>Getting Started</h4>
+            <p>Set up your account and explore the app for the first time.</p>
+            <button class="btn-primary btn-sm" style="width:100%"><i class="fas fa-book-open"></i> Read Guide</button>
+          </div>
+          <div class="help-cat-card" onclick="openGuide('farm-management')">
+            <div class="cat-icon"><i class="fas fa-tractor"></i></div>
+            <h4>Farm Management</h4>
+            <p>Add farms, crops, and track all farm operations.</p>
+            <button class="btn-primary btn-sm" style="width:100%"><i class="fas fa-book-open"></i> Read Guide</button>
+          </div>
+          <div class="help-cat-card" onclick="openGuide('farm-techniques')">
+            <div class="cat-icon"><i class="fas fa-seedling"></i></div>
+            <h4>Farm Techniques</h4>
+            <p>Soil prep, irrigation, fertilizers, and pest management.</p>
+            <button class="btn-primary btn-sm" style="width:100%"><i class="fas fa-book-open"></i> Read Guide</button>
+          </div>
+          <div class="help-cat-card" onclick="openGuide('marketplace')">
+            <div class="cat-icon"><i class="fas fa-store"></i></div>
+            <h4>Marketplace</h4>
+            <p>Buy inputs, sell produce, and connect with buyers.</p>
+            <button class="btn-primary btn-sm" style="width:100%"><i class="fas fa-book-open"></i> Read Guide</button>
+          </div>
+          <div class="help-cat-card" onclick="openGuide('account-security')">
+            <div class="cat-icon"><i class="fas fa-shield-halved"></i></div>
+            <h4>Account & Security</h4>
+            <p>Manage your profile, PIN, and privacy settings.</p>
+            <button class="btn-primary btn-sm" style="width:100%"><i class="fas fa-book-open"></i> Read Guide</button>
+          </div>
+          <div class="help-cat-card" onclick="openGuide('technical-support')">
+            <div class="cat-icon"><i class="fas fa-wrench"></i></div>
+            <h4>Technical Support</h4>
+            <p>Fix app issues, login problems, and connectivity.</p>
+            <button class="btn-primary btn-sm" style="width:100%"><i class="fas fa-book-open"></i> Read Guide</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ SECTION -->
+      <section class="card-premium">
+        <h3 style="font-size:16px;margin-bottom:12px;">
+          <i class="fas fa-circle-question" style="color:var(--premium-green);margin-right:8px;"></i> Frequently Asked Questions
+        </h3>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(1)">
+            <h4>How do I create a Farm Assist account?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-1"></i>
+          </div>
+          <div class="faq-answer" id="fa-1">
+            Download the Farm Assist app or open the web app and tap <strong>Create Account</strong>. Enter your full name, phone number, and create a Farm ID (FA-AS-XXXXXXXX). Set a 4-digit PIN for quick login. You'll receive an OTP on your phone to verify your identity. Once verified, your account is ready to use immediately.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(2)">
+            <h4>How do I log in with my Farm ID?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-2"></i>
+          </div>
+          <div class="faq-answer" id="fa-2">
+            Open the app and enter your Farm ID (format: FA-AS-XXXXXXXX) on the login screen. You'll then be prompted to enter your 4-digit PIN. If you've forgotten your PIN, tap <strong>Forgot PIN?</strong> and verify with the OTP sent to your registered phone number. You can also use biometric login if enabled in settings.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(3)">
+            <h4>What is my Farm ID?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-3"></i>
+          </div>
+          <div class="faq-answer" id="fa-3">
+            Your Farm ID is a unique identifier assigned when you register, in the format <strong>FA-AS-XXXXXXXX</strong>. It is displayed on your profile page and in the sidebar. Use it to log in, share with experts for consultations, and for farmer-to-farmer identification. Keep it safe and do not share it publicly.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(4)">
+            <h4>How do I add my farm?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-4"></i>
+          </div>
+          <div class="faq-answer" id="fa-4">
+            Navigate to the <strong>Farm</strong> section from the sidebar or bottom nav and tap <strong>+ Add Farm</strong>. Enter your farm name, location (use the map or enter manually), total area in acres or hectares, and select the soil type. You can also draw farm boundaries on the map for satellite monitoring. Once saved, your farm will appear in the list and all features will become available for that farm.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(5)">
+            <h4>How do I add crops and track them?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-5"></i>
+          </div>
+          <div class="faq-answer" id="fa-5">
+            Open your farm and select a field, then tap <strong>Add Crop</strong>. Choose from the crop library (Rice, Wheat, Cotton, Maize, Vegetables, etc.), set the planting date, expected harvest date, and variety. The app automatically tracks growth stages, sends irrigation and fertilization reminders, and monitors crop health via satellite data.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(6)">
+            <h4>How do I use AI for crop health analysis?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-6"></i>
+          </div>
+          <div class="faq-answer" id="fa-6">
+            Go to the <strong>AI</strong> section from the bottom navigation. You can upload a photo of your crop leaf or use the camera to scan it in real-time. The AI model detects pests, diseases, and nutrient deficiencies, then provides a diagnosis with severity level and recommended treatments including both organic and chemical control options.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(7)">
+            <h4>How do I check weather for my farm?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-7"></i>
+          </div>
+          <div class="faq-answer" id="fa-7">
+            Open the <strong>Weather</strong> section from the bottom navigation or dashboard widget. The app automatically shows weather data for your registered farm location. View current temperature, humidity, wind speed, and a 7-day forecast. Rain alerts, heatwave warnings, and optimal spraying conditions are highlighted to help you plan farm activities.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(8)">
+            <h4>How do I contact an expert?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-8"></i>
+          </div>
+          <div class="faq-answer" id="fa-8">
+            Go to the <strong>Experts</strong> section from the sidebar menu. Browse the directory of verified agricultural experts by specialty (Soil Science, Crop Health, Irrigation, etc.). You can check their ratings, availability, and hourly rates. Tap <strong>Call</strong> for immediate consultation or <strong>Book</strong> to schedule a detailed session at your preferred time.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(9)">
+            <h4>How do I use the marketplace?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-9"></i>
+          </div>
+          <div class="faq-answer" id="fa-9">
+            Open <strong>Marketplace</strong> from the sidebar. To buy, browse categories (Seeds, Fertilizers, Pesticides, Tools), filter by price or rating, add items to your cart, and checkout. To sell, tap <strong>Sell</strong>, select your crop, set quantity, grade, and price, then list it. Buyers can contact you through the in-app chat for negotiations.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(10)">
+            <h4>How do I book workers?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-10"></i>
+          </div>
+          <div class="faq-answer" id="fa-10">
+            Go to <strong>Workers</strong> from the sidebar menu. Browse available workers by skill (ploughing, sowing, harvesting, spraying, etc.). Check their ratings, hourly rates, and real-time availability. Tap <strong>Book Now</strong>, select the date and time, and confirm the booking. Both you and the worker receive notifications and can track the booking status.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(11)">
+            <h4>How do I track expenses?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-11"></i>
+          </div>
+          <div class="faq-answer" id="fa-11">
+            Navigate to the <strong>Finance</strong> section to view your wallet and transaction history. Tap <strong>Add Expense</strong> to record costs by category (Seeds, Fertilizer, Labor, Equipment, etc.). You can also record income from sales. The app provides monthly summaries, spending breakdowns, and profit/loss reports to help you manage farm finances effectively.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(12)">
+            <h4>How do I use offline mode?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-12"></i>
+          </div>
+          <div class="faq-answer" id="fa-12">
+            Farm Assist works fully offline. Data is stored locally in your browser storage. You can add farms, fields, crops, expenses, and tasks without an internet connection. When you reconnect, the app automatically syncs all changes to the cloud. An offline indicator at the top of the screen shows your current connection status. Enable offline mode from Settings.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-header" onclick="toggleFAQ(13)">
+            <h4>How do I get technical support?</h4>
+            <i class="fas fa-chevron-down faq-chevron" id="fc-13"></i>
+          </div>
+          <div class="faq-answer" id="fa-13">
+            Scroll down to the <strong>Contact Support</strong> section on this page and fill out the support form with your issue details. You can also reach the Kisan Call Centre at <strong>1800-180-1551</strong> (toll-free) for urgent help. For app emergencies, dial <strong>112</strong>. Our support team typically responds within 24 hours on working days.
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTACT SUPPORT (inline form) -->
+      <section class="card-premium" id="contact-section">
+        <h3 style="font-size:16px;margin-bottom:15px;">
+          <i class="fas fa-envelope" style="color:var(--premium-green);margin-right:8px;"></i> Contact Support
+        </h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Submit a support request and our team will get back to you within 24 hours.</p>
+        <div class="contact-fields">
+          <div class="form-group">
+            <label class="form-label">Your Name</label>
+            <input type="text" class="form-input" id="sup-name" placeholder="Enter your name" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Farm ID</label>
+            <input type="text" class="form-input" id="sup-farmer-id" placeholder="FA-AS-XXXXXXXX" readonly style="background:#f5f8f5;color:var(--text-muted)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="sup-category">
+              <option value="">Select category...</option>
+              <option value="Technical Support">Technical Support</option>
+              <option value="Account Issue">Account Issue</option>
+              <option value="Farm Management">Farm Management</option>
+              <option value="Marketplace">Marketplace</option>
+              <option value="Feature Request">Feature Request</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject</label>
+            <input type="text" class="form-input" id="sup-subject" placeholder="Brief description of your issue">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea class="form-textarea" id="sup-description" rows="4" placeholder="Describe your issue in detail. Include any error messages, steps to reproduce, and what you've already tried..."></textarea>
+          </div>
+          <button class="btn-primary" id="sup-submit-btn" onclick="submitSupportTicket()" style="width:100%">
+            <i class="fas fa-paper-plane"></i> Submit Request
+          </button>
+        </div>
+      </section>
+
+      <!-- MY SUPPORT TICKETS -->
+      <section class="card-premium">
+        <h3 style="font-size:16px;margin-bottom:14px;">
+          <i class="fas fa-ticket" style="color:var(--premium-green);margin-right:8px;"></i> My Support Tickets
+        </h3>
+        <div id="tickets-list">
+          <div style="text-align:center;padding:30px 16px;color:var(--text-muted)">
+            <i class="fas fa-spinner fa-spin" style="font-size:20px;margin-bottom:8px;display:block"></i>
+            Loading tickets...
+          </div>
+        </div>
+      </section>
+
+      <!-- EMERGENCY HELP -->
+      <section class="card-premium">
+        <div class="emergency-card">
+          <div class="em-icon"><i class="fas fa-phone-volume"></i></div>
+          <h3>Need Immediate Help?</h3>
+          <div class="em-label" style="margin-bottom:4px">Kisan Call Centre (Toll-Free)</div>
+          <a href="tel:18001801551" style="text-decoration:none"><span class="em-number">1800-180-1551</span></a>
+          <div class="em-label" style="margin-top:14px;margin-bottom:4px">Emergency Services</div>
+          <a href="tel:112" style="text-decoration:none"><span class="em-number" style="font-size:26px">112</span></a>
+          <p class="em-note">For app emergencies, also contact support using the form above.</p>
+        </div>
+      </section>
+
+      <!-- FEEDBACK -->
+      <section class="card-premium">
+        <h3 style="font-size:16px;margin-bottom:12px;">
+          <i class="fas fa-comment" style="color:var(--premium-green);margin-right:8px;"></i> Feedback
+        </h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Help us improve Farm Assist. Your feedback drives our updates and fixes.</p>
+        <div class="feedback-btns">
+          <button class="btn-primary" onclick="window.location.href='feedback.html'">
+            <i class="fas fa-comment-dots"></i> Give Feedback
+          </button>
+          <button class="btn-secondary" onclick="window.location.href='feedback.html?type=bug'">
+            <i class="fas fa-bug"></i> Report a Problem
+          </button>
+        </div>
+      </section>
+
+    </div><!-- end #main-content -->
+
+    <!-- ============ GUIDE VIEWER (hidden by default) ============ -->
+    <div id="guide-viewer">
+      <button class="guide-back" onclick="closeGuide()"><i class="fas fa-arrow-left"></i> Back to Help</button>
+      <div id="guide-viewer-content"></div>
+    </div>
+
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    /* ===== Helpers ===== */
+    function getAuthToken() { return localStorage.getItem('fa-auth-token') || ''; }
+    function getUserName() { return localStorage.getItem('user-name') || ''; }
+    function getFarmerId() { return localStorage.getItem('user-farmer-id') || ''; }
+
+    function showToast(msg, type) {
+      var c = document.querySelector('.toast-container');
+      if (!c) { c = document.createElement('div'); c.className = 'toast-container'; document.body.appendChild(c); }
+      var t = document.createElement('div');
+      t.className = 'toast-msg ' + (type || 'success');
+      t.textContent = msg;
+      c.appendChild(t);
+      requestAnimationFrame(function() { t.classList.add('show'); });
+      setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 350); }, 3500);
+    }
+
+    /* ===== FAQ Toggle ===== */
+    function toggleFAQ(id) {
+      var ans = document.getElementById('fa-' + id);
+      var chev = document.getElementById('fc-' + id);
+      var isOpen = ans.classList.contains('open');
+      ans.classList.toggle('open', !isOpen);
+      chev.classList.toggle('open', !isOpen);
+    }
+
+    /* ===== Contact Support Form ===== */
+    function prefillContactForm() {
+      var nameEl = document.getElementById('sup-name');
+      var fidEl = document.getElementById('sup-farmer-id');
+      if (nameEl && getUserName()) nameEl.value = getUserName();
+      if (fidEl && getFarmerId()) fidEl.value = getFarmerId();
+    }
+
+    function submitSupportTicket() {
+      var name = (document.getElementById('sup-name').value || '').trim();
+      var farmerId = (document.getElementById('sup-farmer-id').value || '').trim();
+      var category = document.getElementById('sup-category').value;
+      var subject = (document.getElementById('sup-subject').value || '').trim();
+      var description = (document.getElementById('sup-description').value || '').trim();
+
+      if (!category) { showToast('Please select a category.', 'warning'); return; }
+      if (!subject) { showToast('Please enter a subject.', 'warning'); return; }
+      if (!description) { showToast('Please describe your issue.', 'warning'); return; }
+
+      var btn = document.getElementById('sup-submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+      fetch('/api/v1/tickets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + getAuthToken()
+        },
+        body: JSON.stringify({
+          name: name,
+          category: category,
+          subject: subject,
+          description: description
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.status === 'success') {
+          showToast('Support request submitted! Ticket ID: ' + (res.data.ticket_id || ''), 'success');
+          document.getElementById('sup-category').value = '';
+          document.getElementById('sup-subject').value = '';
+          document.getElementById('sup-description').value = '';
+          loadTickets();
+        } else {
+          showToast(res.message || 'Failed to submit request. Please try again.', 'danger');
+        }
+      })
+      .catch(function(err) {
+        showToast('Network error. Please check your connection and try again.', 'danger');
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
+      });
+    }
+
+    /* ===== Support Tickets List ===== */
+    function loadTickets() {
+      var container = document.getElementById('tickets-list');
+      fetch('/api/v1/tickets', {
+        headers: { 'Authorization': 'Bearer ' + getAuthToken() }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.status !== 'success') {
+          container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Could not load tickets.</div>';
+          return;
+        }
+        var tickets = res.data.tickets || [];
+        if (tickets.length === 0) {
+          container.innerHTML =
+            '<div style="text-align:center;padding:30px 16px;color:var(--text-muted)">' +
+              '<i class="fas fa-inbox" style="font-size:36px;margin-bottom:10px;display:block;opacity:.4"></i>' +
+              '<p style="font-size:13px">No support requests yet. Submit a request above if you need help.</p>' +
+            '</div>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < tickets.length; i++) {
+          var t = tickets[i];
+          var st = t.status || 'open';
+          var statusLabel = st.replace('_', ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+          var created = t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+          html += '<div class="ticket-card" onclick="toggleTicketDetail(this)">';
+          html += '<div class="ticket-top">';
+          html += '<div><div class="ticket-id">' + escHtml(t.ticket_id || '') + '</div>';
+          html += '<div class="ticket-subject">' + escHtml(t.subject || '') + '</div></div>';
+          html += '<span class="ticket-badge ' + st + '">' + statusLabel + '</span>';
+          html += '</div>';
+          html += '<div class="ticket-meta">';
+          html += '<span><i class="fas fa-tag"></i> ' + escHtml(t.category || '') + '</span>';
+          html += '<span><i class="fas fa-calendar"></i> ' + created + '</span>';
+          html += '</div>';
+          html += '<div class="ticket-detail">';
+          html += '<p>' + escHtml(t.description || 'No description provided.') + '</p>';
+          if (t.admin_reply) {
+            html += '<div class="reply-box"><strong><i class="fas fa-reply"></i> Support Team Reply</strong>' + escHtml(t.admin_reply) + '</div>';
+          }
+          html += '</div></div>';
+        }
+        container.innerHTML = html;
+      })
+      .catch(function() {
+        container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Could not load tickets. Check your connection.</div>';
+      });
+    }
+
+    function toggleTicketDetail(card) {
+      var detail = card.querySelector('.ticket-detail');
+      if (detail) detail.classList.toggle('open');
+    }
+
+    function escHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str));
+      return d.innerHTML;
+    }
+
+    /* ===== Feedback ===== */
+
+    /* ===== GUIDE SYSTEM ===== */
+    var guides = {
+      'getting-started': {
+        icon: 'fas fa-rocket',
+        title: 'Getting Started with Farm Assist',
+        sections: [
+          { id: 'gs-create', title: 'Create Your Account', content:
+            '<p>Getting started with Farm Assist is quick and simple. Open the app or visit the web version and tap <strong>Create Account</strong> to begin the registration process.</p>' +
+            '<ol><li>Enter your full name as you want it to appear on your profile.</li>' +
+            '<li>Provide your phone number  -  this will be used for OTP verification and account recovery.</li>' +
+            '<li>Create a unique Farm ID (format: FA-AS-XXXXXXXX). This is your permanent identity on the platform.</li>' +
+            '<li>Set a 4-digit PIN for quick and secure login. Choose something memorable but not easily guessable like your birth year.</li>' +
+            '<li>Enter the OTP sent to your phone to verify your identity. Once verified, your account is active.</li></ol>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Keep your Farm ID safe  -  you will need it to log in, connect with experts, and for any support requests.</div>'
+          },
+          { id: 'gs-profile', title: 'Complete Your Profile', content:
+            '<p>After creating your account, complete your profile to unlock personalized features. Go to <strong>Profile</strong> from the sidebar menu.</p>' +
+            '<ol><li>Add your profile photo for identification during expert consultations and marketplace transactions.</li>' +
+            '<li>Enter your phone number and email address for notifications and account recovery.</li>' +
+            '<li>Set your location (district and state) to receive accurate weather data and local market prices.</li>' +
+            '<li>Select your farm type (Crops, Livestock, Mixed, Horticulture, etc.) so we can customize recommendations.</li>' +
+            '<li>Choose your preferred language if you want to switch from English.</li></ol>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> A complete profile helps the AI give more accurate recommendations tailored to your specific region and farming style.</div>'
+          },
+          { id: 'gs-first-farm', title: 'Add Your First Farm', content:
+            '<p>Your farm is the center of everything in Farm Assist. Navigate to the <strong>Farm</strong> section from the sidebar or dashboard and tap <strong>+ Add Farm</strong>.</p>' +
+            '<ol><li><strong>Farm Name:</strong> Give your farm a recognizable name (e.g., "Green Valley Farm").</li>' +
+            '<li><strong>Location:</strong> Use the interactive map to drop a pin at your farm location, or enter the address manually.</li>' +
+            '<li><strong>Area:</strong> Enter total farm area in acres or hectares.</li>' +
+            '<li><strong>Soil Type:</strong> Select your primary soil type (Alluvial, Black, Red, Laterite, etc.).</li>' +
+            '<li><strong>Boundary (Optional):</strong> Draw your farm boundary on the map for satellite-based monitoring and NDVI analysis.</li></ol>' +
+            '<p>Once saved, your farm appears in the farm list. You can then add individual fields or plots within it, each with its own crop and management settings.</p>'
+          },
+          { id: 'gs-dashboard', title: 'Explore the Dashboard', content:
+            '<p>The dashboard is your command center. Here is what each section does:</p>' +
+            '<ul><li><strong>Weather Widget:</strong> Shows current weather at your farm location with a 7-day forecast, rain alerts, and temperature warnings.</li>' +
+            '<li><strong>Crop Health:</strong> Displays NDVI satellite imagery of your farms and AI crop analysis results at a glance.</li>' +
+            '<li><strong>Marketplace:</strong> Quick access to buy seeds, fertilizers, and equipment, or list your produce for sale.</li>' +
+            '<li><strong>Tasks:</strong> Your daily and upcoming farm tasks with due dates and priorities.</li>' +
+            '<li><strong>Finance:</strong> Wallet balance, recent expenses, and income summaries.</li>' +
+            '<li><strong>News:</strong> Agricultural news, government scheme updates, and market price trends.</li></ul>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> You can customize your dashboard layout by dragging and dropping widgets to rearrange them to your preference.</div>'
+          },
+          { id: 'gs-explore', title: 'Start Managing Your Farm', content:
+            '<p>With your account, profile, and first farm set up, you are ready to use Farm Assist to its full potential. Here are some recommended next steps:</p>' +
+            '<ul><li>Add fields to your farm and assign crops to each one.</li>' +
+            '<li>Set up irrigation schedules and fertilizer reminders.</li>' +
+            '<li>Use the AI crop scan feature to check the health of existing crops.</li>' +
+            '<li>Browse the marketplace for quality seeds and inputs for your region.</li>' +
+            '<li>Connect with agricultural experts for personalized advice.</li>' +
+            '<li>Start logging expenses to track your farm profitability.</li></ul>' +
+            '<p>Visit the other guides in this help center for detailed instructions on each of these features.</p>'
+          }
+        ]
+      },
+      'farm-management': {
+        icon: 'fas fa-tractor',
+        title: 'Farm Management',
+        sections: [
+          { id: 'fm-add-farm', title: 'Adding a Farm and Plots', content:
+            '<p>Each farm can contain multiple plots or fields. To add a new farm, go to the <strong>Farm</strong> section and tap <strong>+ Add Farm</strong>. Fill in the farm name, location, total area, and soil type.</p>' +
+            '<p>To add plots within a farm, open the farm and tap <strong>+ Add Field</strong>. Specify the field name, area, and optionally draw the field boundary on the map. Each field can have its own crop, irrigation setup, and management plan. This structure helps you manage different crop zones within a single farm independently.</p>'
+          },
+          { id: 'fm-crops', title: 'Adding and Managing Crops', content:
+            '<p>Open a field within your farm and tap <strong>Add Crop</strong>. Select from the crop library, which includes major categories like Cereals (Rice, Wheat, Maize), Pulses (Gram, Lentil), Oilseeds (Mustard, Groundnut), Cash Crops (Cotton, Sugarcane), Vegetables, and Fruits.</p>' +
+            '<p>Set the planting date, expected harvest date, variety, and seed rate. The app will automatically calculate growth stages and send timely reminders for irrigation, fertilization, pest control, and harvesting. You can track each crop\'s progress on a visual timeline and update its status as it moves through different growth phases.</p>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Adding accurate planting dates enables the app to send growth-stage-specific advice, such as the right time for top-dressing nitrogen in rice.</div>'
+          },
+          { id: 'fm-calendar', title: 'Farm Calendar and Tasks', content:
+            '<p>Go to <strong>Tasks</strong> from the bottom navigation to access your farm calendar. Tap <strong>Add Task</strong> to create a new task with a title, description, due date, and priority level (Low, Medium, High).</p>' +
+            '<p>Tasks can be categorized as Irrigation, Fertilizer, Pest Control, Harvesting, Weeding, Land Preparation, or Custom. You can assign tasks to workers and set recurring schedules for routine activities like daily watering. The calendar view shows all tasks by day, week, or month, making it easy to plan your farm activities.</p>'
+          },
+          { id: 'fm-expenses', title: 'Tracking Expenses and Income', content:
+            '<p>Open the <strong>Finance</strong> section to access your farm wallet and transaction history. Tap <strong>Add Expense</strong> to log costs by category  -  Seeds, Fertilizer, Pesticides, Labor, Equipment, Irrigation, Transport, and others.</p>' +
+            '<p>Record income from crop sales and other farm activities. The app generates monthly summaries, spending breakdowns by category, and profit/loss reports. This data helps you understand where your money goes and identify opportunities to reduce costs or increase yields.</p>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Regular expense tracking makes it easier to apply for agricultural loans, as banks often require detailed farm financial records.</div>'
+          },
+          { id: 'fm-workers', title: 'Managing Workers', content:
+            '<p>Go to <strong>Workers</strong> from the sidebar to browse and book skilled farm workers. Workers are categorized by expertise: Ploughing, Sowing, Irrigation, Spraying, Harvesting, and more.</p>' +
+            '<p>Each worker profile shows their experience, ratings, hourly or daily rates, and real-time availability. You can book workers for specific dates and tasks, track their completed work, and leave ratings and reviews. Workers can also be assigned to specific fields and tasks from the calendar view.</p>'
+          },
+          { id: 'fm-journal', title: 'Farm Journal and Records', content:
+            '<p>Keep detailed records of all farm activities using the journal feature. Log daily observations, weather conditions, pest sightings, and treatment applications. Attach photos to document crop conditions, soil samples, or equipment status.</p>' +
+            '<p>Your journal creates a searchable history of your farm\'s activities, which is invaluable for identifying patterns, planning future seasons, and providing documentation for insurance claims or expert consultations. All journal entries are synced across devices and stored securely in the cloud.</p>'
+          }
+        ]
+      },
+      'farm-techniques': {
+        icon: 'fas fa-seedling',
+        title: 'Farm Techniques',
+        sections: [
+          { id: 'ft-soil', title: 'Soil Preparation Guide', content:
+            '<p>Good soil preparation is the foundation of a successful harvest. Start by testing your soil through a government lab or using a soil testing kit to determine pH, nutrient levels, and organic matter content.</p>' +
+            '<ol><li><strong>Primary Tillage:</strong> Plough or deep-turn the soil 20-30 cm to break hardpan and improve drainage. Best done 3-4 weeks before sowing.</li>' +
+            '<li><strong>Secondary Tillage:</strong> Use a cultivator or harrow to break clods and create a fine, level seedbed.</li>' +
+            '<li><strong>Organic Matter:</strong> Incorporate farmyard manure (FYM), compost, or green manure at 5-10 tonnes per hectare to improve soil structure and microbial activity.</li>' +
+            '<li><strong>Basal Fertilizers:</strong> Apply recommended doses of phosphorus and potassium based on soil test results before final land preparation.</li>' +
+            '<li><strong>Leveling:</strong> Use a leveler to ensure even water distribution during irrigation, which prevents waterlogging in low spots.</li></ol>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Avoid working the soil when it is too wet, as this destroys soil structure and creates compaction. The ideal moisture is when the soil crumbles when squeezed but does not stick to your hands.</div>'
+          },
+          { id: 'ft-seed', title: 'Seed Selection and Sowing', content:
+            '<p>Choose certified seeds from reputable suppliers. Look for seeds with high germination rates (above 80%), good genetic purity, and varieties suited to your agro-climatic zone and season.</p>' +
+            '<ol><li>Check the seed packaging for the lot number, germination percentage, and expiry date.</li>' +
+            '<li>Treat seeds with fungicide (Thiram or Carbendazim) before sowing to prevent seed-borne diseases.</li>' +
+            '<li>Determine the correct sowing depth and spacing for your crop  -  Rice transplants need 20×10 cm spacing, while direct-seeded rice needs 20 cm row spacing.</li>' +
+            '<li>Sow at the right time based on local agronomic recommendations and weather conditions.</li>' +
+            '<li>Ensure proper soil moisture at the time of sowing for quick and uniform germination.</li></ol>' +
+            '<p>The Farm Assist app tracks your sowing date and calculates expected germination, tillering, and maturity dates for automatic alerts.</p>'
+          },
+          { id: 'ft-irrigation', title: 'Irrigation Methods and Scheduling', content:
+            '<p>Efficient water management is critical for crop productivity. The method and frequency depend on your crop type, soil, and available water source.</p>' +
+            '<ul><li><strong>Flood Irrigation:</strong> Simple but water-intensive. Suitable for rice in puddled fields. Ensure proper bunding and leveling.</li>' +
+            '<li><strong>Furrow Irrigation:</strong> Good for row crops like cotton, sugarcane, and vegetables. Water flows along channels between crop rows.</li>' +
+            '<li><strong>Drip Irrigation:</strong> Most efficient method (40-60% water savings). Delivers water directly to the root zone. Ideal for vegetables, fruits, and high-value crops.</li>' +
+            '<li><strong>Sprinkler Irrigation:</strong> Simulates rainfall. Good for uneven terrain and crops like wheat, pulses, and fodder.</li></ul>' +
+            '<p>Use the Farm Assist weather data and soil moisture indicators to schedule irrigation. The app sends alerts when irrigation is needed based on evapotranspiration calculations and weather forecasts.</p>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Morning irrigation (6-10 AM) is generally best as it reduces evaporation losses and gives plants access to water during peak photosynthesis hours.</div>'
+          },
+          { id: 'ft-fertilizer', title: 'Fertilizer Usage Guide', content:
+            '<p>Apply fertilizers based on soil test recommendations and crop requirements. Over-application wastes money and can harm soil health, while under-application limits yields.</p>' +
+            '<ol><li><strong>Nitrogen (N):</strong> Essential for leaf growth. Apply in splits  -  basal dose at sowing, top-dress at tillering and panicle initiation stages for cereals.</li>' +
+            '<li><strong>Phosphorus (P):</strong> Important for root development and flowering. Apply as a basal dose before or at sowing. It does not leach, so mixing into soil is important.</li>' +
+            '<li><strong>Potassium (K):</strong> Strengthens stems and improves disease resistance. Apply as basal dose, with possible top-dress for high-demand crops.</li>' +
+            '<li><strong>Organic Options:</strong> Vermicompost, FYM, neem cake, and biofertilizers (Rhizobium, PSB, Azotobacter) improve long-term soil health.</li></ol>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Always maintain a balance between organic and inorganic fertilizers. A good rule of thumb: apply 1 tonne of FYM for every 40 kg of chemical fertilizer to maintain soil biology.</div>'
+          },
+          { id: 'ft-pest', title: 'Pest Management', content:
+            '<p>Integrated Pest Management (IPM) combines multiple strategies to keep pest populations below economic thresholds while minimizing chemical use.</p>' +
+            '<ol><li><strong>Monitoring:</strong> Scout your fields regularly. Use pheromone traps and yellow sticky traps to monitor insect populations.</li>' +
+            '<li><strong>Cultural Controls:</strong> Use crop rotation, intercropping, trap crops (e.g., marigold for aphids), and timely sowing to avoid peak pest periods.</li>' +
+            '<li><strong>Biological Controls:</strong> Encourage natural predators (ladybugs, parasitic wasps) and use biopesticides like Trichoderma, Beauveria bassiana, and neem-based formulations.</li>' +
+            '<li><strong>Chemical Controls (Last Resort):</strong> Use recommended pesticides at correct doses. Rotate chemical classes to prevent resistance. Spray during cooler parts of the day and follow all safety precautions.</li></ol>' +
+            '<p>Use the Farm Assist AI scan feature to identify pests from photos. The app provides organic and chemical treatment recommendations based on the detected pest, crop, and growth stage.</p>'
+          },
+          { id: 'ft-disease', title: 'Disease Management', content:
+            '<p>Crop diseases are caused by fungi, bacteria, and viruses. Early detection and prevention are key to managing them effectively.</p>' +
+            '<ul><li><strong>Prevention:</strong> Use disease-resistant varieties, treat seeds before sowing, maintain proper spacing for air circulation, and avoid overhead irrigation that keeps foliage wet.</li>' +
+            '<li><strong>Identification:</strong> Look for signs like unusual spots, wilting, yellowing, powdery coatings, or abnormal growth. Use the Farm Assist AI scan for instant diagnosis.</li>' +
+            '<li><strong>Organic Treatment:</strong> Neem oil spray, Trichoderma for fungal diseases, Pseudomonas fluorescens for bacterial diseases, and removal of infected plant parts.</li>' +
+            '<li><strong>Chemical Treatment:</strong> Use fungicides (Mancozeb, Carbendazim) or bactericides (Streptomycin) as recommended for the specific disease. Always follow label instructions.</li></ul>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Remove and destroy (do not compost) heavily infected plants to prevent disease spread. Sanitize tools between plants.</div>'
+          },
+          { id: 'ft-harvest', title: 'Harvesting Best Practices', content:
+            '<p>Harvesting at the right time and using proper techniques significantly impacts crop quality and market value.</p>' +
+            '<ol><li><strong>Timing:</strong> Harvest when moisture content is optimal  -  Rice at 20-22%, Wheat at 14-16%, Cotton when bolls open fully. The Farm Assist app notifies you when harvest is approaching.</li>' +
+            '<li><strong>Methods:</strong> Use appropriate harvesting methods  -  manual cutting with sickle for small areas, or mechanized harvesters for large fields.</li>' +
+            '<li><strong>Post-Harvest Handling:</strong> Thresh, clean, and dry grains to safe moisture levels (12-14%) before storage. Use tarpaulins on clean surfaces to prevent contamination.</li>' +
+            '<li><strong>Storage:</strong> Store in clean, dry, well-ventilated containers or silos. Protect from moisture, pests, and rodents. Use hermetic storage bags for small quantities.</li>' +
+            '<li><strong>Record Keeping:</strong> Log your yield data in Farm Assist for season-to-season comparison and to track which varieties and practices produce the best results.</li></ol>'
+          }
+        ]
+      },
+      'marketplace': {
+        icon: 'fas fa-store',
+        title: 'Marketplace',
+        sections: [
+          { id: 'mk-buy', title: 'Finding Products to Buy', content:
+            '<p>Open the <strong>Marketplace</strong> section from the sidebar to browse a wide range of agricultural inputs. Products are organized into categories: Seeds, Fertilizers, Pesticides, Tools, Equipment, and Irrigation supplies.</p>' +
+            '<p>Use the search bar and filters to narrow down by price range, brand, rating, or distance from your location. Each product page shows detailed specifications, user reviews, and delivery estimates. Compare products side-by-side before making a purchase decision.</p>'
+          },
+          { id: 'mk-prices', title: 'Checking Market Prices', content:
+            '<p>The marketplace provides real-time commodity prices from major mandis (markets) across the country. Access prices from the dashboard widget or the Marketplace section.</p>' +
+            '<p>View daily, weekly, and monthly price trends for your crops. Set price alerts to get notified when your target selling price is reached. The app shows prices from nearby mandis as well as national averages, helping you decide the best time and place to sell your produce.</p>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Check prices at multiple mandis before selling. Transportation costs eat into profits, so factor in distance when comparing prices.</div>'
+          },
+          { id: 'mk-sell', title: 'Selling Your Farm Produce', content:
+            '<p>To list your produce for sale, go to Marketplace and tap <strong>Sell</strong>. Select the crop type, quantity available, grade or quality description, your expected price, and upload photos of the produce.</p>' +
+            '<p>Choose between a local listing (visible to nearby buyers) or a public listing (visible across the marketplace). Set a minimum order quantity if desired. Your listing will appear in search results and category browsing. Buyers can initiate a purchase or send a negotiation message through the in-app chat.</p>'
+          },
+          { id: 'mk-buyers', title: 'Finding and Contacting Buyers', content:
+            '<p>Browse the <strong>Buyers</strong> tab in the Marketplace to see verified buyers in your region. Buyer profiles include their business type (Wholesaler, Retailer, Exporter, Processing Unit), ratings from other farmers, and their current demand list.</p>' +
+            '<p>When you find a buyer interested in your produce, tap <strong>Contact</strong> to start a conversation. You can share photos, negotiate prices, discuss delivery terms, and agree on payment methods. Always verify buyer identity and agree on terms before committing to a sale.</p>'
+          },
+          { id: 'mk-chat', title: 'Using In-App Chat for Negotiations', content:
+            '<p>Every marketplace transaction can be discussed through the built-in chat system. When a buyer or seller initiates contact, a conversation thread is created automatically.</p>' +
+            '<p>Use the chat to share additional photos of your produce, discuss quality specifications, negotiate price and quantity, agree on delivery logistics, and confirm payment terms. The chat preserves a record of all agreements, which helps in case of any disputes. You can also share your farm\'s crop health reports and satellite data to build buyer confidence.</p>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Always get payment confirmation before dispatching produce. For large transactions, consider using the in-app escrow or payment system for security.</div>'
+          }
+        ]
+      },
+      'account-security': {
+        icon: 'fas fa-shield-halved',
+        title: 'Account & Security',
+        sections: [
+          { id: 'as-profile', title: 'Account Settings and Profile Management', content:
+            '<p>Access your account settings from <strong>Profile</strong> in the sidebar menu. Here you can update your personal information, change your profile photo, manage notification preferences, and configure display settings.</p>' +
+            '<p>You can update your name, phone number, email, location, and farm type at any time. Changes to critical information like phone number require OTP verification for security. The settings page also lets you enable or disable features like push notifications, email alerts, and SMS updates.</p>'
+          },
+          { id: 'as-farmid', title: 'Understanding Your Farm ID', content:
+            '<p>Your Farm ID follows the format <strong>FA-AS-XXXXXXXX</strong>, where "AS" denotes the platform identifier and the remaining characters are unique to your account. This ID is generated during registration and cannot be changed.</p>' +
+            '<p>Use your Farm ID to log in, share with agricultural experts for consultations, identify yourself in marketplace transactions, and for any support requests. Your Farm ID is displayed at the top of your sidebar, on your profile page, and in your digital farmer ID card.</p>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Your Farm ID is public-facing identity. Never share your PIN or OTP with anyone, even if they claim to be from Farm Assist support.</div>'
+          },
+          { id: 'as-pin', title: 'PIN and OTP Security', content:
+            '<p>Your 4-digit PIN is your primary login credential. It should be something you can remember easily but others cannot guess. Avoid common PINs like 1234, 0000, or your birth year.</p>' +
+            '<p>OTP (One-Time Password) is sent to your registered phone number for critical actions like PIN changes, phone number updates, and account recovery. OTPs expire after 5 minutes and can only be used once. If you do not receive an OTP, check your phone signal and spam messages, then request a new one.</p>'
+          },
+          { id: 'as-privacy', title: 'Privacy Settings', content:
+            '<p>Farm Assist respects your privacy. Go to <strong>Settings > Privacy</strong> to control who can see your farm details, location, and contact information.</p>' +
+            '<p>You can make your farm profile visible to all users, only to verified farmers, or keep it private. Marketplace listings can be anonymous with your Farm ID shown instead of your name. Your exact location is never shared publicly  -  only the approximate area is shown to buyers and experts.</p>'
+          },
+          { id: 'as-change-pin', title: 'Changing Your PIN', content:
+            '<p>To change your PIN, go to <strong>Settings > Security > Change PIN</strong>. You will need to enter your current PIN first, then create and confirm a new 4-digit PIN.</p>' +
+            '<p>If you\'ve forgotten your current PIN, tap <strong>Forgot PIN?</strong> on the login screen. An OTP will be sent to your registered phone number. After verifying the OTP, you can set a new PIN immediately. For security, changing your PIN will log you out of all other devices.</p>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> Change your PIN every 3-4 months for added security, especially if you\'ve used Farm Assist on shared devices.</div>'
+          }
+        ]
+      },
+      'technical-support': {
+        icon: 'fas fa-wrench',
+        title: 'Technical Support',
+        sections: [
+          { id: 'ts-app', title: 'App Not Working', content:
+            '<p>If Farm Assist is not loading, crashing, or behaving unexpectedly, try these steps in order:</p>' +
+            '<ol><li><strong>Clear Browser Cache:</strong> Go to your browser settings and clear the cache and cookies for the Farm Assist site. This fixes most display and loading issues.</li>' +
+            '<li><strong>Refresh the Page:</strong> Sometimes a simple hard refresh (Ctrl+Shift+R or Cmd+Shift+R) resolves temporary glitches.</li>' +
+            '<li><strong>Check Internet Connection:</strong> Ensure you have a stable internet connection. Try switching between Wi-Fi and mobile data.</li>' +
+            '<li><strong>Update the App:</strong> If using the mobile app, check the Play Store or App Store for updates. Outdated versions may have bugs.</li>' +
+            '<li><strong>Reinstall:</strong> Uninstall and reinstall the app as a last resort. Your data is synced to the cloud and will be restored after login.</li></ol>' +
+            '<p>If none of these steps work, submit a support ticket using the form above with details about your device, browser, and the error you are seeing.</p>'
+          },
+          { id: 'ts-login', title: 'Login Problems', content:
+            '<p><strong>Cannot log in with PIN:</strong> Double-check that you are entering the correct Farm ID (FA-AS-XXXXXXXX) and PIN. Farm IDs are case-sensitive in the "AS" portion. If you\'ve forgotten your PIN, use the "Forgot PIN?" link to reset via OTP.</p>' +
+            '<p><strong>OTP not received:</strong> Ensure your phone has network coverage. Check if the phone number matches your registered number. Wait at least 60 seconds before requesting a new OTP. If using a landline or non-smartphone, contact support for alternative verification.</p>' +
+            '<p><strong>Account locked:</strong> After 5 incorrect PIN attempts, the account is locked for 15 minutes as a security measure. Wait for the lockout period to expire, or use the OTP method to reset your PIN immediately.</p>'
+          },
+          { id: 'ts-location', title: 'Location/GPS Problems', content:
+            '<p>Farm Assist uses your device\'s GPS to provide accurate weather data and location-based services. If the app cannot detect your location:</p>' +
+            '<ol><li>Ensure location services are enabled for your browser or the Farm Assist app in your device settings.</li>' +
+            '<li>Check that you\'ve granted location permission when the app requested it. You can re-enable it from browser/site settings.</li>' +
+            '<li>Move to an open area with clear sky view for better GPS signal. Indoor or underground locations may not work.</li>' +
+            '<li>As a manual alternative, you can enter your farm location by dropping a pin on the map or entering coordinates/nearest landmark.</li></ol>' +
+            '<p>The app caches your last known location and works offline with it. Update it periodically for accurate weather and local market data.</p>'
+          },
+          { id: 'ts-notifications', title: 'Notification Issues', content:
+            '<p>If you are not receiving notifications from Farm Assist:</p>' +
+            '<ol><li>Check that notifications are enabled in the app under <strong>Settings > Notifications</strong>.</li>' +
+            '<li>Ensure your browser or device allows notifications from Farm Assist. Check browser notification permissions and system notification settings.</li>' +
+            '<li>Disable battery optimization for the Farm Assist app on Android  -  aggressive battery savers often block background notifications.</li>' +
+            '<li>For critical alerts (weather warnings, crop health issues), enable SMS notifications as a backup.</li></ol>' +
+            '<p>Note that notifications require an internet connection. If you are offline, alerts will be delivered when you reconnect.</p>'
+          },
+          { id: 'ts-offline', title: 'Network and Offline Mode', content:
+            '<p>Farm Assist is designed to work offline. All core features  -  adding farms, crops, expenses, tasks, and journal entries  -  work without internet. Your data is stored locally and automatically synced when connectivity is restored.</p>' +
+            '<p>An offline indicator appears at the top of the screen when you are disconnected. Features requiring real-time data (weather updates, marketplace browsing, AI analysis, expert calls, and satellite imagery) require an active connection. When syncing resumes after being offline, you may see a brief loading state while pending changes are uploaded.</p>' +
+            '<div class="guide-tip"><i class="fas fa-lightbulb"></i> For the best offline experience, load your dashboard and weather data before going to areas with poor connectivity. The app caches recent data for offline viewing.</div>'
+          }
+        ]
+      }
+    };
+
+    function openGuide(guideId) {
+      var guide = guides[guideId];
+      if (!guide) return;
+
+      var main = document.getElementById('main-content');
+      var viewer = document.getElementById('guide-viewer');
+      var content = document.getElementById('guide-viewer-content');
+
+      var tocHtml = '<div class="guide-toc"><h5>Contents</h5>';
+      for (var i = 0; i < guide.sections.length; i++) {
+        tocHtml += '<a class="guide-toc-item" href="#guide-' + guide.sections[i].id + '" onclick="scrollToGuideSection(\'' + guide.sections[i].id + '\')">' + guide.sections[i].title + '</a>';
+      }
+      tocHtml += '</div>';
+
+      var bodyHtml = '';
+      for (var j = 0; j < guide.sections.length; j++) {
+        var s = guide.sections[j];
+        bodyHtml += '<div class="guide-section" id="guide-' + s.id + '"><h3>' + s.title + '</h3>' + s.content + '</div>';
+      }
+
+      content.innerHTML =
+        '<div class="guide-title"><i class="' + guide.icon + '"></i> ' + guide.title + '</div>' +
+        '<div class="guide-layout">' +
+          tocHtml +
+          '<div class="guide-content">' + bodyHtml + '</div>' +
+        '</div>';
+
+      main.classList.add('hidden');
+      viewer.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function closeGuide() {
+      var main = document.getElementById('main-content');
+      var viewer = document.getElementById('guide-viewer');
+      main.classList.remove('hidden');
+      viewer.classList.remove('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function scrollToGuideSection(id) {
+      var el = document.getElementById('guide-' + id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /* ===== Init ===== */
+    document.addEventListener('DOMContentLoaded', function() {
+      prefillContactForm();
+      loadTickets();
+    });
+  </script>
+</body>
+</html>

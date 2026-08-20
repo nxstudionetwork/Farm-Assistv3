@@ -1,0 +1,268 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="documents">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Document Vault</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .doc-toolbar { display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+    .doc-search { flex:1; min-width:200px; position:relative; }
+    .doc-search input { width:100%; padding:10px 14px 10px 38px; border:1px solid var(--border-light); border-radius:var(--radius-sm); font-size:13px; background:white; }
+    .doc-search input:focus { border-color:var(--primary-green); box-shadow:0 0 0 3px rgba(27,94,63,0.08); outline:none; }
+    .doc-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:13px; }
+    .doc-view-toggle { display:flex; gap:4px; }
+    .doc-view-btn { width:36px; height:36px; border:1px solid var(--border-light); background:white; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-muted); transition:all 0.2s; }
+    .doc-view-btn:hover { border-color:var(--primary-green); color:var(--primary-green); }
+    .doc-view-btn.active { background:var(--primary-green); color:white; border-color:var(--primary-green); }
+    .doc-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
+    .doc-list { display:flex; flex-direction:column; gap:8px; }
+    .doc-item { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; text-align:center; }
+    .doc-item:hover { border-color:var(--primary-green); box-shadow:var(--shadow-sm); transform:translateY(-2px); }
+    .doc-item.list-view { flex-direction:row; text-align:left; align-items:center; }
+    .doc-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:10px; }
+    .doc-item.list-view .doc-icon { margin-bottom:0; margin-right:12px; width:40px; height:40px; font-size:18px; }
+    .doc-icon.folder { background:#FFC107; color:#fff; }
+    .doc-icon.pdf { background:#F44336; color:#fff; }
+    .doc-icon.image { background:#4CAF50; color:#fff; }
+    .doc-icon.doc { background:#2196F3; color:#fff; }
+    .doc-icon.other { background:#9E9E9E; color:#fff; }
+    .doc-name { font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+    .doc-item.list-view .doc-name { flex:1; margin-bottom:0; }
+    .doc-meta { font-size:11px; color:var(--text-muted); }
+    .doc-item.list-view .doc-meta { min-width:120px; }
+    .doc-actions { display:flex; gap:4px; margin-top:8px; }
+    .doc-item.list-view .doc-actions { margin-top:0; }
+    .doc-action-btn { width:28px; height:28px; border:1px solid var(--border-light); background:var(--bg-card-soft); border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px; transition:all 0.2s; }
+    .doc-action-btn:hover { background:var(--primary-green); color:white; border-color:var(--primary-green); }
+    .doc-action-btn.delete:hover { background:var(--danger); border-color:var(--danger); }
+    .folder-section { margin-bottom:20px; }
+    .folder-title { font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+    .folder-title i { color:var(--primary-green); }
+    .storage-bar { background:var(--bg-card-soft); border-radius:var(--radius-sm); height:8px; overflow:hidden; margin-top:8px; }
+    .storage-fill { background:var(--primary-green); height:100%; transition:width 0.3s; }
+    .storage-info { display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top:4px; }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+    <section class="hero-dashboard" style="background:var(--gradient-primary); margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2><i class="fas fa-cloud"></i> Document Vault</h2>
+          <p style="font-size:13px; color:rgba(255,255,255,0.9); margin-top:5px;">
+            Your cloud storage for farm documents
+          </p>
+        </div>
+        <div style="background:rgba(255,255,255,0.15); padding:12px 16px; border-radius:12px;">
+          <div style="font-size:11px; color:rgba(255,255,255,0.8);">Storage Used</div>
+          <div style="font-size:18px; font-weight:700; color:white;">2.4 GB / 10 GB</div>
+          <div class="storage-bar" style="background:rgba(255,255,255,0.3);">
+            <div class="storage-fill" style="width:24%; background:white;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="doc-toolbar">
+      <div class="doc-search">
+        <i class="fas fa-search"></i>
+        <input type="text" id="docSearch" placeholder="Search files and folders..." oninput="filterDocs()">
+      </div>
+      <button class="btn-primary btn-sm" onclick="document.getElementById('file-input').click()">
+        <i class="fas fa-upload"></i> Upload
+      </button>
+      <div class="doc-view-toggle">
+        <button class="doc-view-btn active" id="gridViewBtn" onclick="setView('grid')">
+          <i class="fas fa-th-large"></i>
+        </button>
+        <button class="doc-view-btn" id="listViewBtn" onclick="setView('list')">
+          <i class="fas fa-list"></i>
+        </button>
+      </div>
+    </div>
+
+    <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)" multiple>
+
+    <!-- Folders Section -->
+    <div class="folder-section" id="folders-section">
+      <div class="folder-title"><i class="fas fa-folder"></i> Folders</div>
+      <div class="doc-grid" id="folders-grid"></div>
+    </div>
+
+    <!-- Files Section -->
+    <div class="folder-section">
+      <div class="folder-title"><i class="fas fa-file"></i> Files</div>
+      <div class="doc-grid" id="files-grid"></div>
+    </div>
+
+  </main>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    var currentView = 'grid';
+    var folders = [
+      { id: 1, name: 'Land Records', icon: 'fa-folder', color: '#FFC107', count: 8 },
+      { id: 2, name: 'Insurance', icon: 'fa-folder', color: '#FFC107', count: 5 },
+      { id: 3, name: 'Invoices', icon: 'fa-folder', color: '#FFC107', count: 12 },
+      { id: 4, name: 'Government Docs', icon: 'fa-folder', color: '#FFC107', count: 6 },
+      { id: 5, name: 'Crop Records', icon: 'fa-folder', color: '#FFC107', count: 4 }
+    ];
+
+    var files = [
+      { id: 1, name: '7_12_Extract.pdf', type: 'pdf', size: '2.4 MB', date: 'Jan 15, 2026', folder: 'Land Records' },
+      { id: 2, name: 'Land_Tax_Receipt.pdf', type: 'pdf', size: '1.1 MB', date: 'Jan 10, 2026', folder: 'Land Records' },
+      { id: 3, name: 'Crop_Insurance_Policy.pdf', type: 'pdf', size: '3.2 MB', date: 'Dec 20, 2025', folder: 'Insurance' },
+      { id: 4, name: 'Fertilizer_Invoice.pdf', type: 'pdf', size: '856 KB', date: 'Feb 5, 2026', folder: 'Invoices' },
+      { id: 5, name: 'Seeds_Purchase.pdf', type: 'pdf', size: '1.5 MB', date: 'Feb 1, 2026', folder: 'Invoices' },
+      { id: 6, name: 'PM_Kisan_Certificate.pdf', type: 'pdf', size: '2.1 MB', date: 'Nov 15, 2025', folder: 'Government Docs' },
+      { id: 7, name: 'Farm_Map.jpg', type: 'image', size: '4.5 MB', date: 'Jan 5, 2026', folder: 'Land Records' },
+      { id: 8, name: 'Soil_Test_Report.pdf', type: 'pdf', size: '1.8 MB', date: 'Jan 20, 2026', folder: 'Crop Records' }
+    ];
+
+    function getFileIcon(type) {
+      var icons = {
+        'pdf': { icon: 'fa-file-pdf', class: 'pdf' },
+        'image': { icon: 'fa-file-image', class: 'image' },
+        'doc': { icon: 'fa-file-word', class: 'doc' },
+        'docx': { icon: 'fa-file-word', class: 'doc' },
+        'xls': { icon: 'fa-file-excel', class: 'doc' },
+        'xlsx': { icon: 'fa-file-excel', class: 'doc' }
+      };
+      return icons[type] || { icon: 'fa-file', class: 'other' };
+    }
+
+    function setView(view) {
+      currentView = view;
+      document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+      document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+      renderFolders();
+      renderFiles();
+    }
+
+    function renderFolders() {
+      var container = document.getElementById('folders-grid');
+      if (!container) return;
+      
+      container.className = currentView === 'grid' ? 'doc-grid' : 'doc-list';
+      var html = '';
+      
+      folders.forEach(function(folder) {
+        var itemClass = currentView === 'grid' ? 'doc-item' : 'doc-item list-view';
+        html += '<div class="' + itemClass + '" onclick="openFolder(' + folder.id + ')">' +
+          '<div class="doc-icon folder"><i class="fas ' + folder.icon + '"></i></div>' +
+          '<div class="doc-name">' + folder.name + '</div>' +
+          '<div class="doc-meta">' + folder.count + ' items</div>' +
+          '</div>';
+      });
+      
+      container.innerHTML = html;
+    }
+
+    function renderFiles() {
+      var container = document.getElementById('files-grid');
+      if (!container) return;
+      
+      var searchTerm = (document.getElementById('docSearch').value || '').toLowerCase();
+      var filtered = files.filter(function(f) {
+        return f.name.toLowerCase().indexOf(searchTerm) !== -1 || f.folder.toLowerCase().indexOf(searchTerm) !== -1;
+      });
+      
+      container.className = currentView === 'grid' ? 'doc-grid' : 'doc-list';
+      var html = '';
+      
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-muted);font-size:13px;">No files found</div>';
+        return;
+      }
+      
+      filtered.forEach(function(file) {
+        var iconInfo = getFileIcon(file.type);
+        var itemClass = currentView === 'grid' ? 'doc-item' : 'doc-item list-view';
+        html += '<div class="' + itemClass + '">' +
+          '<div class="doc-icon ' + iconInfo.class + '"><i class="fas ' + iconInfo.icon + '"></i></div>' +
+          '<div class="doc-name">' + file.name + '</div>' +
+          '<div class="doc-meta">' + file.size + ' • ' + file.date + '</div>' +
+          '<div class="doc-actions">' +
+          '<button class="doc-action-btn" onclick="downloadFile(' + file.id + ')"><i class="fas fa-download"></i></button>' +
+          '<button class="doc-action-btn" onclick="shareFile(' + file.id + ')"><i class="fas fa-share"></i></button>' +
+          '<button class="doc-action-btn delete" onclick="deleteFile(' + file.id + ')"><i class="fas fa-trash"></i></button>' +
+          '</div>' +
+          '</div>';
+      });
+      
+      container.innerHTML = html;
+    }
+
+    function filterDocs() {
+      renderFiles();
+    }
+
+    function openFolder(id) {
+      var folder = folders.find(function(f) { return f.id === id; });
+      if (folder) {
+        showToast('Opening folder: ' + folder.name, 'info');
+        // In a real implementation, this would filter files by folder
+      }
+    }
+
+    function downloadFile(id) {
+      var file = files.find(function(f) { return f.id === id; });
+      if (file) {
+        showToast('Downloading: ' + file.name, 'info');
+      }
+    }
+
+    function shareFile(id) {
+      var file = files.find(function(f) { return f.id === id; });
+      if (file) {
+        showToast('Share link copied for: ' + file.name, 'success');
+      }
+    }
+
+    function deleteFile(id) {
+      var file = files.find(function(f) { return f.id === id; });
+      if (file && confirm('Are you sure you want to delete ' + file.name + '?')) {
+        files = files.filter(function(f) { return f.id !== id; });
+        renderFiles();
+        showToast('File deleted', 'warning');
+      }
+    }
+
+    function handleFileSelect(e) {
+      if (e.target.files.length > 0) {
+        var file = e.target.files[0];
+        showToast('Uploading: ' + file.name, 'info');
+        
+        // Simulate upload
+        setTimeout(function() {
+          var newFile = {
+            id: files.length + 1,
+            name: file.name,
+            type: file.name.split('.').pop().toLowerCase(),
+            size: (file.size / 1024 / 1024).toFixed(1) + ' MB',
+            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            folder: 'Invoices'
+          };
+          files.unshift(newFile);
+          renderFiles();
+          showToast('File uploaded successfully!', 'success');
+        }, 1500);
+      }
+    }
+
+    window.addEventListener('load', function() {
+      renderFolders();
+      renderFiles();
+    });
+  </script>
+</body>
+</html>

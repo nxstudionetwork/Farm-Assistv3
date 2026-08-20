@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="techniques">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Farm Techniques</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* ===== Farm Techniques ===== */
+    .tec-hero {
+      background: linear-gradient(135deg, #0F2E1E 0%, #1B5E3F 60%, #40916C 100%);
+      border-radius: var(--radius-xl);
+      padding: 22px 20px;
+      color: white;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .tec-hero::after {
+      content: '\f02d';
+      font-family: 'Font Awesome 6 Free'; font-weight: 900;
+      position: absolute; right: -10px; bottom: -20px; font-size: 120px; opacity: 0.07;
+    }
+    .tec-hero h2 { color: white; font-size: 22px; margin-bottom: 4px; }
+    .tec-hero p { font-size: 13px; opacity: 0.85; margin-bottom: 12px; }
+    .tec-chips { display: flex; gap: 6px; flex-wrap: wrap; position: relative; z-index: 1; }
+    .tec-chip { padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: white; font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .tec-chip.active { background: white; color: var(--primary-green); border-color: white; }
+
+    .tec-search-wrap { position: relative; margin-bottom: 14px; }
+    .tec-search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; }
+    .tec-search { width: 100%; padding: 11px 14px 11px 38px; border: 1px solid var(--border-light); border-radius: var(--radius-md); background: white; font-size: 13px; transition: all 0.2s; }
+    .tec-search:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.08); }
+
+    .tec-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 560px) { .tec-grid { grid-template-columns: 1fr 1fr; gap: 14px; } }
+    @media (min-width: 920px) { .tec-grid { grid-template-columns: 1fr 1fr 1fr; gap: 16px; } }
+
+    .tec-card {
+      background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg);
+      padding: 16px; cursor: pointer; transition: all 0.25s; animation: fadeUp 0.4s ease both;
+      display: flex; flex-direction: column; position: relative;
+    }
+    .tec-card:hover { box-shadow: var(--shadow-md); border-color: var(--medium-green); transform: translateY(-3px); }
+    .tec-icon {
+      width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+      font-size: 19px; margin-bottom: 12px; color: white;
+    }
+    .tec-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 5px; line-height: 1.3; }
+    .tec-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .tec-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+    .tec-tag { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: var(--soft-green); color: var(--primary-green); letter-spacing: 0.3px; }
+    .tec-tag.gold { background: #FFF4D6; color: #B7791F; }
+    .tec-tag.blue { background: #E3F2FD; color: #1565C0; }
+    .tec-tag.red { background: #FDECEC; color: #C62828; }
+    .tec-meta { display: flex; gap: 12px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-light); font-size: 10px; color: var(--text-muted); }
+    .tec-meta i { color: var(--medium-green); margin-right: 3px; }
+    .tec-save {
+      position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 10px;
+      background: var(--bg-card-soft); border: 1px solid var(--border-light); color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 13px;
+    }
+    .tec-save:hover { color: var(--primary-green); border-color: var(--primary-green); }
+    .tec-save.saved { background: var(--soft-green); color: var(--primary-green); border-color: var(--primary-green); }
+    .tec-empty { text-align: center; padding: 40px 16px; color: var(--text-muted); }
+    .tec-empty i { font-size: 40px; opacity: 0.4; margin-bottom: 10px; display: block; }
+
+    /* ===== Detail modal ===== */
+    .modal-box.tec-modal { max-width: 560px; padding: 0; overflow: hidden; max-height: 90vh; display: flex; flex-direction: column; }
+    .tec-modal-head {
+      padding: 18px 18px 14px; color: white; position: relative; overflow: hidden; flex-shrink: 0;
+    }
+    .tec-modal-head h3 { color: white; font-size: 17px; margin-bottom: 3px; }
+    .tec-modal-head p { font-size: 12px; opacity: 0.85; }
+    .tec-modal-close {
+      position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(255,255,255,0.2); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.2s;
+    }
+    .tec-modal-close:hover { background: rgba(255,255,255,0.35); }
+    .tec-modal-body { padding: 18px; overflow-y: auto; flex: 1; }
+    .tec-section { margin-bottom: 16px; }
+    .tec-section h5 { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .tec-section h5 i { color: var(--primary-green); }
+    .tec-step { display: flex; gap: 10px; padding: 7px 0; font-size: 13px; color: var(--text-secondary); }
+    .tec-step-num {
+      width: 22px; height: 22px; border-radius: 50%; background: var(--soft-green); color: var(--primary-green);
+      font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+    }
+    .tec-material { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); padding: 5px 0; }
+    .tec-material i { color: var(--medium-green); width: 16px; text-align: center; }
+    .tec-tip {
+      background: #FFF8E1; border-left: 3px solid var(--warning); border-radius: var(--radius-md);
+      padding: 10px 12px; font-size: 12px; color: #6D5310; line-height: 1.5;
+    }
+    .tec-tip b { display: block; margin-bottom: 2px; }
+    .tec-modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+    .tec-modal-actions .btn-primary, .tec-modal-actions .btn-secondary { flex: 1; font-size: 12px; padding: 9px 10px; }
+    @media (max-width: 480px) {
+      .modal-box.tec-modal { width: 100%; height: 100%; max-height: 100vh; max-width: 100%; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-container">
+
+  <div class="tec-hero">
+    <h2><i class="fas fa-book-open" style="margin-right:8px;"></i> Farm Techniques</h2>
+    <p>Proven methods and step-by-step guides to improve yields, save inputs and protect your farm.</p>
+    <div class="tec-chips" id="tecChips">
+      <button class="tec-chip active" data-filter="all">All</button>
+      <button class="tec-chip" data-filter="irrigation">Irrigation</button>
+      <button class="tec-chip" data-filter="soil">Soil Health</button>
+      <button class="tec-chip" data-filter="organic">Organic Inputs</button>
+      <button class="tec-chip" data-filter="pest">Pest Management</button>
+      <button class="tec-chip" data-filter="planting">Planting</button>
+      <button class="tec-chip" data-filter="harvest">Harvest & Post</button>
+    </div>
+  </div>
+
+  <div class="tec-search-wrap">
+    <i class="fas fa-search"></i>
+    <input type="text" id="tecSearch" class="tec-search" placeholder="Search techniques, crops, inputs..." autocomplete="off">
+  </div>
+
+  <div class="tec-grid" id="tecGrid"></div>
+  <div class="tec-empty" id="tecEmpty" style="display:none;">
+    <i class="fas fa-book-open"></i>
+    <p>No techniques found. Try a different search or category.</p>
+  </div>
+
+</main>
+
+<!-- Detail Modal -->
+<div class="modal-backdrop" id="tecModalBackdrop">
+  <div class="modal-box tec-modal" role="dialog" aria-modal="true" aria-label="Technique details">
+    <div class="tec-modal-head" id="tecModalHead">
+      <h3 id="tecModalTitle"></h3>
+      <p id="tecModalSub"></p>
+      <button class="tec-modal-close" id="tecModalClose" aria-label="Close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="tec-modal-body" id="tecModalBody"></div>
+  </div>
+</div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LS_BOOKMARKS = 'fa-techniques-bookmarks';
+
+  var techniques = [
+    { id: 1, title: 'Drip Irrigation Setup', cat: 'irrigation', icon: 'fa-droplet', color: '#1B5E3F', time: '2-3 days', cost: 'Low', steps: 5, desc: 'Install a water-efficient drip system for vegetables to cut water use by up to 60%.', materials: ['16mm lateral pipes', 'Drip emitters (2-4 LPH)', 'Filter + screen', 'End caps & connectors'], stepsList: ['Plan the field layout and mainline path.', 'Lay the mainline pipe from the water source.', 'Fix laterals along each crop row.', 'Punch holes and insert emitters at plant spacing.', 'Flush the system and test pressure.', 'Add a timer for scheduled irrigation.'], tip: 'Mulch over the drip lines keeps the soil cool and reduces weed growth, saving another 20% water.', tag: 'Water Saving', tagClass: 'blue' },
+    { id: 2, title: 'Soil Testing & Nutrient Balance', cat: 'soil', icon: 'fa-flask', color: '#2D8659', time: '1 week', cost: 'Free', steps: 4, desc: 'Sample and test your soil to apply exactly the fertiliser your crop needs - no more, no less.', materials: ['Soil auger or spade', 'Clean plastic bags', 'Soil test kit / lab', 'Soil report sheet'], stepsList: ['Divide the field into uniform zones.', 'Collect 8-10 sub-samples per zone in a zigzag pattern.', 'Mix samples and take a 500g composite.', 'Send to a lab or use a rapid NPK kit.', 'Read the report and adjust fertiliser plan.'], tip: 'Test soil every 2-3 years, ideally after harvest, and always at the same depth for comparable results.', tag: 'Healthy Soil', tagClass: 'gold' },
+    { id: 3, title: 'Vermicompost Making', cat: 'organic', icon: 'fa-seedling', color: '#52B788', time: '45 days', cost: 'Low', steps: 5, desc: 'Convert farm and kitchen waste into rich worm compost that improves soil life and yields.', materials: ['Red wiggler worms (1kg)', 'Cocopeat / dry leaves', 'Shade net + tray', 'Farm waste & kitchen scraps'], stepsList: ['Prepare a 3x2 ft bed with drainage.', 'Add a cocopeat layer as bedding.', 'Release worms and cover with moist waste.', 'Top up with fresh waste every 3-4 days.', 'Harvest castings after 45 days.', 'Air-dry castings before bagging.'], tip: 'Keep the bed moist (like a squeezed sponge) but never waterlogged - worms breathe through their skin.', tag: 'Organic', tagClass: 'gold' },
+    { id: 4, title: 'Integrated Pest Management (IPM)', cat: 'pest', icon: 'fa-bug', color: '#1565C0', time: 'Ongoing', cost: 'Medium', steps: 5, desc: 'Combine traps, natural enemies and safe sprays to keep pests below economic thresholds.', materials: ['Pheromone traps', 'Yellow sticky traps', 'Neem-based spray', 'Beneficial insects'], stepsList: ['Scout fields twice a week for pest signs.', 'Set pheromone and sticky traps at borders.', 'Release predators like Trichogramma on time.', 'Spray only when threshold is crossed.', 'Rotate between approved bio-pesticides.'], tip: 'Pests love stressed plants - balanced irrigation and nutrition is your cheapest pest control.', tag: 'Safer Spray', tagClass: 'red' },
+    { id: 5, title: 'High-Density Planting', cat: 'planting', icon: 'fa-seedling', color: '#40916C', time: '1 week', cost: 'Medium', steps: 4, desc: 'Plant more trees per acre with dwarf varieties and trellising for higher early yields.', materials: ['Dwarf/rootstock saplings', 'Trellis or support wire', 'Drip + fertigation', 'Pruning tools'], stepsList: ['Select dwarf or high-density varieties.', 'Mark rows with 4-5 ft spacing.', 'Install trellis before planting.', 'Plant and stake young saplings.', 'Prune for a single-leader shape.'], tip: 'High density needs discipline - regular pruning and fertigation are non-negotiable for success.', tag: 'More Yield', tagClass: 'blue' },
+    { id: 6, title: 'Zero Tillage Sowing', cat: 'planting', icon: 'fa-tractor', color: '#8B6F47', time: '1 day', cost: 'Low', steps: 4, desc: 'Sow directly into crop residue to build soil organic matter and reduce diesel costs.', materials: ['Zero till drill', 'Suitable seed + fertiliser', 'Happy seeder (for rice)', 'Crop residue'], stepsList: ['Keep the previous crop residue on field.', 'Ensure adequate soil moisture.', 'Calibrate seed and fertiliser rates.', 'Drill seeds directly into residue.', 'Apply pre-emergence herbicide if needed.'], tip: 'Leave residue on the soil - burning it destroys the organic matter you are trying to build.', tag: 'Cost Saver', tagClass: 'gold' },
+    { id: 7, title: 'Mulching with Plastic / Straw', cat: 'irrigation', icon: 'fa-layer-group', color: '#C9A227', time: '1 day', cost: 'Low', steps: 3, desc: 'Cover the soil around plants to conserve moisture, suppress weeds and keep fruits clean.', materials: ['Black plastic / straw', 'Mulch pins or soil', 'Drip line (optional)'], stepsList: ['Lay drip line on the bed.', 'Cover bed with mulch film.', 'Anchor edges with soil or pins.', 'Punch holes and transplant.'], tip: 'Silver-black film reflects light and deters aphids while keeping roots cool.', tag: 'Weed Free', tagClass: 'blue' },
+    { id: 8, title: 'Jeevamrut Preparation', cat: 'organic', icon: 'fa-recycle', color: '#2D8659', time: '48 hours', cost: 'Free', steps: 4, desc: 'A zero-cost liquid fertiliser made from cow dung and urine that boosts soil microbes.', materials: ['Fresh cow dung - 10 kg', 'Cow urine - 10 L', 'Jaggery - 2 kg', 'Chickpea flour - 2 kg', 'Water - 200 L'], stepsList: ['Mix all ingredients in a drum.', 'Stir clockwise for 10 minutes.', 'Cover and ferment for 48 hours.', 'Strain and dilute 1:10 with water.', 'Apply to soil near the root zone.'], tip: 'Use it within 7 days - longer storage lets beneficial microbes die off.', tag: 'Free Input', tagClass: 'gold' },
+    { id: 9, title: 'Post-Harvest Grading & Storage', cat: 'harvest', icon: 'fa-boxes-stacked', color: '#7c3aed', time: 'Ongoing', cost: 'Low', steps: 5, desc: 'Grade, clean and store produce properly to cut post-harvest losses and fetch better prices.', materials: ['Grading trays', 'Ventilated crates', 'Cool, dry storage', 'Clean jute/cotton bags'], stepsList: ['Harvest at the right maturity stage.', 'Remove damaged and diseased produce.', 'Sort by size, colour and quality.', 'Pack loosely in ventilated crates.', 'Store off the floor in a dry, airy room.'], tip: 'A shade net on the way to market can reduce field heat loss and add 2-3 days of shelf life.', tag: 'Less Loss', tagClass: 'red' },
+    { id: 10, title: 'Green Manure Cropping', cat: 'soil', icon: 'fa-leaf', color: '#40916C', time: '2 months', cost: 'Low', steps: 4, desc: 'Grow dhaincha or sunn hemp and plough it back to enrich the soil with nitrogen.', materials: ['Green manure seed', 'Seed drill / broadcasting', 'Irrigation'], stepsList: ['Broadcast seed after harvest.', 'Irrigate to establish the crop.', 'Grow for 45-60 days.', 'Plough down before flowering.', 'Wait 2 weeks before sowing the next crop.'], tip: 'Ploughing in at the flowering stage gives maximum biomass and nitrogen.', tag: 'Natural Fertility', tagClass: 'gold' },
+    { id: 11, title: 'Shade Net Farming', cat: 'harvest', icon: 'fa-house-chimney', color: '#d97706', time: '1 week', cost: 'Medium', steps: 4, desc: 'Grow high-value vegetables under shade nets for better quality and extended seasons.', materials: ['Shade net (50%)', 'GI pipes / bamboo', 'Crop + drip system'], stepsList: ['Select a level, well-drained site.', 'Erect the frame with pipes.', 'Stretch and tie the shade net.', 'Install drip and lay beds.', 'Plant high-value crops like capsicum and tomato.'], tip: 'Use 50% shade for most vegetables; denser nets block too much light and reduce yields.', tag: 'Premium Crop', tagClass: 'blue' },
+    { id: 12, title: 'Seed Treatment & Bio-Priming', cat: 'planting', icon: 'fa-vial', color: '#0F2E1E', time: '1 day', cost: 'Free', steps: 3, desc: 'Treat seeds with bio-fungicides and beneficial microbes before sowing for healthier stands.', materials: ['Seed', 'Trichoderma viride', 'Rhizobium / PSB culture', 'Warm water'], stepsList: ['Warm-treat seeds at 52\u00b0C for 15 minutes.', 'Coat with Trichoderma slurry.', 'Mix Rhizobium culture for legumes.', 'Dry in shade and sow within a day.'], tip: 'Treat only as much seed as you can sow the same day - treated seed loses viability quickly.', tag: 'Strong Start', tagClass: 'red' }
+  ];
+
+  function readJSON(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null') || fallback; } catch (e) { return fallback; }
+  }
+  function writeJSON(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+  }
+
+  var bookmarks = readJSON(LS_BOOKMARKS, []);
+  function isBookmarked(id) { return bookmarks.indexOf(id) !== -1; }
+
+  var grid = document.getElementById('tecGrid');
+  var emptyBox = document.getElementById('tecEmpty');
+  var currentFilter = 'all';
+  var currentQuery = '';
+  var activeTec = null;
+
+  function cardHtml(t) {
+    var saved = isBookmarked(t.id);
+    return '<div class="tec-card" data-id="' + t.id + '" role="button" tabindex="0" aria-label="Open ' + t.title + '">' +
+      '<button class="tec-save' + (saved ? ' saved' : '') + '" data-id="' + t.id + '" title="' + (saved ? 'Remove save' : 'Save') + '"><i class="' + (saved ? 'fas' : 'far') + ' fa-bookmark"></i></button>' +
+      '<div class="tec-icon" style="background:' + t.color + ';"><i class="fas ' + t.icon + '"></i></div>' +
+      '<h4>' + t.title + '</h4>' +
+      '<div class="tec-desc">' + t.desc + '</div>' +
+      '<div class="tec-tags"><span class="tec-tag ' + (t.tagClass || '') + '">' + t.tag + '</span></div>' +
+      '<div class="tec-meta">' +
+        '<span><i class="fas fa-clock"></i>' + t.time + '</span>' +
+        '<span><i class="fas fa-indian-rupee-sign"></i>' + t.cost + '</span>' +
+        '<span><i class="fas fa-list-ol"></i>' + t.steps + ' steps</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function render() {
+    var list = techniques.filter(function (t) {
+      var okCat = currentFilter === 'all' || t.cat === currentFilter;
+      var q = currentQuery.toLowerCase();
+      var hay = (t.title + ' ' + t.desc + ' ' + t.cat + ' ' + t.tag + ' ' + t.materials.join(' ')).toLowerCase();
+      var okQ = !q || hay.indexOf(q) !== -1;
+      return okCat && okQ;
+    });
+    if (list.length === 0) {
+      grid.innerHTML = '';
+      emptyBox.style.display = 'block';
+      return;
+    }
+    emptyBox.style.display = 'none';
+    grid.innerHTML = list.map(function (t) { return cardHtml(t); }).join('');
+
+    grid.querySelectorAll('.tec-card').forEach(function (card) {
+      function open() { openTec(parseInt(card.getAttribute('data-id'), 10)); }
+      card.addEventListener('click', open);
+      card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+      });
+    });
+
+    grid.querySelectorAll('.tec-save').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var id = parseInt(btn.getAttribute('data-id'), 10);
+        var idx = bookmarks.indexOf(id);
+        if (idx === -1) { bookmarks.push(id); } else { bookmarks.splice(idx, 1); }
+        writeJSON(LS_BOOKMARKS, bookmarks);
+        btn.classList.toggle('saved', idx === -1);
+        btn.innerHTML = '<i class="' + (idx === -1 ? 'fas' : 'far') + ' fa-bookmark"></i>';
+        if (typeof showToast === 'function') showToast(idx === -1 ? 'Saved!' : 'Removed', idx === -1 ? 'success' : 'info');
+      });
+    });
+  }
+
+  function openTec(id) {
+    var t = techniques.find(function (x) { return x.id === id; });
+    if (!t) return;
+    activeTec = t;
+    document.getElementById('tecModalHead').style.background = 'linear-gradient(135deg, ' + t.color + ' 0%, #0F2E1E 100%)';
+    document.getElementById('tecModalTitle').textContent = t.title;
+    document.getElementById('tecModalSub').textContent = t.tag + ' \u00b7 ' + t.time + ' \u00b7 ' + t.cost + ' cost';
+
+    var body = document.getElementById('tecModalBody');
+    var saved = isBookmarked(t.id);
+
+    body.innerHTML =
+      '<div class="tec-section"><h5><i class="fas fa-align-left"></i> About</h5>' +
+        '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">' + t.desc + '</div></div>' +
+      '<div class="tec-section"><h5><i class="fas fa-list-ol"></i> Steps (' + t.stepsList.length + ')</h5>' +
+        t.stepsList.map(function (s, i) {
+          return '<div class="tec-step"><div class="tec-step-num">' + (i + 1) + '</div><div>' + s + '</div></div>';
+        }).join('') +
+      '</div>' +
+      '<div class="tec-section"><h5><i class="fas fa-boxes-stacked"></i> Materials</h5>' +
+        t.materials.map(function (m) {
+          return '<div class="tec-material"><i class="fas fa-check-circle"></i>' + m + '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="tec-section"><h5><i class="fas fa-lightbulb"></i> Expert Tip</h5>' +
+        '<div class="tec-tip"><b>Pro Tip</b>' + t.tip + '</div></div>' +
+      '<div class="tec-modal-actions">' +
+        '<button class="btn-primary btn-sm" id="tecBookmarkAction"><i class="' + (saved ? 'fas' : 'far') + ' fa-bookmark"></i> ' + (saved ? 'Saved' : 'Save') + '</button>' +
+        '<button class="btn-secondary btn-sm" id="tecShareAction"><i class="fas fa-share-alt"></i> Share</button>' +
+      '</div>';
+
+    document.getElementById('tecModalBackdrop').classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    document.getElementById('tecBookmarkAction').addEventListener('click', function () {
+      var idx = bookmarks.indexOf(t.id);
+      if (idx === -1) { bookmarks.push(t.id); } else { bookmarks.splice(idx, 1); }
+      writeJSON(LS_BOOKMARKS, bookmarks);
+      var btn = this;
+      btn.innerHTML = '<i class="' + (idx === -1 ? 'fas' : 'far') + ' fa-bookmark"></i> ' + (idx === -1 ? 'Saved' : 'Save');
+      if (typeof showToast === 'function') showToast(idx === -1 ? 'Saved!' : 'Removed', idx === -1 ? 'success' : 'info');
+      render();
+    });
+
+    document.getElementById('tecShareAction').addEventListener('click', function () {
+      var text = t.title + ' - Farm Techniques (Farm Assist)';
+      if (navigator.share) {
+        navigator.share({ title: text, text: text }).catch(function () {});
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(function () {});
+      }
+      if (typeof showToast === 'function') showToast('Link copied to clipboard!', 'info');
+    });
+  }
+
+  function closeModal() {
+    document.getElementById('tecModalBackdrop').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('tecModalClose').addEventListener('click', closeModal);
+  document.getElementById('tecModalBackdrop').addEventListener('click', function (e) {
+    if (e.target === this) closeModal();
+  });
+
+  document.getElementById('tecSearch').addEventListener('input', function () {
+    currentQuery = this.value;
+    render();
+  });
+
+  document.querySelectorAll('.tec-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      document.querySelectorAll('.tec-chip').forEach(function (c) { c.classList.remove('active'); });
+      chip.classList.add('active');
+      currentFilter = chip.getAttribute('data-filter');
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>

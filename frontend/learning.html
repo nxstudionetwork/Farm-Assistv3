@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="learning">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Learning Center</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .learning-hero {
+      background: linear-gradient(135deg, #0F2E1E 0%, #1B5E3F 60%, #40916C 100%);
+      border-radius: var(--radius-xl);
+      padding: 22px 20px;
+      color: white;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .learning-hero::after {
+      content: '\f19d';
+      font-family: 'Font Awesome 6 Free'; font-weight: 900;
+      position: absolute; right: -10px; bottom: -20px; font-size: 120px; opacity: 0.07;
+    }
+    .learning-hero h2 { color: white; font-size: 22px; margin-bottom: 4px; }
+    .learning-hero p { font-size: 13px; opacity: 0.85; margin-bottom: 12px; }
+    .learning-stats { display: flex; gap: 15px; justify-content: space-around; position: relative; z-index: 1; }
+    .learning-stat { text-align: center; }
+    .learning-stat-value { font-size: 24px; font-weight: 700; }
+    .learning-stat-label { font-size: 10px; opacity: 0.8; }
+    
+    .category-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .category-chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-light); background: white; color: var(--text-secondary); font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .category-chip:hover, .category-chip.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+    
+    .course-card {
+      background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg);
+      padding: 16px; cursor: pointer; transition: all 0.25s; display: flex; gap: 14px;
+    }
+    .course-card:hover { box-shadow: var(--shadow-md); border-color: var(--medium-green); transform: translateY(-2px); }
+    .course-thumbnail {
+      width: 80px; height: 60px; border-radius: 12px; background: var(--soft-green);
+      display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--primary-green);
+      flex-shrink: 0;
+    }
+    .course-info { flex: 1; min-width: 0; }
+    .course-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .course-instructor { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+    .course-meta { display: flex; gap: 12px; font-size: 10px; color: var(--text-muted); }
+    .course-meta i { color: var(--medium-green); margin-right: 3px; }
+    .course-progress { margin-top: 8px; }
+    .progress-bar { height: 6px; background: var(--bg-card-soft); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--primary-green); border-radius: 3px; transition: width 0.3s; }
+    .course-enroll-btn {
+      width: 36px; height: 36px; border-radius: 10px; background: var(--primary-green); color: white;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;
+      flex-shrink: 0; align-self: center;
+    }
+    .course-enroll-btn:hover { background: var(--medium-green); }
+    .course-enroll-btn.enrolled { background: var(--soft-green); color: var(--primary-green); }
+    
+    .empty-courses { text-align: center; padding: 40px 16px; color: var(--text-muted); }
+    .empty-courses i { font-size: 40px; opacity: 0.4; margin-bottom: 10px; display: block; }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+    <div class="learning-hero">
+      <h2><i class="fas fa-graduation-cap" style="margin-right:8px;"></i> Learning Center</h2>
+      <p>Expert-led courses to improve your farming skills and increase yields.</p>
+      <div class="learning-stats">
+        <div class="learning-stat">
+          <div class="learning-stat-value" id="stat-enrolled">0</div>
+          <div class="learning-stat-label">Enrolled</div>
+        </div>
+        <div class="learning-stat">
+          <div class="learning-stat-value" id="stat-completed">0</div>
+          <div class="learning-stat-label">Completed</div>
+        </div>
+        <div class="learning-stat">
+          <div class="learning-stat-value" id="stat-progress">0%</div>
+          <div class="learning-stat-label">Avg Progress</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="category-chips" id="category-chips">
+      <button class="category-chip active" data-category="all">All Courses</button>
+      <button class="category-chip" data-category="soil">Soil Health</button>
+      <button class="category-chip" data-category="crops">Crop Management</button>
+      <button class="category-chip" data-category="irrigation">Irrigation</button>
+      <button class="category-chip" data-category="organic">Organic Farming</button>
+      <button class="category-chip" data-category="pest">Pest Control</button>
+    </div>
+
+    <section class="card-premium" style="padding: 15px 12px;">
+      <h3 style="font-size: 16px; margin-left: 12px; margin-bottom: 15px;"><i class="fas fa-book-open" style="color: var(--primary-green); margin-right: 8px;"></i> Available Courses</h3>
+      <div id="courses-list-container" class="courses-list" style="display: grid; gap: 12px;"></div>
+      <div id="empty-courses" class="empty-courses" style="display:none;">
+        <i class="fas fa-book-open"></i>
+        <p>No courses found in this category.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    var courses = [
+      { id: 1, title: 'Soil Health Management', instructor: 'Dr. Suresh Patil', category: 'soil', duration: '4 hours', lessons: 12, icon: 'fa-flask', color: '#2D8659', progress: 0, enrolled: false },
+      { id: 2, title: 'Modern Irrigation Techniques', instructor: 'Dr. Meena Sharma', category: 'irrigation', duration: '3 hours', lessons: 10, icon: 'fa-droplet', color: '#1565C0', progress: 0, enrolled: false },
+      { id: 3, title: 'Organic Farming Basics', instructor: 'Dr. Kavita Desai', category: 'organic', duration: '5 hours', lessons: 15, icon: 'fa-seedling', color: '#52B788', progress: 0, enrolled: false },
+      { id: 4, title: 'Integrated Pest Management', instructor: 'Dr. Arvind Singh', category: 'pest', duration: '4 hours', lessons: 11, icon: 'fa-bug', color: '#C62828', progress: 0, enrolled: false },
+      { id: 5, title: 'Crop Rotation Planning', instructor: 'Dr. Ramesh Kumar', category: 'crops', duration: '3 hours', lessons: 8, icon: 'fa-rotate', color: '#F57C00', progress: 0, enrolled: false },
+      { id: 6, title: 'Vermicompost Production', instructor: 'Dr. Priya Nair', category: 'organic', duration: '2 hours', lessons: 6, icon: 'fa-recycle', color: '#2D8659', progress: 0, enrolled: false },
+      { id: 7, title: 'Drip Irrigation Setup', instructor: 'Eng. Vikram Singh', category: 'irrigation', duration: '2 hours', lessons: 7, icon: 'fa-water', color: '#0288D1', progress: 0, enrolled: false },
+      { id: 8, title: 'Sustainable Agriculture', instructor: 'Dr. Anil Verma', category: 'soil', duration: '6 hours', lessons: 18, icon: 'fa-leaf', color: '#40916C', progress: 0, enrolled: false },
+      { id: 9, title: 'Seed Selection & Treatment', instructor: 'Dr. Sunita Rao', category: 'crops', duration: '2 hours', lessons: 6, icon: 'fa-vial', color: '#7B1FA2', progress: 0, enrolled: false },
+      { id: 10, title: 'Biological Pest Control', instructor: 'Dr. Rajesh Gupta', category: 'pest', duration: '3 hours', lessons: 9, icon: 'fa-spider', color: '#388E3C', progress: 0, enrolled: false }
+    ];
+
+    var enrolledCourses = JSON.parse(localStorage.getItem('fa-enrolled-courses') || '[]');
+    var courseProgress = JSON.parse(localStorage.getItem('fa-course-progress') || '{}');
+    var currentCategory = 'all';
+
+    function updateStats() {
+      var enrolled = enrolledCourses.length;
+      var completed = enrolledCourses.filter(function(id) {
+        return (courseProgress[id] || 0) >= 100;
+      }).length;
+      
+      var totalProgress = 0;
+      enrolledCourses.forEach(function(id) {
+        totalProgress += (courseProgress[id] || 0);
+      });
+      var avgProgress = enrolled > 0 ? Math.round(totalProgress / enrolled) : 0;
+
+      document.getElementById('stat-enrolled').textContent = enrolled;
+      document.getElementById('stat-completed').textContent = completed;
+      document.getElementById('stat-progress').textContent = avgProgress + '%';
+    }
+
+    function isEnrolled(id) {
+      return enrolledCourses.indexOf(id) !== -1;
+    }
+
+    function getProgress(id) {
+      return courseProgress[id] || 0;
+    }
+
+    function renderCourses() {
+      var container = document.getElementById('courses-list-container');
+      var emptyEl = document.getElementById('empty-courses');
+      
+      var filtered = courses.filter(function(c) {
+        return currentCategory === 'all' || c.category === currentCategory;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+      container.innerHTML = filtered.map(function(c) {
+        var enrolled = isEnrolled(c.id);
+        var progress = getProgress(c.id);
+        
+        return '<div class="course-card" data-id="' + c.id + '">' +
+          '<div class="course-thumbnail" style="background: ' + c.color + '20; color: ' + c.color + ';">' +
+            '<i class="fas ' + c.icon + '"></i>' +
+          '</div>' +
+          '<div class="course-info">' +
+            '<div class="course-title">' + c.title + '</div>' +
+            '<div class="course-instructor"><i class="fas fa-user-tie"></i> ' + c.instructor + '</div>' +
+            '<div class="course-meta">' +
+              '<span><i class="fas fa-clock"></i>' + c.duration + '</span>' +
+              '<span><i class="fas fa-list-ol"></i>' + c.lessons + ' lessons</span>' +
+            '</div>' +
+            (enrolled ? '<div class="course-progress"><div class="progress-bar"><div class="progress-fill" style="width:' + progress + '%"></div></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + progress + '% complete</div></div>' : '') +
+          '</div>' +
+          '<button class="course-enroll-btn ' + (enrolled ? 'enrolled' : '') + '" data-id="' + c.id + '">' +
+            '<i class="fas ' + (enrolled ? 'fa-play' : 'fa-plus') + '"></i>' +
+          '</button>' +
+        '</div>';
+      }).join('');
+
+      container.querySelectorAll('.course-enroll-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var id = parseInt(btn.getAttribute('data-id'), 10);
+          if (isEnrolled(id)) {
+            if (typeof showToast === 'function') {
+              showToast('Continue learning!', 'info');
+            }
+          } else {
+            enrolledCourses.push(id);
+            courseProgress[id] = 0;
+            localStorage.setItem('fa-enrolled-courses', JSON.stringify(enrolledCourses));
+            localStorage.setItem('fa-course-progress', JSON.stringify(courseProgress));
+            updateStats();
+            renderCourses();
+            if (typeof showToast === 'function') {
+              showToast('Enrolled successfully!', 'success');
+            }
+          }
+        });
+      });
+    }
+
+    document.querySelectorAll('.category-chip').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        document.querySelectorAll('.category-chip').forEach(function(c) { c.classList.remove('active'); });
+        chip.classList.add('active');
+        currentCategory = chip.getAttribute('data-category');
+        renderCourses();
+      });
+    });
+
+    updateStats();
+    renderCourses();
+  })();
+  </script>
+</body>
+</html>

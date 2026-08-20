@@ -1,0 +1,759 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="finance">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Finance</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .finance-actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .finance-actions .btn-primary, .finance-actions .btn-secondary { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 8px 14px; }
+    .finance-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .finance-filters .form-select { padding: 8px 12px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); font-size: 12px; background: white; color: var(--text-primary); min-width: 130px; }
+    .finance-filters .form-select:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); outline: none; }
+    .modal-box h2 { font-size: 18px; margin-bottom: 16px; }
+    .modal-box .form-group { margin-bottom: 12px; }
+    .modal-box .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+    .modal-box .form-group .form-input, .modal-box .form-group .form-select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; }
+    .modal-box .form-group .form-input:focus, .modal-box .form-group .form-select:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); outline: none; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .report-card { margin-bottom: 16px; }
+    .report-card h3 { font-size: 14px; margin-bottom: 12px; color: var(--text-primary); }
+    .report-bar-container { display: flex; flex-direction: column; gap: 6px; }
+    .report-bar-row { display: flex; align-items: center; gap: 8px; }
+    .report-bar-label { font-size: 11px; color: var(--text-secondary); width: 80px; flex-shrink: 0; text-align: right; }
+    .report-bar-track { flex: 1; height: 16px; background: var(--bg-card-soft); border-radius: 8px; overflow: hidden; }
+    .report-bar-fill { height: 100%; border-radius: 8px; transition: width 0.4s ease; }
+    .report-bar-value { font-size: 11px; color: var(--text-primary); width: 60px; flex-shrink: 0; font-weight: 600; }
+    .stat-box { text-align: center; padding: 16px; }
+    .stat-box i { font-size: 22px; margin-bottom: 6px; display: block; }
+    .stat-box-num { font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
+    .stat-box-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .badge-income { background: var(--soft-green); color: var(--primary-green); }
+    .badge-expense { background: #FFF0F0; color: var(--danger); }
+    #reports-section { margin-top: 16px; }
+    .text-right { text-align: right; }
+    .amount-positive { color: var(--premium-green); font-weight: 700; }
+    .amount-negative { color: var(--danger); font-weight: 700; }
+    .tooltip-btn { position: relative; }
+    .tooltip-btn:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--text-primary); color: white; padding: 4px 10px; border-radius: 6px; font-size: 10px; white-space: nowrap; z-index: 100; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-indian-rupee-sign" style="color:var(--premium-green);margin-right:8px;"></i> Finance</h1>
+        <p style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Track your farm income, expenses, and profitability.</p>
+      </div>
+    </div>
+
+    <!-- Action Buttons Row -->
+    <div class="finance-actions">
+      <button class="btn-primary btn-sm tooltip-btn" data-tip="Add Income" onclick="openModal('income-modal')">
+        <i class="fas fa-plus-circle"></i> Add Income
+      </button>
+      <button class="btn-secondary btn-sm tooltip-btn" data-tip="Add Expense" onclick="openModal('expense-modal')">
+        <i class="fas fa-minus-circle"></i> Add Expense
+      </button>
+      <button class="btn-secondary btn-sm tooltip-btn" data-tip="Add Transaction" onclick="showToast('Transaction feature coming soon','info')">
+        <i class="fas fa-exchange-alt"></i> Transaction
+      </button>
+      <button class="btn-secondary btn-sm tooltip-btn" data-tip="View Reports" onclick="toggleReports()">
+        <i class="fas fa-file-invoice"></i> Reports
+      </button>
+      <button class="btn-secondary btn-sm tooltip-btn" data-tip="Export CSV" onclick="exportCSV()">
+        <i class="fas fa-download"></i> Export
+      </button>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid-4" id="summary-cards">
+      <div class="card-premium stat-box">
+        <i class="fas fa-arrow-up" style="color:var(--premium-green);"></i>
+        <div class="stat-box-num" id="total-income">â‚¹0</div>
+        <div class="stat-box-label">Total Income</div>
+      </div>
+      <div class="card-premium stat-box">
+        <i class="fas fa-arrow-down" style="color:var(--danger);"></i>
+        <div class="stat-box-num" id="total-expenses">â‚¹0</div>
+        <div class="stat-box-label">Total Expenses</div>
+      </div>
+      <div class="card-premium stat-box">
+        <i class="fas fa-chart-line" id="net-profit-icon" style="color:var(--premium-green);"></i>
+        <div class="stat-box-num" id="net-profit">â‚¹0</div>
+        <div class="stat-box-label">Net Profit</div>
+      </div>
+      <div class="card-premium stat-box">
+        <i class="fas fa-exchange-alt" style="color:#3b82f6;"></i>
+        <div class="stat-box-num" id="transaction-count">0</div>
+        <div class="stat-box-label">Transactions</div>
+      </div>
+    </div>
+
+    <!-- Filters Row -->
+    <div class="finance-filters">
+      <select class="form-select" id="filter-date" onchange="applyFilters()">
+        <option value="all">All Dates</option>
+        <option value="7">Last 7 Days</option>
+        <option value="30">Last 30 Days</option>
+        <option value="90">Last 3 Months</option>
+        <option value="year">This Year</option>
+        <option value="custom">Custom</option>
+      </select>
+      <select class="form-select" id="filter-farm" onchange="applyFilters()">
+        <option value="all">All Farms</option>
+        <option value="Green Acre">Green Acre</option>
+        <option value="Saraswati">Saraswati</option>
+        <option value="Deccan">Deccan</option>
+      </select>
+      <select class="form-select" id="filter-crop" onchange="applyFilters()">
+        <option value="all">All Crops</option>
+        <option value="Rice">Rice</option>
+        <option value="Cotton">Cotton</option>
+        <option value="Maize">Maize</option>
+      </select>
+      <select class="form-select" id="filter-category" onchange="applyFilters()">
+        <option value="all">All Categories</option>
+        <option value="Seeds">Seeds</option>
+        <option value="Fertilizer">Fertilizer</option>
+        <option value="Labour">Labour</option>
+        <option value="Equipment">Equipment</option>
+        <option value="Harvest Sale">Harvest Sale</option>
+        <option value="Misc">Misc</option>
+      </select>
+    </div>
+
+    <!-- Recent Transactions Table -->
+    <section class="card-premium">
+      <h2 style="font-size:16px;margin-bottom:12px;"><i class="fas fa-list" style="color:var(--premium-green);margin-right:8px;"></i> Recent Transactions</h2>
+      <div class="responsive-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Farm</th>
+              <th class="text-right">Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="transactions-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Reports Section -->
+    <div id="reports-section" style="display:none;">
+      <section class="card-premium report-card">
+        <h3><i class="fas fa-calendar-alt" style="color:var(--premium-green);margin-right:8px;"></i> Monthly Breakdown</h3>
+        <div id="monthly-breakdown"></div>
+      </section>
+      <section class="card-premium report-card">
+        <h3><i class="fas fa-pie-chart" style="color:var(--premium-green);margin-right:8px;"></i> Category-wise Spending</h3>
+        <div id="category-spending"></div>
+      </section>
+      <section class="card-premium report-card">
+        <h3><i class="fas fa-tractor" style="color:var(--premium-green);margin-right:8px;"></i> Farm-wise Profitability</h3>
+        <div id="farm-profitability"></div>
+      </section>
+    </div>
+
+    <!-- Add Income Modal -->
+    <div class="modal-backdrop" id="income-modal">
+      <div class="modal-box">
+        <h2><i class="fas fa-plus-circle" style="color:var(--premium-green);margin-right:8px;"></i> Add Income</h2>
+        <div class="form-group">
+          <label>Amount (â‚¹)</label>
+          <input type="number" class="form-input" id="income-amount" placeholder="Enter amount" min="0">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select class="form-select" id="income-category">
+            <option value="Harvest Sale">Harvest Sale</option>
+            <option value="Subsidy">Subsidy</option>
+            <option value="Misc">Misc</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" class="form-input" id="income-description" placeholder="e.g. Sold Rice 200 kg">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" class="form-input" id="income-date">
+        </div>
+        <div class="form-group">
+          <label>Farm</label>
+          <select class="form-select" id="income-farm">
+            <option value="Green Acre">Green Acre</option>
+            <option value="Saraswati">Saraswati</option>
+            <option value="Deccan">Deccan</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Crop</label>
+          <select class="form-select" id="income-crop">
+            <option value="Rice">Rice</option>
+            <option value="Cotton">Cotton</option>
+            <option value="Maize">Maize</option>
+            <option value="">None</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal('income-modal')">Cancel</button>
+          <button class="btn-primary" onclick="saveIncome()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div class="modal-backdrop" id="expense-modal">
+      <div class="modal-box">
+        <h2><i class="fas fa-minus-circle" style="color:var(--danger);margin-right:8px;"></i> Add Expense</h2>
+        <div class="form-group">
+          <label>Amount (â‚¹)</label>
+          <input type="number" class="form-input" id="expense-amount" placeholder="Enter amount" min="0">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select class="form-select" id="expense-category">
+            <option value="Seeds">Seeds</option>
+            <option value="Fertilizer">Fertilizer</option>
+            <option value="Labour">Labour</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Misc">Misc</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" class="form-input" id="expense-description" placeholder="e.g. DAP Fertilizer 2 bags">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" class="form-input" id="expense-date">
+        </div>
+        <div class="form-group">
+          <label>Farm</label>
+          <select class="form-select" id="expense-farm">
+            <option value="Green Acre">Green Acre</option>
+            <option value="Saraswati">Saraswati</option>
+            <option value="Deccan">Deccan</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Crop</label>
+          <select class="form-select" id="expense-crop">
+            <option value="Rice">Rice</option>
+            <option value="Cotton">Cotton</option>
+            <option value="Maize">Maize</option>
+            <option value="">None</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal('expense-modal')">Cancel</button>
+          <button class="btn-primary" onclick="saveExpense()">Save</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      var mockTransactions = [
+        { id: 't1', date: '2026-07-28', type: 'Income', category: 'Harvest Sale', description: 'Sold Rice - 200 kg', farm: 'Green Acre', amount: 56000, status: 'Completed' },
+        { id: 't2', date: '2026-07-25', type: 'Expense', category: 'Fertilizer', description: 'DAP Fertilizer - 5 bags', farm: 'Green Acre', amount: 9500, status: 'Completed' },
+        { id: 't3', date: '2026-07-22', type: 'Income', category: 'Harvest Sale', description: 'Sold Cotton - 150 kg', farm: 'Saraswati', amount: 72000, status: 'Completed' },
+        { id: 't4', date: '2026-07-20', type: 'Expense', category: 'Labour', description: 'Harvesting labour - 4 workers', farm: 'Saraswati', amount: 6000, status: 'Completed' },
+        { id: 't5', date: '2026-07-18', type: 'Expense', category: 'Seeds', description: 'Rice seeds - 10 kg', farm: 'Deccan', amount: 3200, status: 'Completed' },
+        { id: 't6', date: '2026-07-15', type: 'Income', category: 'Subsidy', description: 'PM-KISAN installment', farm: 'Green Acre', amount: 6000, status: 'Completed' },
+        { id: 't7', date: '2026-07-12', type: 'Expense', category: 'Equipment', description: 'Tractor rental - 2 days', farm: 'Deccan', amount: 8500, status: 'Pending' },
+        { id: 't8', date: '2026-07-10', type: 'Income', category: 'Harvest Sale', description: 'Sold Maize - 300 kg', farm: 'Deccan', amount: 48000, status: 'Completed' },
+        { id: 't9', date: '2026-07-08', type: 'Expense', category: 'Misc', description: 'Transportation charges', farm: 'Saraswati', amount: 2500, status: 'Completed' },
+        { id: 't10', date: '2026-07-05', type: 'Expense', category: 'Labour', description: 'Weeding labour - 3 workers', farm: 'Green Acre', amount: 3600, status: 'Completed' },
+        { id: 't11', date: '2026-07-02', type: 'Income', category: 'Misc', description: 'Tool rental income', farm: 'Saraswati', amount: 12000, status: 'Pending' },
+        { id: 't12', date: '2026-06-28', type: 'Expense', category: 'Fertilizer', description: 'Urea - 3 bags', farm: 'Deccan', amount: 4200, status: 'Completed' }
+      ];
+
+      var transactions = [];
+      var totalIncome = 485000;
+      var totalExpenses = 212000;
+      var netProfit = 273000;
+      var transCount = 48;
+
+      function normalizeTransaction(tx) {
+        var isIncome = (tx.type || '').toLowerCase() === 'income';
+        var rawDate = tx.transaction_date || tx.income_date || tx.expense_date || tx.date || tx.created_at || '';
+        return {
+          id: tx.id || tx.transaction_id || ('t' + Math.random()),
+          date: (rawDate || '').substring(0, 10),
+          type: isIncome ? 'Income' : 'Expense',
+          category: tx.category || (isIncome ? 'Harvest Sale' : 'Misc'),
+          description: tx.description || '',
+          farm: tx.farm_name || tx.farm || tx.farm_id || '',
+          amount: parseFloat(tx.amount) || 0,
+          status: tx.status || 'Completed'
+        };
+      }
+
+      function loadTransactions() {
+        transactions = mockTransactions.slice();
+        if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+        return Promise.all([
+          window.API.Finance.listIncome('limit=100'),
+          window.API.Finance.listExpenses('limit=100'),
+          window.API.Finance.listTransactions('limit=100')
+        ]).then(function (results) {
+          var incomeItems = ((results[0] && results[0].items) || []).map(function (it) {
+            var n = normalizeTransaction(it);
+            n.type = 'Income';
+            return n;
+          });
+          var expenseItems = ((results[1] && results[1].items) || []).map(function (it) {
+            var n = normalizeTransaction(it);
+            n.type = 'Expense';
+            return n;
+          });
+          var txnItems = ((results[2] && results[2].items) || []).map(normalizeTransaction);
+          var combined = incomeItems.concat(expenseItems).concat(txnItems);
+          if (typeof results[2].total === 'number') transCount = results[2].total;
+          if (combined.length) {
+            combined.sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+            transactions = combined;
+          }
+        }).catch(function () { /* keep mock fallback */ });
+      }
+
+      function loadSummary() {
+        if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+        return window.API.Finance.getSummary().then(function (res) {
+          if (res && typeof res.total_income === 'number') {
+            totalIncome = res.total_income;
+            totalExpenses = res.total_expenses;
+            netProfit = res.net_profit;
+          }
+        }).catch(function () { /* keep mock fallback */ });
+      }
+
+      function formatINR(amount) {
+        var num = parseFloat(amount) || 0;
+        var parts = Math.round(num).toString().split('.');
+        var intPart = parts[0];
+        var lastThree = intPart.substring(intPart.length - 3);
+        var otherNums = intPart.substring(0, intPart.length - 3);
+        if (otherNums !== '') lastThree = ',' + lastThree;
+        var formatted = otherNums.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
+        return '\u20B9' + formatted;
+      }
+
+      function todayStr() {
+        var d = new Date();
+        var y = d.getFullYear();
+        var m = ('0' + (d.getMonth() + 1)).slice(-2);
+        var day = ('0' + d.getDate()).slice(-2);
+        return y + '-' + m + '-' + day;
+      }
+
+      function updateSummary() {
+        document.getElementById('total-income').textContent = formatINR(totalIncome);
+        document.getElementById('total-expenses').textContent = formatINR(totalExpenses);
+        var profitEl = document.getElementById('net-profit');
+        var profitIcon = document.getElementById('net-profit-icon');
+        profitEl.textContent = formatINR(Math.abs(netProfit));
+        if (netProfit >= 0) {
+          profitEl.style.color = 'var(--premium-green)';
+          profitIcon.style.color = 'var(--premium-green)';
+        } else {
+          profitEl.style.color = 'var(--danger)';
+          profitIcon.style.color = 'var(--danger)';
+        }
+        document.getElementById('transaction-count').textContent = transCount;
+      }
+
+      function renderTable(data) {
+        var tbody = document.getElementById('transactions-tbody');
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">No transactions found</td></tr>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < data.length; i++) {
+          var tx = data[i];
+          var isIncome = tx.type === 'Income';
+          var badgeCls = isIncome ? 'badge badge-income' : 'badge badge-expense';
+          var amountCls = isIncome ? 'amount-positive' : 'amount-negative';
+          var sign = isIncome ? '+' : '-';
+          html += '<tr>' +
+            '<td>' + tx.date + '</td>' +
+            '<td><span class="' + badgeCls + '">' + tx.type + '</span></td>' +
+            '<td>' + tx.category + '</td>' +
+            '<td>' + tx.description + '</td>' +
+            '<td>' + tx.farm + '</td>' +
+            '<td class="text-right"><span class="' + amountCls + '">' + sign + formatINR(tx.amount) + '</span></td>' +
+            '<td>' + tx.status + '</td>' +
+          '</tr>';
+        }
+        tbody.innerHTML = html;
+      }
+
+      function applyFilters() {
+        var dateFilter = document.getElementById('filter-date').value;
+        var farmFilter = document.getElementById('filter-farm').value;
+        var cropFilter = document.getElementById('filter-crop').value;
+        var catFilter = document.getElementById('filter-category').value;
+
+        var filtered = [];
+        for (var i = 0; i < transactions.length; i++) {
+          var tx = transactions[i];
+          if (farmFilter !== 'all' && tx.farm !== farmFilter) continue;
+          if (catFilter !== 'all' && tx.category !== catFilter) continue;
+          if (cropFilter !== 'all') {
+            var cropMatch = false;
+            var descLower = tx.description.toLowerCase();
+            if (descLower.indexOf(cropFilter.toLowerCase()) !== -1) cropMatch = true;
+            if (!cropMatch) continue;
+          }
+          if (dateFilter !== 'all' && dateFilter !== 'custom') {
+            var days = parseInt(dateFilter, 10);
+            if (days > 0) {
+              var txDate = new Date(tx.date);
+              var cutoff = new Date();
+              cutoff.setDate(cutoff.getDate() - days);
+              if (txDate < cutoff) continue;
+            }
+          }
+          if (dateFilter === 'year') {
+            var txYear = new Date(tx.date).getFullYear();
+            var currYear = new Date().getFullYear();
+            if (txYear !== currYear) continue;
+          }
+          filtered.push(tx);
+        }
+        renderTable(filtered);
+      }
+
+      function openModal(id) {
+        var backdrop = document.getElementById(id);
+        if (backdrop) backdrop.classList.add('active');
+        if (id === 'income-modal') {
+          document.getElementById('income-date').value = todayStr();
+        }
+        if (id === 'expense-modal') {
+          document.getElementById('expense-date').value = todayStr();
+        }
+      }
+
+      function closeModal(id) {
+        var backdrop = document.getElementById(id);
+        if (backdrop) backdrop.classList.remove('active');
+      }
+
+      function saveIncome() {
+        var amount = parseFloat(document.getElementById('income-amount').value);
+        var category = document.getElementById('income-category').value;
+        var description = document.getElementById('income-description').value;
+        var date = document.getElementById('income-date').value;
+        var farm = document.getElementById('income-farm').value;
+        var crop = document.getElementById('income-crop').value;
+
+        if (!amount || amount <= 0 || !description || !date) {
+          showToast('Please fill all required fields', 'warning');
+          return;
+        }
+
+        var newTx = {
+          id: 't' + Date.now(),
+          date: date,
+          type: 'Income',
+          category: category,
+          description: description + (crop ? ' - ' + crop : ''),
+          farm: farm,
+          amount: amount,
+          status: 'Completed'
+        };
+
+        function applyLocal() {
+          transactions.unshift(newTx);
+          totalIncome += amount;
+          netProfit += amount;
+          transCount++;
+          updateSummary();
+          applyFilters();
+          closeModal('income-modal');
+          showToast('Income added successfully', 'success');
+          document.getElementById('income-amount').value = '';
+          document.getElementById('income-description').value = '';
+        }
+
+        if (window.API && localStorage.getItem('fa-auth-token')) {
+          var payload = { category: category, amount: amount, description: description, income_date: date };
+          if (crop) payload.source = crop;
+          return window.API.Finance.createIncome(payload).then(function () {
+            return loadTransactions().then(function () {
+              return loadSummary();
+            }).then(function () {
+              applyFilters();
+              closeModal('income-modal');
+              showToast('Income added successfully', 'success');
+              document.getElementById('income-amount').value = '';
+              document.getElementById('income-description').value = '';
+            });
+          }).catch(function (err) {
+            showToast((err && err.message) || 'Failed to save income', 'error');
+            applyLocal();
+          });
+        }
+        applyLocal();
+      }
+
+      function saveExpense() {
+        var amount = parseFloat(document.getElementById('expense-amount').value);
+        var category = document.getElementById('expense-category').value;
+        var description = document.getElementById('expense-description').value;
+        var date = document.getElementById('expense-date').value;
+        var farm = document.getElementById('expense-farm').value;
+        var crop = document.getElementById('expense-crop').value;
+
+        if (!amount || amount <= 0 || !description || !date) {
+          showToast('Please fill all required fields', 'warning');
+          return;
+        }
+
+        var newTx = {
+          id: 't' + Date.now(),
+          date: date,
+          type: 'Expense',
+          category: category,
+          description: description + (crop ? ' - ' + crop : ''),
+          farm: farm,
+          amount: amount,
+          status: 'Completed'
+        };
+
+        function applyLocal() {
+          transactions.unshift(newTx);
+          totalExpenses += amount;
+          netProfit -= amount;
+          transCount++;
+          updateSummary();
+          applyFilters();
+          closeModal('expense-modal');
+          showToast('Expense added successfully', 'success');
+          document.getElementById('expense-amount').value = '';
+          document.getElementById('expense-description').value = '';
+        }
+
+        if (window.API && localStorage.getItem('fa-auth-token')) {
+          var payload = { category: category, amount: amount, description: description, expense_date: date };
+          if (crop) payload.subcategory = crop;
+          return window.API.Finance.createExpense(payload).then(function () {
+            return loadTransactions().then(function () {
+              return loadSummary();
+            }).then(function () {
+              applyFilters();
+              closeModal('expense-modal');
+              showToast('Expense added successfully', 'success');
+              document.getElementById('expense-amount').value = '';
+              document.getElementById('expense-description').value = '';
+            });
+          }).catch(function (err) {
+            showToast((err && err.message) || 'Failed to save expense', 'error');
+            applyLocal();
+          });
+        }
+        applyLocal();
+      }
+
+      var reportsVisible = false;
+
+      function toggleReports() {
+        var section = document.getElementById('reports-section');
+        reportsVisible = !reportsVisible;
+        section.style.display = reportsVisible ? 'block' : 'none';
+        if (reportsVisible) {
+          renderReports();
+        }
+      }
+
+      function renderReports() {
+        renderMonthlyBreakdown();
+        renderCategorySpending();
+        renderFarmProfitability();
+      }
+
+      function renderMonthlyBreakdown() {
+        var container = document.getElementById('monthly-breakdown');
+        var months = [
+          { label: 'Feb', income: 65000, expense: 32000 },
+          { label: 'Mar', income: 82000, expense: 41000 },
+          { label: 'Apr', income: 48000, expense: 28000 },
+          { label: 'May', income: 95000, expense: 45000 },
+          { label: 'Jun', income: 110000, expense: 38000 },
+          { label: 'Jul', income: 85000, expense: 28000 }
+        ];
+        var maxVal = 0;
+        for (var i = 0; i < months.length; i++) {
+          if (months[i].income > maxVal) maxVal = months[i].income;
+          if (months[i].expense > maxVal) maxVal = months[i].expense;
+        }
+        if (maxVal === 0) maxVal = 1;
+        var html = '<div style="display:flex;gap:6px;align-items:flex-end;height:140px;padding:8px 0;">';
+        for (var j = 0; j < months.length; j++) {
+          var m = months[j];
+          var ih = Math.round((m.income / maxVal) * 120);
+          var eh = Math.round((m.expense / maxVal) * 120);
+          if (ih < 2 && m.income > 0) ih = 2;
+          if (eh < 2 && m.expense > 0) eh = 2;
+          html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">' +
+            '<div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:120px;">' +
+              '<div style="flex:1;background:var(--premium-green);border-radius:4px 4px 0 0;height:' + ih + 'px;" title="Income: ' + formatINR(m.income) + '"></div>' +
+              '<div style="flex:1;background:var(--danger);border-radius:4px 4px 0 0;height:' + eh + 'px;" title="Expense: ' + formatINR(m.expense) + '"></div>' +
+            '</div>' +
+            '<span style="font-size:9px;color:var(--text-secondary);">' + m.label + '</span>' +
+          '</div>';
+        }
+        html += '</div>';
+        html += '<div style="display:flex;justify-content:center;gap:16px;font-size:10px;color:var(--text-secondary);margin-top:4px;">' +
+          '<span><span style="display:inline-block;width:10px;height:10px;background:var(--premium-green);border-radius:2px;margin-right:4px;"></span> Income</span>' +
+          '<span><span style="display:inline-block;width:10px;height:10px;background:var(--danger);border-radius:2px;margin-right:4px;"></span> Expenses</span>' +
+        '</div>';
+        container.innerHTML = html;
+      }
+
+      function renderCategorySpending() {
+        var container = document.getElementById('category-spending');
+        var categories = [
+          { label: 'Fertilizer', amount: 58000, color: '#22C55E' },
+          { label: 'Labour', amount: 42000, color: '#3B82F6' },
+          { label: 'Seeds', amount: 28000, color: '#F59E0B' },
+          { label: 'Equipment', amount: 35000, color: '#EF4444' },
+          { label: 'Misc', amount: 12000, color: '#8B5CF6' }
+        ];
+        var maxAmt = 0;
+        for (var i = 0; i < categories.length; i++) {
+          if (categories[i].amount > maxAmt) maxAmt = categories[i].amount;
+        }
+        if (maxAmt === 0) maxAmt = 1;
+        var total = 0;
+        for (var j = 0; j < categories.length; j++) total += categories[j].amount;
+        var html = '<div class="report-bar-container">';
+        for (var k = 0; k < categories.length; k++) {
+          var cat = categories[k];
+          var pct = Math.round((cat.amount / maxAmt) * 100);
+          html += '<div class="report-bar-row">' +
+            '<span class="report-bar-label">' + cat.label + '</span>' +
+            '<div class="report-bar-track">' +
+              '<div class="report-bar-fill" style="width:' + pct + '%;background:' + cat.color + ';"></div>' +
+            '</div>' +
+            '<span class="report-bar-value">' + formatINR(cat.amount) + '</span>' +
+          '</div>';
+        }
+        html += '</div>';
+        html += '<div style="margin-top:8px;font-size:11px;color:var(--text-secondary);text-align:right;">Total: ' + formatINR(total) + '</div>';
+        container.innerHTML = html;
+      }
+
+      function renderFarmProfitability() {
+        var container = document.getElementById('farm-profitability');
+        var farms = [
+          { label: 'Green Acre', income: 195000, expense: 72000 },
+          { label: 'Saraswati', income: 165000, expense: 85000 },
+          { label: 'Deccan', income: 125000, expense: 55000 }
+        ];
+        var maxIncome = 0;
+        for (var i = 0; i < farms.length; i++) {
+          if (farms[i].income > maxIncome) maxIncome = farms[i].income;
+        }
+        if (maxIncome === 0) maxIncome = 1;
+        var html = '<div class="report-bar-container">';
+        for (var j = 0; j < farms.length; j++) {
+          var f = farms[j];
+          var profit = f.income - f.expense;
+          var incomePct = Math.round((f.income / maxIncome) * 100);
+          var expensePct = Math.round((f.expense / maxIncome) * 100);
+          html += '<div style="margin-bottom:12px;">' +
+            '<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text-primary);">' + f.label + '</div>' +
+            '<div class="report-bar-row">' +
+              '<span class="report-bar-label">Income</span>' +
+              '<div class="report-bar-track">' +
+                '<div class="report-bar-fill" style="width:' + incomePct + '%;background:var(--premium-green);"></div>' +
+              '</div>' +
+              '<span class="report-bar-value" style="color:var(--premium-green);">' + formatINR(f.income) + '</span>' +
+            '</div>' +
+            '<div class="report-bar-row">' +
+              '<span class="report-bar-label">Expense</span>' +
+              '<div class="report-bar-track">' +
+                '<div class="report-bar-fill" style="width:' + expensePct + '%;background:var(--danger);"></div>' +
+              '</div>' +
+              '<span class="report-bar-value" style="color:var(--danger);">' + formatINR(f.expense) + '</span>' +
+            '</div>' +
+            '<div class="report-bar-row">' +
+              '<span class="report-bar-label">Profit</span>' +
+              '<div class="report-bar-track">' +
+                '<div class="report-bar-fill" style="width:' + Math.round((profit / maxIncome) * 100) + '%;background:' + (profit >= 0 ? 'var(--premium-green)' : 'var(--danger)') + ';"></div>' +
+              '</div>' +
+              '<span class="report-bar-value" style="color:' + (profit >= 0 ? 'var(--premium-green)' : 'var(--danger)') + ';">' + formatINR(profit) + '</span>' +
+            '</div>' +
+          '</div>';
+        }
+        html += '</div>';
+        container.innerHTML = html;
+      }
+
+      function exportCSV() {
+        var csv = 'Date,Type,Category,Description,Farm,Amount,Status\n';
+        for (var i = 0; i < transactions.length; i++) {
+          var tx = transactions[i];
+          csv += tx.date + ',' + tx.type + ',' + tx.category + ',"' + tx.description + '",' + tx.farm + ',' + tx.amount + ',' + tx.status + '\n';
+        }
+        var blob = new Blob([csv], { type: 'text/csv' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'farm_finance_export.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('CSV exported successfully', 'success');
+      }
+
+      window.openModal = openModal;
+      window.closeModal = closeModal;
+      window.saveIncome = saveIncome;
+      window.saveExpense = saveExpense;
+      window.applyFilters = applyFilters;
+      window.toggleReports = toggleReports;
+      window.exportCSV = exportCSV;
+
+      document.addEventListener('DOMContentLoaded', function () {
+        Promise.all([loadTransactions(), loadSummary()]).finally(function () {
+          updateSummary();
+          applyFilters();
+        });
+      });
+
+      document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('modal-backdrop')) {
+          e.target.classList.remove('active');
+        }
+      });
+
+    })();
+  </script>
+</body>
+</html>

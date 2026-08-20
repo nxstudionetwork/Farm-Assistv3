@@ -1,0 +1,917 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Login</title>
+  <meta name="description" content="Login to Farm Assist - India's Agriculture Super App">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/carousel.css">
+  <style>
+    body{padding:0;margin:0;background:#f0f7ee;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh}
+    .login-layout{display:flex;flex-direction:column;min-height:100vh}
+    @media(min-width:900px){.login-layout{flex-direction:row}}
+    .login-visual{position:relative;min-height:250px;flex:0 0 auto;background-size:cover;background-position:center;background-repeat:no-repeat;overflow:hidden}
+    .login-visual::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,30,20,.12) 0%,rgba(11,30,20,.28) 50%,rgba(11,30,20,.62) 100%)}
+    .login-visual-content{position:absolute;z-index:2;left:0;right:0;bottom:0;padding:22px 24px 26px;color:#fff}
+    .login-visual-content .logo-icon{width:52px;height:52px;background:rgba(255,255,255,.16);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#a5d6a7;margin-bottom:12px;backdrop-filter:blur(8px)}
+    .login-visual-content h1{font-size:28px;font-weight:800;margin:0 0 4px;color:#fff;letter-spacing:-.4px}
+    .login-visual-content p{color:rgba(255,255,255,.85);font-size:14px;margin:0}
+    .login-visual-content .login-quote{margin-top:18px;font-size:13.5px;line-height:1.65;color:rgba(255,255,255,.92);max-width:430px;font-style:italic;display:none}
+    @media(min-width:900px){
+      .login-visual{flex:1 1 50%;min-height:100vh}
+      .login-visual-content .login-quote{display:block}
+    }
+    .login-panel{flex:1 1 auto;display:flex;align-items:flex-start;justify-content:center;background:#fff;padding:20px 16px 48px}
+    @media(min-width:900px){.login-panel{flex:1 1 50%;align-items:center;padding:40px 32px}}
+    .login-panel-inner{width:100%;max-width:440px;margin:0 auto}
+    .dev-otp-box{display:none;margin:0 0 16px;padding:12px 14px;border:1.5px dashed #ff9800;border-radius:12px;background:#fff8e1;color:#5d4037;animation:fadeUp .3s ease}
+    .dev-otp-box.show{display:block}
+    .dev-otp-box .dev-otp-label{font-size:11px;font-weight:700;color:#e65100;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+    .dev-otp-box .dev-otp-code{font-size:26px;font-weight:800;letter-spacing:8px;color:#0B3D2E;font-variant-numeric:tabular-nums}
+    .dev-otp-box .dev-otp-note{font-size:11px;color:#8a6d3b;margin-top:4px}
+    .auth-body{padding:0}
+    .auth-tabs{display:flex;background:#f3f7f2;border-radius:12px;padding:4px;margin-bottom:24px;gap:4px}
+    .auth-tab{flex:1;border:none;background:transparent;padding:10px 0;border-radius:9px;font-size:12px;font-weight:600;color:#7a8f7a;cursor:pointer;transition:all .25s ease;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit}
+    .auth-tab i{font-size:13px}
+    .auth-tab.active{background:#fff;color:#1a3c2a;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .auth-tab:hover:not(.active){color:#2d5a3e}
+    .auth-form{display:none}
+    .auth-form.active{display:block;animation:fadeUp .3s ease}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .form-group{margin-bottom:18px}
+    .form-group label{display:block;font-size:13px;font-weight:600;color:#2d3e2d;margin-bottom:6px}
+    .input-wrap{position:relative}
+    .input-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#7a9f7a;font-size:15px;pointer-events:none}
+    .input-wrap input,.input-wrap select{width:100%;padding:13px 14px 13px 42px;border:1.5px solid #e0e8e0;border-radius:12px;font-size:14px;background:#fafcfa;color:#1a2e1a;transition:all .2s ease;box-sizing:border-box;font-family:inherit}
+    .input-wrap input:focus,.input-wrap select:focus{outline:none;border-color:#4caf50;background:#fff;box-shadow:0 0 0 3px rgba(76,175,80,.1)}
+    .input-wrap input::placeholder{color:#a0b8a0}
+    .profile-preview{display:none;text-align:center;padding:16px 0;animation:fadeUp .3s ease}
+    .profile-preview.show{display:block}
+    .profile-preview .avatar{width:72px;height:72px;border-radius:50%;margin:0 auto 10px;border:3px solid #e8f5e9;object-fit:cover}
+    .profile-preview .name{font-size:16px;font-weight:700;color:#1a2e1a}
+    .profile-preview .farmer-id{font-size:12px;color:#4caf50;font-weight:600;margin-top:2px}
+    .profile-preview .masked{font-size:12px;color:#8a9f8a;margin-top:2px}
+    .loading-spinner{display:none;text-align:center;padding:20px}
+    .loading-spinner.show{display:block}
+    .loading-spinner .spinner{width:32px;height:32px;border:3px solid #e8f5e9;border-top-color:#4caf50;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-spinner p{font-size:13px;color:#5a7a5a}
+    .otp-section{display:none}
+    .otp-section.show{display:block;animation:fadeUp .3s ease}
+    .otp-grid{display:flex;justify-content:center;gap:10px;margin:16px 0}
+    .otp-grid input{width:48px;height:52px;text-align:center;font-size:20px;font-weight:700;border:1.5px solid #e0e8e0;border-radius:12px;background:#fafcfa;color:#1a2e1a;transition:all .2s ease;font-family:inherit}
+    .otp-grid input:focus{outline:none;border-color:#4caf50;box-shadow:0 0 0 3px rgba(76,175,80,.1);background:#fff}
+    .pin-grid{display:flex;justify-content:center;gap:12px;margin:20px 0}
+    .pin-grid input{width:52px;height:58px;text-align:center;font-size:22px;font-weight:700;border:1.5px solid #e0e8e0;border-radius:12px;background:#fafcfa;color:#1a2e1a;transition:all .2s ease;font-family:inherit}
+    .pin-grid input:focus{outline:none;border-color:#4caf50;box-shadow:0 0 0 3px rgba(76,175,80,.1);background:#fff}
+    .hint{text-align:center;font-size:12px;color:#8a9f8a;margin-bottom:16px}
+    .hint strong{color:#2e7d32}
+    .btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,#1a3c2a,#2d5a3e);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:all .25s ease;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-submit:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(26,60,42,.25)}
+    .btn-submit:active{transform:translateY(0)}
+    .btn-submit:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .btn-back{background:none;border:none;color:#5a7a5a;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;margin-bottom:12px;font-family:inherit;padding:0}
+    .btn-back:hover{color:#2e7d32}
+    .auth-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px}
+    .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:#e8efe8}
+    .auth-divider span{font-size:12px;color:#8a9f8a;white-space:nowrap}
+    .auth-footer{display:flex;gap:10px}
+    .auth-footer .btn-outline{flex:1;padding:12px;border:1.5px solid #e0e8e0;border-radius:12px;background:transparent;font-size:13px;font-weight:600;color:#3a5a3a;cursor:pointer;transition:all .2s ease;font-family:inherit;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+    .auth-footer .btn-outline:hover{border-color:#4caf50;background:#f5faf5}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);color:#fff;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.15);z-index:2000;animation:fadeUp .3s ease;display:flex;align-items:center;gap:10px;max-width:90vw}
+    .toast.success{background:#1a3c2a}.toast.success i{color:#81c784}
+    .toast.danger{background:#c62828}.toast.danger i{color:#ff8a80}
+    .toast.info{background:#1565c0}.toast.info i{color:#90caf9}
+    .resend-link{color:#2e7d32;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;background:none;border:none;font-family:inherit;padding:0}
+    .resend-link:hover{text-decoration:underline}
+    .otp-info{font-size:13px;color:#5a7a5a;margin-bottom:8px}
+    .step-indicator{display:flex;justify-content:center;gap:8px;margin-bottom:20px}
+    .step-dot{width:8px;height:8px;border-radius:50%;background:#e0e8e0;transition:all .25s}
+    .step-dot.active{background:#4caf50;width:24px;border-radius:4px}
+    .fid-input-wrap{display:flex;border:1.5px solid #e0e8e0;border-radius:12px;overflow:hidden;background:#fafcfa;transition:all .2s ease}
+    .fid-input-wrap:focus-within{border-color:#4caf50;background:#fff;box-shadow:0 0 0 3px rgba(76,175,80,.1)}
+    .fid-input-wrap .fid-prefix{padding:13px 0 13px 14px;background:#f0f7ee;font-weight:700;font-size:14px;color:#1a3c2a;border-right:1.5px solid #e0e8e0;white-space:nowrap;display:flex;align-items:center;gap:6px}
+    .fid-input-wrap .fid-prefix i{color:#7a9f7a;font-size:15px}
+    .fid-input-wrap input{border:none;flex:1;padding:13px 14px 13px 10px;font-size:14px;background:transparent;color:#1a2e1a;outline:none;font-family:inherit;min-width:0}
+    .fid-tabs{display:flex;gap:8px;background:#f0f5f0;border-radius:12px;padding:5px;margin-bottom:18px}
+    .fid-tab{flex:1;padding:10px;border:none;border-radius:9px;background:transparent;color:#6a8a6a;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s ease;font-family:inherit}
+    .fid-tab.active{background:#fff;color:#1a3c2a;box-shadow:0 2px 8px rgba(26,60,42,.12)}
+    .fid-otp-hint{text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:14px;line-height:1.5}
+    .fid-otp-hint b{color:#1a3c2a}
+    .fid-channel{display:flex;gap:8px;margin-bottom:16px}
+    .fid-channel-btn{flex:1;padding:11px;border:1.5px solid #e0e8e0;border-radius:10px;background:#fafcfa;color:#3a5a3a;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s ease;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+    .fid-channel-btn:hover{border-color:#4caf50}
+    .fid-channel-btn.active{border-color:#4caf50;background:#eaf6ea;color:#1a3c2a;box-shadow:0 0 0 3px rgba(76,175,80,.08)}
+    .fid-notfound{text-align:center;padding:18px 10px 8px}
+    .fid-notfound i{font-size:34px;color:#bdbdbd;margin-bottom:8px}
+    .fid-notfound p{font-size:13px;color:#5a7a5a;line-height:1.6;margin-bottom:16px}
+    .fid-notfound-actions{display:flex;gap:10px}
+    .fid-notfound-actions .btn-outline,.fid-notfound-actions .btn-submit{flex:1;padding:12px;font-size:13px}
+    .fid-notfound-actions .btn-outline{border:1.5px solid #e0e8e0;border-radius:12px;background:transparent;color:#3a5a3a;font-weight:600;cursor:pointer;transition:all .2s ease;font-family:inherit;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+    .fid-notfound-actions .btn-outline:hover{border-color:#4caf50;background:#f5faf5}
+    .create-acct-link{text-align:center;margin-top:16px}
+    .create-acct-link a{color:#2e7d32;font-size:13px;font-weight:600;text-decoration:none}
+    .create-acct-link a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="login-layout">
+    <aside class="login-visual" id="login-visual" aria-label="Agriculture imagery">
+      <div class="login-visual-content">
+        <div class="logo-icon"><i class="fas fa-seedling"></i></div>
+        <h1>Farm Assist</h1>
+        <p>India's Agriculture Super App</p>
+        <div class="login-quote">"From soil health to mandi prices, your entire farm in one companion app."</div>
+      </div>
+    </aside>
+    <main class="login-panel">
+      <div class="login-panel-inner">
+    <div class="dev-otp-box" id="dev-otp-box" role="status" aria-live="polite">
+      <div class="dev-otp-label"><i class="fas fa-flask" aria-hidden="true"></i> Development Mode Only</div>
+      <div>Your verification code is:</div>
+      <div class="dev-otp-code" id="dev-otp-code">0000</div>
+      <div class="dev-otp-note">This code is shown for local testing only. It is hidden in production when SMS/email providers are configured.</div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="phone" onclick="switchTab('phone')"><i class="fas fa-mobile-screen"></i> Phone</button>
+        <button class="auth-tab" data-tab="email" onclick="switchTab('email')"><i class="fas fa-envelope"></i> Email</button>
+        <button class="auth-tab" data-tab="farmerid" onclick="switchTab('farmerid')"><i class="fas fa-id-card"></i> Farmer ID</button>
+      </div>
+
+      <!-- Phone Login -->
+      <div class="auth-form active" id="form-phone">
+        <div id="phone-step1">
+          <p style="text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:16px;">Enter your registered phone number</p>
+          <div class="form-group">
+            <div class="input-wrap">
+              <i class="fas fa-phone"></i>
+              <input type="tel" id="phone-input" placeholder="98765 43210" maxlength="10" autocomplete="tel">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:14px">
+            <button class="btn-submit" style="flex:1" onclick="handleSendPhoneOtp()">Send OTP <i class="fas fa-paper-plane"></i></button>
+            <button class="btn-submit" style="flex:1;background:linear-gradient(135deg,#2d5a3e,#4caf50)" onclick="showPhonePin()">Use PIN <i class="fas fa-lock"></i></button>
+          </div>
+          <div class="loading-spinner" id="phone-loading">
+            <div class="spinner"></div>
+            <p>Looking up your account...</p>
+          </div>
+          <div class="profile-preview" id="phone-profile">
+            <img class="avatar" id="phone-avatar" src="" alt="Profile">
+            <div class="name" id="phone-name"></div>
+            <div class="farmer-id" id="phone-farmer-id"></div>
+            <div class="masked" id="phone-masked"></div>
+          </div>
+          <div class="create-acct-link"><a href="signup.html">Create Account</a></div>
+        </div>
+        <div id="phone-pin-section" style="display:none">
+          <button class="btn-back" onclick="hidePhonePin()"><i class="fas fa-arrow-left"></i> Back</button>
+          <p style="text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:4px">Enter your 4-digit PIN</p>
+          <div class="pin-grid">
+            <input type="password" maxlength="1" id="phone-pin-1" oninput="focusNext(this,'phone-pin-2')" inputmode="numeric">
+            <input type="password" maxlength="1" id="phone-pin-2" oninput="focusNext(this,'phone-pin-3')" inputmode="numeric">
+            <input type="password" maxlength="1" id="phone-pin-3" oninput="focusNext(this,'phone-pin-4')" inputmode="numeric">
+            <input type="password" maxlength="1" id="phone-pin-4" oninput="focusNext(this,null);loginPhonePin()" inputmode="numeric">
+          </div>
+          <button class="btn-submit" onclick="loginPhonePin()" id="phone-pin-login-btn">Log In <i class="fas fa-sign-in-alt"></i></button>
+          <div class="create-acct-link"><a href="signup.html">Create Account</a></div>
+        </div>
+        <div id="phone-step2" style="display:none">
+          <button class="btn-back" onclick="goBackPhone()"><i class="fas fa-arrow-left"></i> Back</button>
+          <p class="otp-info">Enter the 4-digit OTP sent to your phone</p>
+          <div class="hint">OTP returned by API for development</div>
+          <div class="otp-grid">
+            <input type="text" maxlength="1" id="phone-otp-1" oninput="focusNext(this,'phone-otp-2')" inputmode="numeric">
+            <input type="text" maxlength="1" id="phone-otp-2" oninput="focusNext(this,'phone-otp-3')" inputmode="numeric">
+            <input type="text" maxlength="1" id="phone-otp-3" oninput="focusNext(this,'phone-otp-4')" inputmode="numeric">
+            <input type="text" maxlength="1" id="phone-otp-4" oninput="focusNext(this,null);handlePhoneOtpComplete()" inputmode="numeric">
+          </div>
+          <button class="btn-submit" onclick="verifyPhoneOtp()" id="phone-verify-btn">Verify OTP <i class="fas fa-check"></i></button>
+          <p style="text-align:center;margin-top:14px;font-size:13px;color:#5a7a5a">
+            Didn't receive? <button class="resend-link" onclick="resendPhoneOtp()" id="phone-resend">Resend OTP</button>
+          </p>
+        </div>
+      </div>
+
+      <!-- Email Login -->
+      <div class="auth-form" id="form-email">
+        <div id="email-step1">
+          <p style="text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:16px;">Enter your registered email address</p>
+          <div class="form-group">
+            <div class="input-wrap">
+              <i class="fas fa-envelope"></i>
+              <input type="email" id="email-input" placeholder="farmer@example.com" autocomplete="email">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:14px">
+            <button class="btn-submit" style="flex:1" onclick="handleSendEmailOtp()">Send OTP <i class="fas fa-paper-plane"></i></button>
+            <button class="btn-submit" style="flex:1;background:linear-gradient(135deg,#2d5a3e,#4caf50)" onclick="showEmailPin()">Use PIN <i class="fas fa-lock"></i></button>
+          </div>
+          <div class="loading-spinner" id="email-loading">
+            <div class="spinner"></div>
+            <p>Looking up your account...</p>
+          </div>
+          <div class="profile-preview" id="email-profile">
+            <img class="avatar" id="email-avatar" src="" alt="Profile">
+            <div class="name" id="email-name"></div>
+            <div class="farmer-id" id="email-farmer-id"></div>
+            <div class="masked" id="email-masked"></div>
+          </div>
+          <div class="create-acct-link"><a href="signup.html">Create Account</a></div>
+        </div>
+        <div id="email-pin-section" style="display:none">
+          <button class="btn-back" onclick="hideEmailPin()"><i class="fas fa-arrow-left"></i> Back</button>
+          <p style="text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:4px">Enter your 4-digit PIN</p>
+          <div class="pin-grid">
+            <input type="password" maxlength="1" id="email-pin-1" oninput="focusNext(this,'email-pin-2')" inputmode="numeric">
+            <input type="password" maxlength="1" id="email-pin-2" oninput="focusNext(this,'email-pin-3')" inputmode="numeric">
+            <input type="password" maxlength="1" id="email-pin-3" oninput="focusNext(this,'email-pin-4')" inputmode="numeric">
+            <input type="password" maxlength="1" id="email-pin-4" oninput="focusNext(this,null);loginEmailPin()" inputmode="numeric">
+          </div>
+          <button class="btn-submit" onclick="loginEmailPin()" id="email-pin-login-btn">Log In <i class="fas fa-sign-in-alt"></i></button>
+          <div class="create-acct-link"><a href="signup.html">Create Account</a></div>
+        </div>
+        <div id="email-step2" style="display:none">
+          <button class="btn-back" onclick="goBackEmail()"><i class="fas fa-arrow-left"></i> Back</button>
+          <p class="otp-info">Enter the 4-digit OTP sent to your email</p>
+          <div class="hint">OTP returned by API for development</div>
+          <div class="otp-grid">
+            <input type="text" maxlength="1" id="email-otp-1" oninput="focusNext(this,'email-otp-2')" inputmode="numeric">
+            <input type="text" maxlength="1" id="email-otp-2" oninput="focusNext(this,'email-otp-3')" inputmode="numeric">
+            <input type="text" maxlength="1" id="email-otp-3" oninput="focusNext(this,'email-otp-4')" inputmode="numeric">
+            <input type="text" maxlength="1" id="email-otp-4" oninput="focusNext(this,null);handleEmailOtpComplete()" inputmode="numeric">
+          </div>
+          <button class="btn-submit" onclick="verifyEmailOtp()" id="email-verify-btn">Verify OTP <i class="fas fa-check"></i></button>
+          <p style="text-align:center;margin-top:14px;font-size:13px;color:#5a7a5a">
+            Didn't receive? <button class="resend-link" onclick="resendEmailOtp()" id="email-resend">Resend OTP</button>
+          </p>
+        </div>
+      </div>
+
+      <!-- Farmer ID Login -->
+      <div class="auth-form" id="form-farmerid">
+        <div id="fid-step1">
+          <p style="text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:16px;">Enter your Farmer ID</p>
+          <div class="form-group">
+            <div class="fid-input-wrap">
+              <span class="fid-prefix"><i class="fas fa-id-card"></i> FA-AS-</span>
+              <input type="text" id="fid-input" placeholder="00000001" autocomplete="off" oninput="formatFidInput(this)" inputmode="numeric">
+            </div>
+          </div>
+          <button class="btn-submit" onclick="handleFarmerIdLookup()" id="fid-lookup-btn">Continue <i class="fas fa-arrow-right"></i></button>
+          <div class="loading-spinner" id="fid-loading">
+            <div class="spinner"></div>
+            <p>Looking up your account...</p>
+          </div>
+          <div class="profile-preview" id="fid-profile">
+            <img class="avatar" id="fid-avatar" src="" alt="Profile">
+            <div class="name" id="fid-name"></div>
+            <div class="farmer-id" id="fid-display-id"></div>
+            <div class="masked" id="fid-masked"></div>
+          </div>
+          <div class="profile-preview fid-notfound" id="fid-notfound">
+            <i class="fas fa-user-times"></i>
+            <p>We couldn't find a farmer with this ID.<br>Check the number and try again, or create a new account.</p>
+            <div class="fid-notfound-actions">
+              <button class="btn-outline" onclick="retryFarmerId()"><i class="fas fa-redo"></i> Try Again</button>
+              <a href="signup.html" class="btn-submit"><i class="fas fa-user-plus"></i> Create Account</a>
+            </div>
+          </div>
+          <div class="create-acct-link"><a href="signup.html">Create Account</a></div>
+        </div>
+        <div id="fid-step2" style="display:none">
+          <button class="btn-back" onclick="goBackFarmerId()"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fid-tabs">
+            <button class="fid-tab active" id="fid-tab-pin" onclick="switchFidAuth('pin')"><i class="fas fa-lock"></i> PIN</button>
+            <button class="fid-tab" id="fid-tab-otp" onclick="switchFidAuth('otp')"><i class="fas fa-message"></i> OTP</button>
+          </div>
+          <div id="fid-pin-panel">
+            <p style="text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:4px;">Enter your 4-digit PIN</p>
+            <div class="pin-grid">
+              <input type="password" maxlength="1" id="fid-pin-1" oninput="focusNext(this,'fid-pin-2')" inputmode="numeric">
+              <input type="password" maxlength="1" id="fid-pin-2" oninput="focusNext(this,'fid-pin-3')" inputmode="numeric">
+              <input type="password" maxlength="1" id="fid-pin-3" oninput="focusNext(this,'fid-pin-4')" inputmode="numeric">
+              <input type="password" maxlength="1" id="fid-pin-4" oninput="focusNext(this,null);handleFarmerIdPinComplete()" inputmode="numeric">
+            </div>
+            <button class="btn-submit" onclick="loginWithFarmerPin()" id="fid-login-btn">Log In <i class="fas fa-sign-in-alt"></i></button>
+          </div>
+          <div id="fid-otp-panel" style="display:none">
+            <p class="fid-otp-hint">We'll send a one-time code to your registered <b>phone</b> or <b>email</b>.</p>
+            <div class="fid-channel">
+              <button class="fid-channel-btn active" id="fid-ch-phone" onclick="setFidChannel('phone')"><i class="fas fa-mobile-alt"></i> SMS</button>
+              <button class="fid-channel-btn" id="fid-ch-email" onclick="setFidChannel('email')"><i class="fas fa-envelope"></i> Email</button>
+            </div>
+            <button class="btn-submit" onclick="sendFarmerOtp(false)" id="fid-otp-send-btn">Send OTP <i class="fas fa-paper-plane"></i></button>
+            <div id="fid-otp-input-area" style="display:none">
+              <p class="fid-otp-hint">Enter the code sent to <b id="fid-otp-target">your phone</b></p>
+              <div class="pin-grid">
+                <input type="text" maxlength="1" id="fid-otp-1" oninput="focusNext(this,'fid-otp-2')" inputmode="numeric">
+                <input type="text" maxlength="1" id="fid-otp-2" oninput="focusNext(this,'fid-otp-3')" inputmode="numeric">
+                <input type="text" maxlength="1" id="fid-otp-3" oninput="focusNext(this,'fid-otp-4')" inputmode="numeric">
+                <input type="text" maxlength="1" id="fid-otp-4" oninput="focusNext(this,null);verifyFarmerOtp()" inputmode="numeric">
+              </div>
+              <button class="btn-submit" onclick="verifyFarmerOtp()" id="fid-otp-verify-btn">Verify OTP <i class="fas fa-check"></i></button>
+              <p style="text-align:center;margin-top:14px;font-size:13px;color:#5a7a5a">
+                Didn't receive? <button class="resend-link" onclick="sendFarmerOtp(true)" id="fid-otp-resend">Resend OTP</button>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-divider"><span>New to Farm Assist?</span></div>
+      <div class="auth-footer">
+        <a href="signup.html" class="btn-outline" style="flex:1"><i class="fas fa-user-plus"></i> Create Account</a>
+      </div>
+    </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script>
+    var _toastTimer = null;
+    function showToast(msg, type) {
+      var old = document.querySelector('.toast');
+      if (old) old.remove();
+      if (_toastTimer) clearTimeout(_toastTimer);
+      var t = document.createElement('div');
+      t.className = 'toast ' + (type || 'success');
+      t.innerHTML = '<i class="fas fa-' + (type === 'danger' ? 'exclamation-circle' : type === 'info' ? 'info-circle' : 'check-circle') + '"></i> ' + msg;
+      document.body.appendChild(t);
+      _toastTimer = setTimeout(function(){ t.remove(); }, 3500);
+    }
+
+    function switchTab(mode) {
+      document.querySelectorAll('.auth-form').forEach(function(f){ f.classList.remove('active'); });
+      document.getElementById('form-' + mode).classList.add('active');
+      document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelector('.auth-tab[data-tab="' + mode + '"]').classList.add('active');
+    }
+
+    function showDevOtp(result) {
+      var code = result && (result.debug_otp || (result.data && result.data.debug_otp));
+      var box = document.getElementById('dev-otp-box');
+      var codeEl = document.getElementById('dev-otp-code');
+      if (!box || !codeEl) return;
+      if (!code) { box.classList.remove('show'); return; }
+      codeEl.textContent = code;
+      box.classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function hideDevOtp() {
+      var box = document.getElementById('dev-otp-box');
+      if (box) box.classList.remove('show');
+    }
+
+    function focusNext(currentEl, nextId) {
+      if (currentEl.value.length === 1 && nextId) {
+        document.getElementById(nextId).focus();
+      }
+    }
+
+    function goToDashboard() {
+      window.location.href = 'index.html';
+    }
+
+    if (window.UserStore && window.UserStore.isLoggedIn()) {
+      goToDashboard();
+    }
+
+    /* ---- Phone OTP Flow ---- */
+    var _phoneOtpSent = false;
+    var _phoneVerifiedPhone = null;
+
+    function handleSendPhoneOtp() {
+      var phone = document.getElementById('phone-input').value.replace(/[^0-9]/g, '');
+      if (phone.length < 10) { showToast('Enter a valid 10-digit phone number', 'danger'); return; }
+      var btn = document.querySelector('#phone-step1 .btn-submit[onclick="handleSendPhoneOtp()"]');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+      document.getElementById('phone-loading').classList.add('show');
+      document.getElementById('phone-profile').classList.remove('show');
+
+      AuthService.lookupProfile(phone).then(function(profile) {
+        document.getElementById('phone-loading').classList.remove('show');
+        if (profile) {
+          var pp = document.getElementById('phone-profile');
+          document.getElementById('phone-avatar').src = profile.profile_image || UserStore.avatarFor({full_name: profile.full_name});
+          document.getElementById('phone-name').textContent = profile.full_name;
+          document.getElementById('phone-farmer-id').textContent = profile.farmer_id;
+          document.getElementById('phone-masked').textContent = profile.phone_masked || '';
+          pp.classList.add('show');
+        }
+        return AuthService.sendOtp(phone);
+      }).then(function(result) {
+        _phoneOtpSent = true;
+        _phoneVerifiedPhone = phone;
+        showDevOtp(result);
+        document.getElementById('phone-step1').style.display = 'none';
+        document.getElementById('phone-step2').style.display = 'block';
+        document.getElementById('phone-otp-1').focus();
+        showToast('OTP sent to ' + phone, 'success');
+      }).catch(function(err) {
+        document.getElementById('phone-loading').classList.remove('show');
+        btn.disabled = false;
+        btn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
+        if (err.status === 401 || err.message.includes('not found')) {
+          showToast('Phone number not registered. Please sign up first.', 'danger');
+        } else {
+          showToast(err.message || 'Failed to send OTP', 'danger');
+        }
+      });
+    }
+
+    function showPhonePin() {
+      var phone = document.getElementById('phone-input').value.replace(/[^0-9]/g, '');
+      if (phone.length < 10) { showToast('Enter a valid 10-digit phone number', 'danger'); return; }
+      _phoneVerifiedPhone = phone;
+      document.getElementById('phone-step1').style.display = 'none';
+      document.getElementById('phone-pin-section').style.display = 'block';
+      document.getElementById('phone-pin-1').focus();
+    }
+
+    function hidePhonePin() {
+      document.getElementById('phone-step1').style.display = 'block';
+      document.getElementById('phone-pin-section').style.display = 'none';
+      for (var i = 1; i <= 4; i++) document.getElementById('phone-pin-' + i).value = '';
+      var btn = document.getElementById('phone-pin-login-btn');
+      btn.disabled = false;
+      btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
+    }
+
+    function loginPhonePin() {
+      var pin = '';
+      for (var i = 1; i <= 4; i++) pin += document.getElementById('phone-pin-' + i).value;
+      if (pin.length < 4) { showToast('Enter complete PIN', 'danger'); return; }
+      if (!_phoneVerifiedPhone) { showToast('Enter your phone number first', 'danger'); return; }
+      var btn = document.getElementById('phone-pin-login-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+
+      AuthService.login({ phone: _phoneVerifiedPhone, pin: pin, login_method: 'phone' }).then(function(data) {
+        if (data && data.access_token) {
+          showToast('Login successful!', 'success');
+          setTimeout(goToDashboard, 600);
+        } else {
+          showToast('Invalid PIN', 'danger');
+          btn.disabled = false;
+          btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
+          for (var i = 1; i <= 4; i++) document.getElementById('phone-pin-' + i).value = '';
+          document.getElementById('phone-pin-1').focus();
+        }
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
+        showToast(err.message || 'Invalid PIN', 'danger');
+        for (var i = 1; i <= 4; i++) document.getElementById('phone-pin-' + i).value = '';
+        document.getElementById('phone-pin-1').focus();
+      });
+    }
+
+    function goBackPhone() {
+      document.getElementById('phone-step1').style.display = 'block';
+      document.getElementById('phone-step2').style.display = 'none';
+      clearOtpInputs('phone-otp');
+      var sendBtn = document.querySelector('#phone-step1 .btn-submit[onclick="handleSendPhoneOtp()"]');
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
+      hideDevOtp();
+      _phoneOtpSent = false;
+    }
+
+    function handlePhoneOtpComplete() {
+      var otp = getOtpValue('phone-otp');
+      if (otp.length === 4) verifyPhoneOtp();
+    }
+
+    function verifyPhoneOtp() {
+      var otp = getOtpValue('phone-otp');
+      if (otp.length < 4) { showToast('Enter complete OTP', 'danger'); return; }
+      var btn = document.getElementById('phone-verify-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+      AuthService.verifyOtp(_phoneVerifiedPhone, null, otp).then(function(data) {
+        if (data && data.access_token) {
+          showToast('Login successful!', 'success');
+          setTimeout(goToDashboard, 600);
+        } else if (data && data.is_existing_user === false) {
+          showToast('Phone not registered. Redirecting to signup...', 'info');
+          setTimeout(function(){ window.location.href = 'signup.html?phone=' + _phoneVerifiedPhone; }, 1000);
+        } else {
+          showToast('OTP verified. Logging in...', 'success');
+          setTimeout(goToDashboard, 600);
+        }
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Verify OTP <i class="fas fa-check"></i>';
+        showToast(err.message || 'Invalid OTP', 'danger');
+        clearOtpInputs('phone-otp');
+        document.getElementById('phone-otp-1').focus();
+      });
+    }
+
+    function resendPhoneOtp() {
+      if (!_phoneVerifiedPhone) return;
+      AuthService.sendOtp(_phoneVerifiedPhone).then(function(result) {
+        showDevOtp(result);
+        showToast('OTP resent!', 'success');
+      }).catch(function(err) {
+        showToast('Failed to resend OTP', 'danger');
+      });
+    }
+
+    /* ---- Email OTP Flow ---- */
+    var _emailOtpSent = false;
+    var _emailVerifiedEmail = null;
+
+    function handleSendEmailOtp() {
+      var email = document.getElementById('email-input').value.trim();
+      if (!email || !email.includes('@')) { showToast('Enter a valid email address', 'danger'); return; }
+      var btn = document.querySelector('#email-step1 .btn-submit[onclick="handleSendEmailOtp()"]');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+      document.getElementById('email-loading').classList.add('show');
+      document.getElementById('email-profile').classList.remove('show');
+
+      AuthService.lookupProfile(null, email).then(function(profile) {
+        document.getElementById('email-loading').classList.remove('show');
+        if (profile) {
+          var pp = document.getElementById('email-profile');
+          document.getElementById('email-avatar').src = profile.profile_image || UserStore.avatarFor({full_name: profile.full_name});
+          document.getElementById('email-name').textContent = profile.full_name;
+          document.getElementById('email-farmer-id').textContent = profile.farmer_id;
+          document.getElementById('email-masked').textContent = profile.email_masked || '';
+          pp.classList.add('show');
+        }
+        return AuthService.sendOtp(null, email);
+      }).then(function(result) {
+        _emailOtpSent = true;
+        _emailVerifiedEmail = email;
+        showDevOtp(result);
+        document.getElementById('email-step1').style.display = 'none';
+        document.getElementById('email-step2').style.display = 'block';
+        document.getElementById('email-otp-1').focus();
+        showToast('OTP sent to ' + email, 'success');
+      }).catch(function(err) {
+        document.getElementById('email-loading').classList.remove('show');
+        btn.disabled = false;
+        btn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
+        if (err.status === 401 || err.message.includes('not found')) {
+          showToast('Email not registered. Please sign up first.', 'danger');
+        } else {
+          showToast(err.message || 'Failed to send OTP', 'danger');
+        }
+      });
+    }
+
+    function showEmailPin() {
+      var email = document.getElementById('email-input').value.trim();
+      if (!email || !email.includes('@')) { showToast('Enter a valid email address', 'danger'); return; }
+      _emailVerifiedEmail = email;
+      document.getElementById('email-step1').style.display = 'none';
+      document.getElementById('email-pin-section').style.display = 'block';
+      document.getElementById('email-pin-1').focus();
+    }
+
+    function hideEmailPin() {
+      document.getElementById('email-step1').style.display = 'block';
+      document.getElementById('email-pin-section').style.display = 'none';
+      for (var i = 1; i <= 4; i++) document.getElementById('email-pin-' + i).value = '';
+      var btn = document.getElementById('email-pin-login-btn');
+      btn.disabled = false;
+      btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
+    }
+
+    function loginEmailPin() {
+      var pin = '';
+      for (var i = 1; i <= 4; i++) pin += document.getElementById('email-pin-' + i).value;
+      if (pin.length < 4) { showToast('Enter complete PIN', 'danger'); return; }
+      if (!_emailVerifiedEmail) { showToast('Enter your email first', 'danger'); return; }
+      var btn = document.getElementById('email-pin-login-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+
+      AuthService.login({ email: _emailVerifiedEmail, pin: pin, login_method: 'email' }).then(function(data) {
+        if (data && data.access_token) {
+          showToast('Login successful!', 'success');
+          setTimeout(goToDashboard, 600);
+        } else {
+          showToast('Invalid PIN', 'danger');
+          btn.disabled = false;
+          btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
+          for (var i = 1; i <= 4; i++) document.getElementById('email-pin-' + i).value = '';
+          document.getElementById('email-pin-1').focus();
+        }
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
+        showToast(err.message || 'Invalid PIN', 'danger');
+        for (var i = 1; i <= 4; i++) document.getElementById('email-pin-' + i).value = '';
+        document.getElementById('email-pin-1').focus();
+      });
+    }
+
+    function goBackEmail() {
+      document.getElementById('email-step1').style.display = 'block';
+      document.getElementById('email-step2').style.display = 'none';
+      clearOtpInputs('email-otp');
+      var sendBtn = document.querySelector('#email-step1 .btn-submit[onclick="handleSendEmailOtp()"]');
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
+      hideDevOtp();
+      _emailOtpSent = false;
+    }
+
+    function handleEmailOtpComplete() {
+      var otp = getOtpValue('email-otp');
+      if (otp.length === 4) verifyEmailOtp();
+    }
+
+    function verifyEmailOtp() {
+      var otp = getOtpValue('email-otp');
+      if (otp.length < 4) { showToast('Enter complete OTP', 'danger'); return; }
+      var btn = document.getElementById('email-verify-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+      AuthService.verifyOtp(null, _emailVerifiedEmail, otp).then(function(data) {
+        if (data && data.access_token) {
+          showToast('Login successful!', 'success');
+          setTimeout(goToDashboard, 600);
+        } else if (data && data.is_existing_user === false) {
+          showToast('Email not registered. Redirecting to signup...', 'info');
+          setTimeout(function(){ window.location.href = 'signup.html?email=' + encodeURIComponent(_emailVerifiedEmail); }, 1000);
+        } else {
+          showToast('OTP verified. Logging in...', 'success');
+          setTimeout(goToDashboard, 600);
+        }
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Verify OTP <i class="fas fa-check"></i>';
+        showToast(err.message || 'Invalid OTP', 'danger');
+        clearOtpInputs('email-otp');
+        document.getElementById('email-otp-1').focus();
+      });
+    }
+
+    function resendEmailOtp() {
+      if (!_emailVerifiedEmail) return;
+      AuthService.sendOtp(null, _emailVerifiedEmail).then(function(result) {
+        showDevOtp(result);
+        showToast('OTP resent!', 'success');
+      }).catch(function() {
+        showToast('Failed to resend OTP', 'danger');
+      });
+    }
+
+    /* ---- Farmer ID + PIN Flow ---- */
+    var _fidLookupResult = null;
+    var _fidChannel = 'phone';
+    var _fidOtpSent = false;
+
+    function formatFidInput(el) {
+      el.value = el.value.replace(/[^0-9]/g, '');
+    }
+
+    function handleFarmerIdLookup() {
+      var raw = document.getElementById('fid-input').value;
+      var fid = 'FA-AS-' + raw;
+      if (!raw.trim() || raw.trim().length === 0) {
+        showToast('Enter your Farmer ID', 'danger');
+        return;
+      }
+      var btn = document.getElementById('fid-lookup-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Looking up...';
+      document.getElementById('fid-loading').classList.add('show');
+      document.getElementById('fid-profile').classList.remove('show');
+      document.getElementById('fid-notfound').classList.remove('show');
+
+      AuthService.lookupProfile(null, null, fid).then(function(profile) {
+        document.getElementById('fid-loading').classList.remove('show');
+        if (profile) {
+          _fidLookupResult = profile;
+          var pp = document.getElementById('fid-profile');
+          document.getElementById('fid-avatar').src = profile.profile_image || UserStore.avatarFor({full_name: profile.full_name});
+          document.getElementById('fid-name').textContent = profile.full_name;
+          document.getElementById('fid-display-id').textContent = profile.farmer_id;
+          document.getElementById('fid-masked').textContent = profile.phone_masked || profile.email_masked || '';
+          pp.classList.add('show');
+          _fidOtpSent = false;
+          document.getElementById('fid-otp-input-area').style.display = 'none';
+          switchFidAuth('pin');
+          setTimeout(function() {
+            document.getElementById('fid-step1').style.display = 'none';
+            document.getElementById('fid-step2').style.display = 'block';
+            document.getElementById('fid-pin-1').focus();
+          }, 800);
+        } else {
+          document.getElementById('fid-notfound').classList.add('show');
+          showToast('Farmer ID not found', 'danger');
+        }
+        btn.disabled = false;
+        btn.innerHTML = 'Continue <i class="fas fa-arrow-right"></i>';
+      }).catch(function(err) {
+        document.getElementById('fid-loading').classList.remove('show');
+        btn.disabled = false;
+        btn.innerHTML = 'Continue <i class="fas fa-arrow-right"></i>';
+        if (err && err.message && /network|fetch|fail/i.test(err.message)) {
+          showToast('Connection issue. Please try again.', 'danger');
+        } else {
+          document.getElementById('fid-notfound').classList.add('show');
+          showToast(err.message || 'Farmer ID not found', 'danger');
+        }
+      });
+    }
+
+    function retryFarmerId() {
+      document.getElementById('fid-notfound').classList.remove('show');
+      var inp = document.getElementById('fid-input');
+      inp.value = '';
+      inp.focus();
+    }
+
+    function goBackFarmerId() {
+      document.getElementById('fid-step1').style.display = 'block';
+      document.getElementById('fid-step2').style.display = 'none';
+      document.getElementById('fid-lookup-btn').disabled = false;
+      document.getElementById('fid-lookup-btn').innerHTML = 'Continue <i class="fas fa-arrow-right"></i>';
+      for (var i = 1; i <= 4; i++) document.getElementById('fid-pin-' + i).value = '';
+      clearOtpInputs('fid-otp');
+      _fidLookupResult = null;
+      _fidOtpSent = false;
+    }
+
+    function switchFidAuth(mode) {
+      document.getElementById('fid-tab-pin').classList.toggle('active', mode === 'pin');
+      document.getElementById('fid-tab-otp').classList.toggle('active', mode === 'otp');
+      document.getElementById('fid-pin-panel').style.display = mode === 'pin' ? 'block' : 'none';
+      document.getElementById('fid-otp-panel').style.display = mode === 'otp' ? 'block' : 'none';
+      if (mode === 'pin') {
+        document.getElementById('fid-pin-1').focus();
+      } else {
+        setFidChannel(_fidChannel);
+        document.getElementById('fid-otp-send-btn').focus();
+      }
+    }
+
+    function setFidChannel(channel) {
+      _fidChannel = channel;
+      document.getElementById('fid-ch-phone').classList.toggle('active', channel === 'phone');
+      document.getElementById('fid-ch-email').classList.toggle('active', channel === 'email');
+    }
+
+    function sendFarmerOtp(resend) {
+      if (!_fidLookupResult) return;
+      var fid = _fidLookupResult.farmer_id;
+      var btn = document.getElementById('fid-otp-send-btn');
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+      AuthService.sendFarmerOtp(fid, _fidChannel).then(function(result) {
+        btn.disabled = false;
+        btn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
+        _fidOtpSent = true;
+        document.getElementById('fid-otp-input-area').style.display = 'block';
+        document.getElementById('fid-otp-target').textContent = _fidChannel === 'phone' ? 'your phone' : 'your email';
+        showDevOtp(result);
+        showToast(resend ? 'OTP resent!' : 'OTP sent!', 'success');
+        document.getElementById('fid-otp-1').focus();
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
+        showToast(err.message || 'Failed to send OTP', 'danger');
+      });
+    }
+
+    function verifyFarmerOtp() {
+      var otp = getOtpValue('fid-otp');
+      if (otp.length < 4) return;
+      if (!_fidLookupResult) return;
+      var fid = _fidLookupResult.farmer_id;
+      var btn = document.getElementById('fid-otp-verify-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+      AuthService.verifyFarmerOtp(fid, _fidChannel, otp).then(function(data) {
+        if (data && data.access_token) {
+          showToast('Login successful!', 'success');
+          setTimeout(goToDashboard, 600);
+        } else {
+          showToast('Invalid OTP', 'danger');
+          btn.disabled = false;
+          btn.innerHTML = 'Verify OTP <i class="fas fa-check"></i>';
+          clearOtpInputs('fid-otp');
+          document.getElementById('fid-otp-1').focus();
+        }
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Verify OTP <i class="fas fa-check"></i>';
+        showToast(err.message || 'Invalid OTP', 'danger');
+        clearOtpInputs('fid-otp');
+        document.getElementById('fid-otp-1').focus();
+      });
+    }
+
+    function handleFarmerIdPinComplete() {
+      var pin = '';
+      for (var i = 1; i <= 4; i++) pin += document.getElementById('fid-pin-' + i).value;
+      if (pin.length === 4) loginWithFarmerPin();
+    }
+
+    function loginWithFarmerPin() {
+      var pin = '';
+      for (var i = 1; i <= 4; i++) pin += document.getElementById('fid-pin-' + i).value;
+      if (pin.length < 4) { showToast('Enter complete PIN', 'danger'); return; }
+      var raw = document.getElementById('fid-input').value;
+      var fid = 'FA-AS-' + raw;
+      var btn = document.getElementById('fid-login-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+
+      AuthService.login({ farmer_id: fid, pin: pin, login_method: 'farmer_id' }).then(function(data) {
+        if (data && data.access_token) {
+          showToast('Login successful!', 'success');
+          setTimeout(goToDashboard, 600);
+        } else {
+          showToast('Invalid PIN', 'danger');
+          btn.disabled = false;
+          btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
+          for (var i = 1; i <= 4; i++) document.getElementById('fid-pin-' + i).value = '';
+          document.getElementById('fid-pin-1').focus();
+        }
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
+        showToast(err.message || 'Invalid PIN', 'danger');
+        for (var i = 1; i <= 4; i++) document.getElementById('fid-pin-' + i).value = '';
+        document.getElementById('fid-pin-1').focus();
+      });
+    }
+
+    /* ---- Helpers ---- */
+    function getOtpValue(prefix) {
+      var otp = '';
+      for (var i = 1; i <= 4; i++) {
+        var el = document.getElementById(prefix + '-' + i);
+        if (el) otp += el.value;
+      }
+      return otp;
+    }
+
+    function clearOtpInputs(prefix) {
+      for (var i = 1; i <= 4; i++) {
+        var el = document.getElementById(prefix + '-' + i);
+        if (el) el.value = '';
+      }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        var activeEl = document.activeElement;
+        if (activeEl && activeEl.id === 'phone-input') handleSendPhoneOtp();
+        if (activeEl && activeEl.id === 'email-input') handleSendEmailOtp();
+        if (activeEl && activeEl.id === 'fid-input') handleFarmerIdLookup();
+      }
+    });
+
+    // Login visual panel: full-screen agricultural imagery on desktop, banner on mobile
+    // Auto-rotate images every 5 seconds
+    (function () {
+      var visual = document.getElementById('login-visual');
+      if (!visual) return;
+      var images = [
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=70',
+        'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1200&q=70',
+        'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1200&q=70',
+        'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=1200&q=70',
+        'https://images.unsplash.com/photo-1574943320219-553eb213f72d?auto=format&fit=crop&w=1200&q=70'
+      ];
+      var currentIndex = Math.floor(Math.random() * images.length);
+      
+      function setBg(url) {
+        var img = new Image();
+        img.onload = function () { visual.style.backgroundImage = 'url("' + url + '")'; };
+        img.src = url;
+      }
+      
+      function rotateImage() {
+        currentIndex = (currentIndex + 1) % images.length;
+        setBg(images[currentIndex]);
+      }
+      
+      // Set initial image
+      setBg(images[currentIndex]);
+      
+      // Auto-rotate every 5 seconds
+      setInterval(rotateImage, 5000);
+    })();
+  </script>
+</body>
+</html>

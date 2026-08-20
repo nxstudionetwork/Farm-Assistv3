@@ -1,0 +1,448 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Feedback</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .fb-hero{background:linear-gradient(135deg,#2D8659,#1B5E3F);border-radius:var(--radius-lg);padding:28px 24px;color:white;margin-bottom:20px}
+    .fb-hero h1{font-size:20px;font-weight:700;margin-bottom:6px}
+    .fb-hero h1 i{margin-right:8px;opacity:.9}
+    .fb-hero p{font-size:13px;opacity:.85;line-height:1.5}
+
+    .fb-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px}
+    @media(max-width:768px){.fb-type-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:480px){.fb-type-grid{grid-template-columns:1fr}}
+    .fb-type-option{border:2px solid var(--border-light);border-radius:var(--radius-md);padding:14px 12px;text-align:center;cursor:pointer;transition:all .2s;background:white}
+    .fb-type-option:hover{border-color:var(--medium-green);box-shadow:var(--shadow-sm)}
+    .fb-type-option.selected{border-color:var(--primary-green);background:var(--soft-green);box-shadow:0 0 0 3px rgba(45,106,79,.1)}
+    .fb-type-option i{font-size:22px;color:var(--primary-green);display:block;margin-bottom:8px}
+    .fb-type-option span{font-size:12px;font-weight:600;color:var(--text-primary);display:block}
+
+    .star-rating{display:flex;gap:6px;margin:6px 0}
+    .star-rating .star{font-size:32px;color:var(--border-medium);cursor:pointer;transition:color .2s,transform .15s}
+    .star-rating .star:hover{transform:scale(1.15)}
+    .star-rating .star.active{color:var(--warning)}
+    .star-rating .star.hover{color:#F0C744}
+    .rating-label{font-size:12px;color:var(--text-muted);margin-top:4px;min-height:18px}
+
+    .fb-user-info{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:480px){.fb-user-info{grid-template-columns:1fr}}
+    .fb-user-info .form-input{background:#f5f8f5;color:var(--text-muted)}
+
+    .fb-success{display:none;text-align:center;padding:40px 20px}
+    .fb-success.show{display:block}
+    .fb-success .check-icon{width:72px;height:72px;border-radius:50%;background:var(--soft-green);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px;color:var(--primary-green);animation:scaleIn .4s ease}
+    @keyframes scaleIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+    .fb-success h2{font-size:20px;font-weight:700;margin-bottom:8px;color:var(--text-primary)}
+    .fb-success p{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:6px}
+    .fb-success .fb-id{font-size:12px;color:var(--primary-green);font-weight:600;background:var(--soft-green);display:inline-block;padding:4px 12px;border-radius:20px;margin:12px 0}
+    .fb-success .fb-actions{display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+
+    .fb-history-item{border-bottom:1px solid var(--border-light);padding:14px 0}
+    .fb-history-item:last-child{border-bottom:none}
+    .fb-type-badge{display:inline-block;font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--soft-green);color:var(--primary-green)}
+    .fb-type-badge.problem{background:#FDEAEA;color:var(--danger)}
+    .fb-type-badge.feature{background:var(--sky-soft);color:#1565C0}
+    .fb-type-badge.suggestion{background:#FFF8E1;color:#F57F17}
+    .fb-type-badge.ux{background:#F3E5F5;color:#7B1FA2}
+    .empty-fb{text-align:center;padding:30px 20px;color:var(--text-muted)}
+    .empty-fb i{font-size:36px;margin-bottom:12px;display:block;opacity:.4}
+
+    .fb-form-card{position:relative}
+    .fb-loading{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center;border-radius:var(--radius-lg);z-index:10;flex-direction:column;gap:12px}
+    .fb-loading.show{display:flex}
+    .fb-loading i{font-size:28px;color:var(--primary-green)}
+    .fb-loading span{font-size:13px;color:var(--text-muted)}
+
+    .fb-error{display:none;background:#FFF5F5;border:1px solid #FFCDD2;border-radius:var(--radius-md);padding:16px;margin-bottom:16px}
+    .fb-error.show{display:block}
+    .fb-error h4{font-size:14px;color:var(--danger);margin-bottom:6px}
+    .fb-error p{font-size:12px;color:var(--text-secondary);margin-bottom:10px}
+    .fb-error button{font-size:12px;padding:6px 16px}
+  </style>
+</head>
+<body>
+
+  <main class="page-container" style="padding-top:var(--topbar-height);padding-bottom:calc(var(--bottomnav-height)+24px);">
+
+    <!-- HERO HEADER -->
+    <div class="fb-hero">
+      <h1><i class="fas fa-comment-dots"></i> Help us improve Farm Assist</h1>
+      <p>Your feedback shapes the future of this platform. Tell us what works, what does not, and what you would like to see next.</p>
+    </div>
+
+    <!-- SUCCESS STATE -->
+    <div class="fb-success" id="fb-success-view">
+      <div class="check-icon"><i class="fas fa-check"></i></div>
+      <h2>Thank you for your feedback!</h2>
+      <p>Your feedback has been successfully submitted to the Farm Assist team.</p>
+      <div class="fb-id" id="fb-success-id"></div>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">We review every submission and use it to improve Farm Assist.</p>
+      <div class="fb-actions">
+        <button class="btn-secondary" onclick="window.location.href='help.html'"><i class="fas fa-headset" style="margin-right:6px;"></i> Back to Help & Support</button>
+        <button class="btn-primary" onclick="window.location.href='index.html'"><i class="fas fa-home" style="margin-right:6px;"></i> Return Home</button>
+      </div>
+    </div>
+
+    <!-- FEEDBACK FORM -->
+    <div id="fb-form-view">
+      <!-- ERROR STATE -->
+      <div class="fb-error" id="fb-error-box">
+        <h4><i class="fas fa-exclamation-circle" style="margin-right:6px;"></i> Submission Failed</h4>
+        <p id="fb-error-msg">We could not submit your feedback right now. Please try again.</p>
+        <button class="btn-secondary" onclick="dismissError()"><i class="fas fa-redo" style="margin-right:6px;"></i> Try Again</button>
+      </div>
+
+      <section class="card-premium fb-form-card" id="feedback-form-card">
+        <div class="fb-loading" id="fb-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Submitting your feedback...</span>
+        </div>
+
+        <h3 style="font-size:16px;margin-bottom:16px;"><i class="fas fa-paper-plane" style="color:var(--premium-green);margin-right:8px;"></i> Submit Feedback</h3>
+
+        <form id="feedback-form" onsubmit="handleFeedbackSubmit(event)">
+          <!-- Feedback Type -->
+          <div class="form-group">
+            <label class="form-label">Feedback Type</label>
+            <div class="fb-type-grid" id="fb-type-grid">
+              <div class="fb-type-option selected" data-type="General Feedback" onclick="selectFeedbackType(this)">
+                <i class="fas fa-comment"></i>
+                <span>General Feedback</span>
+              </div>
+              <div class="fb-type-option" data-type="Suggestion" onclick="selectFeedbackType(this)">
+                <i class="fas fa-lightbulb"></i>
+                <span>Suggestion</span>
+              </div>
+              <div class="fb-type-option" data-type="Bug Report" onclick="selectFeedbackType(this)">
+                <i class="fas fa-bug"></i>
+                <span>Bug Report</span>
+              </div>
+              <div class="fb-type-option" data-type="Feature Request" onclick="selectFeedbackType(this)">
+                <i class="fas fa-plus-circle"></i>
+                <span>Feature Request</span>
+              </div>
+              <div class="fb-type-option" data-type="User Experience" onclick="selectFeedbackType(this)">
+                <i class="fas fa-face-smile"></i>
+                <span>User Experience</span>
+              </div>
+              <div class="fb-type-option" data-type="Other" onclick="selectFeedbackType(this)">
+                <i class="fas fa-ellipsis"></i>
+                <span>Other</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Star Rating -->
+          <div class="form-group">
+            <label class="form-label">Your Rating</label>
+            <div class="star-rating" id="star-rating">
+              <i class="fas fa-star star" data-value="1" onclick="setRating(1)" onmouseenter="hoverRating(1)" onmouseleave="resetHover()"></i>
+              <i class="fas fa-star star" data-value="2" onclick="setRating(2)" onmouseenter="hoverRating(2)" onmouseleave="resetHover()"></i>
+              <i class="fas fa-star star" data-value="3" onclick="setRating(3)" onmouseenter="hoverRating(3)" onmouseleave="resetHover()"></i>
+              <i class="fas fa-star star" data-value="4" onclick="setRating(4)" onmouseenter="hoverRating(4)" onmouseleave="resetHover()"></i>
+              <i class="fas fa-star star" data-value="5" onclick="setRating(5)" onmouseenter="hoverRating(5)" onmouseleave="resetHover()"></i>
+            </div>
+            <div class="rating-label" id="rating-label"></div>
+          </div>
+
+          <!-- Message -->
+          <div class="form-group">
+            <label class="form-label" for="fb-message">Your Message</label>
+            <textarea id="fb-message" class="form-input" rows="5" placeholder="Tell us what you think, what is missing, or what could be better..." required style="resize:vertical;min-height:100px;font-family:inherit;line-height:1.5"></textarea>
+            <div style="text-align:right;margin-top:4px"><span id="fb-char-count" style="font-size:11px;color:var(--text-muted)">0 / 5000</span></div>
+          </div>
+
+          <!-- User Info -->
+          <div class="form-group">
+            <label class="form-label">Your Information</label>
+            <div class="fb-user-info">
+              <input type="text" class="form-input" id="fb-name" placeholder="Your name" readonly>
+              <input type="text" class="form-input" id="fb-farmer-id" placeholder="FA-AS-XXXXXXXX" readonly>
+            </div>
+          </div>
+
+          <!-- Related Page -->
+          <div class="form-group">
+            <label class="form-label" for="fb-related-page">Related Page or Feature (optional)</label>
+            <select id="fb-related-page" class="form-select" style="background-image:none;">
+              <option value="">Not specific to any page</option>
+              <option value="Dashboard">Dashboard</option>
+              <option value="Farm Management">Farm Management</option>
+              <option value="Crops">Crops</option>
+              <option value="Weather">Weather</option>
+              <option value="Marketplace">Marketplace</option>
+              <option value="Finance">Finance</option>
+              <option value="AI">AI Features</option>
+              <option value="Messages">Messages</option>
+              <option value="Community">Community</option>
+              <option value="Help & Support">Help & Support</option>
+              <option value="Settings">Settings</option>
+              <option value="Login">Login</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-primary" id="fb-submit-btn" style="width:100%;margin-top:4px;">
+            <i class="fas fa-paper-plane" style="margin-right:6px;"></i> Submit Feedback
+          </button>
+        </form>
+      </section>
+
+      <!-- Feedback History -->
+      <section class="card-premium">
+        <h3 style="font-size:16px;margin-bottom:5px;"><i class="fas fa-clock-rotate-left" style="color:var(--premium-green);margin-right:8px;"></i> Your Feedback History</h3>
+        <div id="feedback-history-list">
+          <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px">
+            <i class="fas fa-spinner fa-spin" style="margin-bottom:6px;display:block"></i> Loading...
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="card-premium">
+        <h3 style="font-size:16px;margin-bottom:5px;"><i class="fas fa-circle-question" style="color:var(--premium-green);margin-right:8px;"></i> Frequently Asked Questions</h3>
+        <div class="faq-accordion-item">
+          <div class="faq-accordion-q" onclick="toggleFaqAccordion(1)">
+            <h4>How do I contact support?</h4>
+            <i class="fas fa-chevron-down" id="fb-faq-chevron-1" style="color:var(--premium-gray);transition:transform .25s;flex-shrink:0"></i>
+          </div>
+          <p class="faq-accordion-a" id="fb-faq-a-1">
+            You can reach our support team through the <a href="help.html" style="color:var(--primary-green);font-weight:600">Help & Support</a> page, by emailing <a href="mailto:farm.assist@outlook.com" style="color:var(--primary-green);font-weight:600">farm.assist@outlook.com</a>, or by calling our Kisan Call Centre at <strong>1800-180-1551</strong> (Toll Free). Our team is available Monday to Saturday, 8 AM to 8 PM IST.
+          </p>
+        </div>
+        <div class="faq-accordion-item">
+          <div class="faq-accordion-q" onclick="toggleFaqAccordion(2)">
+            <h4>Where can I find tutorials and guides?</h4>
+            <i class="fas fa-chevron-down" id="fb-faq-chevron-2" style="color:var(--premium-gray);transition:transform .25s;flex-shrink:0"></i>
+          </div>
+          <p class="faq-accordion-a" id="fb-faq-a-2">
+            Head over to the <a href="help.html" style="color:var(--primary-green);font-weight:600">Help & Support</a> page. We offer step-by-step guides covering everything from setting up your farm profile to managing crops and using the marketplace.
+          </p>
+        </div>
+        <div class="faq-accordion-item">
+          <div class="faq-accordion-q" onclick="toggleFaqAccordion(3)">
+            <h4>How do I report a bug?</h4>
+            <i class="fas fa-chevron-down" id="fb-faq-chevron-3" style="color:var(--premium-gray);transition:transform .25s;flex-shrink:0"></i>
+          </div>
+          <p class="faq-accordion-a" id="fb-faq-a-3">
+            Use the feedback form above and select "Bug Report" as the type. Include as much detail as possible: what you were doing, what you expected, and what actually happened. Our developers review every report within 48 hours.
+          </p>
+        </div>
+        <div class="faq-accordion-item">
+          <div class="faq-accordion-q" onclick="toggleFaqAccordion(4)">
+            <h4>What happens after I submit feedback?</h4>
+            <i class="fas fa-chevron-down" id="fb-faq-chevron-4" style="color:var(--premium-gray);transition:transform .25s;flex-shrink:0"></i>
+          </div>
+          <p class="faq-accordion-a" id="fb-faq-a-4">
+            Your feedback is sent directly to the Farm Assist team via email and stored securely in our database. We review every submission and use your input to prioritize improvements and fixes. Bug reports are typically addressed within 48 hours.
+          </p>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    var currentRating = 0;
+    var selectedType = 'General Feedback';
+    var isSubmitting = false;
+    var ratingLabels = ['', 'Poor - Needs significant improvement', 'Fair - Below expectations', 'Good - Meets expectations', 'Very Good - Above expectations', 'Excellent - Exceeded expectations'];
+
+    function getAuthToken() { return localStorage.getItem('fa-auth-token') || ''; }
+    function getUserName() { return localStorage.getItem('user-name') || ''; }
+    function getFarmerId() { return localStorage.getItem('user-farmer-id') || ''; }
+
+    function showToast(msg, type) {
+      var c = document.querySelector('.toast-container');
+      if (!c) { c = document.createElement('div'); c.className = 'toast-container'; document.body.appendChild(c); }
+      var t = document.createElement('div');
+      t.className = 'toast-msg ' + (type || 'success');
+      t.textContent = msg;
+      c.appendChild(t);
+      requestAnimationFrame(function() { t.classList.add('show'); });
+      setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 350); }, 3500);
+    }
+
+    function selectFeedbackType(el) {
+      var opts = document.querySelectorAll('.fb-type-option');
+      for (var i = 0; i < opts.length; i++) opts[i].classList.remove('selected');
+      el.classList.add('selected');
+      selectedType = el.getAttribute('data-type');
+    }
+
+    function setRating(value) {
+      currentRating = value;
+      updateStars(value);
+      document.getElementById('rating-label').textContent = ratingLabels[value] || '';
+    }
+
+    function hoverRating(value) {
+      updateStars(value);
+      document.getElementById('rating-label').textContent = ratingLabels[value] || '';
+    }
+
+    function resetHover() {
+      updateStars(currentRating);
+      document.getElementById('rating-label').textContent = currentRating ? ratingLabels[currentRating] : '';
+    }
+
+    function updateStars(value) {
+      var stars = document.querySelectorAll('#star-rating .star');
+      for (var i = 0; i < stars.length; i++) {
+        var v = parseInt(stars[i].getAttribute('data-value'));
+        stars[i].classList.toggle('active', v <= value);
+        stars[i].classList.toggle('hover', v <= value && v > currentRating);
+      }
+    }
+
+    function dismissError() {
+      document.getElementById('fb-error-box').classList.remove('show');
+    }
+
+    function handleFeedbackSubmit(e) {
+      e.preventDefault();
+      if (isSubmitting) return;
+
+      var message = document.getElementById('fb-message').value.trim();
+      if (!message) { showToast('Please enter your feedback message.', 'error'); return; }
+      if (message.length < 5) { showToast('Please provide a more detailed message (at least 5 characters).', 'error'); return; }
+      if (currentRating === 0) { showToast('Please select a star rating.', 'error'); return; }
+
+      isSubmitting = true;
+      var btn = document.getElementById('fb-submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i> Submitting...';
+      document.getElementById('fb-loading').classList.add('show');
+      document.getElementById('fb-error-box').classList.remove('show');
+
+      var payload = {
+        feedback_type: selectedType,
+        rating: currentRating,
+        message: message,
+        related_page: document.getElementById('fb-related-page').value || ''
+      };
+
+      fetch('/api/v1/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + getAuthToken()
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.status === 'success' && res.data) {
+          document.getElementById('fb-form-view').style.display = 'none';
+          var sv = document.getElementById('fb-success-view');
+          sv.classList.add('show');
+          document.getElementById('fb-success-id').textContent = 'Feedback ID: ' + (res.data.feedback_id || '');
+          showToast('Feedback submitted successfully!', 'success');
+        } else {
+          throw new Error(res.detail || res.message || 'Submission failed');
+        }
+      })
+      .catch(function(err) {
+        var msg = 'We could not submit your feedback right now. Please try again.';
+        if (err.message) msg = err.message;
+        document.getElementById('fb-error-msg').textContent = msg;
+        document.getElementById('fb-error-box').classList.add('show');
+        showToast('Submission failed. Please try again.', 'error');
+      })
+      .finally(function() {
+        isSubmitting = false;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i> Submit Feedback';
+        document.getElementById('fb-loading').classList.remove('show');
+      });
+    }
+
+    function loadFeedbackHistory() {
+      var container = document.getElementById('feedback-history-list');
+      fetch('/api/v1/feedback', {
+        headers: { 'Authorization': 'Bearer ' + getAuthToken() }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.status !== 'success') {
+          container.innerHTML = '<div class="empty-fb"><i class="fas fa-inbox"></i><p style="font-size:13px">No feedback submitted yet.</p></div>';
+          return;
+        }
+        var entries = res.data.feedback || [];
+        if (entries.length === 0) {
+          container.innerHTML = '<div class="empty-fb"><i class="fas fa-inbox"></i><p style="font-size:13px">No feedback submitted yet. Your submissions will appear here.</p></div>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < entries.length; i++) {
+          var f = entries[i];
+          var badgeClass = '';
+          if (f.feedback_type === 'Bug Report') badgeClass = ' problem';
+          else if (f.feedback_type === 'Feature Request') badgeClass = ' feature';
+          else if (f.feedback_type === 'Suggestion') badgeClass = ' suggestion';
+          else if (f.feedback_type === 'User Experience') badgeClass = ' ux';
+          var starsHtml = '';
+          for (var j = 1; j <= 5; j++) {
+            starsHtml += '<i class="fas fa-star" style="font-size:11px;color:' + (j <= f.rating ? 'var(--warning)' : 'var(--border-medium)') + ';"></i> ';
+          }
+          var date = f.created_at ? new Date(f.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+          html += '<div class="fb-history-item">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+          html += '<span class="fb-type-badge' + badgeClass + '">' + escHtml(f.feedback_type || '') + '</span>';
+          html += '<span style="font-size:11px;color:var(--text-muted);">' + date + '</span>';
+          html += '</div>';
+          html += '<div style="margin-bottom:6px">' + starsHtml + '</div>';
+          html += '<p style="font-size:12px;color:var(--text-secondary);line-height:1.6">' + escHtml(f.message || '') + '</p>';
+          if (f.related_page) {
+            html += '<div style="margin-top:6px"><span style="font-size:10px;color:var(--text-muted);background:var(--soft-green);padding:2px 8px;border-radius:10px"><i class="fas fa-link" style="margin-right:4px"></i>' + escHtml(f.related_page) + '</span></div>';
+          }
+          html += '</div>';
+        }
+        container.innerHTML = html;
+      })
+      .catch(function() {
+        container.innerHTML = '<div class="empty-fb"><i class="fas fa-inbox"></i><p style="font-size:13px">Could not load feedback history.</p></div>';
+      });
+    }
+
+    function escHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str));
+      return d.innerHTML;
+    }
+
+    function toggleFaqAccordion(id) {
+      var answer = document.getElementById('fb-faq-a-' + id);
+      var chevron = document.getElementById('fb-faq-chevron-' + id);
+      var isOpen = answer.style.display === 'block';
+      answer.style.display = isOpen ? 'none' : 'block';
+      chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('fb-name').value = getUserName();
+      document.getElementById('fb-farmer-id').value = getFarmerId();
+
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('type') === 'bug') {
+        var bugOpt = document.querySelector('[data-type="Bug Report"]');
+        if (bugOpt) selectFeedbackType(bugOpt);
+      }
+
+      document.getElementById('fb-message').addEventListener('input', function() {
+        document.getElementById('fb-char-count').textContent = this.value.length + ' / 5000';
+      });
+
+      loadFeedbackHistory();
+    });
+  </script>
+</body>
+</html>

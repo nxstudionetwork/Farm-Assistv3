@@ -1,0 +1,384 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="community">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Community</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .community-icon-row{display:flex;gap:6px;overflow-x:auto;padding:6px 0 10px 0;scrollbar-width:none;}
+    .community-icon-row::-webkit-scrollbar{display:none;}
+    .icon-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border-radius:12px;background:var(--light-gray,#f0f4f0);border:none;cursor:pointer;font-size:11px;color:var(--text-secondary,#555);white-space:nowrap;min-width:56px;transition:all .2s;}
+    .icon-btn i{font-size:14px;color:var(--primary-green,#2e7d32);transition:color .2s;}
+    .icon-btn:hover,.icon-btn.active{background:var(--primary-green,#2e7d32);color:#fff;}
+    .icon-btn:hover i,.icon-btn.active i{color:#fff;}
+    .filter-tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;}
+    .filter-tabs::-webkit-scrollbar{display:none;}
+    .filter-tab{padding:5px 14px;border-radius:20px;border:1px solid var(--border-color,#d0dcd0);background:var(--white,#fff);font-size:11px;cursor:pointer;white-space:nowrap;transition:all .2s;color:var(--text-secondary,#555);flex-shrink:0;}
+    .filter-tab.active{background:var(--primary-green,#2e7d32);color:#fff;border-color:var(--primary-green,#2e7d32);}
+    .create-post-area{background:var(--light-gray,#f5f8f5);border-radius:16px;padding:10px 12px;margin-bottom:16px;display:flex;gap:8px;align-items:center;}
+    .post-image-placeholder{background:var(--light-gray,#f0f4f0);border-radius:12px;height:130px;margin:10px 0;display:flex;align-items:center;justify-content:center;color:var(--text-muted,#999);font-size:11px;}
+    .post-action{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;cursor:pointer;font-size:11px;color:var(--text-secondary,#555);transition:background .2s;}
+    .post-action:hover{background:var(--light-gray,#f0f4f0);}
+    .post-action i{font-size:14px;}
+    .page-header h1{font-size:20px;margin:0 0 4px 0;}
+  </style>
+</head>
+<body>
+
+<main class="page-container">
+
+
+  <div class="page-header">
+    <h1><i class="fas fa-comments" style="color:var(--primary-green,#2e7d32);margin-right:8px;"></i> Community</h1>
+  </div>
+
+  <!-- Compact icon row -->
+  <div class="community-icon-row" id="iconRow">
+    <button class="icon-btn" data-type="reposted" title="Reposted posts"><i class="fas fa-retweet"></i><span>Reposted</span></button>
+    <button class="icon-btn" data-type="trending" title="Trending posts"><i class="fas fa-fire"></i><span>Trending</span></button>
+    <button class="icon-btn" data-type="nearby" title="Nearby posts"><i class="fas fa-location-dot"></i><span>Nearby</span></button>
+    <button class="icon-btn" data-type="following" title="People you follow"><i class="fas fa-user-plus"></i><span>Following</span></button>
+    <button class="icon-btn" data-type="groups" title="Farmer groups"><i class="fas fa-users"></i><span>Groups</span></button>
+    <button class="icon-btn" data-type="saved" title="Saved posts"><i class="fas fa-bookmark"></i><span>Saved</span></button>
+    <button class="icon-btn" data-type="questions" title="Questions & advice"><i class="fas fa-circle-question"></i><span>Questions</span></button>
+  </div>
+
+  <!-- Filter pills -->
+  <div class="filter-tabs" id="filterTabs">
+    <span class="filter-tab active" data-tag="all">Global Feed</span>
+    <span class="filter-tab" data-tag="paddy">Paddy Growers</span>
+    <span class="filter-tab" data-tag="dairy">Dairy Circles</span>
+    <span class="filter-tab" data-tag="organic">Organic Hub</span>
+    <span class="filter-tab" data-tag="tech">Tech Talk</span>
+  </div>
+
+  <!-- Create Post -->
+  <div class="create-post-area">
+    <input type="text" id="postInput" class="form-input" placeholder="Share farm updates, ask questions..." style="flex:1;padding:9px 14px;font-size:12px;border-radius:12px;">
+    <button class="btn-primary btn-sm" id="uploadImageBtn" onclick="document.getElementById('imageUpload').click();" style="padding:7px 10px;border-radius:10px;" title="Upload image">
+      <i class="fas fa-image"></i>
+    </button>
+    <input type="file" id="imageUpload" accept="image/*" style="display:none;" onchange="handleImageUpload(this)">
+    <button class="btn-primary btn-sm" id="createPostBtn" style="padding:7px 14px;border-radius:10px;">
+      <i class="fas fa-paper-plane"></i> Post
+    </button>
+  </div>
+
+  <!-- Post feed -->
+  <div id="postFeed"></div>
+
+</main>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function() {
+  var feed = document.getElementById('postFeed');
+  var currentTag = 'all';
+  var allPosts = [];
+
+  var mockPosts = [
+    { post_id: 'm1', author_name: 'Rajesh Kumar', author_role: 'Paddy Farmer', content: 'My paddy crop is showing yellow spots on leaves. Any organic remedy suggestions? Applied neem oil but no improvement.', created_at: new Date(Date.now() - 3600000).toISOString(), likes_count: 12, comments_count: 5, liked: false, tags: ['paddy'], saved: false, image: null },
+    { post_id: 'm2', author_name: 'Sunita Devi', author_role: 'Organic Farmer', content: 'Just harvested 12 quintals of organic wheat from 2 acres! Used vermicompost and Jeevamrut. Very happy with the results. Ask me anything.', created_at: new Date(Date.now() - 7200000).toISOString(), likes_count: 45, comments_count: 18, liked: true, tags: ['organic'], saved: false, image: null },
+    { post_id: 'm3', author_name: 'Amit Patel', author_role: 'Dairy Farmer', content: 'Digital milk fat tester is a game changer! Got mine for &#8377;3,500. Testing fat content in minutes. Anyone using one?', created_at: new Date(Date.now() - 14400000).toISOString(), likes_count: 23, comments_count: 8, liked: false, tags: ['dairy'], saved: false, image: null },
+    { post_id: 'm4', author_name: 'Priya Sharma', author_role: 'Agri-Tech Specialist', content: 'Using drones for NDVI mapping in our cooperative. Reduced fertilizer use by 20%! AMA about precision farming tools and techniques.', created_at: new Date(Date.now() - 28800000).toISOString(), likes_count: 67, comments_count: 24, liked: false, tags: ['tech'], saved: false, image: null },
+    { post_id: 'm5', author_name: 'Ganesh More', author_role: 'Cotton Farmer', content: 'Pink bollworm is back in our region. Started pheromone traps and need recommendations for biological control agents. Anyone tried Trichogramma?', created_at: new Date(Date.now() - 43200000).toISOString(), likes_count: 31, comments_count: 14, liked: false, tags: ['paddy','tech'], saved: false, image: null },
+    { post_id: 'm6', author_name: 'Lakshmi Naidu', author_role: 'Dairy Farmer', content: 'Buffalo milk price increased to &#8377;62/L in our village! Finally some good news for dairy farmers. Is this trend across the state?', created_at: new Date(Date.now() - 86400000).toISOString(), likes_count: 89, comments_count: 31, liked: true, tags: ['dairy'], saved: true, image: null },
+    { post_id: 'm7', author_name: 'Farhan Ali', author_role: 'Vegetable Grower', content: 'Trying hydroponic tomatoes for the first time. Setting up NFT system in a 100 sq meter polyhouse. Investment &#8377;1.2L. Any experienced growers here?', created_at: new Date(Date.now() - 172800000).toISOString(), likes_count: 55, comments_count: 22, liked: false, tags: ['tech','organic'], saved: false, image: 'hydroponic' },
+    { post_id: 'm8', author_name: 'Meena Kaur', author_role: 'Seed Supplier', content: 'New high-yielding wheat variety PBW-825 released! Resistant to rust and gives 22% more yield. Available at our outlet in Ludhiana.', created_at: new Date(Date.now() - 57600000).toISOString(), likes_count: 38, comments_count: 11, liked: false, tags: ['organic'], saved: false, image: null },
+    { post_id: 'm9', author_name: 'Suresh Verma', author_role: 'Sugarcane Farmer', content: 'Sugarcane crushing rates dropped this week at our mill. Was hoping for better prices after the good harvest. How is it in other regions?', created_at: new Date(Date.now() - 259200000).toISOString(), likes_count: 18, comments_count: 9, liked: false, tags: ['sugarcane'], saved: false, image: null },
+    { post_id: 'm10', author_name: 'Kavita Joshi', author_role: 'Vegetable Grower', content: 'Sharing my weekly mandi price sheet for Nashik: tomato 42, onion 28, brinjal 35 per kg. Updated yesterday. Bookmark this post for updates!', created_at: new Date(Date.now() - 345600000).toISOString(), likes_count: 72, comments_count: 27, liked: true, tags: ['market','organic'], saved: false, image: null },
+    { post_id: 'm11', author_name: 'Rahul Singh', author_role: 'Agronomist', content: 'Why soil testing matters: 70% of farms in our survey applied excess nitrogen. Get a soil health card before buying fertilizer. Saves money and soil.', created_at: new Date(Date.now() - 432000000).toISOString(), likes_count: 94, comments_count: 35, liked: false, tags: ['soil','tech'], saved: true, image: null },
+    { post_id: 'm12', author_name: 'Anita Bhosale', author_role: 'Floriculture Farmer', content: 'Gerbera cultivation update: 4th harvest done, grossed &#8377;1.8L from 0.5 acre this season. Net profit after inputs is looking great. Happy to share costs.', created_at: new Date(Date.now() - 518400000).toISOString(), likes_count: 61, comments_count: 29, liked: false, tags: ['horticulture'], saved: false, image: null },
+    { post_id: 'm13', author_name: 'Vijay Kumar', author_role: 'Poultry Farmer', content: 'Feed prices up 12% in the last month. Egg prices are stable though. Any tips on reducing feed costs without affecting bird health?', created_at: new Date(Date.now() - 604800000).toISOString(), likes_count: 33, comments_count: 16, liked: false, tags: ['poultry','dairy'], saved: false, image: null },
+    { post_id: 'm14', author_name: 'Neha Gupta', author_role: 'Agri-Entrepreneur', content: 'Built a small cold storage unit with 5 farmer friends under PM-KUSUM. Cost split 40% subsidy, 30% loan, 30% pooled. Now storing 20 tons of produce.', created_at: new Date(Date.now() - 691200000).toISOString(), likes_count: 128, comments_count: 41, liked: true, tags: ['tech','finance'], saved: false, image: null },
+    { post_id: 'm15', author_name: 'Mohan Das', author_role: 'Spice Farmer', content: 'Turmeric sowing done for the season. Used treated rhizomes this time. Fingers crossed for a disease-free crop. Any organic disease management tips?', created_at: new Date(Date.now() - 777600000).toISOString(), likes_count: 27, comments_count: 13, liked: false, tags: ['spices','organic'], saved: false, image: null },
+    { post_id: 'm16', author_name: 'Rekha Sharma', author_role: 'Women Farmers Group', content: 'Our self-help group started a small vermicompost unit. 1,000 kg produced in 3 months, sold to 40 farmers. Planning to double capacity next quarter!', created_at: new Date(Date.now() - 864000000).toISOString(), likes_count: 85, comments_count: 33, liked: true, tags: ['organic','community'], saved: false, image: null }
+  ];
+
+  function timeAgo(dateStr) {
+    if (!dateStr) return '';
+    var diff = Date.now() - new Date(dateStr).getTime();
+    var mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return mins + 'm ago';
+    var hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    var days = Math.floor(hrs / 24);
+    if (days < 7) return days + 'd ago';
+    var weeks = Math.floor(days / 7);
+    return weeks + 'w ago';
+  }
+
+  function renderPosts(posts) {
+    if (!posts || posts.length === 0) {
+      feed.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fas fa-comments" style="font-size:32px;margin-bottom:8px;display:block;"></i>No posts found.</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < posts.length; i++) {
+      var p = posts[i];
+      var authorName = p.author_name || 'Farmer';
+      var initial = authorName.charAt(0).toUpperCase();
+      var content = p.content || '';
+      var likes = p.likes_count || 0;
+      var comments = p.comments_count || 0;
+      var liked = p.liked || false;
+      var saved = p.saved || false;
+      var tags = (p.tags || []).join(' ');
+      var imageHtml = '';
+      if (p.image) {
+        imageHtml = '<div class="post-image-placeholder"><i class="fas fa-image" style="margin-right:6px;"></i> ' + p.author_name + '\'s photo</div>';
+      }
+      html += '<div class="post-card card-premium" data-post-id="' + p.post_id + '" data-tags="' + tags + '">' +
+        '<div class="post-header">' +
+          '<div class="post-author">' +
+            '<div style="width:38px;height:38px;border-radius:50%;background:var(--primary-green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">' + initial + '</div>' +
+            '<div style="flex:1;min-width:0;margin-left:10px;">' +
+              '<div style="font-weight:600;font-size:13px;">' + authorName + '</div>' +
+              '<div style="font-size:10px;color:var(--text-muted);">' + (p.author_role || 'Farmer') + ' &middot; ' + timeAgo(p.created_at) + '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="post-text">' + content + '</div>' +
+        imageHtml +
+        '<div class="post-actions-bar">' +
+          '<div class="post-action like-btn" data-post-id="' + p.post_id + '"><i class="' + (liked ? 'fas' : 'far') + ' fa-heart" style="color:' + (liked ? 'var(--danger)' : '') + ';"></i> <span>' + likes + '</span></div>' +
+          '<div class="post-action comment-toggle" data-post-id="' + p.post_id + '"><i class="far fa-comment"></i> <span>' + comments + '</span></div>' +
+          '<div class="post-action repost-btn" data-post-id="' + p.post_id + '"><i class="fas fa-retweet"></i></div>' +
+          '<div class="post-action share-btn" data-post-id="' + p.post_id + '"><i class="fas fa-share-alt"></i></div>' +
+          '<div class="post-action save-btn" data-post-id="' + p.post_id + '"><i class="' + (saved ? 'fas' : 'far') + ' fa-bookmark" style="color:' + (saved ? 'var(--primary-green)' : '') + ';"></i></div>' +
+        '</div>' +
+        '<div class="post-comments" style="display:none;">' +
+          '<div class="comments-list"></div>' +
+          '<div style="display:flex;gap:6px;margin-top:8px;">' +
+            '<input type="text" placeholder="Add comment..." class="form-input comment-input" style="padding:6px 10px;font-size:11px;border-radius:10px;flex:1;">' +
+            '<button class="btn-primary btn-sm post-comment-btn" style="padding:4px 10px;font-size:10px;">Post</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+    feed.innerHTML = html;
+    attachPostEvents();
+  }
+
+  function attachPostEvents() {
+    var cards = feed.querySelectorAll('.post-card');
+    for (var i = 0; i < cards.length; i++) {
+      (function(card) {
+        var likeBtn = card.querySelector('.like-btn');
+        if (likeBtn) {
+          likeBtn.addEventListener('click', function() {
+            var icon = this.querySelector('i');
+            var span = this.querySelector('span');
+            var isLiked = icon.classList.contains('fas');
+            var count = parseInt(span.textContent) || 0;
+            if (isLiked) {
+              icon.className = 'far fa-heart';
+              icon.style.color = '';
+              span.textContent = count - 1;
+            } else {
+              icon.className = 'fas fa-heart';
+              icon.style.color = 'var(--danger)';
+              span.textContent = count + 1;
+            }
+            var postId = this.getAttribute('data-post-id');
+            if (postId && window.API && API.Community) {
+              API.Community.toggleLike(postId)['catch'](function() {});
+            }
+          });
+        }
+        var commentToggle = card.querySelector('.comment-toggle');
+        if (commentToggle) {
+          commentToggle.addEventListener('click', function() {
+            var box = card.querySelector('.post-comments');
+            if (box) {
+              box.style.display = box.style.display === 'none' ? 'block' : 'none';
+            }
+          });
+        }
+        var commentBtn = card.querySelector('.post-comment-btn');
+        if (commentBtn) {
+          commentBtn.addEventListener('click', function() {
+            var input = card.querySelector('.comment-input');
+            var text = input.value.trim();
+            if (!text) return;
+            var postId = card.getAttribute('data-post-id');
+            var commentsList = card.querySelector('.comments-list');
+            var newItem = document.createElement('div');
+            newItem.style.cssText = 'padding:4px 0;font-size:11px;border-bottom:1px solid var(--border-color,#e8f0e8);';
+            newItem.innerHTML = '<strong>You:</strong> ' + text;
+            if (commentsList) commentsList.appendChild(newItem);
+            input.value = '';
+            if (postId && window.API && API.Community) {
+              API.Community.addComment(postId, { text: text })['catch'](function() {});
+            }
+            if (typeof showToast === 'function') showToast('Comment posted!', 'success');
+          });
+        }
+        var repostBtn = card.querySelector('.repost-btn');
+        if (repostBtn) {
+          repostBtn.addEventListener('click', function() {
+            if (typeof showToast === 'function') showToast('Post reposted!', 'success');
+          });
+        }
+        var shareBtn = card.querySelector('.share-btn');
+        if (shareBtn) {
+          shareBtn.addEventListener('click', function() {
+            if (typeof showToast === 'function') showToast('Share link copied!', 'info');
+          });
+        }
+        var saveBtn = card.querySelector('.save-btn');
+        if (saveBtn) {
+          saveBtn.addEventListener('click', function() {
+            var icon = this.querySelector('i');
+            if (icon.classList.contains('fas')) {
+              icon.className = 'far fa-bookmark';
+              icon.style.color = '';
+              if (typeof showToast === 'function') showToast('Post unsaved', 'info');
+            } else {
+              icon.className = 'fas fa-bookmark';
+              icon.style.color = 'var(--primary-green)';
+              if (typeof showToast === 'function') showToast('Post saved!', 'success');
+            }
+          });
+        }
+      })(cards[i]);
+    }
+  }
+
+  function applyFilters() {
+    var filtered = allPosts;
+    if (currentTag !== 'all') {
+      filtered = filtered.filter(function(p) {
+        var tags = (p.tags || []).join(' ').toLowerCase();
+        return tags.indexOf(currentTag) !== -1;
+      });
+    }
+    if (currentIconFilter === 'questions') {
+      filtered = filtered.filter(function(p) {
+        return p.content.indexOf('?') !== -1;
+      });
+    } else if (currentIconFilter === 'trending') {
+      filtered = filtered.slice().sort(function(a, b) {
+        return (b.likes_count || 0) - (a.likes_count || 0);
+      });
+    } else if (currentIconFilter === 'saved') {
+      filtered = filtered.filter(function(p) {
+        return p.saved;
+      });
+    } else if (currentIconFilter === 'reposted') {
+      filtered = filtered.slice().sort(function(a, b) {
+        return (b.comments_count || 0) - (a.comments_count || 0);
+      });
+    } else if (currentIconFilter === 'nearby') {
+      filtered = filtered.slice(0, 4);
+    } else if (currentIconFilter === 'following') {
+      filtered = filtered.filter(function(p) {
+        return p.author_role === 'Agri-Tech Specialist' || p.author_role === 'Seed Supplier';
+      });
+    } else if (currentIconFilter === 'groups') {
+      if (typeof showToast === 'function') {
+        showToast('View groups in your area', 'info');
+      }
+    }
+    renderPosts(filtered);
+  }
+
+  function loadPosts() {
+    feed.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:24px;color:var(--primary-green);"></i></div>';
+    if (window.API && API.Community) {
+      API.Community.listPosts().then(function(res) {
+        allPosts = Array.isArray(res) ? res : (res && res.items ? res.items : []);
+        if (allPosts.length === 0) allPosts = mockPosts;
+        applyFilters();
+      })['catch'](function() {
+        allPosts = mockPosts;
+        applyFilters();
+      });
+    } else {
+      allPosts = mockPosts;
+      applyFilters();
+    }
+  }
+
+  var currentIconFilter = null;
+
+  // Icon row click handlers
+  var iconBtns = document.querySelectorAll('.icon-btn');
+  for (var i = 0; i < iconBtns.length; i++) {
+    (function(btn) {
+      btn.addEventListener('click', function() {
+        for (var j = 0; j < iconBtns.length; j++) {
+          iconBtns[j].classList.remove('active');
+        }
+        btn.classList.add('active');
+        currentIconFilter = btn.getAttribute('data-type');
+        var names = { reposted: 'Reposted', trending: 'Trending', nearby: 'Nearby', following: 'Following', groups: 'Groups', saved: 'Saved', questions: 'Questions' };
+        if (typeof showToast === 'function') {
+          showToast('Showing ' + (names[currentIconFilter] || currentIconFilter) + ' posts', 'info');
+        }
+        applyFilters();
+      });
+    })(iconBtns[i]);
+  }
+
+  // Create post
+  document.getElementById('createPostBtn').addEventListener('click', function() {
+    var input = document.getElementById('postInput');
+    var text = input.value.trim();
+    if (!text) {
+      if (typeof showToast === 'function') showToast('Please write something first', 'info');
+      return;
+    }
+    if (window.API && API.Community) {
+      API.Community.createPost({ content: text, title: text.substring(0, 50) }).then(function() {
+        input.value = '';
+        if (typeof showToast === 'function') showToast('Post shared!', 'success');
+        loadPosts();
+      })['catch'](function() {
+        input.value = '';
+        if (typeof showToast === 'function') showToast('Post shared locally', 'info');
+      });
+    } else {
+      input.value = '';
+      if (typeof showToast === 'function') showToast('Post shared locally', 'info');
+    }
+  });
+
+  // Filter tabs
+  var filterTabs = document.getElementById('filterTabs');
+  filterTabs.addEventListener('click', function(e) {
+    var tab = e.target.closest('.filter-tab');
+    if (!tab) return;
+    var tabs = filterTabs.querySelectorAll('.filter-tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].classList.remove('active');
+    }
+    tab.classList.add('active');
+    currentTag = tab.getAttribute('data-tag');
+    if (currentIconFilter) {
+      for (var j = 0; j < iconBtns.length; j++) {
+        iconBtns[j].classList.remove('active');
+      }
+      currentIconFilter = null;
+    }
+    applyFilters();
+  });
+
+  loadPosts();
+})();
+
+function handleImageUpload(input) {
+  if (input.files && input.files[0]) {
+    if (typeof showToast === 'function') showToast('Image selected: ' + input.files[0].name, 'info');
+  }
+}
+</script>
+
+</body>
+</html>

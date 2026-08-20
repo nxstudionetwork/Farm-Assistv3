@@ -1,0 +1,288 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="livestock">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Farm Assist - Livestock Management</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root { --livestock-accent: #E67E22; --livestock-green: #27AE60; --livestock-blue: #3498DB; }
+    .livestock-toolbar { display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+    .livestock-search { flex:1; min-width:200px; position:relative; }
+    .livestock-search input { width:100%; padding:10px 14px 10px 38px; border:1px solid var(--border-light); border-radius:var(--radius-sm); font-size:13px; background:white; }
+    .livestock-search input:focus { border-color:var(--livestock-accent); box-shadow:0 0 0 3px rgba(230,126,34,0.08); outline:none; }
+    .livestock-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:13px; }
+    .livestock-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px; }
+    .livestock-card { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; transition:all 0.2s; }
+    .livestock-card:hover { border-color:var(--livestock-accent); box-shadow:var(--shadow-sm); transform:translateY(-2px); }
+    .livestock-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .livestock-avatar { width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; color:white; flex-shrink:0; }
+    .livestock-avatar.cow { background:var(--livestock-accent); }
+    .livestock-avatar.buffalo { background:#34495E; }
+    .livestock-avatar.goat { background:#95A5A6; }
+    .livestock-avatar.chicken { background:#F39C12; }
+    .livestock-avatar.sheep { background:#E74C3C; }
+    .livestock-info { flex:1; }
+    .livestock-name { font-size:15px; font-weight:700; color:var(--text-primary); }
+    .livestock-type { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; }
+    .livestock-id { font-size:10px; color:var(--text-muted); margin-top:2px; }
+    .livestock-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+    .livestock-stat { background:var(--bg-card-soft); padding:8px 10px; border-radius:8px; text-align:center; }
+    .livestock-stat-value { font-size:14px; font-weight:700; color:var(--text-primary); }
+    .livestock-stat-label { font-size:9px; color:var(--text-muted); text-transform:uppercase; }
+    .livestock-health { display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+    .health-badge { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:600; }
+    .health-badge.healthy { background:rgba(39,174,96,0.12); color:var(--livestock-green); }
+    .health-badge.sick { background:rgba(231,76,60,0.12); color:#E74C3C; }
+    .health-badge.checkup { background:rgba(241,196,15,0.12); color:#F39C12; }
+    .livestock-actions { display:flex; gap:8px; margin-top:12px; }
+    .livestock-actions .btn-primary, .livestock-actions .btn-secondary { flex:1; font-size:11px; padding:8px; }
+    .vaccination-alert { background:rgba(241,196,15,0.08); border:1px solid rgba(241,196,15,0.2); border-radius:8px; padding:8px 10px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+    .vaccination-alert i { color:#F39C12; font-size:12px; }
+    .vaccination-alert span { font-size:11px; color:#F39C12; font-weight:600; }
+    .milk-production { background:rgba(52,152,219,0.08); border:1px solid rgba(52,152,219,0.2); border-radius:8px; padding:8px 10px; margin-bottom:10px; }
+    .milk-production-value { font-size:14px; font-weight:700; color:var(--livestock-blue); }
+    .milk-production-label { font-size:10px; color:var(--text-muted); }
+  </style>
+</head>
+<body>
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-paw" style="color:var(--livestock-accent);"></i> Livestock Management</h1>
+        <p>Track animal health, vaccination, milk production, and feed management</p>
+      </div>
+      <button class="btn-primary btn-sm" onclick="openModal('add-animal-modal')" style="background:var(--livestock-accent);">
+        <i class="fas fa-plus-circle"></i> Add Animal
+      </button>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:16px;">
+      <div class="stat-box">
+        <i class="fas fa-paw" style="color:var(--livestock-accent);"></i>
+        <div class="stat-box-num" id="total-animals">0</div>
+        <div class="stat-box-label">Total Animals</div>
+      </div>
+      <div class="stat-box">
+        <i class="fas fa-heartbeat" style="color:var(--livestock-green);"></i>
+        <div class="stat-box-num" id="healthy-animals">0</div>
+        <div class="stat-box-label">Healthy</div>
+      </div>
+      <div class="stat-box">
+        <i class="fas fa-syringe" style="color:#F39C12;"></i>
+        <div class="stat-box-num" id="vaccination-due">0</div>
+        <div class="stat-box-label">Vaccination Due</div>
+      </div>
+      <div class="stat-box">
+        <i class="fas fa-tint" style="color:var(--livestock-blue);"></i>
+        <div class="stat-box-num" id="milk-total">0L</div>
+        <div class="stat-box-label">Daily Milk</div>
+      </div>
+    </div>
+
+    <div class="livestock-toolbar">
+      <div class="livestock-search">
+        <i class="fas fa-search"></i>
+        <input type="text" id="livestock-search" placeholder="Search animals..." oninput="filterLivestock()">
+      </div>
+      <select class="form-select" id="type-filter" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-light); font-size:13px; background:white; min-width:120px;" onchange="filterLivestock()">
+        <option value="all">All Types</option>
+        <option value="cow">Cows</option>
+        <option value="buffalo">Buffalo</option>
+        <option value="goat">Goat</option>
+        <option value="chicken">Chicken</option>
+        <option value="sheep">Sheep</option>
+      </select>
+      <select class="form-select" id="health-filter" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-light); font-size:13px; background:white; min-width:120px;" onchange="filterLivestock()">
+        <option value="all">All Health</option>
+        <option value="healthy">Healthy</option>
+        <option value="sick">Sick</option>
+        <option value="checkup">Checkup Due</option>
+      </select>
+    </div>
+
+    <div class="livestock-grid" id="livestock-grid"></div>
+  </main>
+
+  <!-- Add Animal Modal -->
+  <div class="modal-backdrop" id="add-animal-modal">
+    <div class="modal-box" style="max-width:480px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h3 style="font-size:18px;"><i class="fas fa-paw" style="color:var(--livestock-accent);"></i> Add New Animal</h3>
+        <button onclick="closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="add-animal-form" onsubmit="addAnimal(event)">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">Animal Name/ID</label>
+          <input type="text" class="form-input" id="animal-name" placeholder="e.g. Cow-001" required>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">Type</label>
+          <select class="form-select" id="animal-type" required>
+            <option value="">Select type</option>
+            <option value="cow">Cow</option>
+            <option value="buffalo">Buffalo</option>
+            <option value="goat">Goat</option>
+            <option value="chicken">Chicken</option>
+            <option value="sheep">Sheep</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">Age (years)</label>
+          <input type="number" class="form-input" id="animal-age" placeholder="e.g. 3" min="0" required>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">Health Status</label>
+          <select class="form-select" id="animal-health" required>
+            <option value="healthy">Healthy</option>
+            <option value="sick">Sick</option>
+            <option value="checkup">Checkup Due</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">Last Vaccination</label>
+          <input type="date" class="form-input" id="animal-vaccination">
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%;background:var(--livestock-accent);"><i class="fas fa-plus-circle"></i> Add Animal</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    var livestock = [
+      { id: 1, name: 'Cow-001', type: 'cow', age: 4, health: 'healthy', lastVaccination: '2025-12-15', milkProduction: 12, weight: 450 },
+      { id: 2, name: 'Cow-002', type: 'cow', age: 3, health: 'healthy', lastVaccination: '2025-11-20', milkProduction: 10, weight: 420 },
+      { id: 3, name: 'Buffalo-001', type: 'buffalo', age: 5, health: 'checkup', lastVaccination: '2025-10-10', milkProduction: 8, weight: 550 },
+      { id: 4, name: 'Goat-001', type: 'goat', age: 2, health: 'healthy', lastVaccination: '2026-01-05', milkProduction: 2, weight: 45 },
+      { id: 5, name: 'Chicken-001', type: 'chicken', age: 1, health: 'healthy', lastVaccination: '2026-01-10', milkProduction: 0, weight: 2 }
+    ];
+
+    function getTypeIcon(type) {
+      var icons = {
+        'cow': 'fa-cow',
+        'buffalo': 'fa-hippo',
+        'goat': 'fa-horse',
+        'chicken': 'fa-dove',
+        'sheep': 'fa-cloud'
+      };
+      return icons[type] || 'fa-paw';
+    }
+
+    function getHealthBadge(health) {
+      var badges = {
+        'healthy': '<span class="health-badge healthy"><i class="fas fa-check-circle"></i> Healthy</span>',
+        'sick': '<span class="health-badge sick"><i class="fas fa-exclamation-circle"></i> Sick</span>',
+        'checkup': '<span class="health-badge checkup"><i class="fas fa-stethoscope"></i> Checkup Due</span>'
+      };
+      return badges[health] || '';
+    }
+
+    function isVaccinationDue(date) {
+      if (!date) return false;
+      var vaccDate = new Date(date);
+      var today = new Date();
+      var diffDays = Math.floor((today - vaccDate) / (1000 * 60 * 60 * 24));
+      return diffDays > 180; // 6 months
+    }
+
+    function renderLivestock() {
+      var container = document.getElementById('livestock-grid');
+      var searchTerm = (document.getElementById('livestock-search').value || '').toLowerCase();
+      var typeFilter = document.getElementById('type-filter').value;
+      var healthFilter = document.getElementById('health-filter').value;
+
+      var filtered = livestock.filter(function(animal) {
+        var matchesSearch = animal.name.toLowerCase().indexOf(searchTerm) !== -1;
+        var matchesType = typeFilter === 'all' || animal.type === typeFilter;
+        var matchesHealth = healthFilter === 'all' || animal.health === healthFilter;
+        return matchesSearch && matchesType && matchesHealth;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);"><i class="fas fa-paw" style="font-size:32px;margin-bottom:12px;"></i>No animals found</div>';
+        return;
+      }
+
+      var html = '';
+      filtered.forEach(function(animal) {
+        var vaccDue = isVaccinationDue(animal.lastVaccination);
+        var milkHtml = animal.milkProduction > 0 ? 
+          '<div class="milk-production"><div class="milk-production-value">' + animal.milkProduction + 'L/day</div><div class="milk-production-label">Milk Production</div></div>' : '';
+        
+        html += '<div class="livestock-card">' +
+          '<div class="livestock-header">' +
+          '<div class="livestock-avatar ' + animal.type + '"><i class="fas ' + getTypeIcon(animal.type) + '"></i></div>' +
+          '<div class="livestock-info">' +
+          '<div class="livestock-name">' + animal.name + '</div>' +
+          '<div class="livestock-type">' + animal.type.charAt(0).toUpperCase() + animal.type.slice(1) + '</div>' +
+          '<div class="livestock-id">ID: ' + animal.id + ' • Age: ' + animal.age + ' years</div>' +
+          '</div>' +
+          '</div>' +
+          (vaccDue ? '<div class="vaccination-alert"><i class="fas fa-syringe"></i><span>Vaccination Due</span></div>' : '') +
+          milkHtml +
+          '<div class="livestock-stats">' +
+          '<div class="livestock-stat"><div class="livestock-stat-value">' + animal.weight + ' kg</div><div class="livestock-stat-label">Weight</div></div>' +
+          '<div class="livestock-stat"><div class="livestock-stat-value">' + animal.age + ' yrs</div><div class="livestock-stat-label">Age</div></div>' +
+          '</div>' +
+          '<div class="livestock-health">' + getHealthBadge(animal.health) + '</div>' +
+          '<div class="livestock-actions">' +
+          '<button class="btn-secondary" onclick="editAnimal(' + animal.id + ')"><i class="fas fa-edit"></i> Edit</button>' +
+          '<button class="btn-secondary" onclick="viewDetails(' + animal.id + ')"><i class="fas fa-eye"></i> Details</button>' +
+          '</div>' +
+          '</div>';
+      });
+
+      container.innerHTML = html;
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('total-animals').textContent = livestock.length;
+      document.getElementById('healthy-animals').textContent = livestock.filter(function(a) { return a.health === 'healthy'; }).length;
+      document.getElementById('vaccination-due').textContent = livestock.filter(function(a) { return isVaccinationDue(a.lastVaccination); }).length;
+      var totalMilk = livestock.reduce(function(sum, a) { return sum + (a.milkProduction || 0); }, 0);
+      document.getElementById('milk-total').textContent = totalMilk + 'L';
+    }
+
+    function filterLivestock() {
+      renderLivestock();
+    }
+
+    function addAnimal(e) {
+      e.preventDefault();
+      var newAnimal = {
+        id: livestock.length + 1,
+        name: document.getElementById('animal-name').value,
+        type: document.getElementById('animal-type').value,
+        age: parseInt(document.getElementById('animal-age').value),
+        health: document.getElementById('animal-health').value,
+        lastVaccination: document.getElementById('animal-vaccination').value,
+        milkProduction: 0,
+        weight: 50
+      };
+      livestock.unshift(newAnimal);
+      renderLivestock();
+      closeModal();
+      showToast('Animal added successfully!', 'success');
+      document.getElementById('add-animal-form').reset();
+    }
+
+    function editAnimal(id) {
+      showToast('Edit functionality for animal ' + id, 'info');
+    }
+
+    function viewDetails(id) {
+      showToast('View details for animal ' + id, 'info');
+    }
+
+    window.addEventListener('load', renderLivestock);
+  </script>
+</body>
+</html>

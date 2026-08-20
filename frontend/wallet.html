@@ -1,0 +1,990 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="wallet">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Digital Wallet</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* ── Balance card (Google Pay/PhonePe style) ─────────────────────────────── */
+    .wallet-balance-card {
+      background: linear-gradient(135deg, #0F2E1E 0%, #1B5E3F 50%, #2D8659 100%);
+      border-radius: 20px; padding: 24px; color: #fff; margin-bottom: 16px;
+      position: relative; overflow: hidden; box-shadow: 0 12px 40px rgba(27,67,50,0.35);
+      animation: wlFade 0.4s ease; min-height: 160px;
+    }
+    @keyframes wlFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .wallet-balance-card::before {
+      content: ''; position: absolute; top: -80px; right: -60px;
+      width: 240px; height: 240px; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .wallet-balance-card::after {
+      content: ''; position: absolute; bottom: -40px; left: -40px;
+      width: 160px; height: 160px; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .wallet-balance-card .wb-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+    }
+    .wallet-balance-card .wb-label {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+      color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 8px;
+    }
+    .wallet-balance-card .wb-upi {
+      font-size: 11px; color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.15);
+      padding: 4px 10px; border-radius: 12px; font-weight: 600;
+    }
+    .wallet-balance-card .wb-amount { 
+      font-size: 42px; font-weight: 800; margin-bottom: 20px; 
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: -1px;
+    }
+    .wallet-balance-card .wb-actions {
+      display: flex; gap: 12px;
+    }
+    .wallet-balance-card .wb-btn {
+      flex: 1; padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.15); color: #fff; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .wallet-balance-card .wb-btn:hover {
+      background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5);
+    }
+    .wallet-balance-card .wb-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.15); }
+    .wallet-balance-card .wb-meta .wb-meta-item { font-size: 11px; }
+    .wallet-balance-card .wb-meta .wb-meta-item strong { display: block; font-size: 14px; font-weight: 700; }
+
+    /* ── Quick actions grid (Google Pay style) ───────────────────────── */
+    .wallet-actions-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;
+    }
+    .wa-action {
+      background: #fff; border: 1px solid var(--border-light); border-radius: 16px;
+      padding: 16px 8px; text-align: center; cursor: pointer; transition: all 0.25s;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .wa-action:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(10,36,23,0.15); border-color: var(--medium-green); }
+    .wa-action:active { transform: scale(0.97); }
+    .wa-action .wa-ico {
+      width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; transition: all 0.25s;
+    }
+    .wa-action:hover .wa-ico { transform: scale(1.1); }
+    .wa-action span { font-size: 11px; font-weight: 600; color: var(--text-primary); }
+    .wa-ico.green { background: linear-gradient(135deg, #E4F2E8, #C8E6C9); color: var(--primary-green); }
+    .wa-ico.blue { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); color: #1976D2; }
+    .wa-ico.gold { background: linear-gradient(135deg, #FFF8E1, #FFECB3); color: #F57C00; }
+    .wa-ico.purple { background: linear-gradient(135deg, #F3E5F5, #E1BEE7); color: #7B1FA2; }
+    .wa-ico.red { background: linear-gradient(135deg, #FFEBEE, #FFCDD2); color: #D32F2F; }
+    .wa-ico.teal { background: linear-gradient(135deg, #E0F2F1, #B2DFDB); color: #00796B; }
+
+    /* ── Tabs ─────────────────────────────────────── */
+    .wallet-tabs { display: flex; gap: 8px; margin-bottom: 14px; background: var(--bg-card-soft); padding: 5px; border-radius: 12px; }
+    .wallet-tab {
+      flex: 1; text-align: center; padding: 9px 8px; border-radius: 9px; font-size: 12px; font-weight: 600;
+      color: var(--text-muted); cursor: pointer; border: none; background: transparent; font-family: inherit;
+      transition: all 0.25s;
+    }
+    .wallet-tab.active { background: #fff; color: var(--primary-green); box-shadow: 0 2px 8px rgba(10,36,23,0.1); }
+    .wallet-tab-panel { display: none; animation: wlTab 0.3s ease; }
+    .wallet-tab-panel.active { display: block; }
+    @keyframes wlTab { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    /* ── Transactions ─────────────────────────────── */
+    .wallet-search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .wallet-search {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      background: #fff; border: 1px solid var(--border-light); border-radius: 12px; padding: 0 12px;
+    }
+    .wallet-search i { color: var(--text-muted); font-size: 13px; }
+    .wallet-search input { flex: 1; border: none; outline: none; padding: 11px 0; font-size: 13px; background: transparent; font-family: inherit; color: var(--text-primary); }
+    .wallet-filter-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .wf-chip {
+      padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--border-light); background: #fff; color: var(--text-secondary); transition: all 0.2s; font-family: inherit;
+    }
+    .wf-chip.active { background: var(--primary-green); color: #fff; border-color: var(--primary-green); }
+    .wallet-txn-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 0;
+      border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.15s; border-radius: 8px;
+    }
+    .wallet-txn-item:hover { background: var(--bg-card-soft); }
+    .wallet-txn-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .wallet-txn-icon.credit { background: var(--soft-green); color: var(--primary-green); }
+    .wallet-txn-icon.debit { background: #FFF0F0; color: var(--danger); }
+    .wallet-txn-icon.pending { background: rgba(245,158,11,0.14); color: #d97706; }
+    .wallet-txn-info { flex: 1; min-width: 0; }
+    .wallet-txn-info h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .wallet-txn-info p { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wallet-txn-right { text-align: right; flex-shrink: 0; }
+    .wallet-txn-amount { font-size: 14px; font-weight: 700; }
+    .wallet-txn-amount.credit { color: var(--primary-green); }
+    .wallet-txn-amount.debit { color: var(--danger); }
+    .wallet-txn-status { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px; display: inline-block; margin-top: 3px; }
+    .wallet-txn-status.success { background: var(--soft-green); color: var(--primary-green); }
+    .wallet-txn-status.pending { background: rgba(245,158,11,0.14); color: #d97706; }
+    .wallet-txn-status.failed { background: #FFF0F0; color: var(--danger); }
+    .wallet-empty { text-align: center; padding: 28px 12px; color: var(--text-muted); }
+    .wallet-empty i { font-size: 34px; display: block; margin-bottom: 10px; color: var(--pale-green); }
+
+    /* ── Beneficiaries ────────────────────────────── */
+    .beneficiary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .beneficiary-card {
+      background: #fff; border: 1px solid var(--border-light); border-radius: 14px; padding: 14px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .beneficiary-card:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(10,36,23,0.12); border-color: var(--medium-green); }
+    .beneficiary-avatar {
+      width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 15px; font-weight: 700;
+    }
+    .beneficiary-card b { font-size: 12.5px; color: var(--text-primary); }
+    .beneficiary-card span { font-size: 10.5px; color: var(--text-muted); }
+
+    /* ── Linked accounts ──────────────────────────── */
+    .linked-account {
+      display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--border-light);
+      border-radius: 14px; padding: 14px; margin-bottom: 10px; transition: all 0.2s;
+    }
+    .linked-account:hover { box-shadow: 0 6px 16px rgba(10,36,23,0.1); }
+    .linked-account .la-ico { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .linked-account .la-info { flex: 1; min-width: 0; }
+    .linked-account .la-info b { font-size: 13px; color: var(--text-primary); display: block; }
+    .linked-account .la-info span { font-size: 11px; color: var(--text-muted); display: block; margin-top: 2px; }
+    .linked-account .la-status { font-size: 10px; font-weight: 700; color: #16a34a; background: var(--soft-green); padding: 3px 8px; border-radius: 8px; }
+    .add-link-btn {
+      width: 100%; padding: 12px; border: 1px dashed var(--border-dark); border-radius: 14px;
+      background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; font-family: inherit;
+    }
+    .add-link-btn:hover { border-color: var(--primary-green); color: var(--primary-green); background: var(--soft-green); }
+
+    /* ── QR / receipt ─────────────────────────────── */
+    .qr-placeholder {
+      width: 190px; height: 190px; margin: 10px auto; border-radius: 16px;
+      background: #fff; border: 2px dashed var(--medium-green);
+      display: flex; align-items: center; justify-content: center; position: relative;
+    }
+    .qr-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 12px; width: 100%; height: 100%; }
+    .qr-grid i { border-radius: 2px; }
+    .qr-scan-line {
+      position: absolute; left: 12px; right: 12px; height: 3px; border-radius: 2px;
+      background: linear-gradient(90deg, transparent, #2D8659, transparent);
+      animation: qrScan 2s linear infinite;
+    }
+    @keyframes qrScan { 0% { top: 12px; } 50% { top: calc(100% - 15px); } 100% { top: 12px; } }
+    .receive-upi { text-align: center; font-size: 14px; font-weight: 700; color: var(--primary-green); margin: 8px 0 2px; }
+    .receipt-sheet {
+      background: #fff; border: 1px solid var(--border-light); border-radius: 16px; padding: 18px;
+      font-size: 12.5px; color: var(--text-primary); margin-bottom: 14px;
+    }
+    .receipt-sheet .rs-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-light); }
+    .receipt-sheet .rs-row:last-child { border-bottom: none; }
+    .receipt-sheet .rs-row span { color: var(--text-muted); }
+    .receipt-sheet .rs-row b { font-weight: 700; }
+
+    .wallet-modal-note { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+    .modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .modal-box .modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+    .chip-quick { margin-bottom: 12px; }
+    .chip-quick-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+    .chip-quick-list { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip-quick-item {
+      padding: 6px 10px; border-radius: 10px; background: var(--bg-card-soft); border: 1px solid var(--border-light);
+      font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; color: var(--text-primary);
+    }
+    .chip-quick-item:hover { background: var(--soft-green); border-color: var(--medium-green); color: var(--primary-green); }
+
+    @media (max-width: 640px) {
+      .wallet-actions-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+      .wa-action span { font-size: 9.5px; }
+    }
+    @media (max-width: 380px) {
+      .wallet-actions-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-wallet" style="color:var(--premium-green);margin-right:8px;"></i> Digital Wallet</h1>
+        <p style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Pay, save and manage money securely &mdash; built for farmers.</p>
+      </div>
+    </div>
+
+    <!-- Balance Card -->
+    <div class="wallet-balance-card" id="wallet-balance-card">
+      <div class="wb-header">
+        <div class="wb-label"><i class="fas fa-wallet"></i> Available Balance</div>
+        <div class="wb-upi"><i class="fas fa-at"></i> farmer@farmassist</div>
+      </div>
+      <div class="wb-amount" id="wallet-balance">&#8377;0</div>
+      <div class="wb-actions">
+        <button class="wb-btn" onclick="openWalletModal('add-modal')"><i class="fas fa-plus"></i> Add Money</button>
+        <button class="wb-btn" onclick="openWalletModal('send-modal')"><i class="fas fa-paper-plane"></i> Send</button>
+      </div>
+      <div class="wb-meta">
+        <div class="wb-meta-item"><span style="opacity:0.7;">Total Added</span> <strong id="wallet-credits" style="color:#95D5B2;">&#8377;0</strong></div>
+        <div class="wb-meta-item"><span style="opacity:0.7;">Total Spent</span> <strong id="wallet-debits" style="color:#F9A8A8;">&#8377;0</strong></div>
+        <div class="wb-meta-item"><span style="opacity:0.7;">Pending</span> <strong id="wallet-pending" style="color:#FDE68A;">&#8377;0</strong></div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="wallet-actions-grid">
+      <div class="wa-action" onclick="openWalletModal('qr-modal')"><div class="wa-ico green"><i class="fas fa-qrcode"></i></div><span>Scan QR</span></div>
+      <div class="wa-action" onclick="openWalletModal('phone-modal')"><div class="wa-ico blue"><i class="fas fa-mobile-screen-button"></i></div><span>Pay to Phone</span></div>
+      <div class="wa-action" onclick="openWalletModal('fid-modal')"><div class="wa-ico gold"><i class="fas fa-id-card"></i></div><span>Pay to Farmer ID</span></div>
+      <div class="wa-action" onclick="openWalletModal('send-modal')"><div class="wa-ico purple"><i class="fas fa-paper-plane"></i></div><span>Send Money</span></div>
+      <div class="wa-action" onclick="openWalletModal('receive-modal')"><div class="wa-ico teal"><i class="fas fa-arrow-down-to-bracket"></i></div><span>Receive Money</span></div>
+      <div class="wa-action" onclick="openWalletModal('add-modal')"><div class="wa-ico green"><i class="fas fa-plus-circle"></i></div><span>Add Money</span></div>
+      <div class="wa-action" onclick="switchWalletTab('linked')"><div class="wa-ico blue"><i class="fas fa-building-columns"></i></div><span>Bank Accounts</span></div>
+      <div class="wa-action" onclick="switchWalletTab('linked')"><div class="wa-ico red"><i class="fas fa-mobile"></i></div><span>UPI IDs</span></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="wallet-tabs">
+      <button class="wallet-tab active" data-tab="txns" onclick="switchWalletTab('txns')"><i class="fas fa-list" style="margin-right:5px;"></i>Transactions</button>
+      <button class="wallet-tab" data-tab="benef" onclick="switchWalletTab('benef')"><i class="fas fa-users" style="margin-right:5px;"></i>Beneficiaries</button>
+      <button class="wallet-tab" data-tab="linked" onclick="switchWalletTab('linked')"><i class="fas fa-link" style="margin-right:5px;"></i>Linked Accounts</button>
+    </div>
+
+    <!-- Transactions panel -->
+    <div class="wallet-tab-panel active" id="tab-txns">
+      <div class="wallet-search-row">
+        <div class="wallet-search">
+          <i class="fas fa-magnifying-glass"></i>
+          <input type="text" id="wallet-txn-search" placeholder="Search transactions, UPI, receipts..." autocomplete="off">
+        </div>
+      </div>
+      <div class="wallet-filter-chips">
+        <button class="wf-chip active" data-filter="all">All</button>
+        <button class="wf-chip" data-filter="credit">Received</button>
+        <button class="wf-chip" data-filter="debit">Sent</button>
+        <button class="wf-chip" data-filter="pending">Pending</button>
+      </div>
+      <section class="card-premium">
+        <div class="section-header">
+          <h2 style="font-size:16px;"><i class="fas fa-list" style="color:var(--premium-green);margin-right:8px;"></i> Transaction History</h2>
+          <span class="sec-count" id="wallet-txn-count">0 transactions</span>
+        </div>
+        <div id="wallet-txn-list">
+          <div class="wallet-empty"><i class="fas fa-wallet"></i><p>Loading transactions...</p></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Beneficiaries panel -->
+    <div class="wallet-tab-panel" id="tab-benef">
+      <section class="card-premium">
+        <div class="section-header">
+          <h2 style="font-size:16px;"><i class="fas fa-users" style="color:var(--premium-green);margin-right:8px;"></i> Saved Beneficiaries</h2>
+        </div>
+        <div class="beneficiary-grid" id="beneficiary-grid"></div>
+      </section>
+    </div>
+
+    <!-- Linked panel -->
+    <div class="wallet-tab-panel" id="tab-linked">
+      <section class="card-premium" style="margin-bottom:14px;">
+        <div class="section-header">
+          <h2 style="font-size:16px;"><i class="fas fa-building-columns" style="color:var(--premium-green);margin-right:8px;"></i> Linked Bank Accounts</h2>
+        </div>
+        <div id="bank-list"></div>
+        <button class="add-link-btn" id="add-bank-btn" style="margin-top:12px;"><i class="fas fa-plus" style="margin-right:6px;"></i>Link a Bank Account</button>
+      </section>
+      <section class="card-premium">
+        <div class="section-header">
+          <h2 style="font-size:16px;"><i class="fas fa-mobile" style="color:var(--premium-green);margin-right:8px;"></i> Linked UPI IDs</h2>
+          <span class="sec-count">UPI placeholder</span>
+        </div>
+        <div id="upi-list"></div>
+        <button class="add-link-btn" id="add-upi-btn" style="margin-top:12px;"><i class="fas fa-plus" style="margin-right:6px;"></i>Add UPI ID</button>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Add Money Modal -->
+  <div class="modal-backdrop" id="add-modal">
+    <div class="modal-box" style="max-width:420px;padding:24px;">
+      <h3><i class="fas fa-plus-circle" style="color:var(--premium-green);margin-right:8px;"></i> Add Money</h3>
+      <p class="modal-sub">Top up your digital wallet</p>
+      <div class="form-group">
+        <label class="form-label">Amount (&#8377;)</label>
+        <input type="number" class="form-input" id="wallet-add-amount" placeholder="Enter amount" min="1" step="1" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Payment Method</label>
+        <select class="form-select" id="wallet-add-method">
+          <option value="UPI">UPI</option>
+          <option value="Net Banking">Net Banking</option>
+          <option value="Card">Debit / Credit Card</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note (optional)</label>
+        <input type="text" class="form-input" id="wallet-add-note" placeholder="e.g. PM-KISAN installment" maxlength="120">
+      </div>
+      <div class="wallet-modal-note"><i class="fas fa-info-circle"></i> In demo mode, money is added to your wallet immediately. Real payment gateway integration is a future enhancement.</div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('add-modal')">Cancel</button>
+        <button class="btn-primary" style="flex:1;" onclick="walletAddMoney()"><i class="fas fa-check"></i> Add Money</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Money Modal -->
+  <div class="modal-backdrop" id="send-modal">
+    <div class="modal-box" style="max-width:420px;padding:24px;">
+      <h3><i class="fas fa-paper-plane" style="color:var(--premium-green);margin-right:8px;"></i> Send Money</h3>
+      <p class="modal-sub">Transfer money to any account or UPI ID</p>
+      <div class="chip-quick">
+        <div class="chip-quick-label">Quick pick a beneficiary</div>
+        <div class="chip-quick-list" id="send-quick-list"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (&#8377;)</label>
+        <input type="number" class="form-input" id="wallet-send-amount" placeholder="Enter amount" min="1" step="1" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Recipient Name</label>
+        <input type="text" class="form-input" id="wallet-send-name" placeholder="Recipient name" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">UPI ID / Phone</label>
+        <input type="text" class="form-input" id="wallet-send-upi" placeholder="e.g. farmer@upi or 98765 43210" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note (optional)</label>
+        <input type="text" class="form-input" id="wallet-send-note" placeholder="What is this for?" maxlength="120">
+      </div>
+      <div class="wallet-modal-note"><i class="fas fa-info-circle"></i> Transfers are recorded instantly as wallet transactions in demo mode.</div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('send-modal')">Cancel</button>
+        <button class="btn-primary" style="flex:1;" onclick="walletSendMoney()"><i class="fas fa-paper-plane"></i> Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pay to Phone Modal -->
+  <div class="modal-backdrop" id="phone-modal">
+    <div class="modal-box" style="max-width:420px;padding:24px;">
+      <h3><i class="fas fa-mobile-screen-button" style="color:var(--premium-green);margin-right:8px;"></i> Pay to Phone Number</h3>
+      <p class="modal-sub">Send money using a mobile number</p>
+      <div class="form-group">
+        <label class="form-label">Mobile Number</label>
+        <input type="tel" class="form-input" id="wallet-phone-number" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (&#8377;)</label>
+        <input type="number" class="form-input" id="wallet-phone-amount" placeholder="Enter amount" min="1" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note (optional)</label>
+        <input type="text" class="form-input" id="wallet-phone-note" placeholder="What is this for?" maxlength="120">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('phone-modal')">Cancel</button>
+        <button class="btn-primary" style="flex:1;" onclick="payToPhone()"><i class="fas fa-paper-plane"></i> Pay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pay to Farmer ID Modal -->
+  <div class="modal-backdrop" id="fid-modal">
+    <div class="modal-box" style="max-width:420px;padding:24px;">
+      <h3><i class="fas fa-id-card" style="color:var(--premium-green);margin-right:8px;"></i> Pay to Farmer ID</h3>
+      <p class="modal-sub">Send money to another farmer's Farm Assist ID</p>
+      <div class="form-group">
+        <label class="form-label">Farmer ID</label>
+        <input type="text" class="form-input" id="wallet-fid-number" placeholder="e.g. FA-AS-00000012" maxlength="16">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (&#8377;)</label>
+        <input type="number" class="form-input" id="wallet-fid-amount" placeholder="Enter amount" min="1" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note (optional)</label>
+        <input type="text" class="form-input" id="wallet-fid-note" placeholder="What is this for?" maxlength="120">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('fid-modal')">Cancel</button>
+        <button class="btn-primary" style="flex:1;" onclick="payToFarmerId()"><i class="fas fa-paper-plane"></i> Pay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan QR Modal -->
+  <div class="modal-backdrop" id="qr-modal">
+    <div class="modal-box" style="max-width:420px;padding:24px;text-align:center;">
+      <h3><i class="fas fa-qrcode" style="color:var(--premium-green);margin-right:8px;"></i> Scan QR</h3>
+      <p class="modal-sub">Scan a UPI QR to pay a farmer or shop</p>
+      <div class="qr-placeholder" id="qr-placeholder">
+        <div class="qr-grid" id="qr-grid" style="display:none;"></div>
+        <i class="fas fa-qrcode" style="font-size:64px;color:var(--border-dark);"></i>
+        <div class="qr-scan-line"></div>
+      </div>
+      <p id="qr-status" style="font-size:12px;color:var(--text-muted);margin:10px 0 0;">Position the QR code inside the frame to scan</p>
+      <div id="qr-result" style="display:none;text-align:left;margin-top:14px;">
+        <div class="receipt-sheet" id="qr-result-details"></div>
+        <div class="form-group">
+          <label class="form-label">Enter amount (&#8377;)</label>
+          <input type="number" class="form-input" id="qr-result-amount" placeholder="Enter amount" min="1" inputmode="numeric">
+        </div>
+        <button class="btn-primary" style="width:100%;" onclick="confirmQrPayment()"><i class="fas fa-check"></i> Confirm Payment</button>
+      </div>
+      <button class="btn-secondary" style="width:100%;margin-top:14px;" onclick="closeWalletModal('qr-modal')">Close</button>
+    </div>
+  </div>
+
+  <!-- Receive Money Modal -->
+  <div class="modal-backdrop" id="receive-modal">
+    <div class="modal-box" style="max-width:420px;padding:24px;text-align:center;">
+      <h3><i class="fas fa-arrow-down-to-bracket" style="color:var(--premium-green);margin-right:8px;"></i> Receive Money</h3>
+      <p class="modal-sub">Share your QR or UPI ID to receive money</p>
+      <div class="qr-placeholder" style="position:relative;background:#F4F9F4;">
+        <div class="qr-grid" id="receive-qr-grid"></div>
+      </div>
+      <div class="receive-upi" id="receive-upi-id">farmer@farmassist</div>
+      <p style="font-size:11px;color:var(--text-muted);margin:4px 0 14px;">Ask anyone to scan this QR to send you money instantly</p>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('receive-modal')">Close</button>
+        <button class="btn-primary" style="flex:1;" onclick="shareReceiveQr()"><i class="fas fa-share-nodes"></i> Share</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receipt Modal -->
+  <div class="modal-backdrop" id="receipt-modal">
+    <div class="modal-box" style="max-width:420px;padding:24px;">
+      <h3><i class="fas fa-receipt" style="color:var(--premium-green);margin-right:8px;"></i> Payment Receipt</h3>
+      <p class="modal-sub">Transaction summary</p>
+      <div class="receipt-sheet" id="receipt-details"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('receipt-modal')">Close</button>
+        <button class="btn-primary" style="flex:1;" onclick="downloadReceipt()"><i class="fas fa-download"></i> Download</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Link Modal -->
+  <div class="modal-backdrop" id="link-modal">
+    <div class="modal-box" style="max-width:420px;padding:24px;">
+      <h3><i class="fas fa-link" style="color:var(--premium-green);margin-right:8px;"></i> <span id="link-modal-title">Link Bank Account</span></h3>
+      <p class="modal-sub">Add a new payment method</p>
+      <div class="form-group">
+        <label class="form-label">Account Holder Name</label>
+        <input type="text" class="form-input" id="link-name" placeholder="Name on account" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bank / UPI Handle</label>
+        <input type="text" class="form-input" id="link-id" placeholder="e.g. SBI Savings / myupi@upi" maxlength="100">
+      </div>
+      <div class="wallet-modal-note"><i class="fas fa-info-circle"></i> Linking is simulated in demo mode and stored locally on your device.</div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('link-modal')">Cancel</button>
+        <button class="btn-primary" style="flex:1;" onclick="confirmAddLink()"><i class="fas fa-check"></i> Add</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      var STORE = {
+        beneficiaries: 'fa-wallet-beneficiaries',
+        banks: 'fa-wallet-banks',
+        upi: 'fa-wallet-upi'
+      };
+
+      var DEFAULT_BENEFICIARIES = [
+        { id: 'b1', name: 'Ramesh Patil', upi: 'ramesh@okhdfc', color: '#2D8659' },
+        { id: 'b2', name: 'Lakshmi Devi', upi: 'lakshmi@ybl', color: '#2563eb' },
+        { id: 'b3', name: 'Suresh Kumar', upi: 'suresh@okaxis', color: '#7c3aed' },
+        { id: 'b4', name: 'Anita Reddy', upi: 'anita@oksbi', color: '#d97706' }
+      ];
+      var DEFAULT_BANKS = [
+        { name: 'State Bank of India', detail: 'Savings A/C •••• 4821', color: '#1B5E3F' },
+        { name: 'HDFC Bank', detail: 'Savings A/C •••• 9034', color: '#2563eb' }
+      ];
+      var DEFAULT_UPI = [
+        { name: 'Personal UPI', detail: 'farmer@farmassist', color: '#0d9488' },
+        { name: 'Business UPI', detail: 'farmbusiness@okhdfc', color: '#7c3aed' }
+      ];
+
+      function load(key, def) {
+        try { var raw = localStorage.getItem(key); if (raw) return JSON.parse(raw); } catch (e) {}
+        return def;
+      }
+      function save(key, val) {
+        try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+      }
+
+      var beneficiaries = load(STORE.beneficiaries, DEFAULT_BENEFICIARIES);
+      var banks = load(STORE.banks, DEFAULT_BANKS);
+      var upiIds = load(STORE.upi, DEFAULT_UPI);
+
+      function formatINR(amount) {
+        var num = parseFloat(amount) || 0;
+        var sign = num < 0 ? '-' : '';
+        var abs = Math.round(Math.abs(num)).toString();
+        var lastThree = abs.substring(abs.length - 3);
+        var otherNums = abs.substring(0, abs.length - 3);
+        if (otherNums !== '') lastThree = ',' + lastThree;
+        var formatted = otherNums.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
+        return sign + '\u20B9' + formatted;
+      }
+
+      function esc(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+
+      function fmtDate(str) {
+        if (!str) return '';
+        try {
+          var d = new Date(str.indexOf('T') !== -1 ? str : str.replace(' ', 'T'));
+          if (isNaN(d.getTime())) return str;
+          return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+            d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        } catch (e) { return str; }
+      }
+
+      function nowISO() { return new Date().toISOString(); }
+
+      /* ── Pending mock transactions ─────────────────── */
+      function pendingTransactions() {
+        return [
+          { id: 'TX-PN-1024', category: 'Paid to Ramesh Patil', description: 'UPI / ramesh@okhdfc', amount: 450, type: 'expense', status: 'pending', created_at: nowISO() },
+          { id: 'TX-PN-1023', category: 'Received from PM-KISAN', description: 'Govt. direct benefit transfer', amount: 2000, type: 'income', status: 'pending', created_at: nowISO() }
+        ];
+      }
+
+      var txns = [];
+      var filter = 'all';
+      var searchTerm = '';
+
+      function renderTransactions() {
+        var list = document.getElementById('wallet-txn-list');
+        var count = document.getElementById('wallet-txn-count');
+        var filtered = txns.filter(function (t) {
+          if (filter !== 'all') {
+            if (filter === 'credit' && t.type !== 'income') return false;
+            if (filter === 'debit' && t.type !== 'expense') return false;
+            if (filter === 'pending' && t.status !== 'pending') return false;
+          }
+          if (searchTerm) {
+            var hay = ((t.category || '') + ' ' + (t.description || '') + ' ' + (t.id || '')).toLowerCase();
+            if (hay.indexOf(searchTerm) === -1) return false;
+          }
+          return true;
+        });
+
+        if (!filtered.length) {
+          list.innerHTML = '<div class="wallet-empty"><i class="fas fa-wallet"></i><p>No transactions match your filters.</p></div>';
+          if (count) count.textContent = txns.length + ' transaction' + (txns.length !== 1 ? 's' : '');
+          return;
+        }
+        if (count) count.textContent = txns.length + ' transaction' + (txns.length !== 1 ? 's' : '');
+        list.innerHTML = filtered.map(function (t) {
+          var credit = t.type === 'income';
+          var icon = credit ? 'fa-arrow-down' : (t.status === 'pending' ? 'fa-clock' : 'fa-arrow-up');
+          var sign = credit ? '+' : '-';
+          var amountCls = credit ? 'credit' : (t.status === 'pending' ? 'pending' : 'debit');
+          var statusCls = t.status || 'success';
+          var title = t.category || (credit ? 'Money Received' : 'Money Sent');
+          var desc = t.description || '';
+          return '<div class="wallet-txn-item" onclick="openReceipt(\'' + esc(t.id) + '\')">' +
+            '<div class="wallet-txn-icon ' + amountCls + '"><i class="fas ' + icon + '"></i></div>' +
+            '<div class="wallet-txn-info">' +
+              '<h4>' + esc(title) + '</h4>' +
+              '<p>' + esc(desc) + ' &middot; ' + esc(fmtDate(t.created_at || t.transaction_date)) + '</p>' +
+            '</div>' +
+            '<div class="wallet-txn-right">' +
+              '<span class="wallet-txn-amount ' + amountCls + '">' + sign + formatINR(t.amount) + '</span>' +
+              '<span class="wallet-txn-status ' + statusCls + '">' + (statusCls === 'pending' ? 'Pending' : statusCls === 'failed' ? 'Failed' : 'Success') + '</span>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      }
+
+      function loadWallet() {
+        if (!localStorage.getItem('fa-auth-token')) {
+          if (typeof showToast === 'function') showToast('Please sign in to view your wallet.', 'warning');
+        }
+        var done = function () {
+          var pending = pendingTransactions();
+          var pendingTotal = pending.reduce(function (s, p) { return s + (p.amount || 0); }, 0);
+          document.getElementById('wallet-pending').textContent = formatINR(pendingTotal);
+          txns = pending.concat(txns);
+          renderTransactions();
+          renderBeneficiaries();
+          renderLinked();
+          renderSendQuickList();
+        };
+        WalletService.getSummary().then(function (data) {
+          data = data || {};
+          document.getElementById('wallet-balance').textContent = formatINR(data.balance);
+          document.getElementById('wallet-credits').textContent = formatINR(data.total_credits);
+          document.getElementById('wallet-debits').textContent = formatINR(data.total_debits);
+          txns = (data.recent_transactions || []).map(function (t) {
+            t.status = t.status || 'success';
+            return t;
+          });
+          done();
+        }).catch(function () {
+          txns = [];
+          done();
+        });
+      }
+
+      function renderBeneficiaries() {
+        var grid = document.getElementById('beneficiary-grid');
+        if (!grid) return;
+        grid.innerHTML = beneficiaries.map(function (b) {
+          return '<div class="beneficiary-card" onclick="openSendForBeneficiary(\'' + esc(b.name) + '\',\'' + esc(b.upi) + '\')">' +
+            '<div class="beneficiary-avatar" style="background:' + esc(b.color) + ';">' + esc(b.name.charAt(0)) + '</div>' +
+            '<b>' + esc(b.name) + '</b>' +
+            '<span>' + esc(b.upi) + '</span>' +
+          '</div>';
+        }).join('');
+      }
+
+      function renderSendQuickList() {
+        var list = document.getElementById('send-quick-list');
+        if (!list) return;
+        list.innerHTML = beneficiaries.slice(0, 4).map(function (b) {
+          return '<button class="chip-quick-item" type="button" onclick="pickBeneficiary(\'' + esc(b.name) + '\',\'' + esc(b.upi) + '\')">' + esc(b.name) + '</button>';
+        }).join('');
+      }
+
+      function renderLinked() {
+        var bankList = document.getElementById('bank-list');
+        if (bankList) {
+          bankList.innerHTML = banks.map(function (b) {
+            return '<div class="linked-account">' +
+              '<div class="la-ico" style="background:rgba(' + (b.color === '#1B5E3F' ? '27,94,63' : '37,99,235') + ',0.12);color:' + esc(b.color) + ';"><i class="fas fa-building-columns"></i></div>' +
+              '<div class="la-info"><b>' + esc(b.name) + '</b><span>' + esc(b.detail) + '</span></div>' +
+              '<span class="la-status">Linked</span>' +
+            '</div>';
+          }).join('');
+        }
+        var upiList = document.getElementById('upi-list');
+        if (upiList) {
+          upiList.innerHTML = upiIds.map(function (u) {
+            return '<div class="linked-account">' +
+              '<div class="la-ico" style="background:rgba(13,148,136,0.12);color:' + esc(u.color) + ';"><i class="fas fa-mobile"></i></div>' +
+              '<div class="la-info"><b>' + esc(u.name) + '</b><span>' + esc(u.detail) + '</span></div>' +
+              '<span class="la-status">Active</span>' +
+            '</div>';
+          }).join('');
+        }
+      }
+
+      /* ── Modal helpers ─────────────────────────────── */
+      window.openWalletModal = function (id) {
+        var modal = document.getElementById(id);
+        if (!modal) return;
+        modal.classList.add('active');
+        if (id === 'add-modal') { var a = document.getElementById('wallet-add-amount'); if (a) a.focus(); }
+        if (id === 'send-modal') { var s = document.getElementById('wallet-send-amount'); if (s) s.focus(); }
+        if (id === 'qr-modal') startQrScan();
+      };
+
+      window.closeWalletModal = function (id) {
+        var modal = document.getElementById(id);
+        if (modal) modal.classList.remove('active');
+      };
+
+      window.switchWalletTab = function (tab) {
+        document.querySelectorAll('.wallet-tab').forEach(function (t) {
+          t.classList.toggle('active', t.getAttribute('data-tab') === tab);
+        });
+        ['txns', 'benef', 'linked'].forEach(function (p) {
+          var el = document.getElementById('tab-' + p);
+          if (el) el.classList.toggle('active', p === tab);
+        });
+      };
+
+      /* ── Add money ─────────────────────────────────── */
+      window.walletAddMoney = function () {
+        var amount = parseFloat(document.getElementById('wallet-add-amount').value);
+        var method = document.getElementById('wallet-add-method').value;
+        var note = document.getElementById('wallet-add-note').value.trim();
+        if (!amount || amount <= 0) {
+          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
+          return;
+        }
+        WalletService.addMoney({
+          amount: amount,
+          payment_method: method,
+          description: note || undefined
+        }).then(function () {
+          if (typeof showToast === 'function') showToast('Money added to wallet', 'success');
+          closeWalletModal('add-modal');
+          document.getElementById('wallet-add-amount').value = '';
+          document.getElementById('wallet-add-note').value = '';
+          loadWallet();
+        }).catch(function (err) {
+          if (typeof showToast === 'function') showToast(err && err.message ? err.message : 'Failed to add money', 'danger');
+        });
+      };
+
+      /* ── Send money ────────────────────────────────── */
+      window.pickBeneficiary = function (name, upi) {
+        document.getElementById('wallet-send-name').value = name;
+        document.getElementById('wallet-send-upi').value = upi;
+      };
+      window.openSendForBeneficiary = function (name, upi) {
+        pickBeneficiary(name, upi);
+        openWalletModal('send-modal');
+      };
+
+      window.walletSendMoney = function () {
+        var amount = parseFloat(document.getElementById('wallet-send-amount').value);
+        var name = document.getElementById('wallet-send-name').value.trim();
+        var upi = document.getElementById('wallet-send-upi').value.trim();
+        var note = document.getElementById('wallet-send-note').value.trim();
+        if (!amount || amount <= 0) {
+          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
+          return;
+        }
+        var proceed = function () {
+          if (typeof showToast === 'function') showToast('Transfer completed to ' + (name || upi || 'recipient'), 'success');
+          closeWalletModal('send-modal');
+          document.getElementById('wallet-send-amount').value = '';
+          document.getElementById('wallet-send-name').value = '';
+          document.getElementById('wallet-send-upi').value = '';
+          document.getElementById('wallet-send-note').value = '';
+          loadWallet();
+        };
+        WalletService.transfer({
+          amount: amount,
+          recipient: name || undefined,
+          recipient_upi: upi || undefined,
+          note: note || undefined
+        }).then(proceed).catch(function (err) {
+          if (err && err.status === 404 && localStorage.getItem('fa-auth-token')) {
+            if (typeof showToast === 'function') showToast('Transfer recorded locally (backend wallet transfer pending).', 'success');
+            proceed();
+          } else {
+            if (typeof showToast === 'function') showToast(err && err.message ? err.message : 'Transfer failed', 'danger');
+          }
+        });
+      };
+
+      /* ── Pay to phone / farmer id ──────────────────── */
+      window.payToPhone = function () {
+        var phone = document.getElementById('wallet-phone-number').value.trim();
+        var amount = parseFloat(document.getElementById('wallet-phone-amount').value);
+        if (!/^\d{10}$/.test(phone)) {
+          if (typeof showToast === 'function') showToast('Enter a valid 10-digit mobile number', 'warning');
+          return;
+        }
+        if (!amount || amount <= 0) {
+          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
+          return;
+        }
+        closeWalletModal('phone-modal');
+        document.getElementById('wallet-phone-number').value = '';
+        document.getElementById('wallet-phone-amount').value = '';
+        document.getElementById('wallet-phone-note').value = '';
+        if (typeof showToast === 'function') showToast('Payment of ' + formatINR(amount) + ' sent to +91 ' + phone, 'success');
+        loadWallet();
+      };
+
+      window.payToFarmerId = function () {
+        var fid = document.getElementById('wallet-fid-number').value.trim().toUpperCase();
+        var amount = parseFloat(document.getElementById('wallet-fid-amount').value);
+        if (!/^FA-AS-\d{1,16}$/.test(fid)) {
+          if (typeof showToast === 'function') showToast('Enter a valid Farmer ID (e.g. FA-AS-00000012)', 'warning');
+          return;
+        }
+        if (!amount || amount <= 0) {
+          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
+          return;
+        }
+        closeWalletModal('fid-modal');
+        document.getElementById('wallet-fid-number').value = '';
+        document.getElementById('wallet-fid-amount').value = '';
+        document.getElementById('wallet-fid-note').value = '';
+        if (typeof showToast === 'function') showToast('Payment of ' + formatINR(amount) + ' sent to ' + fid, 'success');
+        loadWallet();
+      };
+
+      /* ── QR scan (simulated) ───────────────────────── */
+      var qrScanned = false;
+      function startQrScan() {
+        qrScanned = false;
+        var placeholder = document.getElementById('qr-placeholder');
+        var status = document.getElementById('qr-status');
+        var result = document.getElementById('qr-result');
+        placeholder.style.display = '';
+        result.style.display = 'none';
+        status.textContent = 'Position the QR code inside the frame to scan';
+        status.style.display = '';
+        setTimeout(function () {
+          if (qrScanned) return;
+          qrScanned = true;
+          status.textContent = 'QR scanned!';
+          placeholder.style.display = 'none';
+          result.style.display = '';
+          document.getElementById('qr-result-details').innerHTML =
+            '<div class="rs-row"><span>Shop / Farmer</span><b>Kisan Mandi Supplies</b></div>' +
+            '<div class="rs-row"><span>UPI ID</span><b>mandisupplies@okhdfc</b></div>' +
+            '<div class="rs-row"><span>Note</span><b>Scan &amp; pay</b></div>';
+          if (typeof showToast === 'function') showToast('QR scanned successfully', 'success');
+        }, 2200);
+      }
+
+      window.confirmQrPayment = function () {
+        var amount = parseFloat(document.getElementById('qr-result-amount').value);
+        if (!amount || amount <= 0) {
+          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
+          return;
+        }
+        closeWalletModal('qr-modal');
+        document.getElementById('qr-result-amount').value = '';
+        if (typeof showToast === 'function') showToast('Payment of ' + formatINR(amount) + ' sent to Kisan Mandi Supplies', 'success');
+        loadWallet();
+      };
+
+      /* ── Receive / QR grid ─────────────────────────── */
+      function buildQrGrid(containerId) {
+        var grid = document.getElementById(containerId);
+        if (!grid) return;
+        grid.style.display = 'grid';
+        var html = '';
+        var seed = 7;
+        var rand = function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+        for (var r = 0; r < 7; r++) {
+          for (var c = 0; c < 7; c++) {
+            var isFinder = (r < 2 && c < 2) || (r < 2 && c > 4) || (r > 4 && c < 2);
+            var on = isFinder ? 1 : (rand() > 0.45 ? 1 : 0);
+            html += '<i style="background:' + (on ? 'var(--premium-green)' : 'transparent') + ';padding-top:100%;display:block;"></i>';
+          }
+        }
+        grid.innerHTML = html;
+      }
+
+      window.shareReceiveQr = function () {
+        if (navigator.share) {
+          navigator.share({ title: 'Farm Assist UPI', text: 'Pay me on Farm Assist: farmer@farmassist' }).catch(function () {});
+        } else if (typeof showToast === 'function') {
+          showToast('UPI ID copied: farmer@farmassist', 'success');
+          try { navigator.clipboard.writeText('farmer@farmassist'); } catch (e) {}
+        }
+      };
+
+      /* ── Receipts ──────────────────────────────────── */
+      var activeReceipt = null;
+      window.openReceipt = function (txnId) {
+        var t = txns.filter(function (x) { return x.id === txnId; })[0];
+        if (!t) return;
+        activeReceipt = t;
+        var credit = t.type === 'income';
+        document.getElementById('receipt-details').innerHTML =
+          '<div class="rs-row"><span>Transaction ID</span><b>' + esc(t.id || '—') + '</b></div>' +
+          '<div class="rs-row"><span>Type</span><b>' + (credit ? 'Credit / Received' : 'Debit / Sent') + '</b></div>' +
+          '<div class="rs-row"><span>Category</span><b>' + esc(t.category || 'Wallet transaction') + '</b></div>' +
+          '<div class="rs-row"><span>Description</span><b>' + esc(t.description || '—') + '</b></div>' +
+          '<div class="rs-row"><span>Date</span><b>' + esc(fmtDate(t.created_at || t.transaction_date)) + '</b></div>' +
+          '<div class="rs-row"><span>Status</span><b>' + esc(t.status || 'success') + '</b></div>' +
+          '<div class="rs-row" style="font-size:14px;"><span>Amount</span><b style="color:' + (credit ? 'var(--primary-green)' : 'var(--danger)') + ';">' + (credit ? '+' : '-') + formatINR(t.amount) + '</b></div>';
+        openWalletModal('receipt-modal');
+      };
+
+      window.downloadReceipt = function () {
+        var t = activeReceipt;
+        if (!t) return;
+        var text =
+          'FARM ASSIST - PAYMENT RECEIPT\n' +
+          '================================\n' +
+          'Transaction ID : ' + (t.id || '—') + '\n' +
+          'Type           : ' + (t.type === 'income' ? 'Credit / Received' : 'Debit / Sent') + '\n' +
+          'Category       : ' + (t.category || 'Wallet transaction') + '\n' +
+          'Description    : ' + (t.description || '—') + '\n' +
+          'Date           : ' + fmtDate(t.created_at || t.transaction_date) + '\n' +
+          'Status         : ' + (t.status || 'success') + '\n' +
+          'Amount         : ' + (t.type === 'income' ? '+' : '-') + formatINR(t.amount) + '\n' +
+          '================================\n' +
+          'Generated by Farm Assist • farmer@farmassist\n';
+        var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'FarmAssist_Receipt_' + (t.id || 'txn') + '.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        if (typeof showToast === 'function') showToast('Receipt downloaded', 'success');
+      };
+
+      /* ── Link accounts ─────────────────────────────── */
+      var linkMode = 'bank';
+      document.addEventListener('click', function (e) {
+        var t = e.target;
+        if (t.id === 'add-bank-btn') { linkMode = 'bank'; document.getElementById('link-modal-title').textContent = 'Link Bank Account'; openWalletModal('link-modal'); }
+        if (t.id === 'add-upi-btn') { linkMode = 'upi'; document.getElementById('link-modal-title').textContent = 'Add UPI ID'; openWalletModal('link-modal'); }
+        if (t.classList.contains('modal-backdrop')) t.classList.remove('active');
+      });
+
+      window.confirmAddLink = function () {
+        var name = document.getElementById('link-name').value.trim();
+        var id = document.getElementById('link-id').value.trim();
+        if (!name || !id) {
+          if (typeof showToast === 'function') showToast('Fill in both fields', 'warning');
+          return;
+        }
+        if (linkMode === 'bank') {
+          banks.push({ name: name, detail: id, color: '#1B5E3F' });
+          save(STORE.banks, banks);
+        } else {
+          upiIds.push({ name: name, detail: id, color: '#0d9488' });
+          save(STORE.upi, upiIds);
+        }
+        document.getElementById('link-name').value = '';
+        document.getElementById('link-id').value = '';
+        closeWalletModal('link-modal');
+        renderLinked();
+        if (typeof showToast === 'function') showToast((linkMode === 'bank' ? 'Bank account' : 'UPI ID') + ' linked', 'success');
+      };
+
+      /* ── Search & filter ───────────────────────────── */
+      document.addEventListener('DOMContentLoaded', function () {
+        loadWallet();
+        buildQrGrid('receive-qr-grid');
+
+        var searchInput = document.getElementById('wallet-txn-search');
+        if (searchInput) {
+          searchInput.addEventListener('input', function () {
+            searchTerm = searchInput.value.trim().toLowerCase();
+            renderTransactions();
+          });
+        }
+
+        document.querySelectorAll('.wf-chip').forEach(function (chip) {
+          chip.addEventListener('click', function () {
+            document.querySelectorAll('.wf-chip').forEach(function (c) { c.classList.remove('active'); });
+            chip.classList.add('active');
+            filter = chip.getAttribute('data-filter');
+            renderTransactions();
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

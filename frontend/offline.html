@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Offline - Farm Assist</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Outfit', 'Segoe UI', Arial, sans-serif; background: #0B3D2E; min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #fff; }
+    .container { text-align: center; padding: 40px 24px; max-width: 400px; }
+    .icon { font-size: 80px; margin-bottom: 20px; opacity: 0.9; }
+    .icon svg { width: 120px; height: 120px; }
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    p { font-size: 14px; opacity: 0.8; margin-bottom: 24px; line-height: 1.6; }
+    .sync-info { font-size: 11px; opacity: 0.5; margin-bottom: 24px; }
+    .btn { display: inline-block; background: #4CAF50; color: #fff; border: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; transition: transform 0.2s; }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 24px; border-radius: 10px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 12px; }
+    .features { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 24px 0; }
+    @media (max-width: 480px) { .features { grid-template-columns: 1fr 1fr; gap: 6px; } }
+    .feature { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 8px; font-size: 11px; }
+    .feature .emoji { font-size: 20px; display: block; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="20" fill="#1B5E3F"/>
+        <text x="50" y="42" text-anchor="middle" font-family="Arial" font-size="28" font-weight="700" fill="white" dy="0">FA</text>
+        <ellipse cx="50" cy="58" rx="10" ry="6" fill="#4CAF50"/>
+        <polygon points="50,50 44,64 56,64" fill="#4CAF50"/>
+        <circle cx="28" cy="28" r="8" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+        <line x1="28" y1="20" x2="28" y2="36" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+        <line x1="20" y1="28" x2="36" y2="28" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+      </svg>
+    </div>
+    <h1>You're Offline</h1>
+    <p>Farm Assist is working in offline mode.<br>Some features may be limited until you reconnect.</p>
+    <div class="sync-info" id="last-sync">Last synced: Loading...</div>
+    <button class="btn" onclick="window.location.reload()">Try Again</button>
+    <a href="/" class="btn-secondary">Back to Home</a>
+    <div class="features">
+      <div class="feature"><span class="emoji">🌾</span>Farm Records</div>
+      <div class="feature"><span class="emoji">📋</span>Saved Tasks</div>
+      <div class="feature"><span class="emoji">📅</span>Calendar</div>
+    </div>
+  </div>
+  <script>
+    var syncEl = document.getElementById('last-sync');
+    try {
+      var syncData = JSON.parse(localStorage.getItem('fa-last-sync') || '{"time":null}');
+      if (syncData.time) {
+        syncEl.textContent = 'Last synced: ' + new Date(syncData.time).toLocaleString();
+      } else {
+        syncEl.textContent = 'No sync data available';
+      }
+    } catch(e) {
+      syncEl.textContent = 'Last synced: Unknown';
+    }
+    if (navigator.onLine) {
+      setTimeout(function() { window.location.href = '/'; }, 3000);
+    }
+    window.addEventListener('online', function() { window.location.href = '/'; });
+  </script>
+</body>
+</html>

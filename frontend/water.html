@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Water & Irrigation</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <main class="page-container">
+    <div class="page-header">
+      <div><h1>Water & Irrigation</h1><p>Manage water sources, schedules, and conservation</p></div>
+      <button class="btn-primary btn-sm" onclick="showWaterCalculator()"><i class="fas fa-calculator"></i> Calculator</button>
+    </div>
+    <div class="search-bar"><i class="fas fa-search"></i><input type="text" placeholder="Search water sources..." oninput="filterWaterSources(this.value)"></div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" onclick="showWaterTab('sources',this)">Water Sources</button>
+      <button class="filter-tab" onclick="showWaterTab('schedule',this)">Schedule</button>
+      <button class="filter-tab" onclick="showWaterTab('tips',this)">Conservation</button>
+    </div>
+    <div id="water-content"></div>
+    <div id="irrigation-schedule-content" style="display:none;"></div>
+    <div id="water-tips-content" style="display:none;">
+      <div class="card-premium">
+        <h3 style="font-size:15px;margin-bottom:12px;"><i class="fas fa-lightbulb" style="color:var(--warning);"></i> Water Saving Tips</h3>
+        <div class="timeline-item"><strong>Drip Irrigation:</strong> Saves up to 40% water compared to flood irrigation. Best for row crops.</div>
+        <div class="timeline-item"><strong>Mulching:</strong> Reduce evaporation by 30% using organic mulch around plants.</div>
+        <div class="timeline-item"><strong>Rainwater Harvesting:</strong> 1 acre rooftop can collect ~50,000L annually.</div>
+        <div class="timeline-item"><strong>Irrigation Timing:</strong> Water early morning or evening to reduce evaporation loss.</div>
+        <div class="timeline-item"><strong>Soil Moisture Sensors:</strong> Smart sensors prevent over-watering and save 20% water.</div>
+        <div class="timeline-item"><strong>Deficit Irrigation:</strong> Apply water only during critical growth stages for 15% savings.</div>
+        <div style="margin-top:12px;"><button class="btn-primary btn-sm" onclick="showToast('AI recommended: Install drip irrigation in Plot B for estimated 40% water savings','success')"><i class="fas fa-robot"></i> AI Recommendation</button></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    function showWaterTab(tab, btn) {
+      ['water-content','irrigation-schedule-content','water-tips-content'].forEach(function(id) { document.getElementById(id).style.display = 'none'; });
+      document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
+      if (btn) btn.classList.add('active');
+      if (tab === 'sources') { document.getElementById('water-content').style.display = 'block'; initWaterManagement('water-content'); }
+      if (tab === 'schedule') { document.getElementById('irrigation-schedule-content').style.display = 'block'; showIrrigationScheduler(); }
+      if (tab === 'tips') document.getElementById('water-tips-content').style.display = 'block';
+    }
+    function filterWaterSources(q) {
+      document.querySelectorAll('.feature-card').forEach(function(c) { c.style.display = c.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; });
+    }
+    setTimeout(function() { showWaterTab('sources', document.querySelector('.filter-tab')); }, 200);
+  </script>
+</body>
+</html>

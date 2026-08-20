@@ -1,0 +1,547 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="profile">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Profile - Farm Assist</title>
+  <meta name="description" content="Manage your Farm Assist profile, settings, and preferences.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .profile-photo-wrap { text-align: center; padding: 10px 0 16px; }
+    .profile-photo { width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #1B5E3F, #52B788); display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 42px; font-weight: 700; border: 3px solid white; box-shadow: 0 4px 16px rgba(0,0,0,0.12); overflow: hidden; margin-bottom: 12px; }
+    .profile-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-photo-init { font-size: 42px; font-weight: 700; color: white; }
+    .photo-preview { width: 160px; height: 160px; border-radius: 50%; overflow: hidden; margin: 12px auto; border: 2px dashed var(--border-medium); display: flex; align-items: center; justify-content: center; background: var(--bg-card-soft); }
+    .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-preview-empty { font-size: 12px; color: var(--text-muted); }
+    .form-select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    .form-select:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .modal-actions .btn-primary, .modal-actions .btn-secondary { padding: 10px 20px; font-size: 13px; }
+    .ml-auto { margin-left: auto; }
+    .text-right { text-align: right; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .mb-8 { margin-bottom: 8px; }
+    .mb-20 { margin-bottom: 20px; }
+    .activity-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(27,94,63,0.08); display: flex; align-items: center; justify-content: center; color: var(--primary-green); font-size: 14px; flex-shrink: 0; }
+    .activity-icon.alert { background: rgba(244,67,54,0.08); color: var(--danger); }
+    .activity-icon.warn { background: rgba(255,152,0,0.08); color: #e65100; }
+    .activity-icon.info { background: rgba(33,150,243,0.08); color: #1565c0; }
+    .activity-content { flex: 1; min-width: 0; }
+    .activity-desc { font-size: 13px; color: var(--text-primary); line-height: 1.3; }
+    .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .setting-link { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--border-light); border-radius: var(--radius-md); margin-bottom: 8px; cursor: pointer; transition: all 0.15s; text-decoration: none; color: inherit; background: white; }
+    .setting-link:hover { border-color: var(--medium-green); background: var(--bg-card-soft); }
+    .setting-link-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; background: rgba(27,94,63,0.08); color: var(--primary-green); flex-shrink: 0; }
+    .setting-link-icon.danger { background: rgba(244,67,54,0.08); color: var(--danger); }
+    .setting-link-content { flex: 1; }
+    .setting-link-label { font-size: 13px; font-weight: 600; }
+    .setting-link-sub { font-size: 11px; color: var(--text-muted); }
+    .setting-link-arrow { color: var(--text-muted); font-size: 12px; }
+    .btn-danger { background: var(--danger); color: white; border: none; }
+    .btn-danger:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  </style>
+</head>
+<body>
+
+<main class="page-container">
+
+
+  <!-- Header -->
+  <div class="page-header">
+    <h1>Profile</h1>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="grid-4 mb-20">
+    <div class="stat-box">
+      <i class="fas fa-map-marked-alt"></i>
+      <div class="stat-box-num" id="stat-acres">24</div>
+      <div class="stat-box-label">Acres</div>
+    </div>
+    <div class="stat-box">
+      <i class="fas fa-seedling"></i>
+      <div class="stat-box-num" id="stat-crops">8</div>
+      <div class="stat-box-label">Crops</div>
+    </div>
+    <div class="stat-box">
+      <i class="fas fa-tractor"></i>
+      <div class="stat-box-num" id="stat-farms">3</div>
+      <div class="stat-box-label">Farms</div>
+    </div>
+    <div class="stat-box">
+      <i class="fas fa-file-alt"></i>
+      <div class="stat-box-num" id="stat-documents">12</div>
+      <div class="stat-box-label">Documents</div>
+    </div>
+  </div>
+
+  <!-- Profile Photo (Optional) -->
+  <div class="card-premium mb-20">
+    <div class="profile-photo-wrap">
+      <div class="profile-photo" id="profile-photo-display">
+        <span class="profile-photo-init" id="photo-initials">F</span>
+        <img id="photo-img" style="display:none;" alt="Profile Photo">
+      </div>
+      <br>
+      <button class="btn-secondary btn-sm" id="change-photo-btn">
+        <i class="fas fa-camera"></i> Add Photo (Optional)
+      </button>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:8px;">You can add a profile photo anytime</p>
+    </div>
+  </div>
+
+  <!-- Photo Modal -->
+  <div class="modal-backdrop" id="photo-modal">
+    <div class="modal-box">
+      <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;">
+        <i class="fas fa-camera"></i> Profile Photo
+      </h3>
+      <div class="photo-preview" id="photo-preview">
+        <span class="photo-preview-empty" id="preview-empty">
+          <i class="fas fa-image" style="font-size:32px;display:block;margin-bottom:6px;"></i>
+          No image selected
+        </span>
+        <img id="preview-img" style="display:none;" alt="Preview">
+      </div>
+      <div class="text-right mt-12">
+        <label class="btn-secondary btn-sm" style="display:inline-block;cursor:pointer;">
+          <i class="fas fa-upload"></i> Choose File
+          <input type="file" id="photo-file-input" accept="image/*" style="display:none;">
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="photo-remove-btn">
+          <i class="fas fa-trash"></i> Remove
+        </button>
+        <button class="btn-primary" id="photo-save-btn">
+          <i class="fas fa-check"></i> Save
+        </button>
+        <button class="btn-secondary" id="photo-cancel-btn">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Personal Info -->
+  <div class="card-premium mb-20">
+    <h3 style="margin:0 0 14px;font-size:15px;font-weight:700;">
+      <i class="fas fa-user"></i> Personal Information
+    </h3>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" class="form-input" id="input-name" placeholder="Enter your full name">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Farmer ID</label>
+        <input type="text" class="form-input" id="input-farmer-id" value="FA-AS-00000004" readonly style="background:var(--bg-card-soft);color:var(--text-muted);">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" class="form-input" id="input-email" placeholder="farmer@example.com">
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="tel" class="form-input" id="input-phone" placeholder="+91 98765 43210">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Location</label>
+      <input type="text" class="form-input" id="input-location" placeholder="District, State">
+    </div>
+    <div class="form-group">
+      <label>Language Preference</label>
+      <select class="form-select" id="input-language">
+        <option value="en">English</option>
+        <option value="hi">Hindi (à¤¹à¤¿à¤‚à¤¦à¥€)</option>
+        <option value="te">Telugu (à°¤à±†à°²à±à°—à±)</option>
+        <option value="ta">Tamil (à®¤à®®à®¿à®´à¯)</option>
+        <option value="kn">Kannada (à²•à²¨à³à²¨à²¡)</option>
+        <option value="ml">Malayalam (à´®à´²à´¯à´¾à´³à´‚)</option>
+      </select>
+    </div>
+    <div class="text-right mt-16">
+      <button class="btn-primary" id="personal-info-save-btn">
+        <i class="fas fa-save"></i> Save Changes
+      </button>
+    </div>
+  </div>
+
+  <!-- Account Settings -->
+  <div class="card-premium mb-20">
+    <h3 style="margin:0 0 14px;font-size:15px;font-weight:700;">
+      <i class="fas fa-lock"></i> Account Settings
+    </h3>
+    <div class="setting-link" id="change-password-link">
+      <div class="setting-link-icon"><i class="fas fa-key"></i></div>
+      <div class="setting-link-content">
+        <div class="setting-link-label">Change Password</div>
+        <div class="setting-link-sub">Update your account password</div>
+      </div>
+      <i class="fas fa-chevron-right setting-link-arrow"></i>
+    </div>
+    <div class="setting-link" id="account-type-link">
+      <div class="setting-link-icon"><i class="fas fa-crown"></i></div>
+      <div class="setting-link-content">
+        <div class="setting-link-label">Account Type</div>
+        <div class="setting-link-sub">Premium</div>
+      </div>
+      <span class="btn-primary btn-sm" style="pointer-events:none;">Premium</span>
+    </div>
+    <div class="setting-link" id="delete-account-link">
+      <div class="setting-link-icon danger"><i class="fas fa-trash"></i></div>
+      <div class="setting-link-content">
+        <div class="setting-link-label" style="color:var(--danger);">Delete Account</div>
+        <div class="setting-link-sub">Permanently remove all data</div>
+      </div>
+      <i class="fas fa-chevron-right setting-link-arrow"></i>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="card-premium mb-20">
+    <h3 style="margin:0 0 6px;font-size:15px;font-weight:700;">
+      <i class="fas fa-clock-rotate"></i> Recent Activity
+    </h3>
+    <div id="activity-timeline">
+      <div class="activity-item">
+        <div class="activity-icon"><i class="fas fa-leaf"></i></div>
+        <div class="activity-content">
+          <div class="activity-desc">Harvested 12 quintals of wheat from Farm A</div>
+          <div class="activity-time">2 hours ago</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon warn"><i class="fas fa-droplet"></i></div>
+        <div class="activity-content">
+          <div class="activity-desc">Irrigation schedule updated for tomato crop</div>
+          <div class="activity-time">5 hours ago</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon info"><i class="fas fa-file-invoice"></i></div>
+        <div class="activity-content">
+          <div class="activity-desc">Invoice #INV-0342 generated for fertilizer purchase</div>
+          <div class="activity-time">Yesterday at 4:30 PM</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon"><i class="fas fa-users"></i></div>
+        <div class="activity-content">
+          <div class="activity-desc">Added 3 new workers to Farm B</div>
+          <div class="activity-time">Yesterday at 11:15 AM</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon alert"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="activity-content">
+          <div class="activity-desc">Pest alert: Aphids detected in rice field - treated immediately</div>
+          <div class="activity-time">2 days ago</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon"><i class="fas fa-cloud-sun"></i></div>
+        <div class="activity-content">
+          <div class="activity-desc">Weather advisory: Heavy rainfall expected next 48 hours</div>
+          <div class="activity-time">3 days ago</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:12px 0 0;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border-light);">
+      <i class="fas fa-circle" style="font-size:6px;vertical-align:middle;color:var(--primary-green);"></i>
+      Last login: Today at 8:30 AM from Chrome on Windows
+    </div>
+  </div>
+
+</main>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  var nameInput = document.getElementById('input-name');
+  var emailInput = document.getElementById('input-email');
+  var phoneInput = document.getElementById('input-phone');
+  var locationInput = document.getElementById('input-location');
+  var langSelect = document.getElementById('input-language');
+  var farmerIdInput = document.getElementById('input-farmer-id');
+  var photoInitials = document.getElementById('photo-initials');
+  var photoImg = document.getElementById('photo-img');
+  var photoDisplay = document.getElementById('profile-photo-display');
+  var previewImg = document.getElementById('preview-img');
+  var previewEmpty = document.getElementById('preview-empty');
+  var modal = document.getElementById('photo-modal');
+  var changeBtn = document.getElementById('change-photo-btn');
+  var cancelBtn = document.getElementById('photo-cancel-btn');
+  var saveBtn = document.getElementById('photo-save-btn');
+  var removeBtn = document.getElementById('photo-remove-btn');
+  var fileInput = document.getElementById('photo-file-input');
+
+  var selectedFileDataUrl = null;
+
+  /* ---------- load saved profile image ---------- */
+  function loadProfileImage() {
+    var saved = localStorage.getItem('fa-profile-image');
+    if (saved) {
+      photoImg.src = saved;
+      photoImg.style.display = 'block';
+      photoInitials.style.display = 'none';
+    } else {
+      photoImg.style.display = 'none';
+      photoInitials.style.display = 'inline';
+    }
+  }
+  loadProfileImage();
+
+  /* ---------- load user data ---------- */
+  function loadUserData() {
+    var user = null;
+    try {
+      if (window.UserStore && UserStore.getCurrentUser) {
+        user = UserStore.getCurrentUser();
+      }
+    } catch (e) {}
+    if (!user) {
+      try {
+        user = JSON.parse(localStorage.getItem('fa-current-user-data') || '{}');
+      } catch (e) {}
+    }
+    if (user) {
+      var name = user.full_name || user.fullName || '';
+      nameInput.value = name;
+      emailInput.value = user.email || '';
+      phoneInput.value = user.phone_number || user.phone || user.mobile || '';
+      var loc = [user.district || '', user.state || ''].filter(Boolean).join(', ');
+      locationInput.value = loc || '';
+      langSelect.value = user.preferred_language || 'en';
+      farmerIdInput.value = user.farmer_id || user.farmerId || 'FA-AS-00000004';
+
+      var initial = name ? name.charAt(0).toUpperCase() : 'F';
+      photoInitials.textContent = initial;
+
+      if (!localStorage.getItem('fa-profile-image')) {
+        photoImg.style.display = 'none';
+        photoInitials.style.display = 'inline';
+      }
+    }
+  }
+  loadUserData();
+
+  /* ---------- refresh from backend ---------- */
+  function loadBackendProfile() {
+    if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+    API.Profile.get().then(function (user) {
+      if (!user) return;
+      try { localStorage.setItem('fa-current-user-data', JSON.stringify(user)); } catch (e) {}
+      if (window.UserStore && UserStore.setCurrentUser) {
+        try { UserStore.setCurrentUser(user); } catch (e) {}
+      }
+      var name = user.full_name || '';
+      nameInput.value = name;
+      emailInput.value = user.email || '';
+      phoneInput.value = user.phone_number || user.phone || user.mobile || '';
+      var addr = (user.address || {});
+      var loc = [addr.district || user.district || '', addr.state || user.state || ''].filter(Boolean).join(', ');
+      locationInput.value = loc || '';
+      langSelect.value = user.preferred_language || 'en';
+      farmerIdInput.value = user.farmer_id || user.farmerId || farmerIdInput.value;
+      var initial = name ? name.charAt(0).toUpperCase() : 'F';
+      photoInitials.textContent = initial;
+    }).catch(function () {});
+  }
+  loadBackendProfile();
+
+  /* ---------- change photo modal ---------- */
+  changeBtn.addEventListener('click', function () {
+    selectedFileDataUrl = null;
+    previewImg.style.display = 'none';
+    previewEmpty.style.display = 'block';
+    fileInput.value = '';
+    modal.classList.add('active');
+  });
+
+  cancelBtn.addEventListener('click', function () {
+    modal.classList.remove('active');
+  });
+
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) {
+      modal.classList.remove('active');
+    }
+  });
+
+  fileInput.addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      if (window.showToast) {
+        showToast('Image must be under 5MB', 'error');
+      }
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      selectedFileDataUrl = ev.target.result;
+      previewImg.src = selectedFileDataUrl;
+      previewImg.style.display = 'block';
+      previewEmpty.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  saveBtn.addEventListener('click', function () {
+    if (!selectedFileDataUrl) {
+      if (window.showToast) {
+        showToast('Please select an image first', 'info');
+      }
+      return;
+    }
+    localStorage.setItem('fa-profile-image', selectedFileDataUrl);
+    photoImg.src = selectedFileDataUrl;
+    photoImg.style.display = 'block';
+    photoInitials.style.display = 'none';
+    modal.classList.remove('active');
+
+    var event = new CustomEvent('profile-image-changed', { detail: { image: selectedFileDataUrl } });
+    document.dispatchEvent(event);
+
+    if (window.showToast) {
+      showToast('Profile photo updated', 'success');
+    }
+  });
+
+  removeBtn.addEventListener('click', function () {
+    localStorage.removeItem('fa-profile-image');
+    photoImg.style.display = 'none';
+    photoInitials.style.display = 'inline';
+    selectedFileDataUrl = null;
+    modal.classList.remove('active');
+
+    var event = new CustomEvent('profile-image-changed', { detail: { image: null } });
+    document.dispatchEvent(event);
+
+    if (window.showToast) {
+      showToast('Profile photo removed', 'info');
+    }
+  });
+
+  /* ---------- save personal info ---------- */
+  document.getElementById('personal-info-save-btn').addEventListener('click', function () {
+    var name = nameInput.value.trim();
+    var email = emailInput.value.trim();
+    var phone = phoneInput.value.trim();
+    var location = locationInput.value.trim();
+    var lang = langSelect.value;
+
+    if (!name) {
+      if (window.showToast) {
+        showToast('Full name is required', 'error');
+      }
+      return;
+    }
+
+    var userData = null;
+    try {
+      userData = JSON.parse(localStorage.getItem('fa-current-user-data') || '{}');
+    } catch (e) {
+      userData = {};
+    }
+    userData.full_name = name;
+    userData.email = email;
+    userData.phone = phone;
+    userData.mobile = phone;
+    userData.preferred_language = lang;
+    if (location) {
+      var parts = location.split(',').map(function (s) { return s.trim(); });
+      userData.district = parts[0] || '';
+      userData.state = parts[1] || '';
+    }
+    localStorage.setItem('fa-current-user-data', JSON.stringify(userData));
+    localStorage.setItem('user-name', name);
+    localStorage.setItem('user-display-name', name);
+
+    var initial = name.charAt(0).toUpperCase();
+    photoInitials.textContent = initial;
+    if (!localStorage.getItem('fa-profile-image')) {
+      photoInitials.style.display = 'inline';
+      photoImg.style.display = 'none';
+    }
+
+    if (window.UserStore && UserStore.hydrate) {
+      UserStore.hydrate();
+    }
+
+    if (window.API && localStorage.getItem('fa-auth-token')) {
+      var payload = {
+        full_name: name,
+        email: email || null,
+        phone_number: phone || null,
+        preferred_language: lang
+      };
+      API.Profile.update(payload).catch(function (err) {
+        if (window.showToast) showToast((err && err.message) || 'Profile update failed', 'error');
+      });
+      if (location) {
+        var locParts = location.split(',').map(function (s) { return s.trim(); });
+        API.Profile.updateAddress({ district: locParts[0] || null, state: locParts[1] || null }).catch(function () {});
+      }
+    }
+
+    if (window.showToast) {
+      showToast('Profile saved successfully', 'success');
+    }
+  });
+
+  /* ---------- account settings ---------- */
+  document.getElementById('change-password-link').addEventListener('click', function () {
+    if (window.showToast) {
+      showToast('Password change page coming soon', 'info');
+    }
+  });
+
+  document.getElementById('account-type-link').addEventListener('click', function () {
+    window.location.href = 'premium.html';
+  });
+
+  document.getElementById('delete-account-link').addEventListener('click', function () {
+    if (window.FarmApp && FarmApp.confirm && FarmApp.confirm.show) {
+      FarmApp.confirm.show({
+        icon: 'fas fa-exclamation-triangle',
+        title: 'Delete Account?',
+        message: 'This will permanently delete all your farm data, records, and account. This action cannot be undone.',
+        onConfirm: function () {
+          localStorage.clear();
+          if (window.showToast) {
+            showToast('Account deleted', 'info');
+          }
+          setTimeout(function () { window.location.href = 'login.html'; }, 1000);
+        }
+      });
+    } else {
+      if (confirm('This will permanently delete all your data. Are you sure?')) {
+        localStorage.clear();
+        window.location.href = 'login.html';
+      }
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

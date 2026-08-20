@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Reports Center</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <main class="page-container">
+
+    <section class="hero-dashboard" style="background:var(--gradient-primary); margin-bottom:25px;">
+      <h2><i class="fas fa-file-contract"></i> Reports Center</h2>
+      <p style="font-size:13px; color:rgba(255,255,255,0.9); margin-top:5px;">
+        Generate agricultural reports instantly using active field data. Print or export files as PDF / Excel.
+      </p>
+    </section>
+
+    <section class="card-premium">
+      <h3 style="font-size:16px; margin-bottom:15px;"><i class="fas fa-gears" style="color:var(--premium-green); margin-right:8px;"></i> Configure Report Parameters</h3>
+      <div class="form-group">
+        <label class="form-label" for="report-select-type">Report Category</label>
+        <select id="report-select-type" class="form-input" onchange="loadSelectedReportTemplate()" style="background-image:none;">
+          <option value="daily">Daily Farm Status Briefing</option>
+          <option value="weekly">Weekly Operational Summary</option>
+          <option value="crop">Detailed Crop Yield & Health Analysis</option>
+          <option value="weather">Weather Risk & Rainfall Advisory</option>
+          <option value="expense">Financial Expense Ledger Breakdown</option>
+          <option value="livestock">Livestock Lactation & Health Directory</option>
+          <option value="sustainability">Carbon Footprint & Sustainability Report</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn-primary" style="flex:2;" onclick="generateActiveReport()"><i class="fas fa-file-invoice"></i> Compile Report</button>
+        <button class="btn-secondary" style="flex:1;" onclick="triggerAction('print')"><i class="fas fa-print"></i> Print</button>
+        <button class="btn-secondary" style="flex:1;" onclick="triggerAction('pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+      </div>
+    </section>
+
+    <section class="card-premium" id="compiled-report-view">
+      <div style="text-align:center; padding:40px 0; color:var(--text-muted);">
+        <i class="fas fa-circle-info" style="font-size:32px; margin-bottom:10px;"></i>
+        <div>Select parameters and tap "Compile Report" to display outputs.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="print-modal" class="cmd-palette-backdrop">
+    <div class="cmd-palette-box" style="padding: 25px; width: 90%; max-width: 600px; max-height:85vh; overflow-y:auto; transform: none; margin-top: 5vh; background:white; color:black;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ddd; padding-bottom:10px; margin-bottom:15px;">
+        <h3 style="color:#000;"><i class="fas fa-print"></i> System Print Preview</h3>
+        <button class="widget-action-btn" onclick="togglePrintModal(false)"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="print-modal-body" style="text-align:left; font-family:serif; line-height:1.6; font-size:12px;"></div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #ddd; padding-top:15px; margin-top:20px;">
+        <button class="btn-secondary" style="background:#eee; color:#333; padding:8px 15px;" onclick="togglePrintModal(false)">Close Preview</button>
+        <button class="btn-primary" style="padding:8px 15px;" onclick="showToast('Connecting to local printer queue... Complete!','info')">Print Document</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    const reportTemplates = {
+      daily: `
+        <div style="text-align:center; border-bottom:2px solid var(--premium-green); padding-bottom:10px; margin-bottom:15px;">
+          <h2 style="color:var(--primary-dark-green); font-size:18px;">DAILY FARM STATUS BRIEFING</h2>
+          <p style="font-size:10px; color:var(--text-secondary);">Date: ${new Date().toLocaleDateString()} • Verified by Farm Assist AI</p>
+        </div>
+        <div style="margin-bottom:15px; display:flex; justify-content:space-between; font-size:11px;">
+          <span><strong>Farm:</strong> <span data-user-farm="name">My Farm</span></span>
+          <span><strong>Manager:</strong> <span data-user="fullName">Farmer</span></span>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:15px;">
+          <thead>
+            <tr style="background:var(--light-gray); border-bottom:1px solid var(--border-light); text-align:left;">
+              <th style="padding:8px;">Plot</th><th style="padding:8px;">Crop</th><th style="padding:8px;">Moisture</th><th style="padding:8px;">NDVI Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:8px; border-bottom:1px solid var(--border-light);">Plot A</td><td style="padding:8px; border-bottom:1px solid var(--border-light);">Rice</td><td style="padding:8px; border-bottom:1px solid var(--border-light);">65%</td><td style="padding:8px; border-bottom:1px solid var(--border-light); color:var(--success);">89% (Healthy)</td></tr>
+            <tr><td style="padding:8px; border-bottom:1px solid var(--border-light);">Plot B</td><td style="padding:8px; border-bottom:1px solid var(--border-light);">Cotton</td><td style="padding:8px; border-bottom:1px solid var(--border-light);">48%</td><td style="padding:8px; border-bottom:1px solid var(--border-light); color:var(--warning);">70% (Irrigation Due)</td></tr>
+            <tr><td style="padding:8px; border-bottom:1px solid var(--border-light);">Plot C</td><td style="padding:8px; border-bottom:1px solid var(--border-light);">Maize</td><td style="padding:8px; border-bottom:1px solid var(--border-light);">62%</td><td style="padding:8px; border-bottom:1px solid var(--border-light); color:var(--success);">85% (Healthy)</td></tr>
+          </tbody>
+        </table>
+        <div style="font-size:10px; background:rgba(31,122,76,0.06); padding:10px; border-radius:8px;">
+          <strong>AI Recommendations summary:</strong> High evaporation winds expected during the afternoon. Apply mulching sheets in tomato rows immediately.
+        </div>`,
+      weekly: `
+        <div style="text-align:center; border-bottom:2px solid var(--premium-green); padding-bottom:10px; margin-bottom:15px;">
+          <h2 style="color:var(--primary-dark-green); font-size:18px;">WEEKLY OPERATIONAL SUMMARY REPORT</h2>
+          <p style="font-size:10px; color:var(--text-secondary);">Week 28 of 2026 • Area Central Sector</p>
+        </div>
+        <div style="font-size:11px; margin-bottom:15px; line-height:1.6;">
+          • <strong>Total logged activities:</strong> 14 operations complete.<br>
+          • <strong>Fertilizer input:</strong> 50kg organic NPK spread in Plot C.<br>
+          • <strong>Irrigation water consumed:</strong> 16,400 Litres total.<br>
+          • <strong>Completed Harvests:</strong> Plot A basmati grains test cut fetched ₹52,000 income.
+        </div>`,
+      crop: `
+        <div style="text-align:center; border-bottom:2px solid var(--premium-green); padding-bottom:10px; margin-bottom:15px;">
+          <h2 style="color:var(--primary-dark-green); font-size:18px;">CROP YIELD & NDVI HEALTH ASSESSMENT</h2>
+          <p style="font-size:10px; color:var(--text-secondary);">Derived via Sentinel-2 Spectral Overlay Models</p>
+        </div>
+        <div style="font-size:11px; line-height:1.6;">
+          <strong>Plot-wise Health indices:</strong><br>
+          • Plot A - Rice: 89% (Stable growth, expected yield: 12.4 Tonnes)<br>
+          • Plot B - Cotton: 70% (Nitrogen levels lower, moisture warning active)<br>
+          • Plot C - Maize: 85% (Optimal tilling complete, standard fertilization finished)
+        </div>`,
+      weather: `
+        <div style="text-align:center; border-bottom:2px solid var(--premium-green); padding-bottom:10px; margin-bottom:15px;">
+          <h2 style="color:var(--primary-dark-green); font-size:18px;">WEATHER RISK & RAINFALL ADVISORY</h2>
+          <p style="font-size:10px; color:var(--text-secondary);">Forecast Models matched to Pune coordinates</p>
+        </div>
+        <div style="font-size:11px; line-height:1.6;">
+          <strong>Risk Matrix:</strong><br>
+          • Heavy Rain chance (July 20): <span class="badge-status danger">High Risk (32mm Expected)</span><br>
+          • Soil erosion index: <span class="badge-status warning">Medium Risk (clear drain lines)</span><br>
+          • Evaporation rating: Low (humid scatter winds)
+        </div>`,
+      expense: `
+        <div style="text-align:center; border-bottom:2px solid var(--premium-green); padding-bottom:10px; margin-bottom:15px;">
+          <h2 style="color:var(--primary-dark-green); font-size:18px;">FINANCIAL CAPITAL OVERHEAD BREAKDOWN</h2>
+          <p style="font-size:10px; color:var(--text-secondary);">Ledger Period: July 2026</p>
+        </div>
+        <div style="font-size:11px; line-height:1.6; margin-bottom:15px;">
+          • Total Income: ₹72,400 (Crop sales, dairy yields)<br>
+          • Total Expenditure: ₹19,800 (NPK boosters, tractor fuel, manual weeders)<br>
+          • Net Cash flow: <strong>+₹52,600 (Profitable)</strong>
+        </div>`,
+      livestock: `
+        <div style="text-align:center; border-bottom:2px solid var(--premium-green); padding-bottom:10px; margin-bottom:15px;">
+          <h2 style="color:var(--primary-dark-green); font-size:18px;">LIVESTOCK HEALTH & PRODUCTION STATUS</h2>
+          <p style="font-size:10px; color:var(--text-secondary);">Lactation yields matched to vaccination dates</p>
+        </div>
+        <div style="font-size:11px; line-height:1.6;">
+          • Cow 'Ganga' (Gir): 12L/Day • Health: Healthy • Vaccines: Up to date<br>
+          • Cow 'Saraswati' (Murrah): 14L/Day • Health: Vaccine Due (July 25)<br>
+          • Poultry batch (25 Hens): 22 eggs/day average yield
+        </div>`,
+      sustainability: `
+        <div style="text-align:center; border-bottom:2px solid var(--premium-green); padding-bottom:10px; margin-bottom:15px;">
+          <h2 style="color:var(--primary-dark-green); font-size:18px;">SUSTAINABILITY & CARBON RECORD</h2>
+          <p style="font-size:10px; color:var(--text-secondary);">Environmental rating and resource usage efficiency</p>
+        </div>
+        <div style="font-size:11px; line-height:1.6;">
+          • <strong>Renewable Power Share:</strong> 85% (Solar tubewells connected)<br>
+          • <strong>Water Conservation ratio:</strong> +35% (Drip arrays installed)<br>
+          • <strong>Sustainability Rating:</strong> <span class="badge-status success">A-Grade (Verified)</span>
+        </div>`
+    };
+
+    function loadSelectedReportTemplate() {}
+    function generateActiveReport() {
+      const type = document.getElementById("report-select-type").value;
+      const container = document.getElementById("compiled-report-view");
+      container.style.animation = "toastFadeIn 0.3s ease";
+      container.innerHTML = reportTemplates[type] || "Template Error";
+      showToast("Report compiled from database!", "success");
+    }
+    function triggerAction(action) {
+      const type = document.getElementById("report-select-type").value;
+      const content = reportTemplates[type] || "No report compiled yet. Click compile report first.";
+      if (action === 'print') { togglePrintModal(true); document.getElementById("print-modal-body").innerHTML = content; }
+      else if (action === 'pdf') { showToast("Generating PDF compilation...", "warning"); setTimeout(() => { showToast("PDF report downloaded to folder downloads/reports!", "success"); }, 1500); }
+    }
+    function togglePrintModal(show) {
+      const modal = document.getElementById("print-modal");
+      if (show) modal.classList.add("active"); else modal.classList.remove("active");
+    }
+  </script>
+</body>
+</html>

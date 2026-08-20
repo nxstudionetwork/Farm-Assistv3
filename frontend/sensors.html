@@ -1,0 +1,451 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="sensors">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Sensors</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .sensor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .sensor-stat {
+      background: var(--bg-card-soft);
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
+      border: 1px solid var(--border-light);
+      transition: all 0.2s ease;
+    }
+    .sensor-stat:hover { border-color: var(--medium-green); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .sensor-stat .stat-icon { font-size: 22px; margin-bottom: 6px; display: block; }
+    .sensor-stat .stat-value { font-size: 22px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
+    .sensor-stat .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .progress-track { height: 5px; background: var(--border-light); border-radius: 10px; margin-top: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 10px; background: var(--primary-green); transition: width 0.8s ease; }
+    .demo-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(233, 182, 64, 0.15); color: #A67C00;
+      padding: 5px 14px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+      border: 1px solid rgba(233, 182, 64, 0.3);
+      margin-left: 10px;
+    }
+    .chart-placeholder {
+      background: var(--bg-card-soft); border-radius: 10px;
+      padding: 20px 14px 14px 14px;
+      border: 1px solid var(--border-light);
+      min-height: 180px;
+      position: relative;
+    }
+    .chart-placeholder .chart-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+    .chart-bars { display: flex; align-items: flex-end; justify-content: space-around; height: 100px; gap: 4px; }
+    .chart-bars .bar {
+      width: 100%; border-radius: 4px 4px 0 0;
+      background: var(--light-green);
+      min-height: 4px;
+      transition: height 0.6s ease;
+      position: relative;
+    }
+    .chart-bars .bar-label { font-size: 8px; color: var(--text-muted); text-align: center; margin-top: 4px; }
+    .skeleton-pulse {
+      background: linear-gradient(90deg, var(--bg-card-soft) 25%, #e0e8e0 50%, var(--bg-card-soft) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    .skeleton-row { height: 40px; margin-bottom: 8px; }
+    .skeleton-stat { height: 80px; border-radius: 12px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .tab-bar {
+      display: flex; gap: 6px; margin-bottom: 14px;
+      border-bottom: 1px solid var(--border-light); padding-bottom: 8px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      font-size: 11px; font-weight: 600; padding: 6px 14px;
+      border-radius: 20px; background: transparent; color: var(--text-muted);
+      cursor: pointer; white-space: nowrap; transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+    .tab-btn:hover { background: var(--bg-card-soft); }
+    .tab-btn.active { background: var(--primary-green); color: #fff; border-color: var(--primary-green); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .sensor-icon-online { color: var(--success); }
+    .sensor-icon-offline { color: var(--danger); }
+    .battery-high { color: var(--success); }
+    .battery-med { color: var(--warning); }
+    .battery-low { color: var(--danger); }
+    @media (max-width: 768px) {
+      .sensor-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .sensor-grid { grid-template-columns: 1fr; }
+      .demo-badge { margin-left: 0; margin-top: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page-container">
+
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-microchip"></i> Sensors <span class="demo-badge"><i class="fas fa-flask"></i> Demo Sensor Data</span></h1>
+        <p>Monitor soil moisture, temperature, humidity, and crop health from your smart sensors.</p>
+      </div>
+      <select class="form-select" id="farm-selector" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-light); font-size:13px; background:white; min-width:150px;" onchange="filterByFarm()">
+        <option value="all">All Farms</option>
+        <option value="Green Acre">Green Acre</option>
+        <option value="Saraswati">Saraswati</option>
+        <option value="Deccan">Deccan</option>
+      </select>
+    </div>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px; margin-bottom:14px;"><i class="fas fa-chart-simple" style="color:var(--primary-green);margin-right:6px"></i> Sensor Summary</h3>
+      <div id="summary-stats" class="sensor-grid">
+        <div class="sensor-stat skeleton-pulse skeleton-stat"></div>
+        <div class="sensor-stat skeleton-pulse skeleton-stat"></div>
+        <div class="sensor-stat skeleton-pulse skeleton-stat"></div>
+        <div class="sensor-stat skeleton-pulse skeleton-stat"></div>
+      </div>
+    </section>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px; margin-bottom:14px;"><i class="fas fa-list" style="color:var(--primary-green);margin-right:6px"></i> Sensor Status</h3>
+      <div id="sensor-table-container" class="responsive-table">
+        <div class="skeleton-pulse skeleton-row" style="width:100%"></div>
+        <div class="skeleton-pulse skeleton-row" style="width:100%"></div>
+        <div class="skeleton-pulse skeleton-row" style="width:100%"></div>
+        <div class="skeleton-pulse skeleton-row" style="width:100%"></div>
+        <div class="skeleton-pulse skeleton-row" style="width:100%"></div>
+      </div>
+    </section>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px; margin-bottom:14px;"><i class="fas fa-chart-line" style="color:var(--primary-green);margin-right:6px"></i> Charts & Trends</h3>
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="tab-humidity">Humidity</button>
+        <button class="tab-btn" data-tab="tab-moisture">Soil Moisture</button>
+        <button class="tab-btn" data-tab="tab-temperature">Temperature</button>
+        <button class="tab-btn" data-tab="tab-growth">Growth Index</button>
+      </div>
+
+      <div id="tab-humidity" class="tab-panel active">
+        <div class="chart-placeholder" data-chart="line" data-values="65,68,72,70,74,73,71" data-labels="Mon,Tue,Wed,Thu,Fri,Sat,Sun">
+          <div class="chart-title"><i class="fas fa-droplet" style="color:var(--info);margin-right:4px"></i> Humidity Trends (7 days)</div>
+          <div class="chart-bars" id="chart-humidity-bars"></div>
+        </div>
+      </div>
+      <div id="tab-moisture" class="tab-panel">
+        <div class="chart-placeholder" data-chart="line" data-values="58,55,62,60,57,63,61" data-labels="Mon,Tue,Wed,Thu,Fri,Sat,Sun">
+          <div class="chart-title"><i class="fas fa-tint" style="color:#3498db;margin-right:4px"></i> Soil Moisture (7 days)</div>
+          <div class="chart-bars" id="chart-moisture-bars"></div>
+        </div>
+      </div>
+      <div id="tab-temperature" class="tab-panel">
+        <div class="chart-placeholder" data-chart="line" data-values="26,28,30,29,27,31,28" data-labels="Mon,Tue,Wed,Thu,Fri,Sat,Sun">
+          <div class="chart-title"><i class="fas fa-temperature-high" style="color:var(--danger);margin-right:4px"></i> Temperature (7 days)</div>
+          <div class="chart-bars" id="chart-temp-bars"></div>
+        </div>
+      </div>
+      <div id="tab-growth" class="tab-panel">
+        <div class="chart-placeholder" data-chart="line" data-values="42,48,55,59,63,68,72" data-labels="Mon,Tue,Wed,Thu,Fri,Sat,Sun">
+          <div class="chart-title"><i class="fas fa-seedling" style="color:var(--light-green);margin-right:4px"></i> Plant Growth Index</div>
+          <div class="chart-bars" id="chart-growth-bars"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px; margin-bottom:14px;"><i class="fas fa-bell" style="color:var(--primary-green);margin-right:6px"></i> Alerts & Notifications</h3>
+      <div id="alerts-container">
+        <div class="skeleton-pulse skeleton-row" style="width:100%"></div>
+        <div class="skeleton-pulse skeleton-row" style="width:100%"></div>
+        <div class="skeleton-pulse skeleton-row" style="width:100%"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var SUMMARY_DATA = [
+      { icon: 'fa-tint', value: '62%', label: 'Soil Moisture', color: '#3498db', progress: 62 },
+      { icon: 'fa-temperature-half', value: '28\u00B0C', label: 'Soil Temperature', color: '#e67e22', progress: null },
+      { icon: 'fa-droplet', value: '74%', label: 'Air Humidity', color: '#40916C', progress: 74 },
+      { icon: 'fa-water', value: '1.2m', label: 'Water Level', color: '#74B9FF', progress: null }
+    ];
+
+    var SENSOR_ROWS = [
+      { name: 'Soil Sensor A - North Field', status: 'Connected', icon: 'fa-wifi', statusClass: 'sensor-icon-online', lastSync: '2 min ago', battery: 87, batteryClass: 'battery-high' },
+      { name: 'Weather Station - Main', status: 'Connected', icon: 'fa-wifi', statusClass: 'sensor-icon-online', lastSync: '5 min ago', battery: 92, batteryClass: 'battery-high' },
+      { name: 'Water Level - Pond', status: 'Connected', icon: 'fa-wifi', statusClass: 'sensor-icon-online', lastSync: '1 min ago', battery: 73, batteryClass: 'battery-med' },
+      { name: 'Crop Health Camera', status: 'Connected', icon: 'fa-wifi', statusClass: 'sensor-icon-online', lastSync: '12 min ago', battery: 55, batteryClass: 'battery-med' },
+      { name: 'Irrigation Controller', status: 'Offline', icon: 'fa-exclamation-triangle', statusClass: 'sensor-icon-offline', lastSync: '2 hours ago', battery: 18, batteryClass: 'battery-low' }
+    ];
+
+    var ALERTS_DATA = [
+      { type: 'warning', icon: 'fa-exclamation-triangle', title: 'Soil moisture below threshold in North Field', detail: 'Current reading 48% \u2014 below 55% threshold. Irrigation recommended.', time: '10 min ago' },
+      { type: 'danger', icon: 'fa-bolt', title: 'Temperature spike detected - South Field', detail: 'Canopy temp at 38\u00B0C for 30+ min. Heat stress risk elevated.', time: '35 min ago' },
+      { type: 'success', icon: 'fa-check-circle', title: 'All sensors operating normally', detail: 'No other anomalies detected across 5 active sensor nodes.', time: 'Just now' }
+    ];
+
+    function renderSummary() {
+      var container = document.getElementById('summary-stats');
+      if (!container) return;
+      var html = '';
+      for (var i = 0; i < SUMMARY_DATA.length; i++) {
+        var s = SUMMARY_DATA[i];
+        html += '<div class="sensor-stat">' +
+          '<span class="stat-icon" style="color:' + s.color + '"><i class="fas ' + s.icon + '"></i></span>' +
+          '<div class="stat-value">' + s.value + '</div>' +
+          '<div class="stat-label">' + s.label + '</div>';
+        if (s.progress !== null) {
+          html += '<div class="progress-track"><div class="progress-fill" style="width:' + s.progress + '%"></div></div>';
+        }
+        html += '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function renderSensorTable() {
+      var container = document.getElementById('sensor-table-container');
+      if (!container) return;
+      var html = '<table><thead><tr>' +
+        '<th>Sensor Name</th><th>Status</th><th>Last Synced</th><th>Battery</th>' +
+        '</tr></thead><tbody>';
+      for (var i = 0; i < SENSOR_ROWS.length; i++) {
+        var r = SENSOR_ROWS[i];
+        var statusBadge = r.status === 'Connected'
+          ? '<span class="badge badge-green"><i class="fas fa-circle" style="font-size:7px;margin-right:3px"></i> Connected</span>'
+          : '<span class="badge badge-danger"><i class="fas fa-circle" style="font-size:7px;margin-right:3px"></i> Offline</span>';
+        var batColor = r.battery > 70 ? 'var(--success)' : (r.battery > 30 ? 'var(--warning)' : 'var(--danger)');
+        html += '<tr>' +
+          '<td><i class="fas ' + r.icon + '" style="margin-right:6px;color:var(--primary-green)"></i> ' + r.name + '</td>' +
+          '<td>' + statusBadge + '</td>' +
+          '<td style="font-size:11px;color:var(--text-muted)">' + r.lastSync + '</td>' +
+          '<td><span style="font-weight:600;color:' + batColor + '">' + r.battery + '%</span></td>' +
+          '</tr>';
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function renderAlerts() {
+      var container = document.getElementById('alerts-container');
+      if (!container) return;
+      var html = '';
+      for (var i = 0; i < ALERTS_DATA.length; i++) {
+        var a = ALERTS_DATA[i];
+        var bColor = a.type === 'warning' ? 'var(--warning)' : (a.type === 'danger' ? 'var(--danger)' : 'var(--success)');
+        var bgColor = a.type === 'warning' ? 'var(--sun-soft)' : (a.type === 'danger' ? '#FFF0F0' : 'var(--soft-green)');
+        html += '<div class="alert-strip ' + a.type + '" style="border-left-color:' + bColor + ';background:' + bgColor + '">' +
+          '<div class="alert-content">' +
+          '<i class="fas ' + a.icon + '" style="color:' + bColor + ';margin-right:8px"></i>' +
+          '<div>' +
+          '<strong>' + a.title + '</strong>' +
+          '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px">' + a.detail + '</div>' +
+          '</div>' +
+          '</div>' +
+          '<span class="alert-time">' + a.time + '</span>' +
+          '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function renderChartBars(chartId, valuesStr) {
+      var container = document.getElementById(chartId);
+      if (!container || !valuesStr) return;
+      var values = valuesStr.split(',');
+      var maxVal = 100;
+      var nums = [];
+      for (var i = 0; i < values.length; i++) {
+        nums.push(parseFloat(values[i]));
+      }
+      for (var j = 0; j < nums.length; j++) {
+        if (nums[j] > maxVal) maxVal = nums[j];
+      }
+      maxVal = maxVal * 1.15;
+      var labels = (container.parentElement.getAttribute('data-labels') || '').split(',');
+      var html = '';
+      var colors = ['#52B788', '#40916C', '#2D8659', '#52B788', '#40916C', '#2D8659', '#52B788'];
+      for (var k = 0; k < nums.length; k++) {
+        var pct = (nums[k] / maxVal) * 100;
+        var label = labels[k] || '';
+        html += '<div style="display:flex;flex-direction:column;align-items:center;flex:1">' +
+          '<div class="bar" style="height:' + pct + '%;background:' + colors[k % colors.length] + '"></div>' +
+          '<div class="bar-label">' + label + '</div>' +
+          '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function initCharts() {
+      renderChartBars('chart-humidity-bars', '65,68,72,70,74,73,71');
+      renderChartBars('chart-moisture-bars', '58,55,62,60,57,63,61');
+      renderChartBars('chart-temp-bars', '26,28,30,29,27,31,28');
+      renderChartBars('chart-growth-bars', '42,48,55,59,63,68,72');
+    }
+
+    function initTabs() {
+      var tabBtns = document.querySelectorAll('.tab-btn');
+      for (var i = 0; i < tabBtns.length; i++) {
+        (function (btn) {
+          btn.addEventListener('click', function () {
+            var activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab) activeTab.classList.remove('active');
+            btn.classList.add('active');
+            var panels = document.querySelectorAll('.tab-panel');
+            for (var j = 0; j < panels.length; j++) {
+              panels[j].classList.remove('active');
+            }
+            var target = document.getElementById(btn.getAttribute('data-tab'));
+            if (target) target.classList.add('active');
+          });
+        })(tabBtns[i]);
+      }
+    }
+
+    function filterByFarm() {
+      var selectedFarm = document.getElementById('farm-selector').value;
+      showToast('Loading sensors for: ' + (selectedFarm === 'all' ? 'All Farms' : selectedFarm), 'info');
+      
+      // In a real implementation, this would fetch farm-specific sensor data
+      if (window.API && localStorage.getItem('fa-auth-token')) {
+        console.log('Fetching sensors for farm:', selectedFarm);
+        // API call to get farm-specific sensors would go here
+      }
+      
+      // Re-render with current data (in production, this would filter by farm)
+      loadData();
+    }
+
+    function loadData() {
+      renderSummary();
+      renderSensorTable();
+      renderAlerts();
+      initCharts();
+    }
+
+    function loadBackendData() {
+      if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+      Promise.all([
+        API.Sensor.list().catch(function() { return []; }),
+        API.Sensor.getReadings('soil_moisture', 168).catch(function() { return []; }),
+        API.Sensor.getReadings('humidity', 168).catch(function() { return []; }),
+        API.Sensor.getReadings('temperature', 168).catch(function() { return []; })
+      ]).then(function(results) {
+        var sensors = results[0] || [];
+        if (!sensors.length) return;
+        var moisture = results[1] || [];
+        var humidity = results[2] || [];
+        var temp = results[3] || [];
+
+        function lastReading(type) {
+          for (var i = 0; i < sensors.length; i++) {
+            if (sensors[i].sensor_type === type) return sensors[i];
+          }
+          return null;
+        }
+
+        var summaryMap = {
+          soil_moisture: { label: 'Soil Moisture', icon: 'fa-tint', color: '#3498db', unit: '%' },
+          temperature: { label: 'Soil Temperature', icon: 'fa-temperature-half', color: '#e67e22', unit: '\u00B0C' },
+          humidity: { label: 'Air Humidity', icon: 'fa-droplet', color: '#40916C', unit: '%' },
+          water_level: { label: 'Water Level', icon: 'fa-water', color: '#74B9FF', unit: 'm' }
+        };
+        var newSummary = [];
+        var order = ['soil_moisture', 'temperature', 'humidity', 'water_level'];
+        for (var o = 0; o < order.length; o++) {
+          var s = lastReading(order[o]);
+          if (!s || !s.last_reading) continue;
+          var cfg = summaryMap[s.sensor_type];
+          newSummary.push({
+            icon: cfg.icon,
+            value: s.last_reading.value + (cfg.unit || ''),
+            label: cfg.label,
+            color: cfg.color,
+            progress: s.sensor_type === 'soil_moisture' || s.sensor_type === 'humidity' ? Math.min(100, s.last_reading.value) : null
+          });
+        }
+        if (newSummary.length) SUMMARY_DATA = newSummary;
+
+        var newRows = [];
+        for (var i = 0; i < sensors.length; i++) {
+          var sen = sensors[i];
+          newRows.push({
+            name: sen.sensor_name || sen.sensor_id,
+            status: sen.is_active === false ? 'Offline' : 'Connected',
+            icon: sen.is_active === false ? 'fa-exclamation-triangle' : 'fa-wifi',
+            statusClass: sen.is_active === false ? 'sensor-icon-offline' : 'sensor-icon-online',
+            lastSync: (sen.last_reading && sen.last_reading.recorded_at) ? String(sen.last_reading.recorded_at).slice(0, 16) : 'Live',
+            battery: sen.battery_level != null ? sen.battery_level : 100,
+            batteryClass: (sen.battery_level != null && sen.battery_level > 70) ? 'battery-high' : (sen.battery_level != null && sen.battery_level > 30) ? 'battery-med' : 'battery-low'
+          });
+        }
+        if (newRows.length) SENSOR_ROWS = newRows;
+
+        var alerts = [];
+        for (var a = 0; a < sensors.length; a++) {
+          var s2 = sensors[a];
+          var lr = s2.last_reading || {};
+          if (s2.battery_level != null && s2.battery_level <= 30) {
+            alerts.push({
+              type: 'warning', icon: 'fa-battery-quarter', time: 'Now',
+              title: 'Low battery - ' + (s2.sensor_name || s2.sensor_id),
+              detail: 'Battery at ' + s2.battery_level + '%. Replace or recharge soon.'
+            });
+          }
+          if (lr.status === 'warning') {
+            alerts.push({
+              type: 'warning', icon: 'fa-exclamation-triangle', time: 'Now',
+              title: 'Warning - ' + (s2.sensor_name || s2.sensor_id),
+              detail: 'Current reading ' + lr.value + (lr.unit || '') + ' requires attention.'
+            });
+          }
+          if (s2.is_active === false) {
+            alerts.push({
+              type: 'danger', icon: 'fa-plug', time: 'Now',
+              title: 'Offline - ' + (s2.sensor_name || s2.sensor_id),
+              detail: 'Sensor is not reporting. Check connectivity and power.'
+            });
+          }
+        }
+        if (!alerts.length) {
+          alerts.push({
+            type: 'success', icon: 'fa-check-circle', time: 'Just now',
+            title: 'All sensors operating normally',
+            detail: 'No anomalies detected across ' + sensors.length + ' sensor nodes.'
+          });
+        }
+        ALERTS_DATA = alerts;
+
+        if (moisture.length) renderChartBars('chart-moisture-bars', moisture.map(function(m) { return m.value; }).join(','));
+        if (humidity.length) renderChartBars('chart-humidity-bars', humidity.map(function(m) { return m.value; }).join(','));
+        if (temp.length) renderChartBars('chart-temp-bars', temp.map(function(m) { return m.value; }).join(','));
+
+        loadData();
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () {
+        initTabs();
+        setTimeout(loadData, 500);
+        loadBackendData();
+      });
+    } else {
+      initTabs();
+      setTimeout(loadData, 500);
+      loadBackendData();
+    }
+  })();
+  </script>
+</body>
+</html>

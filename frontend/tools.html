@@ -1,0 +1,317 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="tools">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Equipment Marketplace</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .tools-filters-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    @media (min-width: 640px) { .tools-filters-row { grid-template-columns: repeat(4, 1fr); } }
+    .form-select {
+      width: 100%; padding: 9px 12px; border: 1px solid var(--border-medium);
+      border-radius: var(--radius-sm); background: white; color: var(--text-primary);
+      font-size: 12px; cursor: pointer; transition: border-color 0.2s;
+      -webkit-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238BA08E'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+    }
+    .form-select:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(27,94,63,0.1); }
+    .tools-count { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; }
+    .tools-toggle-desc { font-size: 12px; color: var(--text-muted); margin-top: -10px; margin-bottom: 14px; }
+    .eq-card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: white; margin-bottom: 10px; }
+    .eq-card-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .eq-card-category { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .eq-card-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--text-secondary); margin: 6px 0; }
+    .eq-card-meta i { width: 14px; color: var(--primary-green); }
+    .eq-rating { display: flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; }
+    .eq-rating i { color: #FFB300; font-size: 11px; }
+    .eq-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+    .eq-card-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .eq-card-actions .btn-primary, .eq-card-actions .btn-sm { flex: 1; }
+    .modal-box-wide { max-width: 520px; }
+    .modal-specs { margin: 14px 0; }
+    .modal-specs dt { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-top: 6px; }
+    .modal-specs dd { font-size: 13px; color: var(--text-primary); margin-left: 0; }
+    .modal-contact { background: var(--bg-card-soft); border-radius: var(--radius-sm); padding: 12px; margin: 12px 0; font-size: 13px; }
+    .modal-price-row { display: flex; gap: 12px; margin: 14px 0; }
+    .modal-price-row .price-card { flex: 1; margin-bottom: 0; }
+  </style>
+</head>
+<body>
+
+<main class="page-container">
+
+
+  <div class="page-header">
+    <div>
+      <h1><i class="fas fa-tractor"></i>Equipment Marketplace</h1>
+      <p>Buy or rent farming equipment from verified sellers</p>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <i class="fas fa-search"></i>
+    <input type="text" id="eqSearch" placeholder="Search equipment by name, brand, or category..." oninput="applyFilters()">
+  </div>
+
+  <!-- Buy / Rent Toggle -->
+  <div class="filter-tabs" id="eqToggleRow">
+    <button class="filter-tab active" data-mode="buy" onclick="setMode('buy')"><i class="fas fa-shopping-cart"></i> Buy</button>
+    <button class="filter-tab" data-mode="rent" onclick="setMode('rent')"><i class="fas fa-calendar-alt"></i> Rent</button>
+  </div>
+  <p class="tools-toggle-desc">Rent equipment for a selected period or book machinery for specific farm work.</p>
+
+  <!-- Dropdown Filters -->
+  <div class="tools-filters-row">
+    <select class="form-select" id="filterCategory" onchange="applyFilters()">
+      <option value="all">All Categories</option>
+      <option value="Tractor">Tractor</option>
+      <option value="Plough">Plough</option>
+      <option value="Seeder">Seeder</option>
+      <option value="Harvester">Harvester</option>
+      <option value="Sprayer">Sprayer</option>
+      <option value="Water Pump">Water Pump</option>
+      <option value="Drone">Drone</option>
+      <option value="Other">Other</option>
+    </select>
+    <select class="form-select" id="filterLocation" onchange="applyFilters()">
+      <option value="all">All Locations</option>
+      <option value="Pune">Pune</option>
+      <option value="Nashik">Nashik</option>
+      <option value="Nagpur">Nagpur</option>
+      <option value="Kolhapur">Kolhapur</option>
+    </select>
+    <select class="form-select" id="filterAvailability" onchange="applyFilters()">
+      <option value="all">All Availability</option>
+      <option value="In Stock">In Stock</option>
+      <option value="Available for Rent">Available for Rent</option>
+    </select>
+    <select class="form-select" id="filterPrice" onchange="applyFilters()">
+      <option value="all">All Prices</option>
+      <option value="0-50000">Under &#8377;50,000</option>
+      <option value="50000-200000">&#8377;50,000 - &#8377;2,00,000</option>
+      <option value="200000-500000">&#8377;2,00,000 - &#8377;5,00,000</option>
+      <option value="500000-99999999">Above &#8377;5,00,000</option>
+    </select>
+  </div>
+
+  <!-- Count -->
+  <div class="tools-count" id="eqCount">0 items found</div>
+
+  <!-- Equipment Grid -->
+  <div class="grid-3" id="eqGrid"></div>
+
+</main>
+
+<!-- Detail Modal -->
+<div class="modal-backdrop" id="eqModal">
+  <div class="modal-box modal-box-wide">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+      <div style="display:flex;gap:14px;align-items:center;">
+        <div class="eq-card-icon" id="modalIcon" style="background:var(--primary-green);"><i class="fas fa-tractor"></i></div>
+        <div>
+          <div class="eq-card-name" id="modalName" style="font-size:18px;"></div>
+          <div class="eq-card-category" id="modalCategory" style="font-size:12px;"></div>
+        </div>
+      </div>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;" id="modalDesc"></p>
+    <div class="modal-specs">
+      <dt>Specifications</dt>
+      <dd id="modalSpecs"></dd>
+      <dt>Location</dt>
+      <dd id="modalLocation"></dd>
+      <dt>Availability</dt>
+      <dd id="modalAvail"></dd>
+      <dt>Rating</dt>
+      <dd id="modalRating"></dd>
+    </div>
+    <div class="modal-contact" id="modalContact"></div>
+    <div class="modal-price-row" id="modalPriceRow"></div>
+    <button class="btn-primary" id="modalActionBtn" onclick="handleModalAction()" style="width:100%;"></button>
+  </div>
+</div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="js/mockData.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  var eqData = [
+    { id: 1, name: "Mahindra 575 DI", category: "Tractor", icon: "fa-tractor", color: "#1B5E3F", price: 585000, location: "Pune", availability: "In Stock", seller: "Mahindra Tractors", rating: 4.7, reviews: 89, mode: "buy", desc: "Powerful 42 HP tractor suitable for ploughing, tilling, and hauling. Comes with power steering and multi-speed PTO.", specs: "42 HP | Power Steering | 8F+2R Gears | 1700 kg Lift", contact: "Ramesh Patel - +91 98765 43201" },
+    { id: 2, name: "John Deere 5045D", category: "Tractor", icon: "fa-tractor", color: "#2D8659", price: 720000, location: "Nashik", availability: "In Stock", seller: "Deere & Co", rating: 4.9, reviews: 156, mode: "buy", desc: "45 HP tractor with advanced transmission and fuel-efficient engine. Ideal for medium to large farms.", specs: "45 HP | 3-Cyl Diesel | 9F+3R Gears | Oil Immersed Brakes", contact: "Suresh Kumar - +91 98765 43202" },
+    { id: 3, name: "MB Reversible Plough", category: "Plough", icon: "fa-grip-lines", color: "#5D4037", price: 45000, location: "Pune", availability: "In Stock", seller: "FarmEquip India", rating: 4.5, reviews: 42, mode: "buy", desc: "Heavy-duty mouldboard reversible plough for deep tilling. Works with 35+ HP tractors.", specs: "2-Bottom | 12\" Furrow | 145 kg | Reversible", contact: "Amar Singh - +91 98765 43203" },
+    { id: 4, name: "Disc Harrow 16 Disc", category: "Plough", icon: "fa-circle-notch", color: "#4E342E", price: 78000, location: "Nagpur", availability: "In Stock", seller: "Nagpur Agri Sales", rating: 4.3, reviews: 27, mode: "buy", desc: "16-disc tandem harrow for secondary tillage. Excellent for seedbed preparation.", specs: "16 Discs | Tandem | 180 kg | 6 ft Width", contact: "Vijay Gawande - +91 98765 43204" },
+    { id: 5, name: "Seed Drill 12-Row", category: "Seeder", icon: "fa-seedling", color: "#E65100", price: 95000, location: "Nashik", availability: "In Stock", seller: "SeedMaster Corp", rating: 4.6, reviews: 58, mode: "buy", desc: "12-row pneumatic seed drill with precise metering. Suitable for wheat, rice, and pulses.", specs: "12 Row | Pneumatic | 8\" Spacing | 300 kg Hopper", contact: "Rajesh Joshi - +91 98765 43205" },
+    { id: 6, name: "Power Sprayer 16L", category: "Sprayer", icon: "fa-water", color: "#00838F", price: 12000, location: "Kolhapur", availability: "In Stock", seller: "SprayTech India", rating: 4.1, reviews: 44, mode: "buy", desc: "Portable battery-powered sprayer with adjustable nozzle. Lightweight and easy to carry.", specs: "16 L Tank | Battery Powered | 4 hr Runtime | Adjustable Nozzle", contact: "Satish Patil - +91 98765 43206" },
+    { id: 7, name: "Submersible Pump 5HP", category: "Water Pump", icon: "fa-water", color: "#1B5E3F", price: 28000, location: "Pune", availability: "In Stock", seller: "Kirloskar Brothers", rating: 4.6, reviews: 93, mode: "buy", desc: "5 HP submersible pump for irrigation. Max head 80m, flow rate 2500 LPH.", specs: "5 HP | 80 m Head | 2500 LPH | Stainless Steel", contact: "Anil Kulkarni - +91 98765 43207" },
+    { id: 8, name: "Electric Fence Unit", category: "Other", icon: "fa-bolt", color: "#FF8F00", price: 8500, location: "Nashik", availability: "In Stock", seller: "FarmSecure Ltd", rating: 4.0, reviews: 18, mode: "buy", desc: "Solar-powered electric fence energizer for crop protection. Covers up to 5 acres.", specs: "Solar Powered | 5 Acre Coverage | 0.5 Joule | IP65", contact: "Deepak Jain - +91 98765 43208" },
+    { id: 9, name: "Combine Harvester 7000", category: "Harvester", icon: "fa-industry", color: "#7B1FA2", price: 5000, location: "Pune", availability: "Available for Rent", seller: "Pune Agro Rentals", rating: 4.8, reviews: 112, mode: "rent", desc: "High-capacity combine harvester with 20ft header. GPS-guided yield mapping included.", specs: "20 ft Header | GPS Mapping | 250 HP | 9000 kg Capacity", contact: "Harpreet Singh - +91 98765 43209" },
+    { id: 10, name: "Mini Harvester", category: "Harvester", icon: "fa-industry", color: "#0D47A1", price: 2000, location: "Nashik", availability: "Available for Rent", seller: "Nashik Farm Services", rating: 4.5, reviews: 67, mode: "rent", desc: "Compact mini combine for small farms and narrow rows. Excellent fuel efficiency.", specs: "3 ft Header | 35 HP | 1200 kg | 18 L/hr Fuel", contact: "Ganesh Kshirsagar - +91 98765 43210" },
+    { id: 11, name: "Tractor Sprayer 200L", category: "Sprayer", icon: "fa-water", color: "#1565C0", price: 350, location: "Nagpur", availability: "Available for Rent", seller: "SprayOnRent", rating: 4.2, reviews: 31, mode: "rent", desc: "200-litre tank with 12m boom. Ideal for pesticide and liquid fertilizer application on rent.", specs: "200 L Tank | 12 m Boom | PTO Driven | 40 PSI", contact: "Manoj Tidke - +91 98765 43211" },
+    { id: 12, name: "Diesel Pump 8HP", category: "Water Pump", icon: "fa-water", color: "#5D4037", price: 450, location: "Kolhapur", availability: "Available for Rent", seller: "Kirloskar Rentals", rating: 4.4, reviews: 51, mode: "rent", desc: "8 HP diesel-powered centrifugal pump. Suitable for large-scale irrigation and drainage on rent.", specs: "8 HP | Diesel | 3000 LPH | 60 m Head", contact: "Shyam Desai - +91 98765 43212" },
+    { id: 13, name: "Agri Drone DJI T40", category: "Drone", icon: "fa-helicopter", color: "#2D8659", price: 2500, location: "Pune", availability: "Available for Rent", seller: "DroneTech Pune", rating: 4.9, reviews: 78, mode: "rent", desc: "Professional agricultural drone with 40L tank. Supports spraying, mapping, and AI crop analysis on rent.", specs: "40 L Tank | RTK GPS | 30 min Flight | AI Mapping", contact: "Aditya Moghe - +91 98765 43213" },
+    { id: 14, name: "Hexacopter Spraying Drone", category: "Drone", icon: "fa-helicopter", color: "#E65100", price: 1800, location: "Nashik", availability: "Available for Rent", seller: "Agribotix Rentals", rating: 4.3, reviews: 34, mode: "rent", desc: "6-rotor spraying drone with 20L capacity and RTK GPS for precision agriculture on rent.", specs: "20 L Tank | 6 Rotor | RTK GPS | 25 min Flight", contact: "Kiran Shinde - +91 98765 43214" },
+    { id: 15, name: "Roto Seed Drill", category: "Seeder", icon: "fa-seedling", color: "#283593", price: 550, location: "Nagpur", availability: "Available for Rent", seller: "Shaktiman Rentals", rating: 4.4, reviews: 36, mode: "rent", desc: "Combination rotavator-cum-seed drill on rent. Prepares bed and sows in one pass.", specs: "6 ft Width | 11-Row | 150 kg | Combined Rotavator + Drill", contact: "Prakash Bhoyar - +91 98765 43215" }
+  ];
+
+  var currentMode = "buy";
+  var currentItem = null;
+
+  function getCatColor(cat) {
+    var m = { "Tractor": "#1B5E3F", "Plough": "#5D4037", "Seeder": "#E65100", "Harvester": "#7B1FA2", "Sprayer": "#1565C0", "Water Pump": "#00838F", "Drone": "#2D8659", "Other": "#FF8F00" };
+    return m[cat] || "#1B5E3F";
+  }
+
+  function getCatIcon(cat) {
+    var m = { "Tractor": "fa-tractor", "Plough": "fa-grip-lines", "Seeder": "fa-seedling", "Harvester": "fa-industry", "Sprayer": "fa-water", "Water Pump": "fa-water", "Drone": "fa-helicopter", "Other": "fa-bolt" };
+    return m[cat] || "fa-toolbox";
+  }
+
+  function renderItems(list) {
+    var grid = document.getElementById("eqGrid");
+    document.getElementById("eqCount").textContent = list.length + " item" + (list.length !== 1 ? "s" : "") + " found";
+    if (list.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--text-muted);"><i class="fas fa-search" style="font-size:32px;margin-bottom:8px;display:block;"></i>No equipment matches your filters.</div>';
+      return;
+    }
+    var html = "";
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      var badgeClass = "badge-success";
+      if (e.availability === "Available for Rent") badgeClass = "badge-warning";
+      var stars = "";
+      var full = Math.floor(e.rating);
+      var half = e.rating - full >= 0.5;
+      for (var j = 0; j < full; j++) stars += '<i class="fas fa-star"></i>';
+      if (half) stars += '<i class="fas fa-star-half-alt"></i>';
+      var priceLabel = e.mode === "rent" ? "&#8377;" + e.price.toLocaleString() + "<small>/day</small>" : "&#8377;" + e.price.toLocaleString() + "<small> buy</small>";
+      var actionLabel = e.mode === "rent" ? "<i class='fas fa-calendar-alt'></i> Rent" : "<i class='fas fa-shopping-cart'></i> Buy";
+      html += '<div class="card-premium" onclick="openModal(\'' + e.id + '\')" style="cursor:pointer;margin-bottom:0;">' +
+        '<div class="eq-card-icon" style="background:' + getCatColor(e.category) + ';"><i class="fas ' + getCatIcon(e.category) + '"></i></div>' +
+        '<div class="eq-card-name">' + e.name + '</div>' +
+        '<div class="eq-card-category">' + e.category + '</div>' +
+        '<div class="eq-card-meta"><span><i class="fas fa-map-marker-alt"></i> ' + e.location + '</span><span><i class="fas fa-user"></i> ' + e.seller + '</span></div>' +
+        '<div class="eq-card-meta"><span class="badge ' + badgeClass + '">' + (e.availability === "In Stock" ? "<i class='fas fa-check-circle'></i>" : "<i class='fas fa-clock'></i>") + ' ' + e.availability + '</span></div>' +
+        '<div class="eq-card-footer"><span style="font-size:15px;font-weight:800;color:var(--primary-green);">' + priceLabel + '</span><div class="eq-rating">' + stars + ' <span>' + e.rating + '</span></div></div>' +
+        '<div class="eq-card-actions">' +
+          '<button class="btn-primary btn-sm" onclick="event.stopPropagation();openModal(\'' + e.id + '\')"><i class="fas fa-eye"></i> View Details</button>' +
+          '<button class="btn-primary btn-sm" style="background:var(--primary-dark);" onclick="event.stopPropagation();openModal(\'' + e.id + '\')">' + actionLabel + '</button>' +
+        '</div></div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  function applyFilters() {
+    var search = document.getElementById("eqSearch").value.toLowerCase().trim();
+    var cat = document.getElementById("filterCategory").value;
+    var loc = document.getElementById("filterLocation").value;
+    var avail = document.getElementById("filterAvailability").value;
+    var priceVal = document.getElementById("filterPrice").value;
+    var filtered = [];
+    for (var i = 0; i < eqData.length; i++) {
+      var e = eqData[i];
+      if (e.mode !== currentMode) continue;
+      if (cat !== "all" && e.category !== cat) continue;
+      if (loc !== "all" && e.location !== loc) continue;
+      if (avail !== "all" && e.availability !== avail) continue;
+      if (priceVal !== "all") {
+        var parts = priceVal.split("-");
+        var min = parseFloat(parts[0]);
+        var max = parseFloat(parts[1]);
+        if (e.price < min || e.price > max) continue;
+      }
+      if (search) {
+        var haystack = (e.name + " " + e.category + " " + e.location + " " + e.seller).toLowerCase();
+        if (haystack.indexOf(search) === -1) continue;
+      }
+      filtered.push(e);
+    }
+    renderItems(filtered);
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    var btns = document.querySelectorAll("#eqToggleRow .filter-tab");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("active", btns[i].getAttribute("data-mode") === mode);
+    }
+    var desc = document.querySelector(".tools-toggle-desc");
+    if (mode === "rent") {
+      desc.style.display = "block";
+    } else {
+      desc.style.display = "block";
+    }
+    applyFilters();
+  }
+
+  function openModal(id) {
+    var e = null;
+    for (var i = 0; i < eqData.length; i++) {
+      if (String(eqData[i].id) === String(id)) { e = eqData[i]; break; }
+    }
+    if (!e) return;
+    currentItem = e;
+    document.getElementById("modalIcon").style.background = getCatColor(e.category);
+    document.getElementById("modalIcon").innerHTML = '<i class="fas ' + getCatIcon(e.category) + '"></i>';
+    document.getElementById("modalName").textContent = e.name;
+    document.getElementById("modalCategory").textContent = e.category + " | " + e.seller;
+    document.getElementById("modalDesc").textContent = e.desc;
+    document.getElementById("modalSpecs").textContent = e.specs;
+    document.getElementById("modalLocation").textContent = e.location;
+    var badgeHtml = '<span class="badge ' + (e.availability === "In Stock" ? "badge-success" : "badge-warning") + '">' + (e.availability === "In Stock" ? "<i class='fas fa-check-circle'></i>" : "<i class='fas fa-clock'></i>") + " " + e.availability + "</span>";
+    document.getElementById("modalAvail").innerHTML = badgeHtml;
+    var starsStr = "";
+    var fullS = Math.floor(e.rating);
+    var halfS = e.rating - fullS >= 0.5;
+    for (var si = 0; si < fullS; si++) starsStr += '<i class="fas fa-star"></i>';
+    if (halfS) starsStr += '<i class="fas fa-star-half-alt"></i>';
+    document.getElementById("modalRating").innerHTML = starsStr + " " + e.rating + " (" + e.reviews + " reviews)";
+    document.getElementById("modalContact").innerHTML = "<strong>Contact:</strong> " + e.contact;
+    var priceHtml = "";
+    if (e.mode === "rent") {
+      priceHtml = '<div class="price-card" style="margin-bottom:0;"><div class="price-info"><div class="price-icon" style="background:var(--soft-green);color:var(--primary-green);"><i class="fas fa-calendar-alt"></i></div><div><div class="price-crop">Rental Rate</div><div style="font-size:10px;color:var(--text-muted);">Per Day</div></div></div><div style="font-size:22px;font-weight:800;color:var(--primary-green);">&#8377;' + e.price.toLocaleString() + "</div></div>";
+    } else {
+      priceHtml = '<div class="price-card" style="margin-bottom:0;"><div class="price-info"><div class="price-icon" style="background:var(--soft-green);color:var(--primary-green);"><i class="fas fa-tag"></i></div><div><div class="price-crop">Purchase Price</div><div style="font-size:10px;color:var(--text-muted);">One-time payment</div></div></div><div style="font-size:22px;font-weight:800;color:var(--primary-green);">&#8377;' + e.price.toLocaleString() + "</div></div>";
+    }
+    document.getElementById("modalPriceRow").innerHTML = priceHtml;
+    var actionBtn = document.getElementById("modalActionBtn");
+    if (e.mode === "rent") {
+      actionBtn.innerHTML = '<i class="fas fa-calendar-alt"></i> Book This Equipment â€” &#8377;' + e.price.toLocaleString() + "/day";
+    } else {
+      actionBtn.innerHTML = '<i class="fas fa-shopping-cart"></i> Buy Now â€” &#8377;' + e.price.toLocaleString();
+    }
+    document.getElementById("eqModal").classList.add("active");
+  }
+
+  function closeModal() {
+    document.getElementById("eqModal").classList.remove("active");
+  }
+
+  function handleModalAction() {
+    if (!currentItem) return;
+    var msg = "";
+    if (currentItem.mode === "rent") {
+      msg = "Booking initiated for " + currentItem.name + " (&#8377;" + currentItem.price.toLocaleString() + "/day). You will be contacted for rental duration and delivery.";
+    } else {
+      msg = "Added to cart: " + currentItem.name + " (&#8377;" + currentItem.price.toLocaleString() + "). Proceed to checkout.";
+    }
+    alert(msg);
+    closeModal();
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    applyFilters();
+    document.getElementById("eqModal").addEventListener("click", function(e) {
+      if (e.target === this) closeModal();
+    });
+  });
+</script>
+
+</body>
+</html>

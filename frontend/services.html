@@ -1,0 +1,987 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="services">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Services</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 900px) { .services-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 540px) { .services-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr !important; } }
+    .service-card {
+      background: white; border-radius: var(--radius-md); padding: 16px;
+      border: 1px solid var(--border-light); cursor: pointer;
+      transition: all 0.25s; position: relative; display: flex; flex-direction: column;
+    }
+    .service-card:hover { border-color: var(--primary-green); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .service-card .service-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: white; margin-bottom: 10px;
+    }
+    .service-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .service-card p { font-size: 11px; color: var(--text-muted); flex: 1; margin-bottom: 8px; line-height: 1.5; }
+    .service-card .service-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .service-card .avail-badge {
+      font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .avail-badge.available { background: var(--soft-green); color: var(--primary-green); }
+    .avail-badge.busy { background: var(--sun-soft); color: #A67C00; }
+    .avail-badge.limited { background: #FFF0F0; color: var(--danger); }
+    .avail-badge i { font-size: 8px; }
+    .service-card .resp-time { font-size: 10px; color: var(--text-muted); }
+    .service-card .card-footer { margin-top: auto; }
+    .service-card .card-footer button {
+      width: 100%; padding: 8px; border-radius: var(--radius-sm); border: none;
+      font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+      background: var(--bg-card-soft); color: var(--primary-green);
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .service-card .card-footer button:hover { background: var(--primary-green); color: white; }
+    .service-card .req-badge {
+      position: absolute; top: 12px; right: 12px;
+      background: var(--danger); color: white; font-size: 8px; font-weight: 700;
+      padding: 2px 7px; border-radius: 10px;
+    }
+    .service-request-item {
+      background: white; border-radius: var(--radius-md); padding: 14px 16px;
+      border: 1px solid var(--border-light); transition: all 0.2s; cursor: pointer;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .service-request-item:hover { border-color: var(--primary-green); box-shadow: var(--shadow-sm); }
+    .service-request-item .sr-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .service-request-item .sr-info { flex: 1; min-width: 0; }
+    .service-request-item .sr-info h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .service-request-item .sr-info .sr-date { font-size: 10px; color: var(--text-muted); }
+    .sr-status {
+      font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+      flex-shrink: 0;
+    }
+    .sr-status.pending { background: var(--sun-soft); color: #A67C00; }
+    .sr-status.in-progress { background: var(--sky-soft); color: #1565C0; }
+    .sr-status.completed { background: var(--soft-green); color: var(--primary-green); }
+    .sr-status.cancelled { background: #FFF0F0; color: var(--danger); }
+    .sr-tracking { font-size: 9px; color: var(--text-muted); margin-top: 2px; font-family: monospace; }
+    .section-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+    }
+    .section-header h3 { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+    .section-header h3 i { color: var(--primary-green); }
+    .section-header .sec-count { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .request-detail-label { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+    .request-detail-value { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
+    .progress-steps { display: flex; align-items: center; justify-content: space-between; margin: 20px 0; position: relative; }
+    .progress-steps::before {
+      content: ''; position: absolute; top: 50%; left: 25px; right: 25px;
+      height: 3px; background: var(--border-light); transform: translateY(-50%); border-radius: 2px;
+      z-index: 0;
+    }
+    .progress-step { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; z-index: 1; }
+    .progress-step .ps-dot {
+      width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; background: var(--border-light); color: var(--text-muted); transition: all 0.3s;
+    }
+    .progress-step.completed .ps-dot { background: var(--primary-green); color: white; }
+    .progress-step.active .ps-dot { background: var(--medium-green); color: white; box-shadow: 0 0 0 4px rgba(45,134,89,0.2); }
+    .progress-step .ps-label { font-size: 9px; font-weight: 600; color: var(--text-muted); text-align: center; white-space: nowrap; }
+    .progress-step.completed .ps-label { color: var(--primary-green); }
+    .progress-step.active .ps-label { color: var(--text-primary); font-weight: 700; }
+    .status-timeline-entry { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
+    .status-timeline-entry:last-child { border-bottom: none; }
+    .status-timeline-entry .tl-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+    .status-timeline-entry .tl-content { font-size: 12px; flex: 1; }
+    .status-timeline-entry .tl-content .tl-title { font-weight: 600; }
+    .status-timeline-entry .tl-content .tl-time { font-size: 10px; color: var(--text-muted); }
+    .filter-chip-group { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 12px; margin-bottom: 4px; }
+    .filter-chip-group::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      background: white; border: 1px solid var(--border-light); color: var(--text-secondary);
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .filter-chip:hover { border-color: var(--primary-green); color: var(--primary-green); }
+    .filter-chip.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+    .skeleton-service {
+      background: white; border-radius: var(--radius-md); padding: 16px;
+      border: 1px solid var(--border-light);
+    }
+    .skeleton-service .sk-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: linear-gradient(90deg, var(--border-light) 25%, var(--bg-card) 50%, var(--border-light) 75%);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite; margin-bottom: 10px;
+    }
+    .skeleton-service .sk-line {
+      height: 12px; border-radius: 6px;
+      background: linear-gradient(90deg, var(--border-light) 25%, var(--bg-card) 50%, var(--border-light) 75%);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite; margin-bottom: 8px;
+    }
+    .skeleton-service .sk-line.w-60 { width: 60%; }
+    .skeleton-service .sk-line.w-80 { width: 80%; }
+    .skeleton-service .sk-line.w-40 { width: 40%; }
+    .skeleton-service .sk-btn {
+      height: 32px; border-radius: var(--radius-sm); margin-top: 12px;
+      background: linear-gradient(90deg, var(--border-light) 25%, var(--bg-card) 50%, var(--border-light) 75%);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .sr-tab.active { color: var(--primary-green) !important; border-bottom-color: var(--primary-green) !important; }
+    .sr-tab:hover { color: var(--primary-green); }
+  </style>
+</head>
+<body>
+
+<main class="page-container">
+
+
+  <div class="page-header">
+    <div>
+      <h1><i class="fas fa-concierge-bell"></i> Services</h1>
+      <p>Expert assistance for every farming need</p>
+    </div>
+  </div>
+
+  <div class="market-search">
+    <i class="fas fa-search"></i>
+    <input type="text" id="services-search-input" placeholder="Search services...">
+  </div>
+
+  <div class="filter-chip-group" id="service-filter-chips">
+    <button class="filter-chip active" data-filter="all">All</button>
+    <button class="filter-chip" data-filter="consultation">Consultation</button>
+    <button class="filter-chip" data-filter="farm-work">Farm Work</button>
+    <button class="filter-chip" data-filter="documentation">Documentation</button>
+    <button class="filter-chip" data-filter="financial">Financial</button>
+  </div>
+
+  <section class="card-premium" style="padding:15px 10px;">
+    <div class="section-header" style="padding:0 6px 8px;">
+      <h3><i class="fas fa-tools"></i> All Services</h3>
+      <span class="sec-count" id="service-count">12 services</span>
+    </div>
+    <div id="services-grid" class="services-grid"></div>
+  </section>
+
+  <section class="card-premium" style="border:1px solid var(--primary-green);background:linear-gradient(180deg, var(--soft-green) 0%, white 40%);">
+    <div class="section-header">
+      <h3><i class="fas fa-magic"></i> Customized Service Request</h3>
+      <span class="sec-count" style="color:var(--primary-green);font-weight:600;"><i class="far fa-clock"></i> Response: ~48 hrs</span>
+    </div>
+    <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">Need something beyond our listed services? Describe your requirement and our team will arrange the right expert for you.</p>
+    <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label">Service Title</label>
+        <input type="text" class="form-input" id="cs-title" placeholder="e.g. Drone spray service for 3 acres" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="cs-category">
+          <option value="">Select category</option>
+          <option value="consultation">Consultation</option>
+          <option value="farm-work">Farm Work</option>
+          <option value="documentation">Documentation</option>
+          <option value="financial">Financial</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Urgency</label>
+        <select class="form-input" id="cs-urgency">
+          <option value="normal">Normal (48 hrs)</option>
+          <option value="urgent">Urgent (24 hrs)</option>
+          <option value="asap">ASAP (Immediate)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Budget (Min) &#8377;</label>
+        <input type="number" class="form-input" id="cs-budget-min" min="0" step="50" placeholder="e.g. 500">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Budget (Max) &#8377;</label>
+        <input type="number" class="form-input" id="cs-budget-max" min="0" step="50" placeholder="e.g. 2000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Preferred Date</label>
+        <input type="date" class="form-input" id="cs-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Preferred Time</label>
+        <input type="time" class="form-input" id="cs-time">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <label class="form-label" style="margin-bottom:0;">Describe your requirement</label>
+          <span class="form-label" id="cs-char-count" style="font-size:10px;color:var(--text-muted);margin-bottom:0;">0/500</span>
+        </div>
+        <textarea class="form-input" id="cs-desc" rows="3" maxlength="500" placeholder="Tell us what you need, for how many acres, location details, etc. (max 500 characters)" style="resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="btn-primary" style="flex:1;padding:12px;" onclick="submitCustomRequest()"><i class="fas fa-paper-plane"></i> Submit Request</button>
+      <button class="btn-secondary" style="padding:12px;" onclick="clearCustomDraft()" title="Clear saved draft"><i class="fas fa-undo"></i> Reset</button>
+    </div>
+    <div id="cs-save-note" style="display:none;font-size:10px;color:var(--text-muted);margin-top:8px;"><i class="fas fa-check-circle"></i> Draft saved automatically</div>
+  </section>
+
+  <section class="card-premium">
+    <div class="section-header">
+      <h3><i class="fas fa-clipboard-list"></i> My Service Requests</h3>
+      <span class="sec-count" id="request-count">0 requests</span>
+    </div>
+    <div class="market-search" style="margin-bottom:10px;">
+      <i class="fas fa-search"></i>
+      <input type="text" id="sr-search-input" placeholder="Search requests by name or ID...">
+    </div>
+    <div class="sr-tabs" style="display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid var(--border-light);padding:0 6px;">
+      <button class="sr-tab active" data-sr-tab="active" onclick="switchSRTab('active')" style="flex:1;padding:8px 12px;border:none;background:none;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;position:relative;bottom:-2px;"><i class="fas fa-play-circle"></i> Active</button>
+      <button class="sr-tab" data-sr-tab="completed" onclick="switchSRTab('completed')" style="flex:1;padding:8px 12px;border:none;background:none;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;position:relative;bottom:-2px;"><i class="fas fa-check-circle"></i> Completed</button>
+      <button class="sr-tab" data-sr-tab="history" onclick="switchSRTab('history')" style="flex:1;padding:8px 12px;border:none;background:none;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;position:relative;bottom:-2px;"><i class="fas fa-history"></i> History</button>
+    </div>
+    <div id="service-requests-list"></div>
+    <div id="sr-empty" class="empty-state" style="display:none;">
+      <i class="fas fa-inbox"></i>
+      <h4>No service requests yet</h4>
+      <p>Browse services above and request assistance</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- Request Detail Modal -->
+<div class="modal-backdrop" id="request-detail-modal">
+  <div class="modal-box" style="max-width:480px;padding:24px;position:relative;">
+    <button onclick="closeRequestDetail()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+    <div id="rd-content"></div>
+  </div>
+</div>
+
+<!-- Request Service Modal -->
+<div class="modal-backdrop" id="request-service-modal">
+  <div class="modal-box" style="max-width:440px;padding:24px;">
+    <h3 style="font-size:17px;font-weight:700;margin-bottom:4px;" id="rsm-title">Request Service</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;" id="rsm-subtitle"></p>
+    <div class="form-group">
+      <label class="form-label">Your Name</label>
+      <input type="text" class="form-input" id="rsm-name" placeholder="Enter your name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone Number</label>
+      <input type="tel" class="form-input" id="rsm-phone" placeholder="Enter phone number">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Preferred Date</label>
+      <input type="date" class="form-input" id="rsm-date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Additional Notes</label>
+      <textarea class="form-input" id="rsm-notes" rows="3" placeholder="Describe your requirement..." style="resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn-secondary" style="flex:1;" onclick="closeRequestService()">Cancel</button>
+      <button class="btn-primary" style="flex:1;" onclick="submitServiceRequest()"><i class="fas fa-paper-plane"></i> Submit Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Request Confirmation Modal -->
+<div class="modal-backdrop" id="custom-confirm-modal">
+  <div class="modal-box" style="max-width:420px;padding:24px;text-align:center;">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--soft-green);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px;"><i class="fas fa-check"></i></div>
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:4px;">Request Submitted!</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Your customized service request has been received.</p>
+    <div style="background:var(--bg-card-soft);border-radius:12px;padding:12px;margin-bottom:14px;">
+      <div class="request-detail-label">Tracking ID</div>
+      <div class="request-detail-value" style="font-family:monospace;font-size:13px;" id="cc-id">-</div>
+      <div class="request-detail-label">Estimated Response Time</div>
+      <div class="request-detail-value" style="font-size:13px;" id="cc-eta">-</div>
+    </div>
+    <button class="btn-primary" style="width:100%;" onclick="closeCustomConfirm()"><i class="fas fa-thumbs-up"></i> Done</button>
+  </div>
+</div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var SERVICE_CATEGORIES = {
+    consultation: ['Expert Consultation', 'Farm Visit', 'Crop Advisory', 'Soil Testing Assistance'],
+    'farm-work': ['Offline Support', 'Equipment Assistance', 'Worker Assistance', 'Farm Visit'],
+    documentation: ['Government Scheme Assistance', 'Documentation Assistance', 'Insurance Assistance'],
+    financial: ['Insurance Assistance', 'Loan Assistance', 'Government Scheme Assistance']
+  };
+
+  var SERVICE_DATA = [
+    { id: 'svc-1',  name: 'Offline Support',                icon: 'fa-wifi-slash',    color: '#6C63FF', category: ['farm-work'],              availability: 'available', respTime: 'Instant',   desc: 'Get help when you\'re offline with cached resources and guides' },
+    { id: 'svc-2',  name: 'Expert Consultation',            icon: 'fa-user-tie',      color: '#1B5E3F', category: ['consultation'],           availability: 'available', respTime: '< 30 min', desc: 'Talk to agriculture experts via chat/call' },
+    { id: 'svc-3',  name: 'Farm Visit',                     icon: 'fa-tractor',       color: '#2D8659', category: ['consultation', 'farm-work'], availability: 'busy',     respTime: '24 hrs',   desc: 'Schedule an on-farm visit by experts' },
+    { id: 'svc-4',  name: 'Soil Testing Assistance',        icon: 'fa-flask',         color: '#8D6E63', category: ['consultation'],           availability: 'available', respTime: '< 2 hrs',  desc: 'Get soil tested, understand NPK levels' },
+    { id: 'svc-5',  name: 'Crop Advisory',                  icon: 'fa-seedling',      color: '#4CAF50', category: ['consultation'],           availability: 'available', respTime: '< 1 hr',   desc: 'Crop-specific guidance from sowing to harvest' },
+    { id: 'svc-6',  name: 'Government Scheme Assistance',   icon: 'fa-file-contract', color: '#1565C0', category: ['documentation', 'financial'], availability: 'limited',  respTime: '2-3 days', desc: 'Help with applications, documents, tracking' },
+    { id: 'svc-7',  name: 'Insurance Assistance',           icon: 'fa-shield-alt',    color: '#E65100', category: ['documentation', 'financial'], availability: 'available', respTime: '< 4 hrs',  desc: 'Policy selection, claims, renewals' },
+    { id: 'svc-8',  name: 'Loan Assistance',                icon: 'fa-coins',         color: '#F9A825', category: ['financial'],             availability: 'available', respTime: '< 24 hrs', desc: 'Find and apply for agri loans' },
+    { id: 'svc-9',  name: 'Documentation Assistance',       icon: 'fa-file-alt',      color: '#5D4037', category: ['documentation'],          availability: 'available', respTime: '< 2 hrs',  desc: 'Help with land records, certificates' },
+    { id: 'svc-10', name: 'Equipment Assistance',           icon: 'fa-cogs',          color: '#7B1FA2', category: ['farm-work'],             availability: 'limited',  respTime: '1-2 days', desc: 'Find and book farm equipment' },
+    { id: 'svc-11', name: 'Worker Assistance',              icon: 'fa-users',         color: '#0D47A1', category: ['farm-work'],             availability: 'available', respTime: '< 1 hr',   desc: 'Find skilled farm workers' },
+    { id: 'svc-12', name: 'Technical Support',              icon: 'fa-headset',       color: '#37474F', category: ['farm-work'],             availability: 'available', respTime: '< 30 min', desc: 'App and device support' }
+  ];
+
+  var MOCK_REQUESTS = [
+    { id: 'SR-20260701-A3K', serviceName: 'Soil Testing Assistance', date: '2026-07-01', status: 'completed', icon: 'fa-flask', color: '#8D6E63', assignedExpert: 'Dr. Meena Sharma', resolutionNotes: 'Soil NPK levels reported. Recommendation: Apply 2 bags DAP and 1 bag Potash per acre.', timeline: [
+      { title: 'Request Submitted', time: 'Jul 01, 2026 09:15 AM', done: true },
+      { title: 'Sample Collected',  time: 'Jul 03, 2026 08:00 AM', done: true },
+      { title: 'Lab Analysis Done', time: 'Jul 08, 2026 02:30 PM', done: true },
+      { title: 'Report Delivered',  time: 'Jul 10, 2026 11:00 AM', done: true }
+    ]},
+    { id: 'SR-20260628-B7K', serviceName: 'Expert Consultation', date: '2026-06-28', status: 'completed', icon: 'fa-user-tie', color: '#1B5E3F', assignedExpert: 'Dr. Arvind Singh', resolutionNotes: 'Consultation completed successfully. Pest management plan and crop rotation schedule provided to farmer.', timeline: [
+      { title: 'Request Submitted', time: 'Jun 28, 2026 10:00 AM', done: true },
+      { title: 'Expert Assigned',   time: 'Jun 28, 2026 10:15 AM', done: true },
+      { title: 'Consultation Done', time: 'Jun 28, 2026 11:30 AM', done: true }
+    ]},
+    { id: 'SR-20260715-C9M', serviceName: 'Insurance Assistance', date: '2026-07-15', status: 'in-progress', icon: 'fa-shield-alt', color: '#E65100', assignedExpert: 'Ravi Patel (Insurance Advisor)', resolutionNotes: '', timeline: [
+      { title: 'Request Submitted', time: 'Jul 15, 2026 08:30 AM', done: true },
+      { title: 'Document Review',   time: 'Jul 15, 2026 02:00 PM', done: true },
+      { title: 'Policy Selection',  time: 'Pending', done: false },
+      { title: 'Policy Issued',     time: 'Pending', done: false }
+    ]},
+    { id: 'SR-20260718-D4P', serviceName: 'Crop Advisory', date: '2026-07-18', status: 'pending', icon: 'fa-seedling', color: '#4CAF50', assignedExpert: 'Pending', resolutionNotes: '', timeline: [
+      { title: 'Request Submitted', time: 'Jul 18, 2026 07:45 AM', done: true },
+      { title: 'Advisor Assigned',  time: 'Pending', done: false },
+      { title: 'Advisory Provided', time: 'Pending', done: false }
+    ]},
+    { id: 'SR-20260710-E5R', serviceName: 'Loan Assistance', date: '2026-07-10', status: 'in-progress', icon: 'fa-coins', color: '#F9A825', assignedExpert: 'SBI Loan Officer - Rajesh K.', resolutionNotes: '', timeline: [
+      { title: 'Request Submitted', time: 'Jul 10, 2026 11:20 AM', done: true },
+      { title: 'Documents Verified', time: 'Jul 12, 2026 04:00 PM', done: true },
+      { title: 'Bank Processing',   time: 'Jul 14, 2026 10:00 AM', done: true },
+      { title: 'Loan Disbursed',    time: 'Pending', done: false }
+    ]},
+    { id: 'SR-20260705-F6S', serviceName: 'Government Scheme Assistance', date: '2026-07-05', status: 'pending', icon: 'fa-file-contract', color: '#1565C0', assignedExpert: 'Pending', resolutionNotes: '', timeline: [
+      { title: 'Request Submitted', time: 'Jul 05, 2026 09:00 AM', done: true },
+      { title: 'Scheme Eligibility Check', time: 'Pending', done: false },
+      { title: 'Application Filed', time: 'Pending', done: false }
+    ]},
+    { id: 'SR-20260625-G7T', serviceName: 'Worker Assistance', date: '2026-06-25', status: 'completed', icon: 'fa-users', color: '#0D47A1', assignedExpert: 'Mahesh Patil (Supervisor)', resolutionNotes: '3 skilled workers assigned for 2 days. Harvesting and loading completed on schedule.', timeline: [
+      { title: 'Request Submitted', time: 'Jun 25, 2026 06:30 AM', done: true },
+      { title: 'Workers Assigned',  time: 'Jun 25, 2026 08:00 AM', done: true },
+      { title: 'Work Completed',    time: 'Jun 27, 2026 05:00 PM', done: true }
+    ]},
+    { id: 'SR-20260720-H8V', serviceName: 'Equipment Assistance', date: '2026-07-20', status: 'pending', icon: 'fa-cogs', color: '#7B1FA2', assignedExpert: 'Pending', resolutionNotes: '', timeline: [
+      { title: 'Request Submitted', time: 'Jul 20, 2026 10:15 AM', done: true },
+      { title: 'Equipment Sourcing', time: 'Pending', done: false },
+      { title: 'Delivery Scheduled', time: 'Pending', done: false }
+    ]}
+  ];
+
+  var allServices = [];
+  var serviceRequests = [];
+  var currentSRTab = 'active';
+
+  function loadFromStorage() {
+    try {
+      var stored = localStorage.getItem('fa-service-requests');
+      if (stored) {
+        var parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          serviceRequests = parsed;
+          return;
+        }
+      }
+    } catch (e) {}
+    serviceRequests = MOCK_REQUESTS.slice();
+    localStorage.setItem('fa-service-requests', JSON.stringify(serviceRequests));
+  }
+
+  function saveRequests() {
+    try { localStorage.setItem('fa-service-requests', JSON.stringify(serviceRequests)); } catch (e) {}
+  }
+
+  function ensureServiceConversation(request) {
+    try {
+      var contacts = [];
+      try { contacts = JSON.parse(localStorage.getItem('farm-chat-contacts')) || []; } catch (e) {}
+      if (!Array.isArray(contacts)) contacts = [];
+      var contactId = 'svc-' + request.id;
+      var existing = contacts.filter(function (c) { return c.id === contactId; });
+      if (existing.length === 0) {
+        contacts.unshift({
+          id: contactId,
+          name: request.serviceName + ' Support',
+          color: request.color || '#2D8659',
+          phone: '',
+          farmerId: request.id,
+          location: 'Farm Assist Service Desk',
+          bio: 'Service request ' + request.id,
+          status: 'online',
+          lastSeen: 'online',
+          unread: 1,
+          serviceRequestId: request.id
+        });
+        try { localStorage.setItem('farm-chat-contacts', JSON.stringify(contacts)); } catch (e) {}
+      }
+      var msgKey = 'farm-chat-' + contactId;
+      var msgs = [];
+      try { msgs = JSON.parse(localStorage.getItem(msgKey)) || []; } catch (e) {}
+      if (!Array.isArray(msgs) || msgs.length === 0) {
+        msgs = [{
+          id: 1,
+          type: 'incoming',
+          text: 'Thank you for your ' + request.serviceName + ' request (' + request.id + '). Our team will respond here. You can track progress and reply in this conversation.',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: 'Today'
+        }];
+        try { localStorage.setItem(msgKey, JSON.stringify(msgs)); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
+  function renderServiceSkeleton() {
+    var grid = document.getElementById('services-grid');
+    if (!grid) return;
+    var html = '';
+    for (var i = 0; i < 6; i++) {
+      html += '<div class="skeleton-service">' +
+        '<div class="sk-icon"></div>' +
+        '<div class="sk-line w-80"></div>' +
+        '<div class="sk-line w-60"></div>' +
+        '<div class="sk-line w-40"></div>' +
+        '<div class="sk-btn"></div>' +
+      '</div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  function getStatusClass(status) {
+    if (status === 'in-progress') return 'in-progress';
+    return status;
+  }
+
+  function renderServices(items) {
+    var grid = document.getElementById('services-grid');
+    if (!grid) return;
+    if (!items || items.length === 0) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><h4>No services found</h4><p>Try adjusting your search or filter</p></div>';
+      return;
+    }
+    grid.innerHTML = items.map(function (s) {
+      var dotIcon = s.availability === 'available' ? 'fa-circle' : (s.availability === 'busy' ? 'fa-circle' : 'fa-exclamation-circle');
+      return '<div class="service-card" data-id="' + s.id + '" onclick="openRequestService(\'' + s.id + '\')">' +
+        '<div class="service-icon" style="background:' + s.color + ';"><i class="fas ' + s.icon + '"></i></div>' +
+        '<h4>' + s.name + '</h4>' +
+        '<p>' + s.desc + '</p>' +
+        '<div class="service-meta">' +
+          '<span class="avail-badge ' + s.availability + '"><i class="fas ' + dotIcon + '"></i> ' + s.availability.charAt(0).toUpperCase() + s.availability.slice(1) + '</span>' +
+          '<span class="resp-time"><i class="far fa-clock"></i> ' + s.respTime + '</span>' +
+        '</div>' +
+        '<div class="card-footer"><button><i class="fas fa-hand-paper"></i> Request Service</button></div>' +
+      '</div>';
+    }).join('');
+    var count = document.getElementById('service-count');
+    if (count) count.textContent = items.length + ' service' + (items.length !== 1 ? 's' : '');
+  }
+
+  function renderServiceRequests() {
+    var list = document.getElementById('service-requests-list');
+    var emptyEl = document.getElementById('sr-empty');
+    var countEl = document.getElementById('request-count');
+    if (!list) return;
+    var filtered = [];
+    if (currentSRTab === 'active') {
+      filtered = serviceRequests.filter(function (r) { return r.status === 'pending' || r.status === 'in-progress'; });
+    } else if (currentSRTab === 'completed') {
+      filtered = serviceRequests.filter(function (r) { return r.status === 'completed'; });
+    } else {
+      filtered = serviceRequests.slice();
+    }
+    var query = getSRSearchQuery();
+    if (query) {
+      filtered = filtered.filter(function (r) {
+        return (r.serviceName || '').toLowerCase().indexOf(query) !== -1 ||
+               (r.id || '').toLowerCase().indexOf(query) !== -1;
+      });
+    }
+    if (countEl) countEl.textContent = serviceRequests.length + ' request' + (serviceRequests.length !== 1 ? 's' : '');
+    if (filtered.length === 0) {
+      list.innerHTML = '';
+      if (emptyEl) {
+        emptyEl.style.display = 'block';
+        emptyEl.innerHTML = '<i class="fas fa-inbox"></i><span style="font-size:16px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">No ' + currentSRTab + ' requests</span><span style="font-size:12px;color:var(--text-muted);">' + (query ? 'No results match "' + query + '"' : currentSRTab === 'active' ? 'Browse services above and request assistance' : currentSRTab === 'completed' ? 'Completed requests will appear here' : 'Your request history will appear here') + '</span>';
+      }
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    list.innerHTML = filtered.map(function (r) {
+      var statusLabel = r.status.charAt(0).toUpperCase() + r.status.slice(1).replace('-', ' ');
+      return '<div class="service-request-item" onclick="openRequestDetail(\'' + r.id + '\')">' +
+        '<div class="sr-icon" style="background:rgba(' + hexToRgb(r.color) + ',0.12);color:' + r.color + ';"><i class="fas ' + r.icon + '"></i></div>' +
+        '<div class="sr-info">' +
+          '<h4>' + r.serviceName + '</h4>' +
+          '<div class="sr-date"><i class="far fa-calendar-alt"></i> ' + formatDate(r.date) + '</div>' +
+          '<div class="sr-tracking">ID: ' + r.id + '</div>' +
+        '</div>' +
+        '<span class="sr-status ' + getStatusClass(r.status) + '">' + statusLabel + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  window.switchSRTab = function (tab) {
+    currentSRTab = tab;
+    var tabs = document.querySelectorAll('.sr-tab');
+    for (var i = 0; i < tabs.length; i++) {
+      if (tabs[i].getAttribute('data-sr-tab') === tab) {
+        tabs[i].classList.add('active');
+      } else {
+        tabs[i].classList.remove('active');
+      }
+    }
+    renderServiceRequests();
+  };
+
+  function hexToRgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? parseInt(result[1], 16) + ',' + parseInt(result[2], 16) + ',' + parseInt(result[3], 16) : '0,0,0';
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    var parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return parseInt(parts[2]) + ' ' + months[parseInt(parts[1]) - 1] + ' ' + parts[0];
+  }
+
+  function getActiveFilter() {
+    var active = document.querySelector('.filter-chip.active');
+    return active ? active.getAttribute('data-filter') : 'all';
+  }
+
+  function getSearchQuery() {
+    var input = document.getElementById('services-search-input');
+    return input ? input.value.toLowerCase().trim() : '';
+  }
+
+  function getSRSearchQuery() {
+    var input = document.getElementById('sr-search-input');
+    return input ? input.value.toLowerCase().trim() : '';
+  }
+
+  function filterAndRender() {
+    var filter = getActiveFilter();
+    var query = getSearchQuery();
+    var filtered = allServices;
+    if (filter !== 'all') {
+      filtered = filtered.filter(function (s) {
+        var cats = s.category || [];
+        return cats.indexOf(filter) !== -1;
+      });
+    }
+    if (query) {
+      filtered = filtered.filter(function (s) {
+        return s.name.toLowerCase().indexOf(query) !== -1 ||
+               s.desc.toLowerCase().indexOf(query) !== -1;
+      });
+    }
+    renderServices(filtered);
+  }
+
+  function init() {
+    renderServiceSkeleton();
+    allServices = SERVICE_DATA.slice();
+    loadFromStorage();
+    renderServiceRequests();
+
+    document.querySelectorAll('.filter-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        document.querySelectorAll('.filter-chip').forEach(function (c) { c.classList.remove('active'); });
+        chip.classList.add('active');
+        filterAndRender();
+      });
+    });
+
+    var input = document.getElementById('services-search-input');
+    if (input) {
+      var debounce = null;
+      input.addEventListener('input', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () { filterAndRender(); }, 250);
+      });
+    }
+
+    var srInput = document.getElementById('sr-search-input');
+    if (srInput) {
+      srInput.addEventListener('input', function () { renderServiceRequests(); });
+    }
+
+    loadCustomDraft();
+    bindCustomDraft();
+
+    setTimeout(function () {
+      filterAndRender();
+      var params = new URLSearchParams(window.location.search);
+      var bookId = params.get('book');
+      if (bookId) {
+        var target = allServices.filter(function (s) { return s.id === bookId; })[0];
+        if (target) openRequestService(target.id);
+      }
+    }, 300);
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  window.openRequestService = function (id) {
+    var service = allServices.filter(function (s) { return s.id === id; })[0];
+    if (!service) return;
+    document.getElementById('rsm-title').textContent = 'Request: ' + service.name;
+    document.getElementById('rsm-subtitle').textContent = service.desc;
+    
+    // Pre-fill user data from UserStore if available
+    var user = null;
+    try {
+      if (window.UserStore && UserStore.getCurrentUser) {
+        user = UserStore.getCurrentUser();
+      }
+    } catch (e) {}
+    if (!user) {
+      try {
+        user = JSON.parse(localStorage.getItem('fa-current-user-data') || '{}');
+      } catch (e) {}
+    }
+    
+    var userName = user ? (user.full_name || user.fullName || '') : '';
+    var userPhone = user ? (user.phone_number || user.phone || user.mobile || '') : '';
+    
+    document.getElementById('rsm-name').value = userName;
+    document.getElementById('rsm-phone').value = userPhone;
+    
+    // Set minimum date to today
+    var today = new Date().toISOString().split('T')[0];
+    var dateInput = document.getElementById('rsm-date');
+    dateInput.value = today;
+    dateInput.setAttribute('min', today);
+    
+    document.getElementById('rsm-notes').value = '';
+    document.getElementById('request-service-modal').classList.add('active');
+    window.__currentRequestService = service;
+  };
+
+  window.closeRequestService = function () {
+    document.getElementById('request-service-modal').classList.remove('active');
+    window.__currentRequestService = null;
+  };
+
+  window.submitServiceRequest = function () {
+    var service = window.__currentRequestService;
+    if (!service) return;
+    var name = document.getElementById('rsm-name').value.trim();
+    var phone = document.getElementById('rsm-phone').value.trim();
+    if (!name || !phone) {
+      if (typeof showToast === 'function') {
+        showToast('Please fill in your name and phone number', 'warning');
+      } else {
+        alert('Please fill in your name and phone number');
+      }
+      return;
+    }
+    var now = new Date();
+    var dateStr = now.toISOString().split('T')[0];
+    var id = 'SR-' + dateStr.replace(/-/g, '') + '-' + Math.random().toString(36).substring(2, 5).toUpperCase();
+    var newRequest = {
+      id: id,
+      serviceName: service.name,
+      date: dateStr,
+      status: 'pending',
+      icon: service.icon,
+      color: service.color,
+      assignedExpert: 'Pending',
+      resolutionNotes: '',
+      timeline: [
+        { title: 'Request Submitted', time: now.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), done: true },
+        { title: 'Processing', time: 'Pending', done: false },
+        { title: 'Completed', time: 'Pending', done: false }
+      ]
+    };
+    serviceRequests.unshift(newRequest);
+    saveRequests();
+    ensureServiceConversation(newRequest);
+    renderServiceRequests();
+    closeRequestService();
+    if (typeof showToast === 'function') {
+      showToast('Service request submitted! ID: ' + id, 'success');
+    }
+    setTimeout(function () {
+      window.location.href = 'messages.html?svc=' + encodeURIComponent(id);
+    }, 1600);
+  };
+
+  function getProgressStepsHtml(status, color) {
+    var steps = ['Submitted', 'Under Review', 'In Progress', 'Completed', 'Closed'];
+    var icons = ['fa-check', 'fa-search', 'fa-spinner', 'fa-check-double', 'fa-flag-checkered'];
+    var activeIdx = 0;
+    if (status === 'pending') activeIdx = 1;
+    else if (status === 'in-progress') activeIdx = 2;
+    else if (status === 'completed') activeIdx = 3;
+    var html = '<div class="progress-steps">';
+    for (var i = 0; i < steps.length; i++) {
+      var cls = '';
+      if (i < activeIdx) cls = 'completed';
+      else if (i === activeIdx) cls = 'active';
+      html += '<div class="progress-step ' + cls + '">' +
+        '<div class="ps-dot"><i class="fas ' + icons[i] + '"></i></div>' +
+        '<div class="ps-label">' + steps[i] + '</div>' +
+      '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  window.openRequestDetail = function (id) {
+    var req = serviceRequests.filter(function (r) { return r.id === id; })[0];
+    if (!req) return;
+    var statusLabel = req.status.charAt(0).toUpperCase() + req.status.slice(1).replace('-', ' ');
+    var progressHtml = getProgressStepsHtml(req.status, req.color);
+    var timelineHtml = (req.timeline || []).map(function (t) {
+      return '<div class="status-timeline-entry">' +
+        '<div class="tl-dot" style="background:' + (t.done ? req.color : 'var(--border-light)') + ';"></div>' +
+        '<div class="tl-content">' +
+          '<div class="tl-title" style="color:' + (t.done ? 'var(--text-primary)' : 'var(--text-muted)') + ';">' + t.title + '</div>' +
+          '<div class="tl-time">' + t.time + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    var assignedHtml = '';
+    if (req.assignedExpert && req.assignedExpert !== 'Pending') {
+      assignedHtml = '<div class="request-detail-label">Assigned Expert</div><div class="request-detail-value" style="display:flex;align-items:center;gap:6px;"><i class="fas fa-user-tie" style="color:' + req.color + ';font-size:14px;"></i> ' + req.assignedExpert + '</div>';
+    } else {
+      assignedHtml = '<div class="request-detail-label">Assigned Expert</div><div class="request-detail-value" style="color:var(--text-muted);font-weight:400;">Awaiting assignment</div>';
+    }
+    var notesHtml = '';
+    if (req.resolutionNotes) {
+      notesHtml = '<div class="request-detail-label">Resolution Notes</div><div class="request-detail-value" style="font-size:12px;font-weight:400;background:var(--soft-green);padding:10px 12px;border-radius:8px;line-height:1.5;">' + req.resolutionNotes + '</div>';
+    }
+
+    document.getElementById('rd-content').innerHTML =
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">' +
+        '<div class="sr-icon" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(' + hexToRgb(req.color) + ',0.12);color:' + req.color + ';flex-shrink:0;"><i class="fas ' + req.icon + '"></i></div>' +
+        '<div><h4 style="font-size:16px;margin-bottom:2px;">' + req.serviceName + '</h4><span class="sr-status ' + getStatusClass(req.status) + '">' + statusLabel + '</span></div>' +
+      '</div>' +
+      progressHtml +
+      '<div class="request-detail-label">Tracking ID</div>' +
+      '<div class="request-detail-value" style="font-family:monospace;font-size:12px;">' + req.id + '</div>' +
+      '<div class="request-detail-label">Requested On</div>' +
+      '<div class="request-detail-value">' + formatDate(req.date) + '</div>' +
+      assignedHtml +
+      notesHtml +
+      '<div style="margin-top:16px;"><h4 style="font-size:14px;margin-bottom:8px;">Status Timeline</h4>' + timelineHtml + '</div>' +
+      '<button class="btn-secondary" style="width:100%;margin-top:16px;" onclick="closeRequestDetail()">Close</button>';
+
+    document.getElementById('request-detail-modal').classList.add('active');
+  };
+
+  window.closeRequestDetail = function () {
+    document.getElementById('request-detail-modal').classList.remove('active');
+  };
+
+  var CUSTOM_DRAFT_KEY = 'fa-custom-request-draft';
+
+  function escText(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function getCustomDraft() {
+    var draft = {};
+    try {
+      var raw = localStorage.getItem(CUSTOM_DRAFT_KEY);
+      if (raw) draft = JSON.parse(raw) || {};
+    } catch (e) { draft = {}; }
+    return draft;
+  }
+
+  function saveCustomDraft() {
+    var draft = {
+      title: document.getElementById('cs-title').value,
+      category: document.getElementById('cs-category').value,
+      urgency: document.getElementById('cs-urgency').value,
+      budgetMin: document.getElementById('cs-budget-min').value,
+      budgetMax: document.getElementById('cs-budget-max').value,
+      date: document.getElementById('cs-date').value,
+      time: document.getElementById('cs-time').value,
+      desc: document.getElementById('cs-desc').value
+    };
+    try { localStorage.setItem(CUSTOM_DRAFT_KEY, JSON.stringify(draft)); } catch (e) {}
+    var note = document.getElementById('cs-save-note');
+    if (note) { note.style.display = 'block'; setTimeout(function () { note.style.display = 'none'; }, 2500); }
+  }
+
+  function loadCustomDraft() {
+    var draft = getCustomDraft();
+    var idMap = {
+      'cs-title': draft.title || '',
+      'cs-category': draft.category || '',
+      'cs-urgency': draft.urgency || 'normal',
+      'cs-budget-min': draft.budgetMin || '',
+      'cs-budget-max': draft.budgetMax || '',
+      'cs-date': draft.date || '',
+      'cs-time': draft.time || '',
+      'cs-desc': draft.desc || ''
+    };
+    Object.keys(idMap).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = idMap[id];
+    });
+    updateCharCount();
+  }
+
+  function bindCustomDraft() {
+    var ids = ['cs-title', 'cs-category', 'cs-urgency', 'cs-budget-min', 'cs-budget-max', 'cs-date', 'cs-time', 'cs-desc'];
+    ids.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', function () { saveCustomDraft(); });
+    });
+  }
+
+  function updateCharCount() {
+    var el = document.getElementById('cs-desc');
+    var count = document.getElementById('cs-char-count');
+    if (!el || !count) return;
+    var len = el.value.length;
+    count.textContent = len + '/500';
+    count.style.color = len >= 450 ? (len >= 500 ? 'var(--danger)' : '#A67C00') : 'var(--text-muted)';
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var descEl = document.getElementById('cs-desc');
+    if (descEl) descEl.addEventListener('input', updateCharCount);
+  });
+
+  window.clearCustomDraft = function () {
+    try { localStorage.removeItem(CUSTOM_DRAFT_KEY); } catch (e) {}
+    var ids = ['cs-title', 'cs-category', 'cs-budget-min', 'cs-budget-max', 'cs-date', 'cs-time', 'cs-desc'];
+    ids.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = id === 'cs-urgency' ? 'normal' : '';
+    });
+    updateCharCount();
+    if (typeof showToast === 'function') showToast('Draft cleared', 'info');
+  };
+
+  window.submitCustomRequest = function () {
+    var title = document.getElementById('cs-title').value.trim();
+    var category = document.getElementById('cs-category').value;
+    var urgency = document.getElementById('cs-urgency').value;
+    var budgetMin = parseFloat(document.getElementById('cs-budget-min').value);
+    var budgetMax = parseFloat(document.getElementById('cs-budget-max').value);
+    var date = document.getElementById('cs-date').value;
+    var time = document.getElementById('cs-time').value;
+    var desc = document.getElementById('cs-desc').value.trim();
+
+    if (!title) {
+      if (typeof showToast === 'function') { showToast('Please enter a service title', 'warning'); } else { alert('Please enter a service title'); }
+      return;
+    }
+    if (desc.length < 10) {
+      if (typeof showToast === 'function') { showToast('Please describe your requirement (at least 10 characters)', 'warning'); } else { alert('Please describe your requirement (at least 10 characters)'); }
+      return;
+    }
+    if (!isNaN(budgetMin) && !isNaN(budgetMax) && budgetMin > budgetMax) {
+      if (typeof showToast === 'function') { showToast('Minimum budget cannot exceed maximum', 'warning'); } else { alert('Minimum budget cannot exceed maximum'); }
+      return;
+    }
+    var name = localStorage.getItem('user-name') || 'Farm User';
+    var phone = localStorage.getItem('user-phone') || '';
+
+    var payload = {
+      service_name: title,
+      service_category: category || null,
+      contact_name: name,
+      contact_phone: phone || null,
+      description: desc,
+      preferred_date: date || null,
+      preferred_time: time || null,
+      budget_min: isNaN(budgetMin) ? null : budgetMin,
+      budget_max: isNaN(budgetMax) ? null : budgetMax,
+      urgency: urgency || 'normal',
+      is_custom: true
+    };
+
+    var btn = event && event.currentTarget ? event.currentTarget : null;
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+    }
+
+    var saveLocally = function (resp) {
+      resp = resp || {};
+      var id = resp.service_request_id || resp.request_id || 'FA-SRQ-' + Date.now().toString().slice(-8);
+      var eta = resp.estimated_response_time || '48 hours';
+      var now = new Date();
+      var dateStr = now.toISOString().split('T')[0];
+      var newRequest = {
+        id: id,
+        serviceName: title,
+        date: dateStr,
+        status: 'pending',
+        icon: 'fa-magic',
+        color: '#1B5E3F',
+        assignedExpert: 'Pending',
+        resolutionNotes: '',
+        timeline: [
+          { title: 'Request Submitted', time: now.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), done: true },
+          { title: 'Under Review', time: 'Pending', done: false },
+          { title: 'Completed', time: 'Pending', done: false }
+        ]
+      };
+      serviceRequests.unshift(newRequest);
+      saveRequests();
+      renderServiceRequests();
+      try { localStorage.removeItem(CUSTOM_DRAFT_KEY); } catch (e) {}
+      document.getElementById('cc-id').textContent = id;
+      document.getElementById('cc-eta').textContent = eta;
+      document.getElementById('custom-confirm-modal').classList.add('active');
+      if (typeof showToast === 'function') showToast('Custom request submitted! ID: ' + id, 'success');
+    };
+
+    var finish = function () {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
+      }
+    };
+
+    if (window.ServiceService && window.navigator && navigator.onLine) {
+      ServiceService.createCustom(payload).then(function (res) {
+        saveLocally(res || {});
+        finish();
+      }).catch(function () {
+        saveLocally({});
+        finish();
+      });
+    } else {
+      saveLocally({});
+      finish();
+    }
+  };
+
+  window.closeCustomConfirm = function () {
+    document.getElementById('custom-confirm-modal').classList.remove('active');
+  };
+
+  document.querySelectorAll('.modal-backdrop').forEach(function (m) {
+    m.addEventListener('click', function (e) {
+      if (e.target === m) m.classList.remove('active');
+    });
+  });
+
+})();
+</script>
+</body>
+</html>

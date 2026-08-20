@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="map">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Land Map View - Farm Assist</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    body { padding-bottom: 0; overflow: hidden; }
+
+    .map-page {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      padding-top: var(--topbar-height, 64px);
+      padding-bottom: var(--bottomnav-height, 72px);
+    }
+    .map-page.fullscreen { padding-top: 0; padding-bottom: 0; z-index: 3000; }
+
+    /* ─── Controls Bar ─── */
+    .map-controls-bar {
+      position: relative; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(45, 106, 79, 0.1);
+      box-shadow: 0 2px 12px rgba(10, 36, 23, 0.08);
+      flex-wrap: wrap;
+    }
+    .controls-left { display: flex; align-items: center; gap: 6px; }
+    .controls-center { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .controls-right { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+
+    .view-toggle {
+      display: inline-flex; border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border-light);
+    }
+    .view-toggle-btn {
+      padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
+      background: var(--white); color: var(--text-secondary);
+      border: none; transition: all 0.2s;
+    }
+    .view-toggle-btn.active {
+      background: var(--primary-green); color: #fff;
+    }
+    .view-toggle-btn:not(:last-child) { border-right: 1px solid var(--border-light); }
+
+    .ctrl-filter {
+      padding: 7px 10px; border-radius: 10px; font-size: 12px; font-weight: 600;
+      background: var(--white); color: var(--text-secondary);
+      border: 1px solid var(--border-light); cursor: pointer;
+      outline: none; appearance: auto;
+    }
+    .ctrl-filter:focus { border-color: var(--primary-green); }
+
+    .ctrl-btn {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--white); border: 1px solid var(--border-light);
+      color: var(--text-secondary); display: flex; align-items: center;
+      justify-content: center; cursor: pointer; font-size: 14px;
+      transition: all 0.2s;
+    }
+    .ctrl-btn:hover { color: var(--primary-green); border-color: var(--primary-green); }
+    .ctrl-btn.active { background: var(--primary-green); color: #fff; border-color: var(--primary-green); }
+
+    .map-title-label {
+      font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px;
+      color: var(--primary-dark); display: flex; align-items: center; gap: 6px;
+      white-space: nowrap;
+    }
+    .map-title-label i { color: var(--primary-green); }
+
+    /* ─── Map Area ─── */
+    .map-area {
+      flex: 1; position: relative; overflow: hidden;
+      background: #3a7233;
+      transition: background 0.5s ease;
+    }
+    .map-area.satellite-view {
+      background: #2b5a24;
+    }
+
+    /* Grid pattern */
+    .map-grid {
+      position: absolute; inset: 0; opacity: 0.18;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 79px, rgba(255,255,255,0.22) 79px, rgba(255,255,255,0.22) 80px),
+        repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(255,255,255,0.22) 79px, rgba(255,255,255,0.22) 80px);
+    }
+
+    /* Terrain textures */
+    .map-terrain {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 180px 100px at 20% 75%, rgba(60,120,40,0.35) 0%, transparent 100%),
+        radial-gradient(ellipse 200px 120px at 75% 25%, rgba(50,110,35,0.3) 0%, transparent 100%),
+        radial-gradient(ellipse 140px 80px at 50% 55%, rgba(70,130,50,0.25) 0%, transparent 100%);
+    }
+
+    /* Water feature */
+    .map-water {
+      position: absolute;
+      top: 8%; left: 6%; width: 90px; height: 54px;
+      border-radius: 50% 45% 52% 48%;
+      background: radial-gradient(ellipse, #4a90d9 20%, #2c6cb0 80%);
+      box-shadow: inset 0 0 18px rgba(0,0,0,0.2);
+      opacity: 0.88;
+    }
+    .map-water-label {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      font-size: 8px; font-weight: 700; color: #fff; opacity: 0.7;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    /* Roads */
+    .map-road {
+      position: absolute; background: rgba(210,205,195,0.5);
+      border-radius: 3px; pointer-events: none;
+    }
+    .road-h { top: 48%; left: 0; width: 100%; height: 8px; transform: rotate(-2deg); }
+    .road-v { top: 0; left: 40%; width: 8px; height: 100%; transform: rotate(4deg); }
+
+    /* ─── Plot Shapes ─── */
+    .plot {
+      position: absolute; cursor: pointer;
+      border: 2.5px dashed rgba(255,255,255,0.55);
+      border-radius: 10px;
+      transition: all 0.3s ease;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .plot::before {
+      content: ''; position: absolute; inset: 0; border-radius: 8px;
+      background: inherit; opacity: 0.28;
+      transition: opacity 0.3s;
+    }
+    .plot:hover, .plot.selected {
+      border-color: #fff; border-style: solid;
+      box-shadow: 0 0 0 3px rgba(82,183,136,0.45), 0 4px 16px rgba(0,0,0,0.18);
+      z-index: 10;
+    }
+    .plot:hover::before, .plot.selected::before { opacity: 0.42; }
+
+    .plot.dimmed { opacity: 0.18; pointer-events: none; }
+    .plot.highlight { border-color: #fff; border-style: solid; box-shadow: 0 0 0 3px rgba(255,255,255,0.5); }
+
+    .plot-label {
+      position: relative; z-index: 2;
+      font-size: 10px; font-weight: 800; color: #fff;
+      background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 6px;
+      white-space: nowrap; pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+    }
+    .plot-label .plot-crop-tag {
+      font-size: 8px; font-weight: 600; opacity: 0.85;
+    }
+
+    .plot-health-dot {
+      position: absolute; top: 6px; right: 6px; z-index: 3;
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    /* ─── Farm Center Marker ─── */
+    .farm-marker {
+      position: absolute; z-index: 15;
+      transform: translate(-50%, -100%);
+      display: flex; flex-direction: column; align-items: center;
+      cursor: default;
+      animation: markerBounce 0.6s ease-out;
+    }
+    @keyframes markerBounce {
+      0% { transform: translate(-50%, -60%) scale(0.6); opacity: 0; }
+      60% { transform: translate(-50%, -105%) scale(1.05); }
+      100% { transform: translate(-50%, -100%) scale(1); opacity: 1; }
+    }
+    .farm-marker i { font-size: 30px; color: #e53935; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)); }
+    .farm-marker .marker-pulse {
+      position: absolute; bottom: -4px; width: 14px; height: 14px;
+      border-radius: 50%; background: rgba(229,57,53,0.3);
+      animation: pulseRing 1.8s ease-out infinite;
+    }
+    @keyframes pulseRing {
+      0% { transform: scale(1); opacity: 0.7; }
+      100% { transform: scale(3.5); opacity: 0; }
+    }
+    .farm-marker .marker-label {
+      font-size: 9px; font-weight: 700; color: #fff;
+      background: rgba(0,0,0,0.6); padding: 2px 7px; border-radius: 5px;
+      margin-top: 2px; white-space: nowrap;
+    }
+
+    /* ─── Compass ─── */
+    .map-compass {
+      position: absolute; top: 12px; right: 12px; z-index: 50;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
+      box-shadow: var(--shadow-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: var(--primary-dark);
+    }
+    .map-compass .n-label {
+      position: absolute; top: 2px; font-size: 8px; font-weight: 800; color: #e53935;
+    }
+
+    /* ─── Scale Bar ─── */
+    .map-scale {
+      position: absolute; bottom: 14px; left: 14px; z-index: 50;
+      display: flex; flex-direction: column; align-items: flex-start;
+    }
+    .scale-bar {
+      width: 120px; height: 0; border-bottom: 2px solid rgba(255,255,255,0.8);
+      border-left: 2px solid rgba(255,255,255,0.8);
+      border-right: 2px solid rgba(255,255,255,0.8);
+      padding-bottom: 2px;
+    }
+    .scale-bar::before {
+      content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+      border-top: 2px solid rgba(255,255,255,0.8);
+    }
+    .scale-text {
+      font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.85);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      margin-top: 2px;
+    }
+
+    /* ─── Plot Info Card ─── */
+    .info-card {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: var(--white);
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -4px 24px rgba(10, 36, 23, 0.15);
+      padding: 0;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      max-height: 55vh; overflow-y: auto;
+    }
+    .info-card.show { transform: translateY(0); }
+
+    .info-card-handle {
+      width: 40px; height: 4px; border-radius: 4px;
+      background: var(--border-light); margin: 10px auto 0;
+    }
+
+    .info-card-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 14px 18px 10px;
+    }
+    .info-card-header .ic-title {
+      font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700;
+      color: var(--primary-dark);
+    }
+    .info-card-header .ic-subtitle {
+      font-size: 12px; font-weight: 600; color: var(--medium-green);
+      margin-top: 2px;
+    }
+    .info-card-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--bg-card-soft); border: none;
+      color: var(--text-muted); font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .info-card-close:hover { background: var(--danger); color: #fff; }
+
+    .info-card-body { padding: 0 18px 18px; }
+
+    .info-status-bar {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+      padding: 8px 12px; border-radius: 10px;
+    }
+    .info-status-bar .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .info-status-bar .status-text { font-size: 12px; font-weight: 700; }
+    .status-healthy { background: rgba(76,175,80,0.12); }
+    .status-healthy .status-dot { background: #4CAF50; }
+    .status-healthy .status-text { color: #2E7D32; }
+    .status-attention { background: rgba(255,152,0,0.12); }
+    .status-attention .status-dot { background: #FF9800; }
+    .status-attention .status-text { color: #E65100; }
+    .status-critical { background: rgba(244,67,54,0.12); }
+    .status-critical .status-dot { background: #f44336; }
+    .status-critical .status-text { color: #C62828; }
+
+    .info-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+    }
+    .info-cell {
+      background: var(--bg-card-soft); border-radius: 12px; padding: 10px 12px;
+    }
+    .info-cell .ic-key {
+      font-size: 9px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;
+    }
+    .info-cell .ic-val {
+      font-size: 14px; font-weight: 800; color: var(--text-primary);
+    }
+    .info-cell .ic-val.small { font-size: 12px; font-weight: 700; }
+
+    .info-card-actions {
+      display: flex; gap: 10px;
+    }
+    .info-card-actions button {
+      flex: 1; padding: 10px; border-radius: 12px; font-size: 12px;
+      font-weight: 700; cursor: pointer; border: none;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .ic-action-primary { background: var(--primary-green); color: #fff; }
+    .ic-action-primary:hover { background: var(--primary-dark); }
+    .ic-action-secondary { background: var(--bg-card-soft); color: var(--text-secondary); border: 1px solid var(--border-light) !important; }
+    .ic-action-secondary:hover { background: var(--soft-green); color: var(--primary-green); }
+
+    /* ─── Farm Summary Panel ─── */
+    .summary-panel {
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-light);
+      box-shadow: 0 2px 12px rgba(10,36,23,0.08);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+    .summary-panel.collapsed .summary-body { max-height: 0; opacity: 0; padding: 0 18px; }
+
+    .summary-handle {
+      width: 36px; height: 4px; border-radius: 4px;
+      background: var(--border-medium); margin: 8px auto 0;
+      cursor: pointer;
+    }
+
+    .summary-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 18px 6px; cursor: pointer;
+    }
+    .summary-header h4 {
+      font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+      color: var(--primary-dark); display: flex; align-items: center; gap: 6px;
+    }
+    .summary-header .toggle-icon { font-size: 12px; color: var(--text-muted); transition: transform 0.3s; }
+    .summary-panel:not(.collapsed) .summary-header .toggle-icon { transform: rotate(180deg); }
+
+    .summary-body {
+      display: flex; gap: 10px; padding: 0 18px 12px;
+      overflow-x: auto; scrollbar-width: none;
+      max-height: 120px; opacity: 1;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .summary-body::-webkit-scrollbar { display: none; }
+
+    .summary-stat {
+      flex: 1; min-width: 80px; background: var(--bg-card-soft);
+      border-radius: 12px; padding: 10px 12px; text-align: center;
+    }
+    .summary-stat .ss-icon {
+      font-size: 16px; color: var(--primary-green); margin-bottom: 4px;
+    }
+    .summary-stat .ss-val {
+      font-size: 16px; font-weight: 800; color: var(--text-primary);
+    }
+    .summary-stat .ss-label {
+      font-size: 9px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+    .summary-weather {
+      min-width: 110px; background: var(--header-gradient);
+      border-radius: 12px; padding: 10px 14px;
+      display: flex; align-items: center; gap: 10px; color: #fff;
+    }
+    .summary-weather .sw-icon { font-size: 24px; }
+    .summary-weather .sw-temp { font-size: 18px; font-weight: 800; }
+    .summary-weather .sw-cond { font-size: 9px; font-weight: 600; opacity: 0.85; }
+
+    /* ─── Satellite View Enhancements ─── */
+    .map-area.satellite-view .map-grid { opacity: 0.08; }
+    .map-area.satellite-view .map-road { background: rgba(160,155,145,0.45); }
+    .map-area.satellite-view .plot { filter: saturate(1.2) brightness(0.95); }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 600px) {
+      .map-controls-bar { padding: 8px 10px; gap: 6px; }
+      .view-toggle-btn { padding: 6px 10px; font-size: 11px; }
+      .ctrl-filter { font-size: 11px; padding: 6px 8px; }
+      .map-title-label { font-size: 12px; }
+      .info-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .summary-stat { min-width: 70px; padding: 8px 10px; }
+      .summary-stat .ss-val { font-size: 14px; }
+      .plot-label { font-size: 9px; }
+      .farm-marker i { font-size: 24px; }
+    }
+    @media (max-width: 400px) {
+      .map-title-label { display: none; }
+      .controls-center { gap: 4px; }
+    }
+
+    /* ─── Satellite pseudo-overlay ─── */
+    .map-area.satellite-view::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 300px 200px at 25% 30%, rgba(34,80,20,0.3) 0%, transparent 100%),
+        radial-gradient(ellipse 250px 180px at 70% 65%, rgba(28,70,18,0.25) 0%, transparent 100%);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .plot { animation: fadeInUp 0.5s ease both; }
+    .plot:nth-child(2) { animation-delay: 0.08s; }
+    .plot:nth-child(3) { animation-delay: 0.16s; }
+    .plot:nth-child(4) { animation-delay: 0.24s; }
+    .plot:nth-child(5) { animation-delay: 0.32s; }
+  </style>
+</head>
+<body>
+
+  <div class="map-page" id="map-page">
+
+    <!-- ═══ Controls Bar ═══ -->
+    <div class="map-controls-bar">
+      <div class="controls-left">
+        <span class="map-title-label"><i class="fas fa-map-location-dot"></i> Farm Map</span>
+      </div>
+      <div class="controls-center">
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="btn-map-view" onclick="FarmMap.setView('map')">
+            <i class="fas fa-map"></i> Map View
+          </button>
+          <button class="view-toggle-btn" id="btn-sat-view" onclick="FarmMap.setView('satellite')">
+            <i class="fas fa-satellite"></i> Satellite
+          </button>
+        </div>
+        <select class="ctrl-filter" id="crop-filter" onchange="FarmMap.filterCrop(this.value)">
+          <option value="all">All Crops</option>
+          <option value="Rice">Rice</option>
+          <option value="Wheat">Wheat</option>
+          <option value="Cotton">Cotton</option>
+          <option value="Vegetables">Vegetables</option>
+          <option value="Maize">Maize</option>
+        </select>
+        <select class="ctrl-filter" id="health-filter" onchange="FarmMap.filterHealth(this.value)">
+          <option value="all">All Health</option>
+          <option value="healthy">Healthy</option>
+          <option value="attention">Needs Attention</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+      <div class="controls-right">
+        <button class="ctrl-btn" title="My Location" onclick="FarmMap.myLocation()">
+          <i class="fas fa-location-crosshairs"></i>
+        </button>
+        <button class="ctrl-btn" id="btn-fullscreen" title="Fullscreen" onclick="FarmMap.toggleFullscreen()">
+          <i class="fas fa-expand" id="fs-icon"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ Farm Summary Panel (top) ═══ -->
+    <div class="summary-panel" id="summary-panel">
+      <div class="summary-handle" onclick="FarmMap.toggleSummary()"></div>
+      <div class="summary-header" onclick="FarmMap.toggleSummary()">
+        <h4><i class="fas fa-chart-pie" style="color:var(--primary-green);"></i> Farm Summary</h4>
+        <i class="fas fa-chevron-up toggle-icon"></i>
+      </div>
+      <div class="summary-body" id="summary-body">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+
+    <!-- ═══ Map Area ═══ -->
+    <div class="map-area" id="map-area">
+      <div class="map-grid"></div>
+      <div class="map-terrain"></div>
+
+      <!-- Water feature -->
+      <div class="map-water">
+        <span class="map-water-label">Pond</span>
+      </div>
+
+      <!-- Roads -->
+      <div class="map-road road-h"></div>
+      <div class="map-road road-v"></div>
+
+      <!-- Plots container (rendered by JS) -->
+      <div id="plots-container"></div>
+
+      <!-- Farm center marker -->
+      <div class="farm-marker" id="farm-marker">
+        <i class="fas fa-map-pin"></i>
+        <div class="marker-pulse"></div>
+        <span class="marker-label">Farm Location</span>
+      </div>
+
+      <!-- Compass -->
+      <div class="map-compass" id="map-compass">
+        <span class="n-label">N</span>
+        <i class="fas fa-compass"></i>
+      </div>
+
+      <!-- Scale bar -->
+      <div class="map-scale">
+        <div class="scale-bar"></div>
+        <span class="scale-text">200 m</span>
+      </div>
+
+      <!-- ═══ Plot Info Card ═══ -->
+      <div class="info-card" id="info-card">
+        <div class="info-card-handle"></div>
+        <div class="info-card-header">
+          <div>
+            <div class="ic-title" id="ic-title">Plot A</div>
+            <div class="ic-subtitle" id="ic-subtitle">Rice (Basmati)</div>
+          </div>
+          <button class="info-card-close" onclick="FarmMap.closeInfo()"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="info-card-body">
+          <div class="info-status-bar" id="ic-status-bar">
+            <span class="status-dot"></span>
+            <span class="status-text" id="ic-status-text">Healthy</span>
+          </div>
+          <div class="info-grid">
+            <div class="info-cell">
+              <div class="ic-key">Area</div>
+              <div class="ic-val" id="ic-area">2.5 Acres</div>
+            </div>
+            <div class="info-cell">
+              <div class="ic-key">Health Score</div>
+              <div class="ic-val" id="ic-health">92%</div>
+            </div>
+            <div class="info-cell">
+              <div class="ic-key">Irrigation</div>
+              <div class="ic-val small" id="ic-irrigation">Active</div>
+            </div>
+            <div class="info-cell">
+              <div class="ic-key">Soil Type</div>
+              <div class="ic-val small" id="ic-soil">Loamy</div>
+            </div>
+            <div class="info-cell" style="grid-column: 1 / -1;">
+              <div class="ic-key">Last Activity</div>
+              <div class="ic-val small" id="ic-activity">Today, 8:00 AM</div>
+            </div>
+          </div>
+          <div class="info-card-actions">
+            <button class="ic-action-primary" onclick="showToast('Opening monitoring view...', 'info')">
+              <i class="fas fa-satellite-dish"></i> Monitor
+            </button>
+            <button class="ic-action-secondary" onclick="showToast('Opening irrigation controls...', 'info')">
+              <i class="fas fa-droplet"></i> Irrigate
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    var FarmMap = (function () {
+
+      /* ─── Mock Data ─── */
+      var plots = [
+        { id: 'A', name: 'Plot A', crop: 'Rice (Basmati)', area: 2.5, health: 'healthy', healthScore: 92, irrigation: 'active', soil: 'Loamy', lastActivity: 'Today, 8:00 AM', lat: 28.6139, lng: 77.2090, color: '#4CAF50' },
+        { id: 'B', name: 'Plot B', crop: 'Wheat (HD-3226)', area: 1.8, health: 'attention', healthScore: 65, irrigation: 'inactive', soil: 'Clay', lastActivity: 'Yesterday', lat: 28.6145, lng: 77.2100, color: '#FF9800' },
+        { id: 'C', name: 'Plot C', crop: 'Cotton (BT)', area: 3.2, health: 'healthy', healthScore: 88, irrigation: 'active', soil: 'Sandy Loam', lastActivity: '2 days ago', lat: 28.6130, lng: 77.2080, color: '#4CAF50' },
+        { id: 'D', name: 'Plot D', crop: 'Vegetables (Mixed)', area: 1.0, health: 'critical', healthScore: 35, irrigation: 'inactive', soil: 'Red Soil', lastActivity: '3 days ago', lat: 28.6150, lng: 77.2110, color: '#f44336' },
+        { id: 'E', name: 'Plot E', crop: 'Maize (Hybrid)', area: 2.0, health: 'healthy', healthScore: 85, irrigation: 'active', soil: 'Alluvial', lastActivity: 'Today, 6:00 AM', lat: 28.6135, lng: 77.2095, color: '#4CAF50' }
+      ];
+
+      /* Positions as [left%, top%, width%, height%] */
+      var positions = {
+        A: [14, 16, 24, 22],
+        B: [44, 10, 22, 20],
+        C: [68, 26, 24, 26],
+        D: [16, 48, 20, 24],
+        E: [46, 52, 26, 24]
+      };
+
+      var currentCropFilter = 'all';
+      var currentHealthFilter = 'all';
+
+      /* ─── Helpers ─── */
+      function healthLabel(h) {
+        if (h === 'healthy') return 'Healthy';
+        if (h === 'attention') return 'Needs Attention';
+        return 'Critical';
+      }
+      function healthColorClass(h) {
+        if (h === 'healthy') return 'status-healthy';
+        if (h === 'attention') return 'status-attention';
+        return 'status-critical';
+      }
+      function plotBgColor(p) {
+        if (p.health === 'healthy') return 'rgba(76,175,80,0.35)';
+        if (p.health === 'attention') return 'rgba(255,152,0,0.35)';
+        return 'rgba(244,67,54,0.35)';
+      }
+      function plotBorderColor(p) {
+        if (p.health === 'healthy') return 'rgba(76,175,80,0.7)';
+        if (p.health === 'attention') return 'rgba(255,152,0,0.7)';
+        return 'rgba(244,67,54,0.7)';
+      }
+      function plotHealthDotColor(p) {
+        if (p.health === 'healthy') return '#4CAF50';
+        if (p.health === 'attention') return '#FF9800';
+        return '#f44336';
+      }
+
+      /* ─── Render Plots ─── */
+      function renderPlots() {
+        var container = document.getElementById('plots-container');
+        container.innerHTML = '';
+        var cropKey = currentCropFilter.toLowerCase();
+        var healthKey = currentHealthFilter;
+
+        plots.forEach(function (p) {
+          var pos = positions[p.id];
+          var el = document.createElement('div');
+          el.className = 'plot';
+          el.id = 'plot-' + p.id;
+          el.style.left = pos[0] + '%';
+          el.style.top = pos[1] + '%';
+          el.style.width = pos[2] + '%';
+          el.style.height = pos[3] + '%';
+          el.style.background = plotBgColor(p);
+
+          /* Apply filters */
+          if (cropKey !== 'all' && p.crop.toLowerCase().indexOf(cropKey) === -1) {
+            el.classList.add('dimmed');
+          }
+          if (healthKey !== 'all' && p.health !== healthKey) {
+            el.classList.add('dimmed');
+          }
+
+          el.innerHTML =
+            '<div class="plot-health-dot" style="background:' + plotHealthDotColor(p) + ';"></div>' +
+            '<span class="plot-label">' +
+              p.name +
+              '<span class="plot-crop-tag">' + p.crop.split('(')[0].trim() + '</span>' +
+            '</span>';
+
+          el.addEventListener('click', function () { showInfo(p); });
+          container.appendChild(el);
+        });
+      }
+
+      /* ─── Show Info Card ─── */
+      function showInfo(p) {
+        document.querySelectorAll('.plot').forEach(function (el) { el.classList.remove('selected'); });
+        var el = document.getElementById('plot-' + p.id);
+        if (el) el.classList.add('selected');
+
+        document.getElementById('ic-title').textContent = p.name;
+        document.getElementById('ic-subtitle').textContent = p.crop;
+        document.getElementById('ic-area').textContent = p.area + ' Acres';
+        document.getElementById('ic-health').textContent = p.healthScore + '%';
+        document.getElementById('ic-irrigation').textContent = p.irrigation.charAt(0).toUpperCase() + p.irrigation.slice(1);
+        document.getElementById('ic-soil').textContent = p.soil;
+        document.getElementById('ic-activity').textContent = p.lastActivity;
+
+        var statusBar = document.getElementById('ic-status-bar');
+        statusBar.className = 'info-status-bar ' + healthColorClass(p.health);
+        document.getElementById('ic-status-text').textContent = healthLabel(p.health);
+
+        document.getElementById('info-card').classList.add('show');
+      }
+
+      /* ─── Render Summary ─── */
+      function renderSummary() {
+        var totalArea = 0;
+        var healthyCount = 0;
+        var activeIrrigations = 0;
+        plots.forEach(function (p) {
+          totalArea += p.area;
+          if (p.health === 'healthy') healthyCount++;
+          if (p.irrigation === 'active') activeIrrigations++;
+        });
+        var avgScore = Math.round(plots.reduce(function (s, p) { return s + p.healthScore; }, 0) / plots.length);
+
+        document.getElementById('summary-body').innerHTML =
+          '<div class="summary-stat"><div class="ss-icon"><i class="fas fa-expand"></i></div><div class="ss-val">' + totalArea.toFixed(1) + '</div><div class="ss-label">Total Acres</div></div>' +
+          '<div class="summary-stat"><div class="ss-icon"><i class="fas fa-th-large"></i></div><div class="ss-val">' + plots.length + '</div><div class="ss-label">Plots</div></div>' +
+          '<div class="summary-stat"><div class="ss-icon"><i class="fas fa-heart-pulse"></i></div><div class="ss-val">' + avgScore + '%</div><div class="ss-label">Avg Health</div></div>' +
+          '<div class="summary-stat"><div class="ss-icon"><i class="fas fa-droplet"></i></div><div class="ss-val">' + activeIrrigations + '</div><div class="ss-label">Irrigating</div></div>' +
+          '<div class="summary-weather"><span class="sw-icon"><i class="fas fa-cloud-sun"></i></span><div><div class="sw-temp">32°C</div><div class="sw-cond">Partly Cloudy</div></div></div>';
+      }
+
+      /* ─── Public API ─── */
+      return {
+        init: function () {
+          renderPlots();
+          renderSummary();
+
+          /* Place farm marker at center of map */
+          var marker = document.getElementById('farm-marker');
+          marker.style.left = '46%';
+          marker.style.top = '38%';
+        },
+
+        setView: function (mode) {
+          var mapArea = document.getElementById('map-area');
+          document.getElementById('btn-map-view').classList.toggle('active', mode === 'map');
+          document.getElementById('btn-sat-view').classList.toggle('active', mode === 'satellite');
+          mapArea.classList.toggle('satellite-view', mode === 'satellite');
+        },
+
+        filterCrop: function (val) {
+          currentCropFilter = val;
+          renderPlots();
+        },
+
+        filterHealth: function (val) {
+          currentHealthFilter = val;
+          renderPlots();
+        },
+
+        myLocation: function () {
+          var marker = document.getElementById('farm-marker');
+          marker.style.transition = 'left 0.5s ease, top 0.5s ease';
+          marker.style.left = '50%';
+          marker.style.top = '50%';
+          setTimeout(function () { marker.style.transition = ''; }, 600);
+          if (typeof showToast === 'function') showToast('Centered on farm location', 'success');
+        },
+
+        toggleFullscreen: function () {
+          var page = document.getElementById('map-page');
+          var on = page.classList.toggle('fullscreen');
+          document.getElementById('fs-icon').className = on ? 'fas fa-compress' : 'fas fa-expand';
+        },
+
+        closeInfo: function () {
+          document.getElementById('info-card').classList.remove('show');
+          document.querySelectorAll('.plot').forEach(function (el) { el.classList.remove('selected'); });
+        },
+
+        toggleSummary: function () {
+          document.getElementById('summary-panel').classList.toggle('collapsed');
+        }
+      };
+    })();
+
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(function () { FarmMap.init(); }, 100);
+    });
+  </script>
+</body>
+</html>
