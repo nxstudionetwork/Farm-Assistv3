@@ -9,15 +9,13 @@ Backend: FastAPI served from the same origin (port 8000).
 (function (global) {
   'use strict';
 
+  var API_ORIGIN = 'https://farm-assistv3-k8kk.vercel.app:8000';
+
   function detectBaseUrl() {
     if (window._API_BASE_URL) return window._API_BASE_URL;
     var meta = document.querySelector('meta[name="api-base-url"], meta[name="api-base"]');
     if (meta && meta.content) return meta.content;
-    var origin = window.location.origin || '';
-    if (!origin || origin === 'null' || origin.indexOf('file:') === 0) {
-      origin = 'http://localhost:8000';
-    }
-    return origin + '/api/v1';
+    return API_ORIGIN + '/api/v1';
   }
 
   var Config = {
