@@ -54,6 +54,24 @@
     .mp-loc-btn:hover{background:var(--bg-secondary,#f5f5f5)}
     .mp-clear-btn{padding:9px 12px;border-radius:9px;border:1px solid var(--border-light,#e5e7eb);background:white;font-size:12px;font-weight:600;color:var(--text-secondary,#6b7280);cursor:pointer;display:flex;align-items:center;gap:6px}
     .mp-clear-btn:hover{background:var(--bg-secondary,#f5f5f5)}
+    .mp-alert-form{display:flex;flex-direction:column;gap:8px;background:var(--bg-card-soft,#F8FAF5);border:1px solid #e5eee5;border-radius:12px;padding:12px}
+    .mp-alert-form input,.mp-alert-form select{padding:10px 12px;border-radius:9px;border:1px solid var(--border-light,#e5e7eb);font-size:13px;font-family:inherit;background:white;box-sizing:border-box;min-width:0}
+    .mp-alert-form input:focus,.mp-alert-form select:focus{border-color:var(--medium-green,#2D8659);outline:none}
+    .mp-alert-form .mp-frow{display:flex;gap:8px;flex-wrap:wrap}
+    .mp-alert-form .mp-frow>*{flex:1 1 130px;min-width:0}
+    .mp-alert-submit{justify-content:center}
+    .mp-alert-note{font-size:11px;color:var(--text-muted,#9ca3af);margin-top:2px;display:flex;gap:6px;line-height:1.45}
+    .mp-alert-item{background:white;border:1px solid var(--border-light,#e5e7eb);border-radius:10px;padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+    .mp-alert-item .mp-ai-info{flex:1;min-width:0}
+    .mp-alert-item .mp-ai-title{font-size:13px;font-weight:700;color:var(--text-primary,#1a1a2e);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .mp-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;text-transform:uppercase}
+    .mp-status.active{background:#E8F5E9;color:var(--success,#2D6A4F)}
+    .mp-status.triggered{background:#FDECEC;color:var(--danger,#D63031)}
+    .mp-status.paused{background:#f3f4f6;color:#6b7280}
+    .mp-ai-meta{font-size:11px;color:var(--text-muted,#9ca3af);margin-top:3px}
+    .mp-del-btn{width:30px;height:30px;border-radius:50%;border:none;background:transparent;color:var(--text-muted,#9ca3af);cursor:pointer;font-size:13px}
+    .mp-del-btn:hover{background:#FDECEC;color:var(--danger,#D63031)}
+    .mp-alert-empty{text-align:center;padding:30px 16px;color:var(--text-muted,#9ca3af);background:var(--bg-card-soft,#F8FAF5);border:1px dashed #cfe0d0;border-radius:12px}
     .mp-cats{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:2px 2px 6px;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
     .mp-cats::-webkit-scrollbar{display:none}
     .mp-cat{padding:5px 12px;border-radius:16px;border:1px solid var(--border-light,#e5e7eb);background:white;color:var(--text-secondary,#6b7280);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:5px}
@@ -168,7 +186,7 @@
     .mp-chart-empty{margin-top:12px}
     .mp-signal{font-size:11px;font-weight:600;margin-left:auto}
     .mp-footer-note{font-size:11px;color:var(--text-muted,#9ca3af);line-height:1.6;border-top:1px solid var(--border-light,#e5e7eb);margin-top:22px;padding:12px 2px 4px;display:flex;gap:8px}
-    @media(max-width:520px){.mp-page{padding:12px}.mp-hero h1{font-size:19px}.mp-filter-panel select{flex:1 1 100%}.mp-dfacts{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.mp-page{padding:12px}.mp-hero h1{font-size:19px}.mp-filter-panel select{flex:1 1 100%}.mp-dfacts{grid-template-columns:repeat(2,1fr)}.mp-filter-panel{position:fixed;left:0;right:0;bottom:0;z-index:70;margin:0;border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,0.22);padding:14px 14px calc(14px + env(safe-area-inset-bottom));max-height:80vh;overflow-y:auto;border:1px solid #dfe9df}}
   </style>
 </head>
 <body>
@@ -183,8 +201,6 @@
         <div class="mp-hero">
           <h1><i class="fas fa-chart-line" style="margin-right:8px;"></i> LIVE MARKET PRICES</h1>
           <p>Track current agricultural commodity prices and market trends.</p>
-          <h1><i class="fas fa-chart-line" style="margin-right:8px;"></i> LIVE MARKET PRICES</h1>
-          <p>Track current agricultural commodity prices and market trends.</p>
           <div class="mp-freshness" id="mp-freshness"></div>
         </div>
 
@@ -197,6 +213,7 @@
           </div>
           <button class="mp-tool-icon" id="btn-filter" title="Filters"><i class="fas fa-sliders-h"></i><span class="mp-tool-dot" id="mp-filter-badge" style="display:none"></span></button>
           <button class="mp-tool-icon" id="btn-watchlist" title="Watchlist"><i class="fas fa-bookmark"></i><span class="mp-badge" id="wl-count">0</span></button>
+          <button class="mp-tool-icon" id="btn-alerts" title="Price Alerts"><i class="fas fa-bell"></i><span class="mp-badge" id="al-count">0</span></button>
           <button class="mp-tool-icon" id="btn-refresh" title="Refresh"><i class="fas fa-sync-alt"></i></button>
         </div>
 
@@ -237,6 +254,33 @@
         </div>
         <div class="mp-section-title"><i class="fas fa-bookmark"></i> Saved Commodities &amp; Markets</div>
         <div id="mp-watchlist-container"></div>
+      </div>
+
+      <div id="mp-alerts-view" class="mp-view">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <button class="mp-back-btn" data-back="main"><i class="fas fa-arrow-left"></i> Back</button>
+          <h2 style="font-size:18px;font-weight:700;margin:0">Price Alerts</h2>
+        </div>
+        <div class="mp-section-title"><i class="fas fa-bell"></i> Create New Alert</div>
+        <div class="mp-alert-form">
+          <div class="mp-frow">
+            <input type="text" id="al-commodity" list="al-commodity-list" placeholder="Commodity (e.g. Paddy)" autocomplete="off" aria-label="Commodity">
+            <datalist id="al-commodity-list"></datalist>
+            <input type="text" id="al-market" list="al-market-list" placeholder="Market (optional)" autocomplete="off" aria-label="Market">
+            <datalist id="al-market-list"></datalist>
+          </div>
+          <div class="mp-frow">
+            <input type="number" id="al-target" placeholder="Target price (Rs/Quintal)" min="1" step="1" aria-label="Target price">
+            <select id="al-condition" aria-label="Alert condition">
+              <option value="above">Price rises above target</option>
+              <option value="below">Price drops below target</option>
+            </select>
+            <button class="mp-btn mp-btn-primary mp-alert-submit" id="btn-create-alert"><i class="fas fa-bell"></i> Create Alert</button>
+          </div>
+          <div class="mp-alert-note"><i class="fas fa-circle-info" style="margin-top:2px"></i><span>You will be notified in-app when the latest official price meets your target. Alerts are monitored by the backend against verified market data only.</span></div>
+        </div>
+        <div class="mp-section-title"><i class="fas fa-list-check"></i> Your Active Alerts</div>
+        <div id="mp-alerts-container"></div>
       </div>
 
       
@@ -287,7 +331,7 @@
     };
 
     var $ = function (id) { return document.getElementById(id); };
-    var mainView = $('mp-main-view'), wlView = $('mp-watchlist-view');
+    var mainView = $('mp-main-view'), wlView = $('mp-watchlist-view'), alView = $('mp-alerts-view');
     var listEl = $('mp-list'), catsEl = $('mp-cats'), snapEl = $('mp-snapshot');
     var recEl = $('mp-recommended'), freshEl = $('mp-freshness');
     var searchInput = $('mp-search-input'), searchClear = $('mp-search-clear'), suggestEl = $('mp-suggest');
@@ -518,7 +562,12 @@
         indexItems(d);
         listEl.querySelectorAll('.mp-skeleton').forEach(function(s){ s.remove(); });
         var html = cardsHtml(d.items || []);
-        if(!append){ listEl.innerHTML = html || '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-search"></i><h3>No prices found</h3><p>' + (S.q ? 'No results for "' + esc(S.q) + '".' : 'Try a different category or location filter.') + '</p><button id="mp-empty-clear">Clear Filters</button></div>'; }
+        var anyFilter = !!(S.q || S.commodity || (S.category && S.category !== 'all') || S.state || S.district || S.market || S.sort !== 'recent');
+        var empty;
+        if(S.q){ empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-search"></i><h3>No markets or commodities match your search</h3><p>Try a different crop, market, district or state.</p><button id="mp-empty-clear">Clear Search</button></div>'; }
+        else if(anyFilter){ empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-filter"></i><h3>No market data matches your filters</h3><p>Clear the filters or choose different options.</p><button id="mp-empty-clear">Clear Filters</button></div>'; }
+        else { empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-database"></i><h3>No market data available</h3><p>The backend has no market prices yet. Try again after market data is synced.</p><button id="mp-empty-retry">Retry</button></div>'; }
+        if(!append){ listEl.innerHTML = html || empty; }
         else {
           var l = listEl.querySelector('.mp-loading-row');
           if(!l){ listEl.insertAdjacentHTML('beforeend', html); }
@@ -527,6 +576,8 @@
         if(S.hasMore){ loadMoreWrap.style.display = 'block'; } else { loadMoreWrap.style.display = 'none'; }
         var cf = $('mp-empty-clear');
         if(cf) cf.addEventListener('click', function(){ resetFilters(); });
+        var er = $('mp-empty-retry');
+        if(er) er.addEventListener('click', function(){ loadList(false); });
         bindCardEvents();
       }).catch(function(err){
         S.loading = false;
@@ -623,7 +674,10 @@
     function renderWatchlist(items){
       var wrap = $('mp-watchlist-container');
       if(!items.length){
-        wrap.innerHTML = '<div class="mp-empty"><i class="fas fa-bookmark"></i><h3>Your watchlist is empty</h3><p>Save commodities or markets to track their latest official prices here.</p></div>';
+        wrap.innerHTML = '<div class="mp-empty"><i class="fas fa-bookmark"></i><h3>Your watchlist is empty</h3><p>Save commodities or markets to track their latest official prices here.</p>' +
+          '<button id="mp-wl-browse"><i class="fas fa-store"></i> Browse Prices</button></div>';
+        var bb = $('mp-wl-browse');
+        if(bb) bb.addEventListener('click', function(){ showView('main'); });
         return;
       }
       wrap.innerHTML = items.map(function(w){
@@ -658,7 +712,71 @@
       S._wlItems = items;
     }
 
-    /* ---------------- alerts (removed) ---------------- */
+    /* ---------------- alerts ---------------- */
+    function loadAlerts(silent){
+      var alCount = $('al-count');
+      window.MarketPriceService.getAlerts().then(function(d){
+        if(alCount) alCount.textContent = d.total || 0;
+        if(S.view !== 'alerts') return;
+        var wrap = $('mp-alerts-container');
+        var items = d.items || [];
+        if(!items.length){
+          wrap.innerHTML = '<div class="mp-empty"><i class="fas fa-bell-slash"></i><h3>No price alerts set</h3><p>Create an alert above and we will notify you in-app when the official price crosses your target.</p></div>';
+          return;
+        }
+        wrap.innerHTML = items.map(function(a){
+          var dir = a.condition === 'above' ? 'rises above' : 'drops below';
+          var when = a.last_triggered_at ? ' &middot; triggered ' + timeAgo(a.last_triggered_at) : '';
+          return '<div class="mp-alert-item">' +
+            '<div class="mp-ai-info"><div class="mp-ai-title">' + esc(a.commodity) + (a.market ? ' <span style="color:var(--text-muted);font-weight:500;font-size:11px">@ ' + esc(a.market) + '</span>' : '') +
+            ' <span class="mp-status ' + esc(a.status) + '">' + esc(a.status) + '</span></div>' +
+            '<div class="mp-ai-meta">Notify when price ' + dir + ' <strong>' + fmtINR(a.target_price) + '</strong>' + when + '</div></div>' +
+            '<button class="mp-del-btn" data-al="1" data-a="' + esc(a.alert_id) + '" title="Delete alert" aria-label="Delete alert"><i class="fas fa-trash"></i></button>' +
+            '</div>';
+        }).join('');
+        wrap.querySelectorAll('[data-al="1"]').forEach(function(b){
+          b.addEventListener('click', function(){
+            window.MarketPriceService.removeAlert(b.getAttribute('data-a')).then(function(){
+              showToast('Alert deleted.', 'success');
+              loadAlerts();
+            }).catch(function(err){ handleApiError(err, null); });
+          });
+        });
+      }).catch(function(err){ handleApiError(err, null); });
+    }
+    function createAlert(){
+      var commodity = ($('al-commodity').value || '').trim();
+      var market = ($('al-market').value || '').trim();
+      var target = parseFloat($('al-target').value);
+      var condition = $('al-condition').value;
+      if(!commodity){ showToast('Please enter a commodity name.', 'error'); return; }
+      if(!target || isNaN(target) || target <= 0){ showToast('Please enter a valid target price.', 'error'); return; }
+      var payload = { commodity: commodity, target_price: target, condition: condition };
+      if(market) payload.market = market;
+      $('btn-create-alert').disabled = true;
+      window.MarketPriceService.createAlert(payload).then(function(d){
+        $('btn-create-alert').disabled = false;
+        showToast('Price alert created for ' + commodity + '.', 'success');
+        $('al-target').value = '';
+        if(d.status === 'triggered'){ setTimeout(function(){ showToast('Already triggered based on the latest official price.', 'info'); }, 400); }
+        loadAlerts();
+      }).catch(function(err){
+        $('btn-create-alert').disabled = false;
+        handleApiError(err, null);
+      });
+    }
+    function loadAlertCommodityList(){
+      window.MarketPriceService.categories().then(function(d){
+        var cm = [];
+        (d.categories || []).forEach(function(c){ if(c && c.name && c.name !== 'All' && c.count) cm.push(c.name); });
+        var dl = $('al-commodity-list');
+        if(dl) dl.innerHTML = cm.map(function(x){ return '<option value="' + esc(x) + '"></option>'; }).join('');
+      }).catch(function(){ });
+      window.MarketPriceService.markets().then(function(d){
+        var dl = $('al-market-list');
+        if(dl) dl.innerHTML = (d.markets || []).map(function(x){ return '<option value="' + esc(x) + '"></option>'; }).join('');
+      }).catch(function(){ });
+    }
 
     /* ---------------- details ---------------- */
     function openDetails(id){
@@ -689,7 +807,8 @@
         { l: 'Last Updated', v: it.last_updated ? timeAgo(it.last_updated) : '—' },
         { l: 'Unit', v: esc((it.unit||'Rs/Quintal').replace(/Rs\/Quintal/,'Quintal')) },
         { l: 'Variety', v: it.variety ? esc(it.variety) : '—' },
-        { l: 'Grade', v: it.grade ? esc(it.grade) : '—' }
+        { l: 'Grade', v: it.grade ? esc(it.grade) : '—' },
+        { l: 'Source', v: it.source_url ? '<a class="mp-src" href="' + esc(it.source_url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Official source') + ' <i class="fa-solid fa-up-right-from-square" style="font-size:9px"></i></a>' : esc(it.source || '—') }
       ];
       body.innerHTML =
         '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
@@ -841,9 +960,12 @@
       S.view = v;
       mainView.style.display = v === 'main' ? '' : 'none';
       wlView.classList.toggle('active', v === 'watchlist');
-      var bw = $('btn-watchlist');
+      alView.classList.toggle('active', v === 'alerts');
+      var bw = $('btn-watchlist'), ba = $('btn-alerts');
       if(bw) bw.classList.toggle('active', v === 'watchlist');
+      if(ba) ba.classList.toggle('active', v === 'alerts');
       if(v === 'watchlist') loadWatchlist();
+      if(v === 'alerts') loadAlerts();
     }
     function closeDetails(){
       $('mp-details').classList.remove('active');
@@ -959,6 +1081,9 @@
 
       $('btn-refresh').addEventListener('click', refresh);
       $('btn-watchlist').addEventListener('click', function(){ showView('watchlist'); });
+      $('btn-alerts').addEventListener('click', function(){ showView('alerts'); });
+      $('btn-create-alert').addEventListener('click', createAlert);
+      $('al-target').addEventListener('keydown', function(e){ if(e.key === 'Enter') createAlert(); });
       filterBtn.addEventListener('click', function(){
         filterPanel.classList.toggle('open');
         filterBtn.classList.toggle('active', filterPanel.classList.contains('open'));
@@ -983,6 +1108,8 @@
       // fire/init
       loadInitial();
       loadWatchlist();
+      loadAlerts();
+      loadAlertCommodityList();
     });
   })();
   </script>
