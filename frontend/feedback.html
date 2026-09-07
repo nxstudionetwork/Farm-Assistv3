@@ -7,19 +7,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    .fb-hero{background:linear-gradient(135deg,#2D8659,#1B5E3F);border-radius:var(--radius-lg);padding:28px 24px;color:white;margin-bottom:20px}
+    .fb-hero{background:linear-gradient(135deg,#2D8659,#1B5E3F);border-radius:var(--radius-lg);padding:24px 20px;color:white;margin-bottom:16px}
     .fb-hero h1{font-size:20px;font-weight:700;margin-bottom:6px}
     .fb-hero h1 i{margin-right:8px;opacity:.9}
     .fb-hero p{font-size:13px;opacity:.85;line-height:1.5}
-
-    .fb-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px}
-    @media(max-width:768px){.fb-type-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:480px){.fb-type-grid{grid-template-columns:1fr}}
-    .fb-type-option{border:2px solid var(--border-light);border-radius:var(--radius-md);padding:14px 12px;text-align:center;cursor:pointer;transition:all .2s;background:white}
-    .fb-type-option:hover{border-color:var(--medium-green);box-shadow:var(--shadow-sm)}
-    .fb-type-option.selected{border-color:var(--primary-green);background:var(--soft-green);box-shadow:0 0 0 3px rgba(45,106,79,.1)}
-    .fb-type-option i{font-size:22px;color:var(--primary-green);display:block;margin-bottom:8px}
-    .fb-type-option span{font-size:12px;font-weight:600;color:var(--text-primary);display:block}
 
     .star-rating{display:flex;gap:6px;margin:6px 0}
     .star-rating .star{font-size:32px;color:var(--border-medium);cursor:pointer;transition:color .2s,transform .15s}
@@ -48,6 +39,12 @@
     .fb-type-badge.feature{background:var(--sky-soft);color:#1565C0}
     .fb-type-badge.suggestion{background:#FFF8E1;color:#F57F17}
     .fb-type-badge.ux{background:#F3E5F5;color:#7B1FA2}
+    .fb-type-badge.bug{background:#FDEAEA;color:var(--danger)}
+    .fb-type-badge.service{background:#E3F2FD;color:#1565C0}
+    .fb-type-badge.request{background:#FFF3E0;color:#E65100}
+    .fb-type-badge.experience{background:#F3E5F5;color:#7B1FA2}
+    .fb-type-badge.other{background:var(--soft-gray);color:var(--text-muted)}
+    .fb-category-badge{display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;background:var(--soft-gray);color:var(--text-muted);margin-left:6px}
     .empty-fb{text-align:center;padding:30px 20px;color:var(--text-muted)}
     .empty-fb i{font-size:36px;margin-bottom:12px;display:block;opacity:.4}
 
@@ -62,11 +59,41 @@
     .fb-error h4{font-size:14px;color:var(--danger);margin-bottom:6px}
     .fb-error p{font-size:12px;color:var(--text-secondary);margin-bottom:10px}
     .fb-error button{font-size:12px;padding:6px 16px}
+
+    .faq-accordion-item{border-bottom:1px solid var(--border-light);padding:0}
+    .faq-accordion-item:last-child{border-bottom:none}
+    .faq-accordion-q{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 0;cursor:pointer;gap:10px;user-select:none;
+    }
+    .faq-accordion-q h4{font-size:13.5px;font-weight:600;color:var(--text-primary);margin:0;flex:1}
+    .faq-accordion-a{
+      display:none;
+      font-size:12.5px;color:var(--text-secondary);line-height:1.65;
+      padding:0 0 14px 0;
+      animation:faqSlideDown .25s ease;
+    }
+    @keyframes faqSlideDown{
+      from{opacity:0;transform:translateY(-6px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+
+    @media(max-width:480px){
+      .fb-hero{padding:18px 16px}
+      .fb-hero h1{font-size:17px}
+      .fb-user-info{gap:10px}
+      .star-rating .star{font-size:28px}
+      .fb-success .fb-actions{flex-direction:column}
+      .fb-success .fb-actions button{width:100%}
+    }
+    @media(min-width:481px) and (max-width:768px){
+      .fb-hero{padding:20px 18px}
+    }
   </style>
 </head>
 <body>
 
-  <main class="page-container" style="padding-top:var(--topbar-height);padding-bottom:calc(var(--bottomnav-height)+24px);">
+  <main class="page-container" style="padding-bottom:calc(var(--bottomnav-height)+24px);">
 
     <!-- HERO HEADER -->
     <div class="fb-hero">
@@ -105,37 +132,6 @@
         <h3 style="font-size:16px;margin-bottom:16px;"><i class="fas fa-paper-plane" style="color:var(--premium-green);margin-right:8px;"></i> Submit Feedback</h3>
 
         <form id="feedback-form" onsubmit="handleFeedbackSubmit(event)">
-          <!-- Feedback Type -->
-          <div class="form-group">
-            <label class="form-label">Feedback Type</label>
-            <div class="fb-type-grid" id="fb-type-grid">
-              <div class="fb-type-option selected" data-type="General Feedback" onclick="selectFeedbackType(this)">
-                <i class="fas fa-comment"></i>
-                <span>General Feedback</span>
-              </div>
-              <div class="fb-type-option" data-type="Suggestion" onclick="selectFeedbackType(this)">
-                <i class="fas fa-lightbulb"></i>
-                <span>Suggestion</span>
-              </div>
-              <div class="fb-type-option" data-type="Bug Report" onclick="selectFeedbackType(this)">
-                <i class="fas fa-bug"></i>
-                <span>Bug Report</span>
-              </div>
-              <div class="fb-type-option" data-type="Feature Request" onclick="selectFeedbackType(this)">
-                <i class="fas fa-plus-circle"></i>
-                <span>Feature Request</span>
-              </div>
-              <div class="fb-type-option" data-type="User Experience" onclick="selectFeedbackType(this)">
-                <i class="fas fa-face-smile"></i>
-                <span>User Experience</span>
-              </div>
-              <div class="fb-type-option" data-type="Other" onclick="selectFeedbackType(this)">
-                <i class="fas fa-ellipsis"></i>
-                <span>Other</span>
-              </div>
-            </div>
-          </div>
-
           <!-- Star Rating -->
           <div class="form-group">
             <label class="form-label">Your Rating</label>
@@ -163,6 +159,21 @@
               <input type="text" class="form-input" id="fb-name" placeholder="Your name" readonly>
               <input type="text" class="form-input" id="fb-farmer-id" placeholder="FA-AS-XXXXXXXX" readonly>
             </div>
+          </div>
+
+          <!-- Category (Optional) -->
+          <div class="form-group">
+            <label class="form-label" for="fb-category">Category (optional)</label>
+            <select id="fb-category" class="form-select" style="background-image:none;">
+              <option value="">No category</option>
+              <option value="Service">Service</option>
+              <option value="Request">Request</option>
+              <option value="Suggestion">Suggestion</option>
+              <option value="Bug">Bug Report</option>
+              <option value="Feature Request">Feature Request</option>
+              <option value="Farm Assist Experience">Farm Assist Experience</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
 
           <!-- Related Page -->
@@ -252,7 +263,6 @@
   <script src="assets/js/app.js"></script>
   <script>
     var currentRating = 0;
-    var selectedType = 'General Feedback';
     var isSubmitting = false;
     var ratingLabels = ['', 'Poor - Needs significant improvement', 'Fair - Below expectations', 'Good - Meets expectations', 'Very Good - Above expectations', 'Excellent - Exceeded expectations'];
 
@@ -269,13 +279,6 @@
       c.appendChild(t);
       requestAnimationFrame(function() { t.classList.add('show'); });
       setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 350); }, 3500);
-    }
-
-    function selectFeedbackType(el) {
-      var opts = document.querySelectorAll('.fb-type-option');
-      for (var i = 0; i < opts.length; i++) opts[i].classList.remove('selected');
-      el.classList.add('selected');
-      selectedType = el.getAttribute('data-type');
     }
 
     function setRating(value) {
@@ -324,9 +327,9 @@
       document.getElementById('fb-error-box').classList.remove('show');
 
       var payload = {
-        feedback_type: selectedType,
         rating: currentRating,
         message: message,
+        category: document.getElementById('fb-category').value || '',
         related_page: document.getElementById('fb-related-page').value || ''
       };
 
@@ -397,6 +400,9 @@
           html += '<div class="fb-history-item">';
           html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
           html += '<span class="fb-type-badge' + badgeClass + '">' + escHtml(f.feedback_type || '') + '</span>';
+          if (f.category) {
+            html += '<span class="fb-category-badge">' + escHtml(f.category) + '</span>';
+          }
           html += '<span style="font-size:11px;color:var(--text-muted);">' + date + '</span>';
           html += '</div>';
           html += '<div style="margin-bottom:6px">' + starsHtml + '</div>';
@@ -430,12 +436,6 @@
     document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('fb-name').value = getUserName();
       document.getElementById('fb-farmer-id').value = getFarmerId();
-
-      var params = new URLSearchParams(window.location.search);
-      if (params.get('type') === 'bug') {
-        var bugOpt = document.querySelector('[data-type="Bug Report"]');
-        if (bugOpt) selectFeedbackType(bugOpt);
-      }
 
       document.getElementById('fb-message').addEventListener('input', function() {
         document.getElementById('fb-char-count').textContent = this.value.length + ' / 5000';

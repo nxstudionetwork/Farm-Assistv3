@@ -1,4 +1,4 @@
-var CACHE_NAME = 'farm-assist-v9';
+var CACHE_NAME = 'farm-assist-v12';
 var STATIC_CACHE = CACHE_NAME + '-static';
 var IMAGE_CACHE = CACHE_NAME + '-images';
 var FONT_CACHE = CACHE_NAME + '-fonts';
@@ -22,7 +22,6 @@ var STATIC_PATHS = [
   '/messages.html',
   '/weather.html',
   '/settings.html',
-  '/finance.html',
   '/sensors.html',
   '/loans.html',
   '/crop-health.html',
@@ -32,7 +31,7 @@ var STATIC_PATHS = [
   '/service-details.html',
   '/wallet.html',
   '/offline-support.html',
-  '/consultations.html',
+  '/expert.html',
   '/help.html',
   '/ai.html',
   '/input-store.html',

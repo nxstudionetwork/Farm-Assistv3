@@ -1,700 +1,1330 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light" data-page="expert">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Farm Assist - Expert Hub</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Experts Hub - Farm Assist</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    .expert-hub-hero { background: var(--gradient-primary); border-radius: var(--radius-xl); padding: 24px; color: white; margin-bottom: 16px; }
-    .filter-icons { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding: 4px 0; }
-    .filter-icon-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border-light); background: white; color: var(--text-secondary); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; box-shadow: var(--shadow-sm); }
-    .filter-icon-btn:hover, .filter-icon-btn.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
-    .expert-card { background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; transition: all 0.25s; }
-    .expert-card:hover { box-shadow: var(--shadow-md); border-color: var(--medium-green); transform: translateY(-2px); }
-    .expert-card-top { display: flex; gap: 14px; }
-    .expert-avatar { width: 60px; height: 60px; border-radius: 16px; background: var(--primary-green); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; font-family: 'Outfit', sans-serif; flex-shrink: 0; }
-    .expert-info { flex: 1; min-width: 0; }
-    .expert-info h4 { font-size: 15px; font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
-    .expert-qual { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
-    .expert-spec { font-size: 11px; color: var(--primary-green); font-weight: 600; margin-bottom: 4px; }
-    .expert-stars { font-size: 12px; color: var(--warning); display: flex; align-items: center; gap: 4px; }
-    .expert-stars small { color: var(--text-muted); font-weight: 400; }
-    .expert-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 8px; font-size: 11px; color: var(--text-secondary); }
-    .expert-meta i { color: var(--medium-green); width: 14px; }
-    .expert-avail { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; display: inline-block; }
-    .expert-avail.today { background: #E8F5E9; color: #2E7D32; }
-    .expert-avail.tomorrow { background: #FFF8E1; color: #F57F17; }
-    .expert-avail.week { background: #E3F2FD; color: #1565C0; }
-    .expert-fee { font-size: 16px; font-weight: 800; color: var(--primary-green); }
-    .expert-fee small { font-size: 11px; font-weight: 400; color: var(--text-muted); }
-    .expert-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); }
-    .expert-actions .btn-primary, .expert-actions .btn-secondary { flex: 1; font-size: 11px; padding: 8px 10px; }
-    .expert-actions .btn-sm { padding: 8px 12px; }
-    .section-title { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-    .section-title i { color: var(--primary-green); }
-    .about-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
-    .review-item { padding: 12px 0; border-bottom: 1px solid var(--border-light); }
-    .review-item:last-child { border-bottom: none; }
-    .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-    .review-header b { font-size: 13px; }
-    .review-header span { font-size: 11px; color: var(--warning); }
-    .review-text { font-size: 12px; color: var(--text-secondary); }
-    .working-hours { font-size: 13px; color: var(--text-secondary); }
-    .working-hours div { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border-light); }
-    .working-hours div:last-child { border-bottom: none; }
-    .success-toast { position: fixed; top: 80px; right: 16px; background: white; border-left: 4px solid var(--success); padding: 14px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); font-size: 13px; font-weight: 500; z-index: 3000; display: flex; align-items: center; gap: 10px; transform: translateX(120%); transition: transform 0.35s ease; max-width: 340px; }
-    .success-toast.show { transform: translateX(0); }
-    .success-toast i { font-size: 18px; color: var(--success); }
-    .modal-box.expert-modal { max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 24px; }
-    .modal-box h3 { font-size: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .modal-box h3 i { color: var(--primary-green); }
-    .modal-close-btn { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-card-soft); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; transition: all 0.2s; }
-    .modal-close-btn:hover { background: var(--danger); color: white; }
-    .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
-    .book-summary { background: var(--soft-green); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
-    .book-summary .expert-avatar { width: 44px; height: 44px; font-size: 16px; }
-    .book-summary-info h4 { font-size: 14px; }
-    .book-summary-info p { font-size: 11px; color: var(--text-secondary); }
-    .search-bar-wrapper { position: relative; margin-bottom: 16px; }
-    .search-bar-wrapper input { padding-left: 38px; }
-    .search-bar-wrapper i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-    @media (max-width: 480px) { .expert-actions { flex-wrap: wrap; } .expert-actions .btn-primary, .expert-actions .btn-secondary { min-width: 100px; } }
-    .badge-custom { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; background: var(--soft-green); color: var(--primary-green); }
-    .experts-grid { display: grid; grid-template-columns: 1fr; gap: 0; }
-    @media (min-width: 640px) { .experts-grid { grid-template-columns: 1fr 1fr; gap: 12px; } .expert-actions { flex-direction: column; } }
-    @media (min-width: 768px) and (max-width: 1023px) { .experts-grid { grid-template-columns: 1fr 1fr; } }
-    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    :root{--c-green:#1B5E2F;--c-green-l:#E8F5E9;--c-green-m:#52B788;--c-red:#D32F2F;--c-orange:#E65100;--c-blue:#1565C0;--c-radius:12px;--c-radius-sm:8px;--c-shadow:0 2px 8px rgba(0,0,0,0.06);--c-shadow-lg:0 4px 16px rgba(0,0,0,0.1)}
+    .cns-page{padding:0 16px 100px;max-width:960px;margin:0 auto}
+    .cns-header{padding:16px 0 8px;display:flex;align-items:center;justify-content:space-between}
+    .cns-header h1{font-size:20px;font-weight:700;margin:0}
+    .cns-header p{font-size:12px;color:var(--text-muted);margin:2px 0 0}
+    .cns-section{margin-bottom:24px}
+    .cns-section-title{font-size:15px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+    .cns-section-title i{color:var(--c-green);font-size:14px}
+    .cns-section-title .cns-count{font-size:11px;color:var(--text-muted);font-weight:500;margin-left:auto}
+
+    /* Filter bar */
+    .cns-filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+    .cns-search{flex:1;min-width:180px;position:relative}
+    .cns-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px}
+    .cns-search input{width:100%;padding:9px 12px 9px 32px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);font-size:12px;background:#fff;color:var(--text-primary);box-sizing:border-box}
+    .cns-search input:focus{border-color:var(--c-green);outline:none}
+    .cns-filter-select{padding:9px 28px 9px 12px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);font-size:12px;background:#fff;color:var(--text-primary)}
+    .cns-filter-select:focus{border-color:var(--c-green);outline:none}
+    .cns-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+    .cns-appt-tab{padding:6px 12px;border-radius:16px;border:1px solid #e0e0e0;background:#fff;font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all .15s}
+    .cns-appt-tab:hover{border-color:var(--c-green-m)}
+    .cns-appt-tab.active{background:var(--c-green);color:#fff;border-color:var(--c-green)}
+
+    /* Available Experts Section */
+    .cns-experts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+    .cns-expert-card{background:#fff;border:1px solid #f0f0f0;border-radius:var(--c-radius);padding:16px;transition:all 0.2s;cursor:pointer;display:flex;flex-direction:column}
+    .cns-expert-card:hover{box-shadow:var(--c-shadow);border-color:var(--c-green-m);transform:translateY(-2px)}
+    .cns-expert-card.selected,.cns-expert-card.active{border-color:var(--c-green);background:var(--c-green-l)}
+    .cns-expert-top{display:flex;gap:12px;align-items:center}
+    .cns-expert-avatar{width:48px;height:48px;border-radius:12px;background:var(--c-green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+    .cns-expert-info{flex:1;min-width:0}
+    .cns-expert-name{font-size:14px;font-weight:700;margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .cns-expert-spec{font-size:11px;color:var(--c-green);font-weight:600;margin-top:2px}
+    .cns-expert-meta{font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+    .cns-expert-meta i{margin-right:3px}
+    .cns-expert-fee{font-weight:700;color:var(--c-green)}
+    .cns-expert-rating{display:inline-flex;align-items:center;gap:2px;font-size:11px;color:#F9A825}
+    .cns-avail-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:3px}
+    .cns-avail-badge.available{background:var(--c-green-l);color:var(--c-green)}
+    .cns-avail-badge.unavailable{background:#F5F5F5;color:var(--text-muted)}
+    .cns-expert-footer{margin-top:12px;display:flex;align-items:center;justify-content:flex-end}
+
+    /* Booked Appointments */
+    .cns-appointments-list{display:flex;flex-direction:column;gap:12px}
+    .cns-appointment-card{background:#fff;border:1px solid #f0f0f0;border-radius:var(--c-radius);padding:16px;transition:all 0.2s;cursor:pointer}
+    .cns-appointment-card:hover{box-shadow:var(--c-shadow);border-color:var(--c-green-m)}
+    .cns-appointment-header{display:flex;gap:12px;align-items:center}
+    .cns-appointment-avatar{width:44px;height:44px;border-radius:10px;background:var(--c-green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+    .cns-appointment-info{flex:1;min-width:0}
+    .cns-appointment-title{font-size:14px;font-weight:700;margin:0}
+    .cns-appointment-spec{font-size:11px;color:var(--c-green);font-weight:500;margin-top:2px}
+    .cns-appointment-ref{font-size:10px;color:var(--text-muted);margin-top:2px;font-weight:600}
+    .cns-appointment-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin:8px 0;font-size:11px;color:var(--text-muted)}
+    .cns-appointment-meta i{color:var(--c-green-m);width:14px}
+    .cns-appointment-topic{font-size:13px;font-weight:600;color:var(--text-primary);margin:6px 0 0}
+    .cns-appointment-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #f0f0f0;flex-wrap:wrap}
+    .cns-appointment-note{font-size:11px;color:var(--text-muted);padding-top:8px;display:flex;align-items:center;gap:6px}
+    .cns-btn{padding:7px 12px;border-radius:var(--c-radius-sm);font-size:11px;font-weight:600;border:1px solid #e0e0e0;background:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all 0.15s}
+    .cns-btn:hover{border-color:var(--c-green-m);background:var(--c-green-l)}
+    .cns-btn-primary{background:var(--c-green);color:#fff;border-color:var(--c-green)}
+    .cns-btn-primary:hover{filter:brightness(1.1)}
+    .cns-btn-danger{color:var(--c-red);border-color:#FFCDD2}
+    .cns-btn-danger:hover{background:#FFEBEE}
+    .cns-btn-small{padding:6px 10px;font-size:10px}
+    .cns-btn:disabled{opacity:0.5;cursor:not-allowed}
+
+    /* Booking Wizard */
+    .cns-form-card{background:#fff;border:1px solid #f0f0f0;border-radius:var(--c-radius);padding:20px}
+    .cns-form-title{font-size:15px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+    .cns-form-title i{color:var(--c-green)}
+    .cns-form-sub{font-size:12px;color:var(--text-muted);margin:0 0 16px}
+    .cns-steps{display:flex;align-items:center;gap:4px;margin:0 0 16px;flex-wrap:wrap}
+    .cns-step-dot{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted)}
+    .cns-step-dot .num{width:22px;height:22px;border-radius:50%;border:1.5px solid #e0e0e0;display:flex;align-items:center;justify-content:center;font-weight:700;background:#fff}
+    .cns-step-dot.active .num{background:var(--c-green);color:#fff;border-color:var(--c-green)}
+    .cns-step-dot.done .num{background:var(--c-green-l);color:var(--c-green);border-color:var(--c-green-m)}
+    .cns-step-dot .lbl{display:none}
+    .cns-step-line{flex:1;min-width:8px;height:2px;background:#f0f0f0}
+    .cns-step-line.filled{background:var(--c-green-m)}
+    .cns-step{display:none}
+    .cns-step.active{display:block}
+    .cns-step h3.cns-step-heading{font-size:13px;font-weight:700;margin:0 0 4px}
+    .cns-step .cns-step-sub{font-size:11px;color:var(--text-muted);margin:0 0 12px}
+    .cns-expert-select-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:2px}
+    .cns-form-group{margin-bottom:14px}
+    .cns-form-group label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px}
+    .cns-form-group label .req{color:var(--c-red)}
+    .cns-form-input{width:100%;padding:10px 12px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);font-size:13px;transition:border-color 0.2s;background:#fff;color:var(--text-primary);box-sizing:border-box}
+    .cns-form-input:focus{border-color:var(--c-green);outline:none;box-shadow:0 0 0 3px rgba(27,94,47,0.08)}
+    .cns-form-input:disabled{background:#f5f5f5;cursor:not-allowed}
+    .cns-form-input.error{border-color:var(--c-red)}
+    .cns-form-error{font-size:11px;color:var(--c-red);margin-top:4px}
+    select.cns-form-input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+    textarea.cns-form-input{resize:vertical;min-height:70px}
+    .cns-form-row{display:flex;gap:12px}
+    .cns-form-row .cns-form-group{flex:1}
+    .cns-method-group{display:flex;gap:8px;flex-wrap:wrap}
+    .cns-method-opt{flex:1;min-width:130px;padding:12px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);text-align:center;cursor:pointer;transition:all 0.15s;font-size:12px;font-weight:600;background:#fff}
+    .cns-method-opt:hover{border-color:var(--c-green-m);background:var(--c-green-l)}
+    .cns-method-opt.active{border-color:var(--c-green);background:var(--c-green);color:#fff}
+    .cns-method-opt i{display:block;font-size:18px;margin-bottom:4px}
+    .cns-slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+    .cns-slot-opt{padding:9px 8px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);background:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+    .cns-slot-opt:hover{border-color:var(--c-green-m);background:var(--c-green-l)}
+    .cns-slot-opt.active{border-color:var(--c-green);background:var(--c-green);color:#fff}
+    .cns-review-list{display:flex;flex-direction:column}
+    .cns-review-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f5;font-size:12px;gap:12px}
+    .cns-review-row:last-child{border-bottom:none}
+    .cns-review-label{color:var(--text-muted);font-weight:500;flex-shrink:0}
+    .cns-review-value{color:var(--text-primary);font-weight:600;text-align:right;word-break:break-word}
+    .cns-confirm-card{text-align:center;padding:16px 8px}
+    .cns-confirm-card .big-icon{font-size:44px;color:var(--c-green);margin-bottom:12px}
+    .cns-confirm-card h3{font-size:16px;font-weight:700;margin:0 0 6px}
+    .cns-confirm-card p{font-size:12px;color:var(--text-muted);margin:0 0 16px}
+    .cns-ref-chip{display:inline-block;background:var(--c-green-l);color:var(--c-green);font-weight:700;font-size:12px;padding:4px 12px;border-radius:6px;margin-bottom:14px}
+    .cns-submit{width:100%;padding:12px;border-radius:var(--c-radius-sm);background:var(--c-green);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.15s}
+    .cns-submit:hover{filter:brightness(1.1);transform:translateY(-1px)}
+    .cns-submit:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    .cns-step-nav{display:flex;gap:8px;margin-top:16px}
+    .cns-step-nav .cns-btn{flex:1;justify-content:center;padding:10px}
+
+    /* Empty States */
+    .cns-empty{text-align:center;padding:32px 16px;color:var(--text-muted)}
+    .cns-empty i{font-size:32px;display:block;margin-bottom:12px;opacity:0.3}
+    .cns-empty h4{font-size:14px;font-weight:600;margin:0 0 4px;color:var(--text-primary)}
+    .cns-empty p{font-size:12px;margin:0 0 16px}
+
+    /* Modal */
+    .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
+    .modal-overlay.active{display:flex}
+    .modal-box{background:#fff;border-radius:var(--c-radius);padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto}
+    .modal-box h3{font-size:16px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:8px}
+    .modal-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);padding:4px}
+    .modal-info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:12px;gap:12px}
+    .modal-info-row:last-child{border-bottom:none}
+    .modal-info-label{color:var(--text-muted);font-weight:500;flex-shrink:0}
+    .modal-info-value{color:var(--text-primary);font-weight:600;text-align:right;max-width:60%;word-break:break-word}
+    .modal-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+    .modal-actions .cns-btn{flex:1;justify-content:center;padding:10px}
+
+    /* Loading */
+    .cns-loading{text-align:center;padding:24px;color:var(--text-muted);font-size:12px}
+    .cns-loading i{animation:cns-spin 1s linear infinite;margin-right:6px}
+    @keyframes cns-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+    /* Toast */
+    .cns-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:var(--c-radius-sm);color:#fff;font-size:13px;font-weight:600;z-index:2000;opacity:0;transition:opacity 0.3s;pointer-events:none;max-width:90%;text-align:center}
+    .cns-toast.show{opacity:1}
+    .cns-toast.success{background:#2E7D32}
+    .cns-toast.error{background:#C62828}
+    .cns-toast.info{background:#1565C0}
+
+    /* Status Badges */
+    .cns-badge{font-size:10px;padding:3px 10px;border-radius:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+    .cns-badge.scheduled{background:#FFF3E0;color:#E65100}
+    .cns-badge.requested{background:#FFF3E0;color:#E65100}
+    .cns-badge.confirmed{background:#E3F2FD;color:#1565C0}
+    .cns-badge.in_progress{background:#F3E5F5;color:#7B1FA2}
+    .cns-badge.completed{background:#E8F5E9;color:#2E7D32}
+    .cns-badge.cancelled{background:#FFEBEE;color:#C62828}
+
+    @media(max-width:640px){
+      .cns-header{flex-direction:column;align-items:flex-start;gap:8px}
+      .cns-experts-grid{grid-template-columns:1fr}
+      .cns-form-row{flex-direction:column;gap:0}
+      .cns-method-group{flex-direction:column}
+      .cns-method-opt{min-width:auto}
+      .cns-slots-grid{grid-template-columns:repeat(3,1fr)}
+      .cns-appointment-actions{justify-content:center}
+      .modal-box{max-height:90vh;margin:8px}
+    }
   </style>
 </head>
 <body>
+<main class="cns-page">
 
-  <main class="page-container">
+  <div class="cns-header">
+    <div>
+      <h1><i class="fas fa-user-doctor" style="color:var(--c-green)"></i> Experts Hub</h1>
+      <p>FARM ASSIST AGRICULTURE EXPERTS &mdash; discover agriculture specialists, check expertise and availability, book consultations, and manage your appointments</p>
+    </div>
+  </div>
 
-
-    <!-- Hero / Header -->
-    <div class="expert-hub-hero">
-      <h2 style="font-size:22px; margin-bottom:4px; color:white;">Expert Hub</h2>
-      <p style="font-size:13px; opacity:0.85; margin-bottom:16px;">Connect with agriculture experts for personalized guidance.</p>
-      <div class="search-bar-wrapper" style="margin-bottom:0;">
+  <!-- SECTION 1: AVAILABLE EXPERTS -->
+  <div class="cns-section">
+    <div class="cns-section-title">
+      <i class="fas fa-users"></i> Available Agriculture Experts
+      <span class="cns-count" id="cns-experts-count">0</span>
+    </div>
+    <div class="cns-filter-bar">
+      <div class="cns-search">
         <i class="fas fa-search"></i>
-        <input type="text" id="expert-search" placeholder="Search experts by name, specialization, or location..." class="form-input" style="width:100%; padding:12px 14px 12px 40px; font-size:13px; border-radius:12px; border:none;">
+        <input type="text" id="cns-expert-search" placeholder="Search by name, specialisation or expertise..." oninput="cnsFilterExperts()">
+      </div>
+      <select class="cns-filter-select" id="cns-expert-spec-filter" onchange="cnsFilterExperts()">
+        <option value="">All Specialisations</option>
+      </select>
+    </div>
+    <div id="cns-experts-list">
+      <div class="cns-loading"><i class="fas fa-spinner fa-spin"></i> Loading experts...</div>
+    </div>
+    <div id="cns-experts-empty" style="display:none">
+      <div class="cns-empty">
+        <i class="fas fa-user-slash"></i>
+        <h4>No experts are currently available.</h4>
+        <p>Check back later when experts become available for consultation.</p>
       </div>
     </div>
+  </div>
 
-    <!-- Quick filter icons -->
-    <div class="filter-icons" id="expert-filter-icons">
-      <button class="filter-icon-btn" data-filter="booked" title="Booked Appointments"><i class="fas fa-calendar-check"></i></button>
-      <button class="filter-icon-btn" data-filter="recommended" title="Recommended"><i class="fas fa-thumbs-up"></i></button>
-      <button class="filter-icon-btn" data-filter="starred" title="Starred"><i class="fas fa-star"></i></button>
-      <button class="filter-icon-btn" data-filter="known" title="Known"><i class="fas fa-user-check"></i></button>
+  <!-- SECTION 2: BOOKED APPOINTMENTS -->
+  <div class="cns-section">
+    <div class="cns-section-title">
+      <i class="fas fa-calendar-check"></i> Booked Appointments
+      <span class="cns-count" id="cns-appointments-count">0</span>
     </div>
-
-    <!-- Filter dropdown + results count -->
-    <div class="flex-between" style="margin-bottom:12px;">
-      <select id="expert-category-filter" class="form-select" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-light); font-size:12px; background:white;">
-        <option value="all">All</option>
-        <option value="Crop Disease">Crop Disease</option>
-        <option value="Crop Growth">Crop Growth</option>
-        <option value="Soil">Soil</option>
-        <option value="Irrigation">Irrigation</option>
-        <option value="Pest Control">Pest Control</option>
-        <option value="Organic Farming">Organic Farming</option>
-        <option value="Finance">Finance</option>
-        <option value="Other">Other</option>
-      </select>
-      <span id="expert-count" style="font-size:12px; color:var(--text-muted); font-weight:600;">10 experts</span>
+    <div class="cns-tabs" id="cns-appt-tabs"></div>
+    <div id="cns-appointments-list">
+      <div class="cns-loading"><i class="fas fa-spinner fa-spin"></i> Loading appointments...</div>
     </div>
-
-    <!-- Expert Cards Container -->
-    <div id="expert-list" class="experts-grid"></div>
-
-  </main>
-
-  <!-- Detail Modal -->
-  <div class="modal-backdrop" id="detail-modal">
-    <div class="modal-box expert-modal" style="position:relative;">
-      <button class="modal-close-btn" onclick="closeDetailModal()"><i class="fas fa-times"></i></button>
-      <div id="detail-modal-content"></div>
+    <div id="cns-appointments-empty" style="display:none">
+      <div class="cns-empty">
+        <i class="fas fa-calendar-alt"></i>
+        <h4>No booked appointments yet</h4>
+        <p>Book an appointment with an agriculture expert when you need professional guidance.</p>
+        <button class="cns-btn cns-btn-primary" onclick="cnsOpenWizard('')"><i class="fas fa-plus"></i> Find an Expert</button>
+      </div>
     </div>
   </div>
 
-  <!-- Booking Modal -->
-  <div class="modal-backdrop" id="booking-modal">
-    <div class="modal-box expert-modal" style="position:relative;">
-      <button class="modal-close-btn" onclick="closeBookingModal()"><i class="fas fa-times"></i></button>
-      <div id="booking-modal-content"></div>
+  <!-- SECTION 3: BOOK EXPERT APPOINTMENT -->
+  <div class="cns-section" id="cns-book-section">
+    <div class="cns-section-title">
+      <i class="fas fa-calendar-plus"></i> Book an Expert Appointment
+    </div>
+    <div class="cns-form-card">
+      <div id="cns-wizard">
+
+        <div class="cns-steps" id="cns-steps"></div>
+
+        <div id="cns-step-content"></div>
+
+        <div class="cns-step-nav" id="cns-step-nav"></div>
+
+      </div>
     </div>
   </div>
 
-  <!-- Success Toast -->
-  <div class="success-toast" id="success-toast">
-    <i class="fas fa-check-circle"></i>
-    <span id="toast-message">Appointment booked successfully!</span>
+  <div style="text-align:center;padding:16px 0;font-size:10px;color:var(--text-muted)">
+    Farm Assist v1.0.0 &mdash; Agriculture Experts &amp; Consultation Services
   </div>
 
-  <script src="js/services.js"></script>
-  <script src="js/userStore.js"></script>
-  <script src="assets/js/navigation.js"></script>
-  <script src="assets/js/app.js"></script>
+</main>
 
-  <script>
-  (function () {
-    'use strict';
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="cns-detail-modal">
+  <div class="modal-box" style="position:relative">
+    <button class="modal-close" onclick="cnsCloseDetail()"><i class="fas fa-times"></i></button>
+    <h3><i class="fas fa-clipboard-list" style="color:var(--c-green)"></i> Appointment Details</h3>
+    <div id="cns-detail-content"></div>
+    <div class="modal-actions" id="cns-detail-actions"></div>
+  </div>
+</div>
 
-    function esc(s) {
-      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
-      });
+<!-- CANCEL MODAL -->
+<div class="modal-overlay" id="cns-cancel-modal">
+  <div class="modal-box" style="position:relative">
+    <button class="modal-close" onclick="cnsCloseCancel()"><i class="fas fa-times"></i></button>
+    <h3><i class="fas fa-calendar-xmark" style="color:var(--c-red)"></i> Cancel Appointment</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px">Are you sure you want to cancel this appointment? This action cannot be undone.</p>
+    <div class="cns-form-group">
+      <label>Reason for cancellation</label>
+      <textarea class="cns-form-input" id="cns-cancel-reason" placeholder="Optional: Why are you cancelling?" rows="2"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="cns-btn" onclick="cnsCloseCancel()">Keep Appointment</button>
+      <button class="cns-btn cns-btn-danger" id="cns-cancel-confirm-btn" onclick="cnsConfirmCancel()"><i class="fas fa-times"></i> Cancel Appointment</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESCHEDULE MODAL -->
+<div class="modal-overlay" id="cns-reschedule-modal">
+  <div class="modal-box" style="position:relative">
+    <button class="modal-close" onclick="cnsCloseReschedule()"><i class="fas fa-times"></i></button>
+    <h3><i class="fas fa-calendar-week" style="color:var(--c-green)"></i> Reschedule Appointment</h3>
+    <div id="cns-reschedule-content"></div>
+    <div class="modal-actions">
+      <button class="cns-btn" onclick="cnsCloseReschedule()">Keep Current Slot</button>
+      <button class="cns-btn cns-btn-primary" id="cns-reschedule-confirm-btn" onclick="cnsConfirmReschedule()"><i class="fas fa-check"></i> Confirm Reschedule</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW MODAL -->
+<div class="modal-overlay" id="cns-review-modal">
+  <div class="modal-box" style="position:relative">
+    <button class="modal-close" onclick="cnsCloseReview()"><i class="fas fa-times"></i></button>
+    <h3><i class="fas fa-star" style="color:#F9A825"></i> Rate Appointment</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px" id="cns-review-expert-name"></p>
+    <div class="cns-form-group">
+      <label>Rating <span class="req">*</span></label>
+      <div style="display:flex;gap:6px;font-size:24px;cursor:pointer" id="cns-rating-stars">
+        <i class="far fa-star" data-star="1"></i>
+        <i class="far fa-star" data-star="2"></i>
+        <i class="far fa-star" data-star="3"></i>
+        <i class="far fa-star" data-star="4"></i>
+        <i class="far fa-star" data-star="5"></i>
+      </div>
+    </div>
+    <div class="cns-form-group">
+      <label>Your Review</label>
+      <textarea class="cns-form-input" id="cns-review-text" placeholder="Share your experience..." rows="3"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="cns-btn" onclick="cnsCloseReview()">Cancel</button>
+      <button class="cns-btn cns-btn-primary" id="cns-review-submit" onclick="cnsSubmitReview()"><i class="fas fa-paper-plane"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="cns-toast" id="cns-toast"></div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var allExperts = [];
+  var allAppointments = [];
+  var farmsList = [];
+  var cyclesByFarm = {};
+  var cropCatalog = {};
+  var appointmentTab = "All";
+
+  var wizard = { step:1, expertId:"", method:"", date:"", time:"", farmId:"", cropId:"", topic:"", desc:"", type:"" };
+  var zones = ["scheduled","requested","confirmed","in_progress","completed","cancelled"];
+  var upcomingSet = { scheduled:1, requested:1, confirmed:1, in_progress:1 };
+
+  var reviewTargetId = "";
+  var reviewRating = 0;
+  var cancelTargetId = "";
+  var reschedule = { id:"", expertId:"", currentDate:"", currentTime:"", date:"", time:"", slots:[] };
+  var wizardBusy = false;
+  var reschedBusy = false;
+
+  var consultTypes = [
+    "Crop Disease","Pest Control","Soil Health","Irrigation","Fertilizer",
+    "Crop Planning","Livestock","Farm Management","Market Guidance","Government Schemes","Other"
+  ];
+  var methods = [
+    { value:"Phone", icon:"fa-phone", label:"Voice Call" },
+    { value:"Video", icon:"fa-video", label:"Video Meeting" },
+    { value:"In-Person", icon:"fa-user-doctor", label:"In-Person" },
+    { value:"Chat", icon:"fa-comment", label:"Chat" }
+  ];
+  var methodLabels = { Phone:"Voice Call", Video:"Video Meeting", "In-Person":"In-Person", Chat:"Chat" };
+  var statusLabels = { scheduled:"Upcoming", requested:"Upcoming", confirmed:"Confirmed", in_progress:"In Progress", completed:"Completed", cancelled:"Cancelled" };
+
+  function hasApi(){ return window.API && localStorage.getItem("fa-auth-token"); }
+
+  function showToast(msg,type){
+    var t=document.getElementById("cns-toast");
+    t.textContent=msg;
+    t.className="cns-toast "+(type||"info")+" show";
+    clearTimeout(t._t);
+    t._t=setTimeout(function(){t.classList.remove("show")},2800);
+  }
+
+  function esc(s){if(s===null||s===undefined)return"";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+
+  function todayStr(){
+    var d=new Date();
+    var m=String(d.getMonth()+1).padStart(2,"0");
+    var day=String(d.getDate()).padStart(2,"0");
+    return d.getFullYear()+"-"+m+"-"+day;
+  }
+
+  function fmtDate(s){
+    if(!s)return"--";
+    s=String(s);
+    if(s.indexOf("T")>=0)s=s.split("T")[0];
+    if(s.indexOf(" ")>0)s=s.split(" ")[0];
+    var parts=s.split("-");
+    if(parts.length===3 && parts[0].length===4){
+      var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      return parseInt(parts[2],10)+" "+m[parseInt(parts[1],10)-1]+" "+parts[0];
     }
-
-    function rupee(n) {
-      return '\u20B9' + Number(n).toLocaleString('en-IN');
+    var d=new Date(s);
+    if(!isNaN(d.getTime())){
+      var mm=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      return d.getDate()+" "+mm[d.getMonth()]+" "+d.getFullYear();
     }
+    return s;
+  }
 
-    function stars(rating) {
-      var r = Math.round(parseFloat(rating));
-      var out = '';
-      for (var i = 1; i <= 5; i++) {
-        out += '<i class="fa' + (i <= r ? 's' : 'r') + ' fa-star"></i>';
-      }
-      return out;
-    }
+  function timeAgo(s){
+    if(!s)return"";
+    var d=new Date(String(s).replace(" ","T"));
+    if(isNaN(d.getTime()))return s;
+    var diff=Math.floor((Date.now()-d.getTime())/1000);
+    if(diff<60)return "Just now";
+    if(diff<3600)return Math.floor(diff/60)+"m ago";
+    if(diff<86400)return Math.floor(diff/3600)+"h ago";
+    if(diff<604800)return Math.floor(diff/86400)+"d ago";
+    var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return m[d.getMonth()]+" "+d.getDate();
+  }
 
-    function getInitials(name) {
-      if (!name) return 'EX';
-      var parts = name.trim().split(/\s+/).filter(Boolean);
-      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-    }
+  function setBtn(btn,loading){
+    if(!btn)return;
+    if(loading){btn.dataset.orig=btn.innerHTML;btn.innerHTML="<i class='fas fa-spinner fa-spin'></i> Working...";btn.disabled=true;}
+    else{btn.innerHTML=btn.dataset.orig||btn.innerHTML;btn.disabled=false;}
+  }
 
-    // ---- Expert Data ----
-    var experts = [
-      {
-        id: 1,
-        name: 'Dr. Arvind Sharma',
-        qualification: 'PhD Plant Pathology',
-        experience: '15 years',
-        specialization: 'Crop Disease',
-        languages: 'Hindi, English',
-        location: 'Delhi, India',
-        rating: 4.8,
-        reviews: 124,
-        availability: 'Available Today',
-        fee: 499,
-        about: 'Dr. Arvind Sharma is a senior plant pathologist with over 15 years of experience in diagnosing and managing crop diseases. He has worked with ICAR and has helped thousands of farmers across North India improve crop yield through disease management.',
-        workingHours: { Monday: '9:00 AM - 5:00 PM', Tuesday: '9:00 AM - 5:00 PM', Wednesday: '9:00 AM - 5:00 PM', Thursday: '9:00 AM - 5:00 PM', Friday: '9:00 AM - 5:00 PM', Saturday: '10:00 AM - 2:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Ramesh Kumar', rating: 5, text: 'Excellent diagnosis! My wheat crop recovered within a week.', date: '2 weeks ago' },
-          { author: 'Suresh Patel', rating: 4, text: 'Very knowledgeable. Gave detailed treatment plan.', date: '1 month ago' }
-        ],
-        availClass: 'today'
-      },
-      {
-        id: 2,
-        name: 'Dr. Priya Mehta',
-        qualification: 'MSc Soil Science',
-        experience: '12 years',
-        specialization: 'Soil',
-        languages: 'Hindi, English, Marathi',
-        location: 'Pune, India',
-        rating: 4.9,
-        reviews: 98,
-        availability: 'Available Tomorrow',
-        fee: 399,
-        about: 'Dr. Priya Mehta is a soil scientist specializing in soil health analysis, nutrient management, and sustainable farming practices. She has consulted for over 2000 farms across Maharashtra.',
-        workingHours: { Monday: '10:00 AM - 6:00 PM', Tuesday: '10:00 AM - 6:00 PM', Wednesday: '10:00 AM - 6:00 PM', Thursday: '10:00 AM - 6:00 PM', Friday: '10:00 AM - 6:00 PM', Saturday: '10:00 AM - 4:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Anita Deshmukh', rating: 5, text: 'My soil quality improved significantly after following her advice.', date: '1 week ago' },
-          { author: 'Vijay Pawar', rating: 5, text: 'Very practical recommendations. Highly recommended.', date: '3 weeks ago' }
-        ],
-        availClass: 'tomorrow'
-      },
-      {
-        id: 3,
-        name: 'Dr. Rajesh Gupta',
-        qualification: 'PhD Agronomy',
-        experience: '18 years',
-        specialization: 'Crop Growth',
-        languages: 'Hindi, English',
-        location: 'Lucknow, India',
-        rating: 4.7,
-        reviews: 156,
-        availability: 'Available Today',
-        fee: 599,
-        about: 'Dr. Rajesh Gupta is an agronomy expert with extensive experience in crop growth optimization, yield enhancement, and precision farming techniques. He has published over 30 research papers.',
-        workingHours: { Monday: '8:00 AM - 4:00 PM', Tuesday: '8:00 AM - 4:00 PM', Wednesday: '8:00 AM - 4:00 PM', Thursday: '8:00 AM - 4:00 PM', Friday: '8:00 AM - 4:00 PM', Saturday: '9:00 AM - 1:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Dinesh Yadav', rating: 5, text: 'My paddy yield increased by 40% after his recommendations.', date: '5 days ago' },
-          { author: 'Manoj Singh', rating: 4, text: 'Detailed analysis and very patient with all my questions.', date: '2 weeks ago' }
-        ],
-        availClass: 'today'
-      },
-      {
-        id: 4,
-        name: 'Dr. Sunita Verma',
-        qualification: 'MSc Entomology',
-        experience: '10 years',
-        specialization: 'Pest Control',
-        languages: 'Hindi, English, Punjabi',
-        location: 'Chandigarh, India',
-        rating: 4.6,
-        reviews: 87,
-        availability: 'Available Tomorrow',
-        fee: 349,
-        about: 'Dr. Sunita Verma is an entomologist specializing in integrated pest management (IPM). She helps farmers identify pest problems early and implement eco-friendly control measures.',
-        workingHours: { Monday: '9:00 AM - 5:00 PM', Tuesday: '9:00 AM - 5:00 PM', Wednesday: '9:00 AM - 5:00 PM', Thursday: '9:00 AM - 5:00 PM', Friday: '9:00 AM - 5:00 PM', Saturday: '10:00 AM - 2:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Gurpreet Singh', rating: 5, text: 'Saved my cotton crop from pink bollworm. Very effective treatment.', date: '1 week ago' },
-          { author: 'Ravi Sharma', rating: 4, text: 'Great knowledge of organic pest control methods.', date: '3 weeks ago' }
-        ],
-        availClass: 'tomorrow'
-      },
-      {
-        id: 5,
-        name: 'Dr. Anand Joshi',
-        qualification: 'PhD Irrigation Engineering',
-        experience: '20 years',
-        specialization: 'Irrigation',
-        languages: 'English, Hindi, Marathi, Gujarati',
-        location: 'Surat, India',
-        rating: 4.9,
-        reviews: 203,
-        availability: 'This Week',
-        fee: 699,
-        about: 'Dr. Anand Joshi is a leading irrigation engineer with two decades of experience in designing efficient irrigation systems. He specializes in drip irrigation, sprinkler systems, and water conservation techniques.',
-        workingHours: { Monday: '9:00 AM - 6:00 PM', Tuesday: '9:00 AM - 6:00 PM', Wednesday: '9:00 AM - 6:00 PM', Thursday: '9:00 AM - 6:00 PM', Friday: '9:00 AM - 6:00 PM', Saturday: '9:00 AM - 3:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Kiran Patel', rating: 5, text: 'Designed a complete drip system for my farm. Water savings are amazing!', date: '3 days ago' },
-          { author: 'Hariom Tiwari', rating: 5, text: 'Very professional. Explained everything in detail.', date: '2 weeks ago' },
-          { author: 'Mohan Lal', rating: 4, text: 'Good consultation, practical advice for my farm.', date: '1 month ago' }
-        ],
-        availClass: 'week'
-      },
-      {
-        id: 6,
-        name: 'Dr. Lakshmi Nair',
-        qualification: 'PhD Organic Agriculture',
-        experience: '14 years',
-        specialization: 'Organic Farming',
-        languages: 'English, Hindi, Malayalam, Tamil',
-        location: 'Coimbatore, India',
-        rating: 4.8,
-        reviews: 112,
-        availability: 'Available Today',
-        fee: 449,
-        about: 'Dr. Lakshmi Nair is an organic farming expert passionate about sustainable agriculture. She has helped over 500 farms transition to certified organic farming practices.',
-        workingHours: { Monday: '8:00 AM - 5:00 PM', Tuesday: '8:00 AM - 5:00 PM', Wednesday: '8:00 AM - 5:00 PM', Thursday: '8:00 AM - 5:00 PM', Friday: '8:00 AM - 5:00 PM', Saturday: '8:00 AM - 12:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Sivakumar', rating: 5, text: 'Helped me get organic certification. Her knowledge is incredible.', date: '1 week ago' },
-          { author: 'Geetha Rani', rating: 5, text: 'My farm is now fully organic thanks to her guidance.', date: '1 month ago' }
-        ],
-        availClass: 'today'
-      },
-      {
-        id: 7,
-        name: 'Dr. Vikram Rathore',
-        qualification: 'MBA Agri-Business',
-        experience: '16 years',
-        specialization: 'Finance',
-        languages: 'Hindi, English',
-        location: 'Jaipur, India',
-        rating: 4.5,
-        reviews: 78,
-        availability: 'Available Tomorrow',
-        fee: 549,
-        about: 'Dr. Vikram Rathore is an agri-finance expert who helps farmers with financial planning, loan applications, government scheme navigation, and farm profitability analysis.',
-        workingHours: { Monday: '10:00 AM - 6:00 PM', Tuesday: '10:00 AM - 6:00 PM', Wednesday: '10:00 AM - 6:00 PM', Thursday: '10:00 AM - 6:00 PM', Friday: '10:00 AM - 6:00 PM', Saturday: '10:00 AM - 2:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Bhanwar Singh', rating: 5, text: 'Helped me get a PM-KISAN loan. Very knowledgeable about schemes.', date: '2 weeks ago' },
-          { author: 'Deepak Sharma', rating: 4, text: 'Good financial advice. Helped me plan my farm budget.', date: '1 month ago' }
-        ],
-        availClass: 'tomorrow'
-      },
-      {
-        id: 8,
-        name: 'Dr. Meera Iyer',
-        qualification: 'PhD Horticulture',
-        experience: '11 years',
-        specialization: 'Crop Growth',
-        languages: 'English, Hindi, Tamil, Kannada',
-        location: 'Bangalore, India',
-        rating: 4.7,
-        reviews: 94,
-        availability: 'This Week',
-        fee: 399,
-        about: 'Dr. Meera Iyer is a horticulture specialist focusing on fruit and vegetable crop growth optimization. She has extensive experience with greenhouse cultivation and precision nutrient management.',
-        workingHours: { Monday: '9:00 AM - 5:00 PM', Tuesday: '9:00 AM - 5:00 PM', Wednesday: '9:00 AM - 5:00 PM', Thursday: '9:00 AM - 5:00 PM', Friday: '9:00 AM - 5:00 PM', Saturday: '9:00 AM - 1:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Shashi Kumar', rating: 5, text: 'My tomato yield doubled after following her advice!', date: '1 week ago' },
-          { author: 'Lakshmi Devi', rating: 4, text: 'Very thorough analysis of my vegetable farm.', date: '3 weeks ago' }
-        ],
-        availClass: 'week'
-      },
-      {
-        id: 9,
-        name: 'Dr. Farhan Ali',
-        qualification: 'MSc Plant Pathology',
-        experience: '9 years',
-        specialization: 'Crop Disease',
-        languages: 'Hindi, English, Urdu',
-        location: 'Patna, India',
-        rating: 4.6,
-        reviews: 67,
-        availability: 'Available Today',
-        fee: 299,
-        about: 'Dr. Farhan Ali specializes in early detection and treatment of crop diseases. He has worked extensively in Bihar and Eastern UP helping farmers combat fungal and bacterial infections.',
-        workingHours: { Monday: '8:00 AM - 4:00 PM', Tuesday: '8:00 AM - 4:00 PM', Wednesday: '8:00 AM - 4:00 PM', Thursday: '8:00 AM - 4:00 PM', Friday: '8:00 AM - 4:00 PM', Saturday: '8:00 AM - 12:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Amar Nath', rating: 5, text: 'Quick diagnosis and affordable treatment plan.', date: '4 days ago' },
-          { author: 'Sita Devi', rating: 4, text: 'Very helpful and patient with all my questions.', date: '2 weeks ago' }
-        ],
-        availClass: 'today'
-      },
-      {
-        id: 10,
-        name: 'Dr. Kavita Desai',
-        qualification: 'PhD Soil Microbiology',
-        experience: '13 years',
-        specialization: 'Soil',
-        languages: 'English, Hindi, Gujarati',
-        location: 'Ahmedabad, India',
-        rating: 4.8,
-        reviews: 143,
-        availability: 'Available Tomorrow',
-        fee: 499,
-        about: 'Dr. Kavita Desai is a soil microbiologist specializing in soil health restoration, bio-fertilizers, and microbial consortiums for improved crop productivity. She has consulted for over 3000 farms.',
-        workingHours: { Monday: '9:00 AM - 6:00 PM', Tuesday: '9:00 AM - 6:00 PM', Wednesday: '9:00 AM - 6:00 PM', Thursday: '9:00 AM - 6:00 PM', Friday: '9:00 AM - 6:00 PM', Saturday: '9:00 AM - 2:00 PM', Sunday: 'Closed' },
-        reviewsList: [
-          { author: 'Jignesh Patel', rating: 5, text: 'My soil test was very detailed. Her bio-fertilizer recommendation worked wonders.', date: '1 week ago' },
-          { author: 'Rekha Ben', rating: 5, text: 'Wonderful expert! My farm soil is now much healthier.', date: '3 weeks ago' },
-          { author: 'Prakash Joshi', rating: 4, text: 'Very professional and knowledgeable.', date: '2 months ago' }
-        ],
-        availClass: 'tomorrow'
-      }
-    ];
+  function getInitials(name){
+    if(!name)return"EX";
+    var parts=String(name).trim().split(/\s+/).filter(Boolean);
+    if(parts.length===1)return parts[0].charAt(0).toUpperCase();
+    return(parts[0].charAt(0)+parts[parts.length-1].charAt(0)).toUpperCase();
+  }
 
-    var currentFilter = 'all';
-    var currentCategory = 'all';
-    var currentQuery = '';
-    var currentBookedExpert = null;
+  function getStatusBadge(status){
+    var label=statusLabels[status]||(status?String(status).replace(/_/g," "):status)||"Unknown";
+    return "<span class=\"cns-badge "+esc(status)+"\">"+esc(label)+"</span>";
+  }
 
-    // ---- Render Expert Cards ----
-    function renderExperts() {
-      var list = document.getElementById('expert-list');
-      if (!list) return;
+  function getMethodIcon(m){
+    if(m==="Phone")return"fa-phone";
+    if(m==="Video")return"fa-video";
+    if(m==="In-Person")return"fa-user-doctor";
+    if(m==="Chat")return"fa-comment";
+    return"fa-circle";
+  }
 
-      var filtered = experts.filter(function (e) {
-        if (currentCategory !== 'all' && e.specialization !== currentCategory) return false;
-        if (currentQuery) {
-          var q = currentQuery.toLowerCase();
-          var nameMatch = e.name.toLowerCase().indexOf(q) !== -1;
-          var specMatch = e.specialization.toLowerCase().indexOf(q) !== -1;
-          var locMatch = e.location.toLowerCase().indexOf(q) !== -1;
-          var langMatch = e.languages.toLowerCase().indexOf(q) !== -1;
-          var qualMatch = e.qualification.toLowerCase().indexOf(q) !== -1;
-          if (!nameMatch && !specMatch && !locMatch && !langMatch && !qualMatch) return false;
-        }
-        return true;
-      });
+  function methodLabel(m){ return methodLabels[m]||m||"--"; }
 
-      // Quick filter logic
-      if (currentFilter === 'booked') {
-        filtered = filtered.filter(function (e) { return e.availClass === 'today'; });
-      } else if (currentFilter === 'recommended') {
-        filtered = filtered.filter(function (e) { return e.rating >= 4.7; });
-      } else if (currentFilter === 'starred') {
-        filtered = filtered.filter(function (e) { return e.rating >= 4.8; });
-      } else if (currentFilter === 'known') {
-        filtered = filtered.filter(function (e) { return e.reviews >= 100; });
-      }
+  function starsHtml(rating){
+    var r=Math.round(parseFloat(rating)||0);
+    var out="";
+    for(var i=1;i<=5;i++)out+="<i class=\"fa"+(i<=r?"s":"r")+" fa-star\"></i>";
+    return out;
+  }
 
-      var countEl = document.getElementById('expert-count');
-      if (countEl) countEl.textContent = filtered.length + ' expert' + (filtered.length === 1 ? '' : 's');
+  function findExpert(id){
+    for(var i=0;i<allExperts.length;i++)if(allExperts[i].id===id)return allExperts[i];
+    return null;
+  }
 
-      if (filtered.length === 0) {
-        list.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-user-md"></i><h4>No experts found</h4><p>Try adjusting your filters or search terms.</p></div>';
-        return;
-      }
-
-      list.innerHTML = filtered.map(function (e) {
-        var availLabel = e.availability;
-        var starsHtml = stars(e.rating);
-        var initials = getInitials(e.name);
-        return '' +
-          '<div class="expert-card" data-id="' + e.id + '">' +
-            '<div class="expert-card-top">' +
-              '<div class="expert-avatar">' + esc(initials) + '</div>' +
-              '<div class="expert-info">' +
-                '<h4>' + esc(e.name) + ' <span class="badge badge-green">Expert</span></h4>' +
-                '<div class="expert-qual">' + esc(e.qualification) + ' &bull; ' + esc(e.experience) + '</div>' +
-                '<div class="expert-spec"><i class="fas fa-flask"></i> ' + esc(e.specialization) + '</div>' +
-                '<div class="expert-stars">' + starsHtml + ' <b>' + e.rating + '</b> <small>(' + e.reviews + ' reviews)</small></div>' +
-              '</div>' +
-            '</div>' +
-            '<div class="expert-meta">' +
-              '<span><i class="fas fa-language"></i> ' + esc(e.languages) + '</span>' +
-              '<span><i class="fas fa-map-marker-alt"></i> ' + esc(e.location) + '</span>' +
-            '</div>' +
-            '<div class="flex-between">' +
-              '<span class="expert-avail ' + e.availClass + '"><i class="fas fa-circle"></i> ' + esc(availLabel) + '</span>' +
-              '<span class="expert-fee">' + rupee(e.fee) + ' <small>/ consult</small></span>' +
-            '</div>' +
-            '<div class="expert-actions">' +
-              '<button class="btn-secondary btn-sm" onclick="window._openDetail(' + e.id + ')"><i class="fas fa-eye"></i> View Details</button>' +
-              '<button class="btn-secondary btn-sm" onclick="window._openMessage(' + e.id + ')"><i class="fas fa-comment-dots"></i> Message</button>' +
-              '<button class="btn-primary btn-sm" onclick="window._openBooking(' + e.id + ')"><i class="fas fa-calendar-check"></i> Book</button>' +
-            '</div>' +
-          '</div>';
-      }).join('');
-    }
-
-    // ---- Detail Modal ----
-    window._openDetail = function (id) {
-      var e = null;
-      for (var i = 0; i < experts.length; i++) {
-        if (experts[i].id === id) { e = experts[i]; break; }
-      }
-      if (!e) return;
-
-      var starsHtml = stars(e.rating);
-      var initials = getInitials(e.name);
-      var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      var hoursHtml = '';
-      for (var d = 0; d < days.length; d++) {
-        var day = days[d];
-        var time = e.workingHours[day] || 'Closed';
-        hoursHtml += '<div><span>' + day + '</span><span>' + time + '</span></div>';
-      }
-      var reviewsHtml = '';
-      for (var r = 0; r < e.reviewsList.length; r++) {
-        var rev = e.reviewsList[r];
-        reviewsHtml += '' +
-          '<div class="review-item">' +
-            '<div class="review-header"><b>' + esc(rev.author) + '</b><span>' + stars(rev.rating) + '</span></div>' +
-            '<div class="review-text">' + esc(rev.text) + '</div>' +
-            '<small style="color:var(--text-muted);font-size:10px;">' + esc(rev.date) + '</small>' +
-          '</div>';
-      }
-
-      var content = '' +
-        '<div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;">' +
-          '<div class="expert-avatar" style="width:72px;height:72px;font-size:28px;">' + esc(initials) + '</div>' +
-          '<div>' +
-            '<h3 style="font-size:18px;margin-bottom:2px;">' + esc(e.name) + '</h3>' +
-            '<div style="font-size:12px;color:var(--text-muted);">' + esc(e.qualification) + ' &bull; ' + esc(e.experience) + '</div>' +
-            '<div class="expert-stars" style="margin-top:4px;">' + starsHtml + ' <b>' + e.rating + '</b> <small>(' + e.reviews + ' reviews)</small></div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="section-title"><i class="fas fa-user-circle"></i> About</div>' +
-        '<div class="about-text">' + esc(e.about) + '</div>' +
-        '<div class="section-title"><i class="fas fa-star"></i> Reviews (' + e.reviewsList.length + ')</div>' +
-        reviewsHtml +
-        '<div class="section-title" style="margin-top:12px;"><i class="fas fa-clock"></i> Working Hours</div>' +
-        '<div class="working-hours">' + hoursHtml + '</div>' +
-        '<div style="display:flex;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border-light);">' +
-          '<button class="btn-secondary" onclick="closeDetailModal()" style="flex:1;">Close</button>' +
-          '<button class="btn-primary" onclick="closeDetailModal();window._openBooking(' + e.id + ');" style="flex:1;"><i class="fas fa-calendar-check"></i> Book Appointment</button>' +
-        '</div>';
-
-      document.getElementById('detail-modal-content').innerHTML = content;
-      openModal('detail-modal');
-    };
-
-    // ---- Booking Modal ----
-    window._openBooking = function (id) {
-      var e = null;
-      for (var i = 0; i < experts.length; i++) {
-        if (experts[i].id === id) { e = experts[i]; break; }
-      }
-      if (!e) return;
-      currentBookedExpert = e;
-
-      var initials = getInitials(e.name);
-      var tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      var minDate = tomorrow.toISOString().slice(0, 10);
-
-      var content = '' +
-        '<div class="book-summary">' +
-          '<div class="expert-avatar" style="width:44px;height:44px;font-size:16px;">' + esc(initials) + '</div>' +
-          '<div class="book-summary-info">' +
-            '<h4>' + esc(e.name) + '</h4>' +
-            '<p>' + esc(e.specialization) + ' &bull; ' + esc(e.qualification) + '</p>' +
-          '</div>' +
-        '</div>' +
-        '<form id="booking-form" novalidate>' +
-          '<div class="form-group">' +
-            '<label>Select Date</label>' +
-            '<input type="date" class="form-input" id="booking-date" min="' + minDate + '" value="' + minDate + '">' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label>Time Slot</label>' +
-            '<select class="form-select" id="booking-time">' +
-              '<option value="Morning 9-12">Morning (9:00 AM - 12:00 PM)</option>' +
-              '<option value="Afternoon 12-3">Afternoon (12:00 PM - 3:00 PM)</option>' +
-              '<option value="Evening 3-6">Evening (3:00 PM - 6:00 PM)</option>' +
-            '</select>' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label>Consultation Type</label>' +
-            '<select class="form-select" id="booking-type">' +
-              '<option value="Video">Video Call</option>' +
-              '<option value="Audio">Audio Call</option>' +
-              '<option value="Chat">Chat</option>' +
-              '<option value="In-person">In-person</option>' +
-            '</select>' +
-          '</div>' +
-          '<div style="background:var(--soft-green);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">' +
-            '<span style="font-size:13px;font-weight:600;color:var(--text-secondary);">Consultation Fee</span>' +
-            '<span style="font-size:20px;font-weight:800;color:var(--primary-green);">' + rupee(e.fee) + '</span>' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label>Notes (optional)</label>' +
-            '<textarea class="form-textarea" id="booking-notes" rows="3" placeholder="Describe your issue or any questions for the expert..." style="width:100%;padding:10px 14px;border:1px solid var(--border-medium);border-radius:var(--radius-sm);font-size:13px;resize:vertical;"></textarea>' +
-          '</div>' +
-        '</form>' +
-        '<div style="display:flex;gap:10px;padding-top:8px;">' +
-          '<button class="btn-secondary" style="flex:1;" onclick="closeBookingModal()">Cancel</button>' +
-          '<button class="btn-primary" style="flex:1;" onclick="confirmBooking()"><i class="fas fa-check"></i> Confirm Booking</button>' +
-        '</div>';
-
-      document.getElementById('booking-modal-content').innerHTML = content;
-      openModal('booking-modal');
-    };
-
-    window.confirmBooking = function () {
-      var date = document.getElementById('booking-date');
-      var time = document.getElementById('booking-time');
-      var type = document.getElementById('booking-type');
-      var notes = document.getElementById('booking-notes');
-      if (!date || !time || !type) return;
-
-      var msg = 'Appointment booked with ' + esc(currentBookedExpert.name) + ' on ' + date.value + ' (' + time.value + ') via ' + type.value + '.';
-      showToast(msg);
-      closeBookingModal();
-    };
-
-    window._openMessage = function (id) {
-      var e = null;
-      for (var i = 0; i < experts.length; i++) {
-        if (experts[i].id === id) { e = experts[i]; break; }
-      }
-      if (!e) return;
-      showToast('Opening chat with ' + e.name + '...');
-    };
-
-    // ---- Modal Controls ----
-    function openModal(id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-
-    window.closeDetailModal = function () {
-      var el = document.getElementById('detail-modal');
-      if (!el) return;
-      el.classList.remove('active');
-      document.body.style.overflow = '';
-    };
-
-    window.closeBookingModal = function () {
-      var el = document.getElementById('booking-modal');
-      if (!el) return;
-      el.classList.remove('active');
-      document.body.style.overflow = '';
-    };
-
-    // ---- Click outside to close modals ----
-    document.addEventListener('click', function (e) {
-      var dm = document.getElementById('detail-modal');
-      var bm = document.getElementById('booking-modal');
-      if (dm && dm.classList.contains('active') && e.target === dm) closeDetailModal();
-      if (bm && bm.classList.contains('active') && e.target === bm) closeBookingModal();
-    });
-
-    // ---- Escape key to close modals ----
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        closeDetailModal();
-        closeBookingModal();
-      }
-    });
-
-    // ---- Toast ----
-    function showToast(msg) {
-      var el = document.getElementById('success-toast');
-      var msgEl = document.getElementById('toast-message');
-      if (!el || !msgEl) return;
-      msgEl.textContent = msg;
-      el.classList.add('show');
-      clearTimeout(el._timeout);
-      el._timeout = setTimeout(function () {
-        el.classList.remove('show');
-      }, 3500);
-    }
-
-    // ---- Bind UI Controls ----
-    function bindUI() {
-      // Search
-      var search = document.getElementById('expert-search');
-      if (search) {
-        var timer;
-        search.addEventListener('input', function () {
-          clearTimeout(timer);
-          timer = setTimeout(function () {
-            currentQuery = search.value;
-            renderExperts();
-          }, 250);
-        });
-      }
-
-      // Category filter
-      var cat = document.getElementById('expert-category-filter');
-      if (cat) {
-        cat.addEventListener('change', function () {
-          currentCategory = cat.value;
-          renderExperts();
-        });
-      }
-
-      // Quick filter icons
-      var iconBtns = document.querySelectorAll('.filter-icon-btn');
-      for (var i = 0; i < iconBtns.length; i++) {
-        (function (btn) {
-          btn.addEventListener('click', function () {
-            var filter = btn.getAttribute('data-filter');
-            if (currentFilter === filter) {
-              currentFilter = 'all';
-              btn.classList.remove('active');
-            } else {
-              for (var j = 0; j < iconBtns.length; j++) iconBtns[j].classList.remove('active');
-              currentFilter = filter;
-              btn.classList.add('active');
-            }
-            renderExperts();
-          });
-        })(iconBtns[i]);
-      }
-    }
-
-    // ---- Init ----
-    function init() {
-      if (!document.getElementById('expert-list')) return;
+  // ================= EXPERTS SECTION =================
+  function loadExperts(){
+    if(!hasApi())return;
+    var el=document.getElementById("cns-experts-list");
+    API.Community.listExperts({limit:50}).then(function(r){
+      allExperts=(r&&r.items)||[];
+      fillSpecFilter();
       renderExperts();
-      bindUI();
+      if(document.getElementById("cns-steps"))renderWizard();
+    }).catch(function(){
+      el.innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load experts</h4><p>Please try again later.</p></div>";
+    });
+  }
+
+  function fillSpecFilter(){
+    var sel=document.getElementById("cns-expert-spec-filter");
+    var seen={};
+    for(var i=0;i<allExperts.length;i++){
+      var sp=allExperts[i].speciality;
+      if(sp&&!seen[sp.toLowerCase()]){seen[sp.toLowerCase()]=1;}
+    }
+    var opts=["<option value=\"\">All Specialisations</option>"];
+    Object.keys(seen).forEach(function(k){
+      var orig="";
+      for(var j=0;j<allExperts.length;j++){if(allExperts[j].speciality.toLowerCase()===k){orig=allExperts[j].speciality;break;}}
+      opts.push("<option value=\""+esc(orig)+"\">"+esc(orig)+"</option>");
+    });
+    sel.innerHTML=opts.join("");
+  }
+
+  function filterExpertsClient(){
+    var q=document.getElementById("cns-expert-search").value.trim().toLowerCase();
+    var sp=document.getElementById("cns-expert-spec-filter").value;
+    return allExperts.filter(function(e){
+      if(sp && e.speciality!==sp)return false;
+      if(q){
+        var hay=(e.full_name+" "+e.speciality+" "+(e.bio||"")+" "+(e.qualification||"")).toLowerCase();
+        if(hay.indexOf(q)<0)return false;
+      }
+      return true;
+    });
+  }
+
+  window.cnsFilterExperts=function(){
+    renderExperts();
+  };
+
+  function renderExperts(){
+    var el=document.getElementById("cns-experts-list");
+    var empty=document.getElementById("cns-experts-empty");
+    var list=filterExpertsClient();
+
+    document.getElementById("cns-experts-count").textContent=list.length+" expert"+(list.length!==1?"s":"");
+
+    if(list.length===0){
+      el.innerHTML="";
+      empty.style.display="block";
+      return;
+    }
+    empty.style.display="none";
+
+    el.innerHTML=list.map(function(e){
+      var initials=getInitials(e.full_name);
+      var avail=e.is_available
+        ? "<span class=\"cns-avail-badge available\"><i class=\"fas fa-circle\" style=\"font-size:6px\"></i> Available</span>"
+        : "<span class=\"cns-avail-badge unavailable\"><i class=\"fas fa-circle\" style=\"font-size:6px\"></i> Unavailable</span>";
+      var fee=e.consultation_fee
+        ? "<span class=\"cns-expert-fee\"><i class=\"fas fa-indian-rupee-sign\"></i> "+e.consultation_fee+"</span>"
+        : "<span class=\"cns-expert-fee\">Free consultation</span>";
+      return "<div class=\"cns-expert-card\">"+
+        "<div class=\"cns-expert-top\">"+
+          "<div class=\"cns-expert-avatar\">"+esc(initials)+"</div>"+
+          "<div class=\"cns-expert-info\">"+
+            "<div class=\"cns-expert-name\">"+esc(e.full_name)+" "+avail+"</div>"+
+            "<div class=\"cns-expert-spec\">"+esc(e.speciality)+"</div>"+
+            "<div class=\"cns-expert-meta\">"+
+              (e.experience_years?"<span><i class=\"fas fa-briefcase\"></i>"+e.experience_years+" yrs exp</span>":"")+
+              (e.qualification?"<span><i class=\"fas fa-graduation-cap\"></i>"+esc(e.qualification)+"</span>":"")+
+              (e.location?"<span><i class=\"fas fa-location-dot\"></i>"+esc(e.location)+"</span>":"")+
+            "</div>"+
+          "</div>"+
+        "</div>"+
+        "<div style=\"margin-top:10px;font-size:11px;color:var(--text-muted)\">"+esc(e.bio||"Agriculture expert providing professional consultation services.")+"</div>"+
+        "<div class=\"cns-expert-meta\" style=\"margin-top:8px\">"+
+          "<span>"+fee+"</span>"+
+          (e.rating?"<span class=\"cns-expert-rating\"><i class=\"fas fa-star\"></i> "+e.rating+"/5</span>":"")+
+          (e.languages&&e.languages.length?"<span><i class=\"fas fa-language\"></i>"+esc(e.languages.join(", "))+"</span>":"")+
+        "</div>"+
+        "<div class=\"cns-expert-footer\">"+
+          "<button class=\"cns-btn cns-btn-primary cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenWizard('"+e.id+"')\"><i class=\"fas fa-calendar-plus\"></i> Book</button>"+
+        "</div>"+
+      "</div>";
+    }).join("");
+  }
+
+  // ================= APPOINTMENTS SECTION =================
+  function loadAppointments(){
+    if(!hasApi())return;
+    var el=document.getElementById("cns-appointments-list");
+    API.Community.listConsultations({limit:50}).then(function(r){
+      allAppointments=(r&&r.items)||[];
+      renderAppointmentTabs();
+      renderAppointments();
+    }).catch(function(err){
+      el.innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load appointments</h4><p>"+esc((err&&err.message)||"Please try again later")+"</p></div>";
+    });
+  }
+
+  function counts(){
+    var c={All:allAppointments.length,Upcoming:0,Completed:0,Cancelled:0};
+    for(var i=0;i<allAppointments.length;i++){
+      var s=allAppointments[i].status;
+      if(upcomingSet[s])c.Upcoming++;
+      else if(s==="completed")c.Completed++;
+      else if(s==="cancelled")c.Cancelled++;
+    }
+    return c;
+  }
+
+  function renderAppointmentTabs(){
+    var c=counts();
+    var defs=[["All","fa-list"],["Upcoming","fa-clock"],["Completed","fa-circle-check"],["Cancelled","fa-circle-xmark"]];
+    document.getElementById("cns-appt-tabs").innerHTML=defs.map(function(d){
+      var count=d[0]==="All"?c.All:(c[d[0]]||0);
+      return "<button class=\"cns-appt-tab"+(appointmentTab===d[0]?" active":"")+"\" onclick=\"cnsSetApptTab('"+d[0]+"')\"><i class=\"fas "+d[1]+"\"></i> "+d[0]+" ("+count+")</button>";
+    }).join("");
+  }
+
+  window.cnsSetApptTab=function(tab){
+    appointmentTab=tab;
+    renderAppointmentTabs();
+    renderAppointments();
+  };
+
+  function appointmentMatches(c){
+    if(appointmentTab==="Upcoming")return !!upcomingSet[c.status];
+    if(appointmentTab==="Completed")return c.status==="completed";
+    if(appointmentTab==="Cancelled")return c.status==="cancelled";
+    return true;
+  }
+
+  function renderAppointments(){
+    var el=document.getElementById("cns-appointments-list");
+    var empty=document.getElementById("cns-appointments-empty");
+    var list=allAppointments.filter(appointmentMatches);
+
+    document.getElementById("cns-appointments-count").textContent=allAppointments.length+" appointment"+(allAppointments.length!==1?"s":"");
+
+    if(allAppointments.length===0){
+      el.innerHTML="";
+      empty.style.display="block";
+      return;
+    }
+    empty.style.display="none";
+
+    if(list.length===0){
+      el.innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-inbox\"></i><h4>No appointments in this category</h4></div>";
+      return;
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
+    el.innerHTML=list.map(function(c){
+      var initials=getInitials(c.expert_name);
 
+      var actions="";
+      if(upcomingSet[c.status]){
+        actions="<div class=\"cns-appointment-actions\">"+
+          "<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenDetail('"+c.id+"')\"><i class=\"fas fa-eye\"></i> Details</button>";
+        if(c.status==="scheduled"||c.status==="requested"||c.status==="confirmed"){
+          actions+="<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenReschedule('"+c.id+"')\"><i class=\"fas fa-calendar-week\"></i> Reschedule</button>";
+        }
+        if(c.status==="scheduled"||c.status==="requested"||c.status==="confirmed"||c.status==="in_progress"){
+          actions+="<button class=\"cns-btn cns-btn-small cns-btn-danger\" onclick=\"event.stopPropagation();cnsOpenCancel('"+c.id+"')\"><i class=\"fas fa-times\"></i> Cancel</button>";
+        }
+        actions+="</div>";
+      }else if(c.status==="completed"){
+        if(!c.rating){
+          actions="<div class=\"cns-appointment-actions\">"+
+            "<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenDetail('"+c.id+"')\"><i class=\"fas fa-eye\"></i> Details</button>"+
+            "<button class=\"cns-btn cns-btn-small cns-btn-primary\" onclick=\"event.stopPropagation();cnsOpenReview('"+c.id+"','"+esc(c.expert_name)+"')\"><i class=\"fas fa-star\"></i> Rate</button>"+
+          "</div>";
+        }else{
+          actions="<div class=\"cns-appointment-actions\">"+
+            "<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenDetail('"+c.id+"')\"><i class=\"fas fa-eye\"></i> Details</button>"+
+          "</div>"+
+          "<div style=\"font-size:11px;color:var(--text-muted);padding-top:8px\"><i class=\"fas fa-check-circle\" style=\"color:var(--c-green);margin-right:4px\"></i> Reviewed ("+c.rating+"/5)</div>";
+        }
+      }else if(c.status==="cancelled"){
+        actions="<div class=\"cns-appointment-actions\">"+
+          "<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenDetail('"+c.id+"')\"><i class=\"fas fa-eye\"></i> Details</button>"+
+        "</div>";
+        actions+="<div class=\"cns-appointment-note\"><i class=\"fas fa-times-circle\" style=\"color:var(--c-red)\"></i> Cancelled"+(c.cancel_reason?": "+esc(c.cancel_reason):"")+"</div>";
+      }
+
+      return "<div class=\"cns-appointment-card\" onclick=\"cnsOpenDetail('"+c.id+"')\">"+
+        "<div class=\"cns-appointment-header\">"+
+          "<div class=\"cns-appointment-avatar\">"+esc(initials)+"</div>"+
+          "<div class=\"cns-appointment-info\">"+
+            "<div class=\"cns-appointment-title\">"+esc(c.expert_name)+"</div>"+
+            "<div class=\"cns-appointment-spec\">"+esc(c.expert_speciality)+"</div>"+
+            "<div class=\"cns-appointment-ref\"><i class=\"fas fa-hashtag\"></i> Booking ID: "+esc(c.consultation_id||c.reference_id||"--")+"</div>"+
+          "</div>"+
+          "<div>"+getStatusBadge(c.status)+"</div>"+
+        "</div>"+
+        "<div class=\"cns-appointment-meta\">"+
+          "<span><i class=\"far fa-calendar-alt\"></i> "+fmtDate(c.scheduled_date)+"</span>"+
+          "<span><i class=\"far fa-clock\"></i> "+esc(c.scheduled_time||"--")+"</span>"+
+          "<span><i class=\"fas "+getMethodIcon(c.consultation_method)+"\"></i> "+esc(methodLabel(c.consultation_method))+"</span>"+
+          (c.consultation_type?"<span><i class=\"fas fa-tag\"></i> "+esc(c.consultation_type)+"</span>":"")+
+        "</div>"+
+        "<div class=\"cns-appointment-topic\">"+esc(c.topic)+"</div>"+
+        actions+
+      "</div>";
+    }).join("");
+  }
+
+  // ================= WIZARD =================
+  function cnsScrollToBooking(){
+    document.getElementById("cns-book-section").scrollIntoView({behavior:"smooth"});
+  }
+
+  window.cnsOpenWizard=function(expertId){
+    if(!hasApi())return;
+    wizard.step=1;
+    wizard.expertId=expertId||"";
+    wizard.method="";
+    wizard.date="";
+    wizard.time="";
+    wizard.farmId=farmsList.length===1?farmsList[0].id:"";
+    wizard.cropId="";
+    wizard.topic="";
+    wizard.desc="";
+    wizard.type="";
+    wizardBusy=false;
+    cnsScrollToBooking();
+    renderWizard();
+  };
+
+  var stepNames=["Expert","Type","Date &amp; Time","Farm &amp; Issue","Review","Confirmation"];
+
+  function renderWizard(){
+    var stepsHtml="";
+    for(var i=0;i<6;i++){
+      var cls="cns-step-dot";
+      if(i+1===wizard.step)cls+=" active";
+      else if(i+1<wizard.step)cls+=" done";
+      stepsHtml+="<div class=\""+cls+"\"><i class=\"fas "+(i+1<wizard.step?"fa-check":"fa-"+["fa-user","fa-phone","fa-calendar-day","fa-tractor","fa-list-check","fa-circle-check"][i])+"\" style=\"font-size:9px\"></i><span class=\"num\">"+(i+1<wizard.step?"<i class='fas fa-check' style='font-size:9px'></i>":(i+1))+"</span><span class=\"lbl\">"+stepNames[i]+"</span></div>";
+      if(i<5)stepsHtml+="<div class=\"cns-step-line"+(i+1<wizard.step?" filled":"")+"\"></div>";
+    }
+    document.getElementById("cns-steps").innerHTML=stepsHtml;
+
+    var content="";
+    if(wizard.step===1)content=renderStep1();
+    else if(wizard.step===2)content=renderStep2();
+    else if(wizard.step===3)content=renderStep3();
+    else if(wizard.step===4)content=renderStep4();
+    else if(wizard.step===5)content=renderStep5();
+    else if(wizard.step===6)content=renderStep6();
+    document.getElementById("cns-step-content").innerHTML=content;
+
+    renderStepNav();
+  }
+
+  function renderStep1(){
+    if(allExperts.length===0){
+      return "<div class=\"cns-empty\"><i class=\"fas fa-user-slash\"></i><h4>No experts are currently available.</h4><p>Check back later.</p></div>";
+    }
+    return "<h3 class=\"cns-step-heading\"><i class=\"fas fa-user-doctor\" style=\"color:var(--c-green)\"></i> Select an Expert</h3>"+
+      "<p class=\"cns-step-sub\">Choose the agriculture specialist you would like to consult.</p>"+
+      "<div class=\"cns-expert-select-list\">"+
+      allExperts.map(function(e){
+        var initials=getInitials(e.full_name);
+        var fee=e.consultation_fee
+          ? "<i class=\"fas fa-indian-rupee-sign\"></i> "+e.consultation_fee
+          : "Free";
+        return "<div class=\"cns-expert-card"+(wizard.expertId===e.id?" active":"")+"\" data-expert-id=\""+e.id+"\" onclick=\"wizSelectExpert(this,'"+e.id+"')\">"+
+          "<div class=\"cns-expert-top\">"+
+            "<div class=\"cns-expert-avatar\">"+esc(initials)+"</div>"+
+            "<div class=\"cns-expert-info\">"+
+              "<div class=\"cns-expert-name\">"+esc(e.full_name)+"</div>"+
+              "<div class=\"cns-expert-spec\">"+esc(e.speciality)+"</div>"+
+              "<div class=\"cns-expert-meta\">"+
+                (e.experience_years?"<span><i class=\"fas fa-briefcase\"></i>"+e.experience_years+" yrs</span>":"")+
+                (e.rating?"<span class=\"cns-expert-rating\"><i class=\"fas fa-star\"></i> "+e.rating+"</span>":"")+
+                "<span>"+fee+"</span>"+
+              "</div>"+
+            "</div>"+
+          "</div>"+
+        "</div>";
+      }).join("")+
+      "</div>";
+  }
+
+  window.wizSelectExpert=function(el,id){
+    wizard.expertId=id;
+    wizard.date="";
+    wizard.time="";
+    var cards=document.querySelectorAll("#cns-step-content .cns-expert-card");
+    for(var i=0;i<cards.length;i++){
+      cards[i].classList.toggle("active",cards[i].getAttribute("data-expert-id")===id);
+    }
+    renderStepNav();
+  };
+
+  function renderStep2(){
+    return "<h3 class=\"cns-step-heading\"><i class=\"fas fa-phone\" style=\"color:var(--c-green)\"></i> Select Consultation Type</h3>"+
+      "<p class=\"cns-step-sub\">Choose how you would like to connect with the expert.</p>"+
+      "<div class=\"cns-method-group\">"+
+      methods.map(function(m){
+        return "<div class=\"cns-method-opt"+(wizard.method===m.value?" active":"")+"\" data-method=\""+m.value+"\" onclick=\"wizSelectMethod(this)\">"+
+          "<i class=\"fas "+m.icon+"\"></i> "+m.label+
+        "</div>";
+      }).join("")+
+      "</div>";
+  }
+
+  window.wizSelectMethod=function(el){
+    wizard.method=el.getAttribute("data-method");
+    var opts=document.querySelectorAll(".cns-method-opt");
+    for(var i=0;i<opts.length;i++)opts[i].classList.remove("active");
+    el.classList.add("active");
+    renderStepNav();
+  };
+
+  function renderStep3(){
+    var expert=findExpert(wizard.expertId);
+    return "<h3 class=\"cns-step-heading\"><i class=\"fas fa-calendar-day\" style=\"color:var(--c-green)\"></i> Select Date &amp; Time</h3>"+
+      "<p class=\"cns-step-sub\">Consulting with <b>"+esc(expert?expert.full_name:"the expert")+"</b>. Choose an available slot for your appointment.</p>"+
+      "<div class=\"cns-form-group\">"+
+        "<label>Appointment Date <span class=\"req\">*</span></label>"+
+        "<input type=\"date\" class=\"cns-form-input\" id=\"cns-wiz-date\" min=\""+todayStr()+"\" value=\""+esc(wizard.date)+"\" onchange=\"wizDateChanged()\">"+
+      "</div>"+
+      "<div id=\"cns-wiz-slots\"><div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading available slots...</div></div>";
+  }
+
+  window.wizDateChanged=function(){
+    wizard.date=document.getElementById("cns-wiz-date").value;
+    wizard.time="";
+    renderSlotArea();
+  };
+
+  function renderSlotArea(){
+    var holder=document.getElementById("cns-wiz-slots");
+    if(!holder)return;
+    if(!wizard.expertId||!wizard.date){
+      holder.innerHTML="<p class=\"cns-empty\" style=\"padding:24px\"><i class=\"fas fa-clock\"></i><h4>Select a date to see available time slots.</h4></p>";
+      return;
+    }
+    holder.innerHTML="<div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading available slots...</div>";
+    API.Community.getExpertSlots(wizard.expertId,wizard.date).then(function(r){
+      if(!holder)return;
+      var slots=(r&&r.slots)||[];
+      renderSlotsInto(holder,slots,"wizPickSlot",wizard.time);
+      renderStepNav();
+    }).catch(function(err){
+      holder.innerHTML="<div class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load appointment slots.</h4><p>"+esc((err&&err.message)||"Please try again.")+"</p></div>";
+    });
+  }
+
+  function renderSlotsInto(holder,slots,fnName,selected){
+    if(!slots||slots.length===0){
+      holder.innerHTML="<div class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-clock\"></i><h4>No available slots for this date.</h4><p>Try another date.</p></div>";
+      return;
+    }
+    holder.innerHTML="<div style=\"font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px\">Available Time Slots</div>"+
+      "<div class=\"cns-slots-grid\">"+
+      slots.map(function(s){
+        return "<button type=\"button\" class=\"cns-slot-opt"+(selected===s?" active":"")+"\" data-time=\""+esc(s)+"\" onclick=\""+fnName+"(this)\">"+esc(s)+"</button>";
+      }).join("")+
+      "</div>";
+  }
+
+  window.wizPickSlot=function(el){
+    wizard.time=el.getAttribute("data-time");
+    var opts=document.querySelectorAll("#cns-wiz-slots .cns-slot-opt");
+    for(var i=0;i<opts.length;i++)opts[i].classList.remove("active");
+    el.classList.add("active");
+    renderStepNav();
+  };
+
+  function renderStep4(){
+    var expert=findExpert(wizard.expertId);
+    var farmOptions="<option value=\"\">Select farm"+(farmsList.length>0?"":" (no farm on your account)")+"</option>";
+    farmsList.forEach(function(f){
+      farmOptions+="<option value=\""+esc(f.id)+"\""+(wizard.farmId===f.id?" selected":"")+">"+esc(f.farm_name)+(f.total_area?" ("+f.total_area+" "+(f.area_unit||"Acres")+")":"")+"</option>";
+    });
+    var cropOptions="<option value=\"\">Select crop (optional)</option>";
+    if(wizard.farmId&&cyclesByFarm[wizard.farmId]){
+      cyclesByFarm[wizard.farmId].forEach(function(c){
+        cropOptions+="<option value=\""+esc(c.crop_id)+"\""+(wizard.cropId===c.crop_id?" selected":"")+">"+esc(cropName(c.crop_id))+"</option>";
+      });
+    }
+    var typeOptions="<option value=\"\">Select issue category (optional)</option>";
+    consultTypes.forEach(function(t){
+      typeOptions+="<option value=\""+esc(t)+"\""+(wizard.type===t?" selected":"")+">"+esc(t)+"</option>";
+    });
+
+    var farmBlock=farmsList.length===0
+      ? "<p style=\"font-size:11px;color:var(--text-muted)\"><i class=\"fas fa-info-circle\"></i> No farms added to your account yet &mdash; you can still book without a farm.</p>"
+      : "<div class=\"cns-form-group\"><label>Farm / Plot <span class=\"req\">*</span></label>"+
+        "<select class=\"cns-form-input\" id=\"cns-wiz-farm\" onchange=\"wizFarmChanged()\">"+farmOptions+"</select></div>"+
+        "<div class=\"cns-form-group\"><label>Crop (Optional)</label>"+
+        "<select class=\"cns-form-input\" id=\"cns-wiz-crop\">"+cropOptions+"</select></div>";
+
+    return "<h3 class=\"cns-step-heading\"><i class=\"fas fa-tractor\" style=\"color:var(--c-green)\"></i> Farm &amp; Issue Details</h3>"+
+      "<p class=\"cns-step-sub\">Tell the expert about your <b>"+esc(expert?expert.full_name:"")+"</b> consultation.</p>"+
+      "<div id=\"cns-wiz-step4\">"+farmBlock+
+      "<div class=\"cns-form-group\"><label>Issue Category (Optional)</label>"+
+      "<select class=\"cns-form-input\" id=\"cns-wiz-type\" onchange=\"wizStep4Changed()\">"+typeOptions+"</select></div>"+
+      "<div class=\"cns-form-group\"><label>Consultation Topic <span class=\"req\">*</span></label>"+
+      "<input type=\"text\" class=\"cns-form-input\" id=\"cns-wiz-topic\" placeholder=\"e.g. Tomato leaves turning yellow\" maxlength=\"200\" value=\""+esc(wizard.topic)+"\" oninput=\"wizStep4Changed()\"></div>"+
+      "<div class=\"cns-form-group\"><label>Short Description</label>"+
+      "<textarea class=\"cns-form-input\" id=\"cns-wiz-desc\" placeholder=\"Describe your issue or question in detail...\" rows=\"3\" oninput=\"wizStep4Changed()\">"+esc(wizard.desc)+"</textarea></div>"+
+      "</div>";
+  }
+
+  window.wizFarmChanged=function(){
+    wizard.farmId=document.getElementById("cns-wiz-farm").value;
+    wizard.cropId="";
+    renderWizard();
+  };
+
+  window.wizStep4Changed=function(){
+    wizard.topic=document.getElementById("cns-wiz-topic").value.trim();
+    wizard.desc=document.getElementById("cns-wiz-desc").value.trim();
+    var readType=document.getElementById("cns-wiz-type");
+    if(readType)wizard.type=readType.value;
+    renderStepNav();
+  };
+
+  function cropName(cropId){
+    if(cropCatalog[cropId])return cropCatalog[cropId].name||cropCatalog[cropId].crop_name||cropId;
+    return cropId;
+  }
+
+  function renderStep5(){
+    var expert=findExpert(wizard.expertId);
+    var farmName="";
+    for(var i=0;i<farmsList.length;i++)if(farmsList[i].id===wizard.farmId)farmName=farmsList[i].farm_name;
+    var fee=expert&&expert.consultation_fee
+      ? "<i class=\"fas fa-indian-rupee-sign\"></i> "+expert.consultation_fee
+      : "Free consultation";
+    var rows=[
+      ["Expert",expert?expert.full_name:"--"],
+      ["Specialisation",expert?expert.speciality:"--"],
+      ["Consultation Type",methodLabel(wizard.method)],
+      ["Date",wizard.date?fmtDate(wizard.date):"--"],
+      ["Time",wizard.time||"--"],
+      ["Farm",farmName||"--"],
+      ["Crop",wizard.cropId?cropName(wizard.cropId):"--"],
+      ["Issue Category",wizard.type||"--"],
+      ["Topic",wizard.topic||"--"]
+    ];
+    var html="<h3 class=\"cns-step-heading\"><i class=\"fas fa-list-check\" style=\"color:var(--c-green)\"></i> Review Your Appointment</h3>"+
+      "<p class=\"cns-step-sub\">Please confirm the details before booking.</p><div class=\"cns-review-list\">";
+    rows.forEach(function(r){
+      if(r[0]==="Consultation Type"&&r[1]==="--")return;
+      html+="<div class=\"cns-review-row\"><span class=\"cns-review-label\">"+r[0]+"</span><span class=\"cns-review-value\">"+esc(r[1])+"</span></div>";
+    });
+    html+="<div class=\"cns-review-row\"><span class=\"cns-review-label\">Fee</span><span class=\"cns-review-value cns-expert-fee\">"+fee+"</span></div></div>";
+    return html;
+  }
+
+  function renderStep6(){
+    return "<div class=\"cns-confirm-card\">"+
+      "<div class=\"big-icon\"><i class=\"fas fa-circle-check\"></i></div>"+
+      "<h3>Appointment booked successfully!</h3>"+
+      "<p>Your consultation has been scheduled. Keep a note of your booking ID below.</p>"+
+      "<div class=\"cns-ref-chip\" id=\"cns-booked-ref\">"+esc(wizard.confirmedRef||"")+"</div>"+
+      "<div class=\"cns-review-list\">"+
+        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Expert</span><span class=\"cns-review-value\">"+esc(wizard.confirmedName||wizard.expertId)+"</span></div>"+
+        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Date</span><span class=\"cns-review-value\">"+fmtDate(wizard.date)+"</span></div>"+
+        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Time</span><span class=\"cns-review-value\">"+esc(wizard.time)+"</span></div>"+
+        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Type</span><span class=\"cns-review-value\">"+esc(methodLabel(wizard.method))+"</span></div>"+
+        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Farm</span><span class=\"cns-review-value\">"+esc(farmNameById(wizard.farmId)||"--")+"</span></div>"+
+      "</div></div>";
+  }
+
+  function farmNameById(id){
+    for(var i=0;i<farmsList.length;i++)if(farmsList[i].id===id)return farmsList[i].farm_name;
+    return "";
+  }
+
+  function renderStepNav(){
+    var nav=document.getElementById("cns-step-nav");
+    var html="";
+    if(wizard.step>1&&wizard.step<6){
+      html+="<button class=\"cns-btn\" onclick=\"cnsWizardBack()\"><i class=\"fas fa-arrow-left\"></i> Back</button>";
+    }
+    if(wizard.step<5){
+      html+="<button class=\"cns-btn cns-btn-primary\" id=\"cns-wiz-next\" onclick=\"cnsWizardNext()\"><i class=\"fas fa-arrow-right\"></i> Continue</button>";
+    }else if(wizard.step===5){
+      html+="<button class=\"cns-btn cns-btn-primary\" id=\"cns-wiz-confirm\" onclick=\"cnsWizardConfirm()\"><i class=\"fas fa-calendar-check\"></i> Confirm Booking</button>";
+    }else if(wizard.step===6){
+      html+="<button class=\"cns-btn cns-btn-primary\" onclick=\"cnsOpenDetailFromConfirm()\"><i class=\"fas fa-eye\"></i> View Appointment</button>";
+      html+="<button class=\"cns-btn\" onclick=\"cnsOpenWizard('')\"><i class=\"fas fa-plus\"></i> Book Another</button>";
+    }
+    nav.innerHTML=html;
+  }
+
+  window.cnsWizardBack=function(){
+    if(wizard.step>1)wizard.step--;
+    if(wizard.step===3)renderSlotArea();
+    renderWizard();
+  };
+
+  function wizCanContinue(){
+    if(wizard.step===1)return !!wizard.expertId;
+    if(wizard.step===2)return !!wizard.method;
+    if(wizard.step===3)return !!(wizard.date&&wizard.time);
+    if(wizard.step===4)return wizard.topic.length>=3 && (farmsList.length===0||wizard.farmId);
+    return true;
+  }
+
+  window.cnsWizardNext=function(){
+    if(wizardBusy)return;
+    if(!wizCanContinue()){
+      if(wizard.step===1){showToast("Please select an expert","error");return;}
+      if(wizard.step===2){showToast("Please select a consultation type","error");return;}
+      if(wizard.step===3){showToast("Please select a date and time slot","error");return;}
+      if(wizard.step===4){
+        if(wizard.topic.length<3){showToast("Topic must be at least 3 characters","error");return;}
+        showToast("Please select a farm","error");return;
+      }
+      return;
+    }
+    wizard.step++;
+    renderWizard();
+    if(wizard.step===3&&wizard.expertId&&wizard.date)renderSlotArea();
+  };
+
+  window.cnsWizardConfirm=function(){
+    if(wizardBusy)return;
+    if(!wizard.expertId||!wizard.method||!wizard.date||!wizard.time||wizard.topic.length<3){
+      showToast("Please complete the appointment details","error");
+      return;
+    }
+    wizardBusy=true;
+    var btn=document.getElementById("cns-wiz-confirm");
+    setBtn(btn,true);
+
+    var payload={
+      expert_id:wizard.expertId,
+      topic:wizard.topic,
+      description:wizard.desc||null,
+      consultation_type:wizard.type||"Other",
+      consultation_method:wizard.method,
+      scheduled_date:wizard.date,
+      scheduled_time:wizard.time,
+      farm_id:wizard.farmId||null,
+      farm_name:farmNameById(wizard.farmId)||null,
+      crop_id:wizard.cropId||null,
+      crop_name:wizard.cropId?cropName(wizard.cropId):null
+    };
+
+    API.Community.bookConsultation(payload).then(function(r){
+      wizardBusy=false;
+      setBtn(btn,false);
+      var expert=findExpert(wizard.expertId);
+      wizard.confirmedRef=(r&&(r.consultation_id||r.reference_id))||"--";
+      wizard.confirmedName=expert?expert.full_name:(r&&r.expert_name)||"";
+      wizard.confirmedId=(r&&r.id)||"";
+      wizard.step=6;
+      renderWizard();
+      showToast("Appointment booked successfully","success");
+      loadAppointments();
+    }).catch(function(err){
+      wizardBusy=false;
+      setBtn(btn,false);
+      var msg=(err&&err.message)||"Unable to book the appointment.";
+      if(msg==="This time slot is no longer available. Please choose another time."){
+        wizard.time="";
+        wizard.step=3;
+        renderWizard();
+        renderSlotArea();
+      }
+      showToast(msg,"error");
+    });
+  };
+
+  window.cnsOpenDetailFromConfirm=function(){
+    if(wizard.confirmedId)window.cnsOpenDetail(wizard.confirmedId);
+  };
+
+  // ================= DETAIL MODAL =================
+  window.cnsOpenDetail=function(id){
+    if(!hasApi())return;
+    var modal=document.getElementById("cns-detail-modal");
+    document.getElementById("cns-detail-content").innerHTML="<div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading...</div>";
+    document.getElementById("cns-detail-actions").innerHTML="";
+    modal.classList.add("active");
+    API.Community.getConsultation(id).then(function(r){
+      var c=r||{};
+      var isUpcoming=!!upcomingSet[c.status];
+
+      var html="<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-hashtag\"></i> Booking ID</span><span class=\"modal-info-value\">"+esc(c.consultation_id||c.reference_id||"--")+"</span></div>"+
+        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-user\"></i> Expert</span><span class=\"modal-info-value\">"+esc(c.expert_name||c.expert_name||"Unknown")+"</span></div>"+
+        (c.expert_speciality?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-flask\"></i> Specialisation</span><span class=\"modal-info-value\">"+esc(c.expert_speciality)+"</span></div>":"")+
+        (c.expert_qualification?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-graduation-cap\"></i> Qualification</span><span class=\"modal-info-value\">"+esc(c.expert_qualification)+"</span></div>":"")+
+        (c.expert_experience?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-briefcase\"></i> Experience</span><span class=\"modal-info-value\">"+c.expert_experience+" years</span></div>":"")+
+        (c.expert_rating?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-star\"></i> Rating</span><span class=\"modal-info-value\">"+c.expert_rating+"/5</span></div>":"")+
+        (c.expert_languages&&c.expert_languages.length?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-language\"></i> Languages</span><span class=\"modal-info-value\">"+esc(c.expert_languages.join(", "))+"</span></div>":"")+
+        "<div style=\"height:8px\"></div>"+
+        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-tag\"></i> Topic</span><span class=\"modal-info-value\">"+esc(c.topic)+"</span></div>"+
+        (c.consultation_type?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-folder-open\"></i> Category</span><span class=\"modal-info-value\">"+esc(c.consultation_type)+"</span></div>":"")+
+        (c.description?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-info-circle\"></i> Description</span><span class=\"modal-info-value\" style=\"font-weight:400\">"+esc(c.description)+"</span></div>":"")+
+        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-calendar-alt\"></i> Date</span><span class=\"modal-info-value\">"+fmtDate(c.scheduled_date)+"</span></div>"+
+        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-clock\"></i> Time</span><span class=\"modal-info-value\">"+esc(c.scheduled_time||"--")+"</span></div>"+
+        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-phone\"></i> Consultation Type</span><span class=\"modal-info-value\">"+esc(methodLabel(c.consultation_method))+"</span></div>"+
+        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-calendar-check\"></i> Status</span><span class=\"modal-info-value\">"+getStatusBadge(c.status)+"</span></div>"+
+        (c.farm_name?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-tractor\"></i> Farm</span><span class=\"modal-info-value\">"+esc(c.farm_name)+"</span></div>":"")+
+        (c.crop_name?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-seedling\"></i> Crop</span><span class=\"modal-info-value\">"+esc(c.crop_name)+"</span></div>":"")+
+        (c.meeting_location?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-location-arrow\"></i> Location</span><span class=\"modal-info-value\">"+esc(c.meeting_location)+"</span></div>":"")+
+        (c.cancel_reason?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-times-circle\" style=\"color:var(--c-red)\"></i> Cancel Reason</span><span class=\"modal-info-value\" style=\"color:var(--c-red)\">"+esc(c.cancel_reason)+"</span></div>":"")+
+        (c.rating?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-star\" style=\"color:#F9A825\"></i> Your Rating</span><span class=\"modal-info-value\">"+c.rating+"/5</span></div>":"")+
+        (c.feedback?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-comment\"></i> Your Review</span><span class=\"modal-info-value\" style=\"font-weight:400\">"+esc(c.feedback)+"</span></div>":"")+
+        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-clock\"></i> Booked</span><span class=\"modal-info-value\" style=\"font-size:11px\">"+timeAgo(c.created_at)+"</span></div>";
+
+      document.getElementById("cns-detail-content").innerHTML=html;
+
+      var actions="";
+      if(isUpcoming){
+        if(c.consultation_method==="Phone"&&c.status==="confirmed"){
+          actions+="<button class=\"cns-btn cns-btn-small\" onclick=\"showToast('The expert will call you at your registered number at the scheduled time.','info')\"><i class=\"fas fa-phone\"></i> Call</button>";
+        }
+        if(c.consultation_method==="Video"&&c.meeting_reference){
+          var href=esc(c.meeting_reference);
+          actions+="<a class=\"cns-btn cns-btn-small cns-btn-primary\" href=\""+href+"\" target=\"_blank\" rel=\"noopener\" onclick=\"event.stopPropagation()\"><i class=\"fas fa-video\"></i> Join Meeting</a>";
+        }
+        if(c.consultation_method==="In-Person"&&c.meeting_location){
+          actions+="<button class=\"cns-btn cns-btn-small\" onclick=\"showToast('Location: "+esc(c.meeting_location)+"','info')\"><i class=\"fas fa-map-marker-alt\"></i> Location</button>";
+        }
+        if(c.status==="scheduled"||c.status==="requested"||c.status==="confirmed"){
+          actions+="<button class=\"cns-btn cns-btn-small\" onclick=\"cnsCloseDetail();cnsOpenReschedule('"+c.id+"')\"><i class=\"fas fa-calendar-week\"></i> Reschedule</button>";
+        }
+        if(c.status==="scheduled"||c.status==="requested"||c.status==="confirmed"||c.status==="in_progress"){
+          actions+="<button class=\"cns-btn cns-btn-small cns-btn-danger\" onclick=\"cnsCloseDetail();cnsOpenCancel('"+c.id+"')\"><i class=\"fas fa-times\"></i> Cancel</button>";
+        }
+      }
+      if(c.status==="completed"&&!c.rating){
+        actions+="<button class=\"cns-btn cns-btn-small cns-btn-primary\" onclick=\"cnsCloseDetail();cnsOpenReview('"+c.id+"','"+esc(c.expert_name)+"')\"><i class=\"fas fa-star\"></i> Rate</button>";
+      }
+      document.getElementById("cns-detail-actions").innerHTML=actions;
+    }).catch(function(err){
+      document.getElementById("cns-detail-content").innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load details</h4><p>"+esc((err&&err.message)||"Please try again.")+"</p></div>";
+    });
+  };
+
+  window.cnsCloseDetail=function(){
+    document.getElementById("cns-detail-modal").classList.remove("active");
+  };
+
+  function openModal(id){document.getElementById(id).classList.add("active");}
+  function closeModal(id){document.getElementById(id).classList.remove("active");}
+
+  // ================= CANCEL =================
+  window.cnsOpenCancel=function(id){
+    cancelTargetId=id;
+    document.getElementById("cns-cancel-reason").value="";
+    openModal("cns-cancel-modal");
+  };
+
+  window.cnsCloseCancel=function(){
+    cancelTargetId="";
+    closeModal("cns-cancel-modal");
+  };
+
+  window.cnsConfirmCancel=function(){
+    if(!cancelTargetId||!hasApi())return;
+    var reason=document.getElementById("cns-cancel-reason").value.trim();
+    var btn=document.getElementById("cns-cancel-confirm-btn");
+    setBtn(btn,true);
+
+    API.Community.updateConsultation(cancelTargetId,{status:"cancelled",cancel_reason:reason||null}).then(function(){
+      setBtn(btn,false);
+      cnsCloseCancel();
+      showToast("Appointment cancelled","success");
+      loadAppointments();
+    }).catch(function(err){
+      setBtn(btn,false);
+      showToast((err&&err.message)||"Failed to cancel appointment","error");
+    });
+  };
+
+  // ================= RESCHEDULE =================
+  window.cnsOpenReschedule=function(id){
+    reschedule.id=id;
+    reschedule.date="";
+    reschedule.time="";
+    reschedule.slots=[];
+    reschedBusy=false;
+    var box=document.getElementById("cns-reschedule-content");
+    box.innerHTML="<div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading...</div>";
+    openModal("cns-reschedule-modal");
+    API.Community.getConsultation(id).then(function(c){
+      reschedule.expertId=c.expert_id;
+      reschedule.currentDate=c.scheduled_date;
+      reschedule.currentTime=c.scheduled_time;
+      box.innerHTML="<p style=\"font-size:12px;color:var(--text-muted);margin:0 0 12px\">Current slot: <b>"+fmtDate(c.scheduled_date)+" &middot; "+esc(c.scheduled_time)+"</b> with "+
+        "<b>"+esc(c.expert_name)+"</b>. Changing will free your current slot for others.</p>"+
+        "<div class=\"cns-form-group\"><label>New Date <span class=\"req\">*</span></label>"+
+        "<input type=\"date\" class=\"cns-form-input\" id=\"cns-resched-date\" min=\""+todayStr()+"\" onchange=\"reschedDateChanged()\"></div>"+
+        "<div id=\"cns-resched-slots\"><p class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-clock\"></i><h4>Select a date to see available slots.</h4></p></div>";
+      renderReschedNav();
+    }).catch(function(err){
+      box.innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load appointment</h4><p>"+esc((err&&err.message)||"Please try again.")+"</p></div>";
+    });
+  };
+
+  window.reschedDateChanged=function(){
+    reschedule.date=document.getElementById("cns-resched-date").value;
+    reschedule.time="";
+    var holder=document.getElementById("cns-resched-slots");
+    if(!reschedule.expertId||!reschedule.date){
+      holder.innerHTML="<p class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-clock\"></i><h4>Select a date to see available slots.</h4></p>";
+      renderReschedNav();
+      return;
+    }
+    holder.innerHTML="<div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading available slots...</div>";
+    API.Community.getExpertSlots(reschedule.expertId,reschedule.date).then(function(r){
+      reschedule.slots=(r&&r.slots)||[];
+      renderSlotsInto(holder,reschedule.slots,"reschedPickSlot",reschedule.time);
+      renderReschedNav();
+    }).catch(function(err){
+      holder.innerHTML="<div class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load appointment slots.</h4><p>"+esc((err&&err.message)||"Please try again.")+"</p></div>";
+    });
+  };
+
+  window.reschedPickSlot=function(el){
+    reschedule.time=el.getAttribute("data-time");
+    var opts=document.querySelectorAll("#cns-resched-slots .cns-slot-opt");
+    for(var i=0;i<opts.length;i++)opts[i].classList.remove("active");
+    el.classList.add("active");
+    renderReschedNav();
+  };
+
+  function renderReschedNav(){
+    var btn=document.getElementById("cns-reschedule-confirm-btn");
+    if(!btn)return;
+    var releasable=reschedule.time&&reschedule.date&&(reschedule.date!==reschedule.currentDate||reschedule.time!==reschedule.currentTime);
+    btn.disabled=!releasable;
+  }
+
+  window.cnsConfirmReschedule=function(){
+    if(!reschedule.id||reschedBusy||!reschedule.date||!reschedule.time)return;
+    reschedBusy=true;
+    var btn=document.getElementById("cns-reschedule-confirm-btn");
+    setBtn(btn,true);
+    API.Community.updateConsultation(reschedule.id,{scheduled_date:reschedule.date,scheduled_time:reschedule.time}).then(function(){
+      reschedBusy=false;
+      setBtn(btn,false);
+      cnsCloseReschedule();
+      showToast("Appointment rescheduled successfully","success");
+      loadAppointments();
+    }).catch(function(err){
+      reschedBusy=false;
+      setBtn(btn,false);
+      showToast((err&&err.message)||"Unable to reschedule the appointment.","error");
+    });
+  };
+
+  window.cnsCloseReschedule=function(){
+    reschedule.id="";
+    reschedBusy=false;
+    closeModal("cns-reschedule-modal");
+  };
+
+  // ================= REVIEW =================
+  window.cnsOpenReview=function(id,expertName){
+    reviewTargetId=id;
+    reviewRating=0;
+    document.getElementById("cns-review-expert-name").textContent="Rate your consultation with "+expertName;
+    document.getElementById("cns-review-text").value="";
+    var stars=document.querySelectorAll("#cns-rating-stars i");
+    for(var i=0;i<stars.length;i++)stars[i].className="far fa-star";
+    openModal("cns-review-modal");
+  };
+
+  window.cnsCloseReview=function(){
+    reviewTargetId="";
+    reviewRating=0;
+    closeModal("cns-review-modal");
+  };
+
+  window.cnsSubmitReview=function(){
+    if(!reviewTargetId||!hasApi())return;
+    if(!reviewRating){showToast("Please select a rating","error");return;}
+    var text=document.getElementById("cns-review-text").value.trim();
+    var btn=document.getElementById("cns-review-submit");
+    setBtn(btn,true);
+
+    API.Community.reviewConsultation(reviewTargetId,{rating:reviewRating,feedback:text||null}).then(function(){
+      setBtn(btn,false);
+      cnsCloseReview();
+      showToast("Review submitted! Thank you.","success");
+      loadAppointments();
+    }).catch(function(err){
+      setBtn(btn,false);
+      showToast((err&&err.message)||"Failed to submit review","error");
+    });
+  };
+
+  // ===== RATING STARS =====
+  (function(){
+    var container=document.getElementById("cns-rating-stars");
+    if(!container)return;
+    var stars=container.querySelectorAll("i");
+    for(var i=0;i<stars.length;i++){
+      (function(star){
+        star.addEventListener("click",function(){
+          reviewRating=parseInt(star.getAttribute("data-star"),10);
+          for(var j=0;j<stars.length;j++)stars[j].className=(j<reviewRating)?"fas fa-star":"far fa-star";
+        });
+        star.addEventListener("mouseenter",function(){
+          var v=parseInt(star.getAttribute("data-star"),10);
+          for(var j=0;j<stars.length;j++)stars[j].className=(j<v)?"fas fa-star":"far fa-star";
+        });
+        star.addEventListener("mouseleave",function(){
+          for(var j=0;j<stars.length;j++)stars[j].className=(j<reviewRating)?"fas fa-star":"far fa-star";
+        });
+      })(stars[i]);
+    }
   })();
-  </script>
+
+  // ===== MODAL BACKDROP =====
+  document.querySelectorAll(".modal-overlay").forEach(function(m){
+    m.addEventListener("click",function(e){if(e.target===m)m.classList.remove("active");});
+  });
+
+  // ===== LOAD FARMS + CROPS =====
+  function loadFarmsAndCrops(){
+    if(!hasApi())return;
+    Promise.all([API.Profile.getFarms(), API.Crop.listCrops(), API.Crop.listCycles()]).then(function(results){
+      var farmData=results[0]||{};
+      var cropData=results[1]||[];
+      var cycleData=results[2]||[];
+      farmsList=Array.isArray(farmData)?farmData:(Array.isArray(farmData.data)?farmData.data:[]);
+      cropData.forEach(function(c){if(c&&c.crop_id)cropCatalog[c.crop_id]={name:c.name||c.crop_name};});
+      cyclesByFarm={};
+      cycleData.forEach(function(cy){
+        if(!cy||!cy.farm_id)return;
+        if(!cyclesByFarm[cy.farm_id])cyclesByFarm[cy.farm_id]=[];
+        cyclesByFarm[cy.farm_id].push(cy);
+      });
+      if(farmsList.length===1&&!wizard.farmId){
+        wizard.farmId=farmsList[0].id;
+      }
+      renderWizard();
+    }).catch(function(){
+      farmsList=[];
+    });
+  }
+
+  // ===== INIT =====
+  if(hasApi()){
+    loadExperts();
+    loadAppointments();
+    loadFarmsAndCrops();
+    renderWizard();
+  }else{
+    document.getElementById("cns-experts-list").innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-lock\"></i><h4>Please log in</h4><p>You need to be logged in to view experts and book appointments.</p></div>";
+    document.getElementById("cns-appointments-list").innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-lock\"></i><h4>Please log in</h4><p>You need to be logged in to view your appointments.</p></div>";
+    document.getElementById("cns-step-content").innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-lock\"></i><h4>Please log in</h4></div>";
+    document.getElementById("cns-step-nav").innerHTML="";
+  }
+})();
+</script>
 </body>
 </html>

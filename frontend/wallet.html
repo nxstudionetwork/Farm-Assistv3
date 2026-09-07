@@ -1,495 +1,1589 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light" data-page="wallet">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Farm Assist - Digital Wallet</title>
+  <title>Digital Wallet - Farm Assist</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    /* ── Balance card (Google Pay/PhonePe style) ─────────────────────────────── */
-    .wallet-balance-card {
-      background: linear-gradient(135deg, #0F2E1E 0%, #1B5E3F 50%, #2D8659 100%);
-      border-radius: 20px; padding: 24px; color: #fff; margin-bottom: 16px;
-      position: relative; overflow: hidden; box-shadow: 0 12px 40px rgba(27,67,50,0.35);
-      animation: wlFade 0.4s ease; min-height: 160px;
+    :root {
+      --w-primary: #1B5E3F;
+      --w-dark: #0F2E1E;
+      --w-medium: #2D8659;
+      --w-light: #E4F2E8;
+      --w-accent: #40916C;
+      --w-bg: #F4F7F4;
+      --w-card: #FFFFFF;
+      --w-text: #1A2E1A;
+      --w-text-sec: #5A7A5A;
+      --w-text-muted: #8AA093;
+      --w-border: rgba(45, 106, 79, 0.14);
+      --w-shadow-sm: 0 2px 6px rgba(15, 46, 30, 0.06);
+      --w-shadow-md: 0 4px 16px rgba(15, 46, 30, 0.1);
+      --w-shadow-lg: 0 8px 30px rgba(15, 46, 30, 0.15);
+      --w-radius: 14px;
     }
-    @keyframes wlFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-    .wallet-balance-card::before {
-      content: ''; position: absolute; top: -80px; right: -60px;
-      width: 240px; height: 240px; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 65%);
+
+    body {
+      background: var(--w-bg);
+      color: var(--w-text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .wp {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 16px 14px 60px;
+      min-height: 85vh;
+    }
+
+    /* Loading Skeletons */
+    .w-skel {
+      background: var(--w-card);
+      border-radius: var(--w-radius);
+      padding: 24px;
+      border: 1px solid var(--w-border);
+      box-shadow: var(--w-shadow-sm);
+    }
+    .sk {
+      height: 14px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #e8ece8 25%, #f4f6f4 50%, #e8ece8 75%);
+      background-size: 200% 100%;
+      animation: sk-sh 1.5s infinite;
+      margin-bottom: 12px;
+    }
+    .sk:nth-child(1) { width: 45%; height: 18px; }
+    .sk:nth-child(2) { width: 85%; height: 36px; }
+    .sk:nth-child(3) { width: 60%; }
+    .sk:nth-child(4) { width: 100%; height: 90px; }
+    @keyframes sk-sh { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Available Balance Card */
+    .bal-card {
+      background: linear-gradient(135deg, var(--w-dark) 0%, var(--w-primary) 55%, var(--w-accent) 100%);
+      border-radius: 18px;
+      padding: 22px 20px 18px;
+      color: #ffffff;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 16px;
+      box-shadow: var(--w-shadow-md);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .bal-card::before {
+      content: '';
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%);
       pointer-events: none;
     }
-    .wallet-balance-card::after {
-      content: ''; position: absolute; bottom: -40px; left: -40px;
-      width: 160px; height: 160px; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%);
+    .bal-card::after {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      left: -30px;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
       pointer-events: none;
     }
-    .wallet-balance-card .wb-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+    .bal-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
     }
-    .wallet-balance-card .wb-label {
-      font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
-      color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 8px;
+    .bal-label {
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0.9;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.2px;
     }
-    .wallet-balance-card .wb-upi {
-      font-size: 11px; color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.15);
-      padding: 4px 10px; border-radius: 12px; font-weight: 600;
+    .bal-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(4px);
     }
-    .wallet-balance-card .wb-amount { 
-      font-size: 42px; font-weight: 800; margin-bottom: 20px; 
-      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    .bal-status .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ADE80;
+      box-shadow: 0 0 6px #4ADE80;
+    }
+    .bal-status.inactive .dot {
+      background: #F87171;
+      box-shadow: 0 0 6px #F87171;
+    }
+    .bal-amount {
+      font-size: 36px;
+      font-weight: 800;
       letter-spacing: -1px;
+      margin: 6px 0 14px;
+      line-height: 1.1;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
     }
-    .wallet-balance-card .wb-actions {
-      display: flex; gap: 12px;
+    .bal-amount .curr-sym {
+      font-size: 26px;
+      font-weight: 600;
+      opacity: 0.9;
     }
-    .wallet-balance-card .wb-btn {
-      flex: 1; padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3);
-      background: rgba(255,255,255,0.15); color: #fff; font-size: 12px; font-weight: 600;
-      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    .bal-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.16);
+      gap: 12px;
     }
-    .wallet-balance-card .wb-btn:hover {
-      background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5);
+    .bal-meta-item {
+      flex: 1;
     }
-    .wallet-balance-card .wb-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.15); }
-    .wallet-balance-card .wb-meta .wb-meta-item { font-size: 11px; }
-    .wallet-balance-card .wb-meta .wb-meta-item strong { display: block; font-size: 14px; font-weight: 700; }
+    .bal-meta-item .mv {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .bal-meta-item .ml {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+    .bal-upi-chip {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      transition: background 0.15s;
+    }
+    .bal-upi-chip:hover {
+      background: rgba(0, 0, 0, 0.35);
+    }
 
-    /* ── Quick actions grid (Google Pay style) ───────────────────────── */
-    .wallet-actions-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;
+    /* Restored Quick Actions Grid in TWO rows */
+    .qgrid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
     }
-    .wa-action {
-      background: #fff; border: 1px solid var(--border-light); border-radius: 16px;
-      padding: 16px 8px; text-align: center; cursor: pointer; transition: all 0.25s;
-      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    .qitem {
+      background: var(--w-card);
+      border: 1px solid var(--w-border);
+      border-radius: 14px;
+      padding: 14px 6px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      box-shadow: var(--w-shadow-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
-    .wa-action:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(10,36,23,0.15); border-color: var(--medium-green); }
-    .wa-action:active { transform: scale(0.97); }
-    .wa-action .wa-ico {
-      width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
-      font-size: 18px; transition: all 0.25s;
+    .qitem:hover {
+      transform: translateY(-2px);
+      border-color: var(--w-medium);
+      box-shadow: var(--w-shadow-md);
     }
-    .wa-action:hover .wa-ico { transform: scale(1.1); }
-    .wa-action span { font-size: 11px; font-weight: 600; color: var(--text-primary); }
-    .wa-ico.green { background: linear-gradient(135deg, #E4F2E8, #C8E6C9); color: var(--primary-green); }
-    .wa-ico.blue { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); color: #1976D2; }
-    .wa-ico.gold { background: linear-gradient(135deg, #FFF8E1, #FFECB3); color: #F57C00; }
-    .wa-ico.purple { background: linear-gradient(135deg, #F3E5F5, #E1BEE7); color: #7B1FA2; }
-    .wa-ico.red { background: linear-gradient(135deg, #FFEBEE, #FFCDD2); color: #D32F2F; }
-    .wa-ico.teal { background: linear-gradient(135deg, #E0F2F1, #B2DFDB); color: #00796B; }
+    .qitem:active {
+      transform: scale(0.96);
+    }
+    .qitem-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--w-light);
+      color: var(--w-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .qitem:hover .qitem-icon {
+      background: var(--w-primary);
+      color: #ffffff;
+    }
+    .qitem span {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--w-text);
+      line-height: 1.2;
+      display: block;
+    }
 
-    /* ── Tabs ─────────────────────────────────────── */
-    .wallet-tabs { display: flex; gap: 8px; margin-bottom: 14px; background: var(--bg-card-soft); padding: 5px; border-radius: 12px; }
-    .wallet-tab {
-      flex: 1; text-align: center; padding: 9px 8px; border-radius: 9px; font-size: 12px; font-weight: 600;
-      color: var(--text-muted); cursor: pointer; border: none; background: transparent; font-family: inherit;
-      transition: all 0.25s;
+    /* Section Headers */
+    .sec-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 22px 0 12px;
     }
-    .wallet-tab.active { background: #fff; color: var(--primary-green); box-shadow: 0 2px 8px rgba(10,36,23,0.1); }
-    .wallet-tab-panel { display: none; animation: wlTab 0.3s ease; }
-    .wallet-tab-panel.active { display: block; }
-    @keyframes wlTab { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .sec-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--w-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sec-link {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--w-primary);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .sec-link:hover {
+      text-decoration: underline;
+    }
 
-    /* ── Transactions ─────────────────────────────── */
-    .wallet-search-row { display: flex; gap: 8px; margin-bottom: 12px; }
-    .wallet-search {
-      flex: 1; display: flex; align-items: center; gap: 8px;
-      background: #fff; border: 1px solid var(--border-light); border-radius: 12px; padding: 0 12px;
+    /* Filter Chips */
+    .wfilter {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+      padding-bottom: 2px;
     }
-    .wallet-search i { color: var(--text-muted); font-size: 13px; }
-    .wallet-search input { flex: 1; border: none; outline: none; padding: 11px 0; font-size: 13px; background: transparent; font-family: inherit; color: var(--text-primary); }
-    .wallet-filter-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-    .wf-chip {
-      padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 600; cursor: pointer;
-      border: 1px solid var(--border-light); background: #fff; color: var(--text-secondary); transition: all 0.2s; font-family: inherit;
+    .wchip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--w-border);
+      background: var(--w-card);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--w-text-sec);
+      transition: all 0.15s;
+      white-space: nowrap;
     }
-    .wf-chip.active { background: var(--primary-green); color: #fff; border-color: var(--primary-green); }
-    .wallet-txn-item {
-      display: flex; align-items: center; gap: 12px; padding: 12px 0;
-      border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.15s; border-radius: 8px;
+    .wchip:hover {
+      border-color: var(--w-medium);
+      color: var(--w-primary);
     }
-    .wallet-txn-item:hover { background: var(--bg-card-soft); }
-    .wallet-txn-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; }
-    .wallet-txn-icon.credit { background: var(--soft-green); color: var(--primary-green); }
-    .wallet-txn-icon.debit { background: #FFF0F0; color: var(--danger); }
-    .wallet-txn-icon.pending { background: rgba(245,158,11,0.14); color: #d97706; }
-    .wallet-txn-info { flex: 1; min-width: 0; }
-    .wallet-txn-info h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-    .wallet-txn-info p { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wallet-txn-right { text-align: right; flex-shrink: 0; }
-    .wallet-txn-amount { font-size: 14px; font-weight: 700; }
-    .wallet-txn-amount.credit { color: var(--primary-green); }
-    .wallet-txn-amount.debit { color: var(--danger); }
-    .wallet-txn-status { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px; display: inline-block; margin-top: 3px; }
-    .wallet-txn-status.success { background: var(--soft-green); color: var(--primary-green); }
-    .wallet-txn-status.pending { background: rgba(245,158,11,0.14); color: #d97706; }
-    .wallet-txn-status.failed { background: #FFF0F0; color: var(--danger); }
-    .wallet-empty { text-align: center; padding: 28px 12px; color: var(--text-muted); }
-    .wallet-empty i { font-size: 34px; display: block; margin-bottom: 10px; color: var(--pale-green); }
+    .wchip.active {
+      background: var(--w-primary);
+      color: #ffffff;
+      border-color: var(--w-primary);
+      box-shadow: 0 2px 6px rgba(27, 94, 63, 0.25);
+    }
 
-    /* ── Beneficiaries ────────────────────────────── */
-    .beneficiary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-    .beneficiary-card {
-      background: #fff; border: 1px solid var(--border-light); border-radius: 14px; padding: 14px;
-      display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;
+    /* Transaction Items */
+    .txn-item {
+      background: var(--w-card);
+      border: 1px solid var(--w-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+      box-shadow: var(--w-shadow-sm);
     }
-    .beneficiary-card:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(10,36,23,0.12); border-color: var(--medium-green); }
-    .beneficiary-avatar {
-      width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 15px; font-weight: 700;
+    .txn-item:hover {
+      border-color: rgba(45, 106, 79, 0.35);
+      box-shadow: var(--w-shadow-md);
+      transform: translateX(2px);
     }
-    .beneficiary-card b { font-size: 12.5px; color: var(--text-primary); }
-    .beneficiary-card span { font-size: 10.5px; color: var(--text-muted); }
+    .txn-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .txn-icon.credit {
+      background: #ECFDF5;
+      color: #059669;
+    }
+    .txn-icon.debit {
+      background: #FEF2F2;
+      color: #DC2626;
+    }
+    .txn-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .txn-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--w-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .txn-sub {
+      font-size: 11px;
+      color: var(--w-text-muted);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .txn-amt {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .txn-val {
+      font-size: 15px;
+      font-weight: 800;
+    }
+    .txn-val.credit {
+      color: #059669;
+    }
+    .txn-val.debit {
+      color: #DC2626;
+    }
+    .txn-status {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--w-text-muted);
+      margin-top: 1px;
+      text-transform: capitalize;
+    }
 
-    /* ── Linked accounts ──────────────────────────── */
-    .linked-account {
-      display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--border-light);
-      border-radius: 14px; padding: 14px; margin-bottom: 10px; transition: all 0.2s;
+    /* Views */
+    .full-view {
+      display: none;
+      animation: fv-in 0.2s ease;
     }
-    .linked-account:hover { box-shadow: 0 6px 16px rgba(10,36,23,0.1); }
-    .linked-account .la-ico { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-    .linked-account .la-info { flex: 1; min-width: 0; }
-    .linked-account .la-info b { font-size: 13px; color: var(--text-primary); display: block; }
-    .linked-account .la-info span { font-size: 11px; color: var(--text-muted); display: block; margin-top: 2px; }
-    .linked-account .la-status { font-size: 10px; font-weight: 700; color: #16a34a; background: var(--soft-green); padding: 3px 8px; border-radius: 8px; }
-    .add-link-btn {
-      width: 100%; padding: 12px; border: 1px dashed var(--border-dark); border-radius: 14px;
-      background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 600;
-      cursor: pointer; transition: all 0.2s; font-family: inherit;
+    .full-view.active {
+      display: block;
     }
-    .add-link-btn:hover { border-color: var(--primary-green); color: var(--primary-green); background: var(--soft-green); }
+    @keyframes fv-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* ── QR / receipt ─────────────────────────────── */
-    .qr-placeholder {
-      width: 190px; height: 190px; margin: 10px auto; border-radius: 16px;
-      background: #fff; border: 2px dashed var(--medium-green);
-      display: flex; align-items: center; justify-content: center; position: relative;
+    .fv-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
     }
-    .qr-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 12px; width: 100%; height: 100%; }
-    .qr-grid i { border-radius: 2px; }
-    .qr-scan-line {
-      position: absolute; left: 12px; right: 12px; height: 3px; border-radius: 2px;
-      background: linear-gradient(90deg, transparent, #2D8659, transparent);
-      animation: qrScan 2s linear infinite;
+    .fv-back {
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--w-border);
+      background: var(--w-card);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--w-text-sec);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, color 0.15s;
     }
-    @keyframes qrScan { 0% { top: 12px; } 50% { top: calc(100% - 15px); } 100% { top: 12px; } }
-    .receive-upi { text-align: center; font-size: 14px; font-weight: 700; color: var(--primary-green); margin: 8px 0 2px; }
-    .receipt-sheet {
-      background: #fff; border: 1px solid var(--border-light); border-radius: 16px; padding: 18px;
-      font-size: 12.5px; color: var(--text-primary); margin-bottom: 14px;
+    .fv-back:hover {
+      background: var(--w-light);
+      color: var(--w-primary);
     }
-    .receipt-sheet .rs-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-light); }
-    .receipt-sheet .rs-row:last-child { border-bottom: none; }
-    .receipt-sheet .rs-row span { color: var(--text-muted); }
-    .receipt-sheet .rs-row b { font-weight: 700; }
+    .fv-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--w-text);
+      flex: 1;
+    }
 
-    .wallet-modal-note { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
-    .modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-    .modal-box .modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
-    .chip-quick { margin-bottom: 12px; }
-    .chip-quick-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
-    .chip-quick-list { display: flex; gap: 6px; flex-wrap: wrap; }
-    .chip-quick-item {
-      padding: 6px 10px; border-radius: 10px; background: var(--bg-card-soft); border: 1px solid var(--border-light);
-      font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; color: var(--text-primary);
+    /* Forms and Inputs */
+    .form-card {
+      background: var(--w-card);
+      border: 1px solid var(--w-border);
+      border-radius: var(--w-radius);
+      padding: 20px;
+      box-shadow: var(--w-shadow-sm);
+      margin-bottom: 16px;
     }
-    .chip-quick-item:hover { background: var(--soft-green); border-color: var(--medium-green); color: var(--primary-green); }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--w-text-sec);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--w-border);
+      border-radius: 10px;
+      font-size: 14px;
+      box-sizing: border-box;
+      outline: none;
+      background: var(--w-bg);
+      color: var(--w-text);
+      font-weight: 600;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .form-input:focus {
+      border-color: var(--w-primary);
+      background: #ffffff;
+    }
+    .form-input.amount {
+      font-size: 30px;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: -0.5px;
+      padding: 14px;
+    }
 
-    @media (max-width: 640px) {
-      .wallet-actions-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-      .wa-action span { font-size: 9.5px; }
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
-    @media (max-width: 380px) {
-      .wallet-actions-grid { grid-template-columns: repeat(3, 1fr); }
+    .chip-amt {
+      padding: 6px 12px;
+      border-radius: 16px;
+      border: 1px solid var(--w-border);
+      background: var(--w-card);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--w-primary);
+      transition: background 0.15s, color 0.15s;
+    }
+    .chip-amt:hover {
+      background: var(--w-light);
+    }
+
+    /* Buttons */
+    .w-btn {
+      width: 100%;
+      padding: 13px 18px;
+      border-radius: 12px;
+      border: none;
+      font-size: 14.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-sizing: border-box;
+    }
+    .w-btn.primary {
+      background: linear-gradient(135deg, var(--w-dark) 0%, var(--w-primary) 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(27, 94, 63, 0.3);
+    }
+    .w-btn.primary:hover {
+      background: linear-gradient(135deg, #0a2015 0%, var(--w-medium) 100%);
+      box-shadow: 0 6px 16px rgba(27, 94, 63, 0.4);
+    }
+    .w-btn.primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+    .w-btn.secondary {
+      background: var(--w-card);
+      color: var(--w-text-sec);
+      border: 1px solid var(--w-border);
+    }
+    .w-btn.secondary:hover {
+      background: var(--w-light);
+      color: var(--w-primary);
+    }
+    .w-btn.danger {
+      background: #FEF2F2;
+      color: #DC2626;
+      border: 1px solid #FECACA;
+    }
+
+    /* Multi-step Indicator */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      padding: 0 10px;
+    }
+    .step-dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      border: 2px solid var(--w-border);
+      background: var(--w-card);
+      color: var(--w-text-muted);
+      transition: all 0.2s;
+    }
+    .step-dot.active {
+      border-color: var(--w-primary);
+      background: var(--w-primary);
+      color: #ffffff;
+      box-shadow: 0 0 0 3px rgba(27, 94, 63, 0.2);
+    }
+    .step-dot.done {
+      border-color: #059669;
+      background: #059669;
+      color: #ffffff;
+    }
+    .step-line {
+      flex: 1;
+      max-width: 44px;
+      height: 3px;
+      background: var(--w-border);
+      transition: background 0.2s;
+    }
+    .step-line.done {
+      background: #059669;
+    }
+
+    /* Recipient Card */
+    .recipient-card {
+      background: #ffffff;
+      border: 2px solid var(--w-primary);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+      box-shadow: var(--w-shadow-sm);
+    }
+    .rc-avatar-lg {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--w-primary), var(--w-accent));
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      margin: 0 auto 10px;
+      box-shadow: 0 2px 8px rgba(27, 94, 63, 0.25);
+    }
+    .rc-avatar-lg img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .rc-name-lg {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--w-text);
+      margin-bottom: 2px;
+    }
+    .rc-id-lg {
+      font-size: 12px;
+      color: var(--w-text-muted);
+      font-weight: 600;
+    }
+
+    /* Review Table */
+    .review-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--w-border);
+      font-size: 13.5px;
+    }
+    .review-row:last-child {
+      border-bottom: none;
+    }
+    .review-row .rr-label {
+      color: var(--w-text-sec);
+      font-weight: 600;
+    }
+    .review-row .rr-val {
+      font-weight: 800;
+      color: var(--w-text);
+      text-align: right;
+    }
+
+    /* Success & Failure States */
+    .success-view {
+      text-align: center;
+      padding: 30px 16px;
+    }
+    .success-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #ECFDF5;
+      color: #059669;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 16px;
+      box-shadow: 0 4px 16px rgba(5, 150, 105, 0.2);
+    }
+    .success-view h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--w-text);
+      margin-bottom: 6px;
+    }
+    .success-view p {
+      font-size: 13.5px;
+      color: var(--w-text-sec);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    /* Error Message */
+    .error-msg {
+      background: #FEF2F2;
+      color: #DC2626;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 14px;
+      border: 1px solid #FECACA;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 36px 16px;
+      color: var(--w-text-muted);
+    }
+    .empty-state i {
+      font-size: 40px;
+      opacity: 0.35;
+      margin-bottom: 12px;
+      display: block;
+      color: var(--w-medium);
+    }
+    .empty-state p {
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--w-text-sec);
+    }
+
+    /* Bank Account Card */
+    .bank-card {
+      background: var(--w-card);
+      border: 1px solid var(--w-border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: var(--w-shadow-sm);
+    }
+    .bank-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--w-light);
+      color: var(--w-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .bank-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .bank-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--w-text);
+    }
+    .bank-num {
+      font-size: 12px;
+      color: var(--w-text-muted);
+      margin-top: 2px;
+    }
+    .bank-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      color: #059669;
+      background: #ECFDF5;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-top: 4px;
+    }
+    .bank-del {
+      background: none;
+      border: none;
+      color: #DC2626;
+      cursor: pointer;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .bank-del:hover {
+      background: #FEF2F2;
+    }
+
+    /* Modal dialog */
+    .w-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fv-in 0.15s ease;
+    }
+    .w-modal.active {
+      display: flex;
+    }
+    .w-modal-content {
+      background: #ffffff;
+      border-radius: 18px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 22px 20px;
+      box-shadow: var(--w-shadow-lg);
+      position: relative;
+    }
+    .w-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 18px;
+      color: var(--w-text-muted);
+      cursor: pointer;
+    }
+
+    /* Print Receipt Area */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #print-receipt-area, #print-receipt-area *,
+      #report-print-area, #report-print-area * {
+        visibility: visible;
+      }
+      #print-receipt-area, #report-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .qgrid {
+        gap: 8px;
+      }
+      .qitem {
+        padding: 12px 4px 10px;
+      }
+      .qitem-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+      }
+      .qitem span {
+        font-size: 10px;
+      }
+      .bal-amount {
+        font-size: 30px;
+      }
+    }
+
+    /* Balance visibility toggle */
+    .bal-eyes {
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+    .bal-eyes:hover { background: rgba(255, 255, 255, 0.3); }
+
+    /* Farm Finance dashboard strip */
+    .ff-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .ff-card {
+      background: var(--w-card);
+      border: 1px solid var(--w-border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: var(--w-shadow-sm);
+    }
+    .ff-card .fc-label {
+      font-size: 11px; font-weight: 700; color: var(--w-text-muted);
+      text-transform: uppercase; letter-spacing: 0.4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ff-card .fc-val { font-size: 18px; font-weight: 800; color: var(--w-text); margin-top: 6px; }
+    .ff-card.income .fc-val { color: #059669; }
+    .ff-card.expense .fc-val { color: #DC2626; }
+    .ff-card.net .fc-val { color: var(--w-primary); }
+    .ff-row { display: flex; gap: 8px; margin-top: 12px; }
+    .ff-btn {
+      flex: 1; background: var(--w-light); color: var(--w-primary);
+      border: 1px solid var(--w-border); border-radius: 10px;
+      padding: 10px 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+      text-align: center; transition: all 0.15s;
+    }
+    .ff-btn:hover { background: var(--w-primary); color: #ffffff; }
+
+    /* Period selector */
+    .period-row { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
+    .period-row .wchip { flex-shrink: 0; }
+    .custom-range { display: none; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 12px; align-items: end; }
+    .custom-range.show { display: grid; }
+    .custom-range label { font-size: 11px; font-weight: 700; color: var(--w-text-sec); text-transform: uppercase; display: block; margin-bottom: 4px; }
+
+    /* P&L cards */
+    .pnl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .pnl-card {
+      background: var(--w-card); border: 1px solid var(--w-border);
+      border-radius: 14px; padding: 14px; box-shadow: var(--w-shadow-sm);
+    }
+    .pnl-card .pnl-label { font-size: 11px; font-weight: 700; color: var(--w-text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+    .pnl-card .pnl-val { font-size: 19px; font-weight: 800; margin-top: 6px; }
+    .pnl-card .pnl-sub { font-size: 10.5px; color: var(--w-text-muted); margin-top: 3px; }
+    .pnl-card.income .pnl-val { color: #059669; }
+    .pnl-card.expense .pnl-val { color: #DC2626; }
+    .pnl-card.net .pnl-val { color: var(--w-primary); }
+
+    /* Chart box + bar chart */
+    .chart-box {
+      background: var(--w-card); border: 1px solid var(--w-border);
+      border-radius: 14px; padding: 16px; box-shadow: var(--w-shadow-sm); margin-bottom: 14px;
+    }
+    .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 150px; padding-top: 10px; overflow-x: auto; }
+    .bar-col { flex: 1; min-width: 34px; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+    .bar-wrap { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; }
+    .bar-fill { width: 100%; border-radius: 5px 5px 2px 2px; min-height: 2px; }
+    .bar-fill.inc { background: linear-gradient(180deg, #34D399, #059669); }
+    .bar-fill.exp { background: linear-gradient(180deg, #FCA5A5, #DC2626); }
+    .bar-mlbl { font-size: 9px; font-weight: 700; color: var(--w-text-muted); margin-top: 4px; text-align: center; white-space: nowrap; }
+    .bar-hint { position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-size: 8.5px; font-weight: 800; color: var(--w-text-sec); opacity: 0; transition: opacity 0.15s; z-index: 2; background: #fff; padding: 1px 4px; border-radius: 4px; box-shadow: var(--w-shadow-sm); }
+    .bar-wrap:hover .bar-hint { opacity: 1; }
+
+    /* Category bars */
+    .cat-row { margin-bottom: 10px; }
+    .cat-row .cat-top { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px; }
+    .cat-row .cat-top b { color: var(--w-text); font-weight: 700; }
+    .cat-row .cat-top span { color: var(--w-text-sec); font-weight: 700; }
+    .cat-bar { height: 8px; border-radius: 6px; background: var(--w-light); overflow: hidden; }
+    .cat-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--w-primary), var(--w-accent)); }
+
+    /* Finance records list */
+    .fin-item {
+      background: var(--w-card); border: 1px solid var(--w-border); border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--w-shadow-sm);
+      display: flex; gap: 12px; align-items: center;
+    }
+    .fin-item .fi-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .fin-item.income .fi-icon { background: #ECFDF5; color: #059669; }
+    .fin-item.expense .fi-icon { background: #FEF2F2; color: #DC2626; }
+    .fin-item .fi-info { flex: 1; min-width: 0; }
+    .fin-item .fi-title { font-size: 13.5px; font-weight: 700; color: var(--w-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fin-item .fi-sub { font-size: 11px; color: var(--w-text-muted); margin-top: 2px; }
+    .fin-item .fi-amt { text-align: right; flex-shrink: 0; }
+    .fin-item .fi-val { font-size: 15px; font-weight: 800; }
+    .fin-item.income .fi-val { color: #059669; }
+    .fin-item.expense .fi-val { color: #DC2626; }
+    .fin-item .fi-actions { display: flex; gap: 2px; }
+    .fin-item .fi-act { background: none; border: none; color: var(--w-text-muted); cursor: pointer; padding: 8px; border-radius: 8px; font-size: 13px; }
+    .fin-item .fi-act:hover { background: var(--w-light); color: var(--w-primary); }
+    .fin-item .fi-act.del:hover { background: #FEF2F2; color: #DC2626; }
+
+    /* Reports */
+    .report-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .report-card {
+      background: var(--w-card); border: 1px solid var(--w-border); border-radius: 14px;
+      padding: 16px 10px; text-align: center; cursor: pointer; box-shadow: var(--w-shadow-sm);
+      transition: all 0.15s;
+    }
+    .report-card:hover { border-color: var(--w-medium); transform: translateY(-2px); }
+    .report-card i { font-size: 22px; color: var(--w-primary); margin-bottom: 8px; }
+    .report-card .rc-title { font-size: 13px; font-weight: 800; color: var(--w-text); }
+    .report-card .rc-sub { font-size: 10.5px; color: var(--w-text-muted); margin-top: 2px; }
+    .report-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .report-table th, .report-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--w-border); }
+    .report-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--w-text-sec); background: var(--w-bg); }
+    .report-table .num { text-align: right; font-weight: 700; }
+    .report-table tr.total td { font-weight: 800; border-top: 2px solid var(--w-border); }
+    #report-print-area { background: #ffffff; border-radius: 14px; padding: 16px; box-shadow: var(--w-shadow-sm); }
+
+    @media (max-width: 480px) {
+      .pnl-grid, .ff-strip { grid-template-columns: 1fr 1fr; }
+      .bar-col { min-width: 28px; }
+      .custom-range { grid-template-columns: 1fr 1fr; }
+      .custom-range .w-btn { grid-column: 1 / -1; }
     }
   </style>
 </head>
 <body>
-
   <main class="page-container">
-
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-wallet" style="color:var(--premium-green);margin-right:8px;"></i> Digital Wallet</h1>
-        <p style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Pay, save and manage money securely &mdash; built for farmers.</p>
+    <div class="wp">
+      <!-- Loading Skeleton -->
+      <div id="w-loading" class="w-skel">
+        <div class="sk"></div>
+        <div class="sk"></div>
+        <div class="sk"></div>
+        <div class="sk"></div>
       </div>
-    </div>
 
-    <!-- Balance Card -->
-    <div class="wallet-balance-card" id="wallet-balance-card">
-      <div class="wb-header">
-        <div class="wb-label"><i class="fas fa-wallet"></i> Available Balance</div>
-        <div class="wb-upi"><i class="fas fa-at"></i> farmer@farmassist</div>
-      </div>
-      <div class="wb-amount" id="wallet-balance">&#8377;0</div>
-      <div class="wb-actions">
-        <button class="wb-btn" onclick="openWalletModal('add-modal')"><i class="fas fa-plus"></i> Add Money</button>
-        <button class="wb-btn" onclick="openWalletModal('send-modal')"><i class="fas fa-paper-plane"></i> Send</button>
-      </div>
-      <div class="wb-meta">
-        <div class="wb-meta-item"><span style="opacity:0.7;">Total Added</span> <strong id="wallet-credits" style="color:#95D5B2;">&#8377;0</strong></div>
-        <div class="wb-meta-item"><span style="opacity:0.7;">Total Spent</span> <strong id="wallet-debits" style="color:#F9A8A8;">&#8377;0</strong></div>
-        <div class="wb-meta-item"><span style="opacity:0.7;">Pending</span> <strong id="wallet-pending" style="color:#FDE68A;">&#8377;0</strong></div>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="wallet-actions-grid">
-      <div class="wa-action" onclick="openWalletModal('qr-modal')"><div class="wa-ico green"><i class="fas fa-qrcode"></i></div><span>Scan QR</span></div>
-      <div class="wa-action" onclick="openWalletModal('phone-modal')"><div class="wa-ico blue"><i class="fas fa-mobile-screen-button"></i></div><span>Pay to Phone</span></div>
-      <div class="wa-action" onclick="openWalletModal('fid-modal')"><div class="wa-ico gold"><i class="fas fa-id-card"></i></div><span>Pay to Farmer ID</span></div>
-      <div class="wa-action" onclick="openWalletModal('send-modal')"><div class="wa-ico purple"><i class="fas fa-paper-plane"></i></div><span>Send Money</span></div>
-      <div class="wa-action" onclick="openWalletModal('receive-modal')"><div class="wa-ico teal"><i class="fas fa-arrow-down-to-bracket"></i></div><span>Receive Money</span></div>
-      <div class="wa-action" onclick="openWalletModal('add-modal')"><div class="wa-ico green"><i class="fas fa-plus-circle"></i></div><span>Add Money</span></div>
-      <div class="wa-action" onclick="switchWalletTab('linked')"><div class="wa-ico blue"><i class="fas fa-building-columns"></i></div><span>Bank Accounts</span></div>
-      <div class="wa-action" onclick="switchWalletTab('linked')"><div class="wa-ico red"><i class="fas fa-mobile"></i></div><span>UPI IDs</span></div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="wallet-tabs">
-      <button class="wallet-tab active" data-tab="txns" onclick="switchWalletTab('txns')"><i class="fas fa-list" style="margin-right:5px;"></i>Transactions</button>
-      <button class="wallet-tab" data-tab="benef" onclick="switchWalletTab('benef')"><i class="fas fa-users" style="margin-right:5px;"></i>Beneficiaries</button>
-      <button class="wallet-tab" data-tab="linked" onclick="switchWalletTab('linked')"><i class="fas fa-link" style="margin-right:5px;"></i>Linked Accounts</button>
-    </div>
-
-    <!-- Transactions panel -->
-    <div class="wallet-tab-panel active" id="tab-txns">
-      <div class="wallet-search-row">
-        <div class="wallet-search">
-          <i class="fas fa-magnifying-glass"></i>
-          <input type="text" id="wallet-txn-search" placeholder="Search transactions, UPI, receipts..." autocomplete="off">
+      <!-- ========================================== -->
+      <!-- VIEW: FIRST-TIME SETUP -->
+      <!-- ========================================== -->
+      <div id="w-setup-view" class="full-view">
+        <div class="form-card" style="text-align:center;padding:32px 20px;">
+          <div style="width:68px;height:68px;border-radius:50%;background:var(--w-light);color:var(--w-primary);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <h2 style="font-size:20px;font-weight:800;color:var(--w-text);margin-bottom:6px;">Welcome to Farm Assist Wallet</h2>
+          <p style="font-size:13.5px;color:var(--w-text-sec);line-height:1.5;margin-bottom:22px;">
+            A simple and secure way to manage supported Farm Assist payments. Set up your 4-6 digit Wallet PIN to get started.
+          </p>
+          <div class="form-group" style="max-width:280px;margin:0 auto 14px;">
+            <label>Create Wallet PIN</label>
+            <input type="password" id="pin-new" maxlength="6" placeholder="••••" inputmode="numeric" class="form-input" style="text-align:center;letter-spacing:6px;font-size:18px;">
+          </div>
+          <div class="form-group" style="max-width:280px;margin:0 auto 14px;">
+            <label>Confirm Wallet PIN</label>
+            <input type="password" id="pin-confirm" maxlength="6" placeholder="••••" inputmode="numeric" class="form-input" style="text-align:center;letter-spacing:6px;font-size:18px;">
+          </div>
+          <div id="setup-err" class="error-msg" style="display:none;max-width:280px;margin:0 auto 14px;"></div>
+          <button class="w-btn primary" id="btn-setup-wallet" style="max-width:280px;margin:0 auto;">Set Up Wallet</button>
         </div>
       </div>
-      <div class="wallet-filter-chips">
-        <button class="wf-chip active" data-filter="all">All</button>
-        <button class="wf-chip" data-filter="credit">Received</button>
-        <button class="wf-chip" data-filter="debit">Sent</button>
-        <button class="wf-chip" data-filter="pending">Pending</button>
+
+      <!-- ========================================== -->
+      <!-- VIEW: MAIN DASHBOARD -->
+      <!-- ========================================== -->
+      <div id="w-dashboard-view" class="full-view">
+        <!-- Available Balance Card -->
+        <div class="bal-card" id="bal-card">
+          <div class="bal-header-row">
+            <div class="bal-label"><i class="fas fa-wallet"></i> Available Balance</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="bal-status" id="bal-status-badge"><span class="dot"></span> <span id="bal-status-text">Active</span></div>
+              <button class="bal-eyes" id="btn-toggle-balance" title="Show / Hide balance"><i class="fas fa-eye" id="bal-eye-icon"></i></button>
+            </div>
+          </div>
+          <div class="bal-amount">
+            <span class="curr-sym">&#8377;</span><span id="bal-amount">0.00</span>
+          </div>
+          <div class="bal-meta">
+            <div class="bal-meta-item">
+              <div class="mv" id="meta-credits">&#8377;0.00</div>
+              <div class="ml">Total Received</div>
+            </div>
+            <div class="bal-meta-item">
+              <div class="mv" id="meta-debits">&#8377;0.00</div>
+              <div class="ml">Total Sent</div>
+            </div>
+            <div class="bal-upi-chip" id="btn-copy-upi-dash" title="Click to copy UPI ID">
+              <i class="fas fa-at"></i> <span id="dash-upi-id">upi@farmassist</span> <i class="far fa-copy" style="opacity:0.7"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- RESTORED QUICK ACTIONS (2 Rows) -->
+        <div class="qgrid" id="qgrid">
+          <!-- Row 1 -->
+          <div class="qitem" data-action="send">
+            <div class="qitem-icon"><i class="fas fa-paper-plane"></i></div>
+            <span>Send Money</span>
+          </div>
+          <div class="qitem" data-action="add">
+            <div class="qitem-icon"><i class="fas fa-plus-circle"></i></div>
+            <span>Add Money</span>
+          </div>
+          <div class="qitem" data-action="receive">
+            <div class="qitem-icon"><i class="fas fa-qrcode"></i></div>
+            <span>Receive</span>
+          </div>
+          <div class="qitem" data-action="scan">
+            <div class="qitem-icon"><i class="fas fa-camera"></i></div>
+            <span>Scan & Pay</span>
+          </div>
+
+          <!-- Row 2 -->
+          <div class="qitem" data-action="txns">
+            <div class="qitem-icon"><i class="fas fa-list-ul"></i></div>
+            <span>Transactions</span>
+          </div>
+          <div class="qitem" data-action="bank">
+            <div class="qitem-icon"><i class="fas fa-building-columns"></i></div>
+            <span>Bank A/c</span>
+          </div>
+          <div class="qitem" data-action="requests">
+            <div class="qitem-icon"><i class="fas fa-hand-holding-dollar"></i></div>
+            <span>Requests</span>
+          </div>
+          <div class="qitem" data-action="security">
+            <div class="qitem-icon"><i class="fas fa-shield-halved"></i></div>
+            <span>Security</span>
+          </div>
+
+          <!-- Row 3 -->
+          <div class="qitem" data-action="finance">
+            <div class="qitem-icon"><i class="fas fa-chart-pie"></i></div>
+            <span>Farm Finance</span>
+          </div>
+          <div class="qitem" data-action="income">
+            <div class="qitem-icon"><i class="fas fa-arrow-down"></i></div>
+            <span>Income</span>
+          </div>
+          <div class="qitem" data-action="expense">
+            <div class="qitem-icon"><i class="fas fa-arrow-up"></i></div>
+            <span>Expenses</span>
+          </div>
+          <div class="qitem" data-action="reports">
+            <div class="qitem-icon"><i class="fas fa-file-invoice"></i></div>
+            <span>Reports</span>
+          </div>
+        </div>
+
+        <!-- Farm Finance Overview (Dashboard) -->
+        <div class="sec-header">
+          <div class="sec-title"><i class="fas fa-chart-pie" style="color:var(--w-primary)"></i> Farm Finance</div>
+          <a class="sec-link" id="link-open-finance">Open Finance <i class="fas fa-chevron-right" style="font-size:10px;"></i></a>
+        </div>
+        <div class="ff-strip">
+          <div class="ff-card income">
+            <div class="fc-label"><i class="fas fa-arrow-down"></i> Income</div>
+            <div class="fc-val" id="dash-income">&#8377;0.00</div>
+            <div class="fc-sub" id="dash-income-count" style="font-size:10.5px;color:var(--w-text-muted);margin-top:3px;">0 records</div>
+          </div>
+          <div class="ff-card expense">
+            <div class="fc-label"><i class="fas fa-arrow-up"></i> Expenses</div>
+            <div class="fc-val" id="dash-expense">&#8377;0.00</div>
+            <div class="fc-sub" id="dash-expense-count" style="font-size:10.5px;color:var(--w-text-muted);margin-top:3px;">0 records</div>
+          </div>
+          <div class="ff-card net">
+            <div class="fc-label"><i class="fas fa-scale-balanced"></i> Net Profit</div>
+            <div class="fc-val" id="dash-net">&#8377;0.00</div>
+            <div class="fc-sub" id="dash-net-label" style="font-size:10.5px;color:var(--w-text-muted);margin-top:3px;">All time</div>
+          </div>
+        </div>
+        <div class="ff-row">
+          <button class="ff-btn" data-fin="income"><i class="fas fa-plus"></i> Add Income</button>
+          <button class="ff-btn" data-fin="expense"><i class="fas fa-minus"></i> Add Expense</button>
+          <button class="ff-btn" data-fin="reports"><i class="fas fa-file-lines"></i> Reports</button>
+        </div>
+
+        <!-- Recent Transactions Section -->
+        <div class="sec-header">
+          <div class="sec-title"><i class="fas fa-history" style="color:var(--w-primary)"></i> Recent Transactions</div>
+          <a class="sec-link" id="link-view-all-txns">View All</a>
+        </div>
+        <div class="wfilter" id="txn-filter">
+          <button class="wchip active" data-f="all">All</button>
+          <button class="wchip" data-f="credit">Received (+)</button>
+          <button class="wchip" data-f="debit">Sent (-)</button>
+        </div>
+        <div id="txn-list"></div>
       </div>
-      <section class="card-premium">
-        <div class="section-header">
-          <h2 style="font-size:16px;"><i class="fas fa-list" style="color:var(--premium-green);margin-right:8px;"></i> Transaction History</h2>
-          <span class="sec-count" id="wallet-txn-count">0 transactions</span>
-        </div>
-        <div id="wallet-txn-list">
-          <div class="wallet-empty"><i class="fas fa-wallet"></i><p>Loading transactions...</p></div>
-        </div>
-      </section>
-    </div>
 
-    <!-- Beneficiaries panel -->
-    <div class="wallet-tab-panel" id="tab-benef">
-      <section class="card-premium">
-        <div class="section-header">
-          <h2 style="font-size:16px;"><i class="fas fa-users" style="color:var(--premium-green);margin-right:8px;"></i> Saved Beneficiaries</h2>
+      <!-- ========================================== -->
+      <!-- VIEW: SEND MONEY (5 STEPS) -->
+      <!-- ========================================== -->
+      <div id="v-send" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="dashboard"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Send Money</div>
         </div>
-        <div class="beneficiary-grid" id="beneficiary-grid"></div>
-      </section>
-    </div>
 
-    <!-- Linked panel -->
-    <div class="wallet-tab-panel" id="tab-linked">
-      <section class="card-premium" style="margin-bottom:14px;">
-        <div class="section-header">
-          <h2 style="font-size:16px;"><i class="fas fa-building-columns" style="color:var(--premium-green);margin-right:8px;"></i> Linked Bank Accounts</h2>
+        <div class="step-indicator" id="send-steps">
+          <div class="step-dot active" data-step="1">1</div>
+          <div class="step-line"></div>
+          <div class="step-dot" data-step="2">2</div>
+          <div class="step-line"></div>
+          <div class="step-dot" data-step="3">3</div>
+          <div class="step-line"></div>
+          <div class="step-dot" data-step="4">4</div>
+          <div class="step-line"></div>
+          <div class="step-dot" data-step="5">5</div>
+        </div>
+
+        <!-- STEP 1: Search Recipient -->
+        <div id="send-step1">
+          <div class="form-card">
+            <div class="form-group">
+              <label>Recipient Phone Number or Farmer ID</label>
+              <input class="form-input" id="send-search" placeholder="Enter 10-digit phone or FA-AS-00000003" autocomplete="off">
+            </div>
+            <div id="send-search-err" class="error-msg" style="display:none"></div>
+            <div id="send-search-result"></div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Enter Amount -->
+        <div id="send-step2" style="display:none">
+          <div class="form-card">
+            <div id="send-recipient-banner" style="margin-bottom:16px;"></div>
+            <div class="form-group">
+              <label>Amount (&#8377;)</label>
+              <input class="form-input amount" id="send-amount" placeholder="0" inputmode="decimal">
+              <div class="chip-row">
+                <button class="chip-amt" data-amt="100">+ &#8377;100</button>
+                <button class="chip-amt" data-amt="500">+ &#8377;500</button>
+                <button class="chip-amt" data-amt="1000">+ &#8377;1,000</button>
+                <button class="chip-amt" data-amt="2000">+ &#8377;2,000</button>
+                <button class="chip-amt" data-amt="5000">+ &#8377;5,000</button>
+              </div>
+              <div style="font-size:12px;color:var(--w-text-sec);text-align:center;margin-top:8px;" id="send-bal-note">
+                Available Balance: &#8377;0.00
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Note (Optional)</label>
+              <input class="form-input" id="send-note" placeholder="e.g. Seeds payment or labor charge">
+            </div>
+            <div id="send-amount-err" class="error-msg" style="display:none"></div>
+            <button class="w-btn primary" id="btn-send-review">Review Transfer</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Review -->
+        <div id="send-step3" style="display:none">
+          <div class="form-card">
+            <h3 style="font-size:16px;font-weight:800;color:var(--w-text);margin-bottom:14px;text-align:center;">Transfer Summary</h3>
+            <div id="send-review-data"></div>
+            <div style="display:flex;gap:10px;margin-top:18px;">
+              <button class="w-btn secondary" id="btn-send-edit" style="flex:1;">Edit</button>
+              <button class="w-btn primary" id="btn-send-proceed" style="flex:2;">Proceed to Pay</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 4: Security PIN -->
+        <div id="send-step4" style="display:none">
+          <div class="form-card" style="text-align:center;">
+            <div style="width:54px;height:54px;border-radius:50%;background:var(--w-light);color:var(--w-primary);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 12px;">
+              <i class="fas fa-lock"></i>
+            </div>
+            <h3 style="font-size:16px;font-weight:800;color:var(--w-text);margin-bottom:4px;">Enter Wallet PIN</h3>
+            <p style="font-size:12.5px;color:var(--w-text-sec);margin-bottom:16px;" id="send-pin-prompt">Enter PIN to authorize transfer</p>
+            <div class="form-group" style="max-width:240px;margin:0 auto 14px;">
+              <input class="form-input" id="send-pin" type="password" maxlength="6" placeholder="••••" inputmode="numeric" style="text-align:center;letter-spacing:6px;font-size:20px;">
+            </div>
+            <div id="send-pin-err" class="error-msg" style="display:none"></div>
+            <button class="w-btn primary" id="btn-send-confirm">Confirm & Send</button>
+          </div>
+        </div>
+
+        <!-- STEP 5: Success Screen -->
+        <div id="send-step5" style="display:none" class="form-card success-view">
+          <div class="success-icon"><i class="fas fa-check"></i></div>
+          <h2>Payment Successful</h2>
+          <p id="send-success-msg">Your transfer has been processed successfully.</p>
+          <div id="send-success-detail" style="background:var(--w-bg);border-radius:12px;padding:14px;text-align:left;margin-bottom:18px;border:1px solid var(--w-border);"></div>
+          <div style="display:flex;gap:10px;">
+            <button class="w-btn secondary" id="btn-send-share-receipt" style="flex:1;"><i class="fas fa-receipt"></i> Receipt</button>
+            <button class="w-btn primary" id="btn-send-done" style="flex:1;">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW: ADD MONEY -->
+      <!-- ========================================== -->
+      <div id="v-add" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="dashboard"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Add Money to Wallet</div>
+        </div>
+        <div class="form-card">
+          <div class="form-group">
+            <label>Amount to Add (&#8377;)</label>
+            <input class="form-input amount" id="add-amount" placeholder="0" inputmode="decimal">
+            <div class="chip-row">
+              <button class="chip-amt" data-amt="500">+ &#8377;500</button>
+              <button class="chip-amt" data-amt="1000">+ &#8377;1,000</button>
+              <button class="chip-amt" data-amt="2000">+ &#8377;2,000</button>
+              <button class="chip-amt" data-amt="5000">+ &#8377;5,000</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Payment Method</label>
+            <select class="form-input" id="add-method">
+              <option value="bank_transfer">Direct Bank Transfer</option>
+              <option value="upi">UPI / QR</option>
+              <option value="net_banking">Net Banking</option>
+              <option value="debit_card">Debit Card</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Note (Optional)</label>
+            <input class="form-input" id="add-note" placeholder="e.g. Wallet top-up for fertilizer">
+          </div>
+          <div id="add-err" class="error-msg" style="display:none"></div>
+          <button class="w-btn primary" id="btn-add-money">Add Money Securely</button>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW: RECEIVE MONEY -->
+      <!-- ========================================== -->
+      <div id="v-receive" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="dashboard"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Receive Money</div>
+        </div>
+        <div class="form-card" style="text-align:center;">
+          <div class="rc-avatar-lg" id="recv-avatar">F</div>
+          <h3 id="recv-name" style="font-size:17px;font-weight:800;margin-bottom:2px;">Farmer Name</h3>
+          <p style="font-size:12px;color:var(--w-text-muted);margin-bottom:16px;">Farmer ID: <span id="recv-fid" style="font-weight:700;">FA-AS-00000001</span></p>
+
+          <div style="width:200px;height:200px;margin:0 auto 16px;background:#ffffff;border:2px solid var(--w-border);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:var(--w-shadow-sm);padding:10px;">
+            <div id="qr-container" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"></div>
+          </div>
+
+          <div style="background:var(--w-bg);padding:10px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:10px;border:1px solid var(--w-border);margin-bottom:14px;">
+            <span id="recv-upi" style="font-size:13.5px;font-weight:800;color:var(--w-text);">farmer@farmassist</span>
+            <button id="btn-copy-upi-recv" style="background:none;border:none;color:var(--w-primary);cursor:pointer;font-size:15px;" title="Copy UPI"><i class="far fa-copy"></i></button>
+          </div>
+          <p style="font-size:11.5px;color:var(--w-text-sec);line-height:1.4;">
+            Scan this QR code using Farm Assist Scan & Pay or share your UPI ID to receive instant payments.
+          </p>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW: SCAN & PAY -->
+      <!-- ========================================== -->
+      <div id="v-scan" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="dashboard"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Scan & Pay</div>
+        </div>
+        <div class="form-card" style="text-align:center;">
+          <div id="qr-reader-wallet" style="width:100%;max-width:320px;margin:0 auto 14px;border-radius:14px;overflow:hidden;background:#000;"></div>
+          <div id="scan-err" class="error-msg" style="display:none"></div>
+          <p style="font-size:12.5px;color:var(--w-text-sec);margin-bottom:14px;">Point camera at any Farm Assist recipient QR code</p>
+          <div style="border-top:1px solid var(--w-border);padding-top:14px;margin-top:14px;">
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--w-text-sec);margin-bottom:6px;">Or upload QR Code image / enter Farmer ID</label>
+            <input type="file" id="scan-file-input" accept="image/*" style="display:none;">
+            <button class="w-btn secondary" id="btn-scan-upload" style="margin-bottom:8px;"><i class="fas fa-image"></i> Upload QR Code Image</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW: TRANSACTIONS (FULL LIST + SEARCH) -->
+      <!-- ========================================== -->
+      <div id="v-txns" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="dashboard"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">All Transactions</div>
+        </div>
+        <div class="form-card" style="padding:14px;margin-bottom:12px;">
+          <div class="form-group" style="margin-bottom:8px;">
+            <input class="form-input" id="txns-search-input" placeholder="Search by description or reference ID...">
+          </div>
+          <div class="wfilter" id="txn-filter-full">
+            <button class="wchip active" data-f="all">All</button>
+            <button class="wchip" data-f="credit">Received (+)</button>
+            <button class="wchip" data-f="debit">Sent (-)</button>
+          </div>
+        </div>
+        <div id="txn-list-full"></div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW: BANK ACCOUNTS -->
+      <!-- ========================================== -->
+      <div id="v-bank" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="dashboard"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Linked Bank Accounts</div>
         </div>
         <div id="bank-list"></div>
-        <button class="add-link-btn" id="add-bank-btn" style="margin-top:12px;"><i class="fas fa-plus" style="margin-right:6px;"></i>Link a Bank Account</button>
-      </section>
-      <section class="card-premium">
-        <div class="section-header">
-          <h2 style="font-size:16px;"><i class="fas fa-mobile" style="color:var(--premium-green);margin-right:8px;"></i> Linked UPI IDs</h2>
-          <span class="sec-count">UPI placeholder</span>
+        <div class="form-card" style="margin-top:16px;">
+          <h3 style="font-size:15px;font-weight:800;color:var(--w-text);margin-bottom:12px;">Link Bank Account</h3>
+          <div class="form-group">
+            <label>Bank Name</label>
+            <input class="form-input" id="bnk-name" placeholder="e.g. State Bank of India">
+          </div>
+          <div class="form-group">
+            <label>Account Holder Name</label>
+            <input class="form-input" id="bnk-holder" placeholder="Name as per bank passbook">
+          </div>
+          <div class="form-group">
+            <label>Account Number</label>
+            <input class="form-input" id="bnk-acct" placeholder="Enter bank account number" inputmode="numeric">
+          </div>
+          <div class="form-group">
+            <label>IFSC Code</label>
+            <input class="form-input" id="bnk-ifsc" placeholder="e.g. SBIN0001234" style="text-transform:uppercase">
+          </div>
+          <div id="bnk-err" class="error-msg" style="display:none"></div>
+          <button class="w-btn primary" id="btn-add-bank">Link Account Securely</button>
         </div>
-        <div id="upi-list"></div>
-        <button class="add-link-btn" id="add-upi-btn" style="margin-top:12px;"><i class="fas fa-plus" style="margin-right:6px;"></i>Add UPI ID</button>
-      </section>
-    </div>
+      </div>
 
+      <!-- ========================================== -->
+      <!-- VIEW: MONEY REQUESTS -->
+      <!-- ========================================== -->
+      <div id="v-requests" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="dashboard"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Money Requests</div>
+        </div>
+        <div class="wfilter" id="req-filter">
+          <button class="wchip active" data-f="received">Received Requests</button>
+          <button class="wchip" data-f="sent">Sent Requests</button>
+        </div>
+        <div id="req-list"></div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW: WALLET SECURITY -->
+      <!-- ========================================== -->
+      <div id="v-security" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="dashboard"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Wallet Security</div>
+        </div>
+        <div id="sec-info"></div>
+        <div class="form-card" style="margin-top:16px;">
+          <h3 style="font-size:15px;font-weight:800;color:var(--w-text);margin-bottom:12px;">Change Wallet PIN</h3>
+          <div class="form-group">
+            <label>Current PIN</label>
+            <input class="form-input" id="sec-cur" type="password" maxlength="6" inputmode="numeric" placeholder="••••">
+          </div>
+          <div class="form-group">
+            <label>New 4-6 Digit PIN</label>
+            <input class="form-input" id="sec-new" type="password" maxlength="6" inputmode="numeric" placeholder="••••">
+          </div>
+          <div class="form-group">
+            <label>Confirm New PIN</label>
+            <input class="form-input" id="sec-confirm" type="password" maxlength="6" inputmode="numeric" placeholder="••••">
+          </div>
+          <div id="sec-err" class="error-msg" style="display:none"></div>
+          <button class="w-btn primary" id="btn-change-pin">Update PIN</button>
+        </div>
+      </div>
+
+    <!-- ========================================== -->
+      <!-- VIEW: FARM FINANCE -->
+      <!-- ========================================== -->
+      <div id="v-finance" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="dashboard"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Farm Finance</div>
+        </div>
+        <div class="period-row" id="fin-period">
+          <button class="wchip" data-p="today">Today</button>
+          <button class="wchip" data-p="week">Week</button>
+          <button class="wchip active" data-p="month">Month</button>
+          <button class="wchip" data-p="year">Year</button>
+          <button class="wchip" data-p="custom">Custom</button>
+        </div>
+        <div class="custom-range" id="fin-custom-range">
+          <div><label>From</label><input type="date" class="form-input" id="fin-date-start"></div>
+          <div><label>To</label><input type="date" class="form-input" id="fin-date-end"></div>
+          <button class="w-btn secondary" id="btn-apply-custom"><i class="fas fa-check"></i> Apply</button>
+        </div>
+        <div id="fin-loading" class="w-skel" style="margin-bottom:14px;"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
+        <div id="fin-overview"></div>
+        <div class="chart-box">
+          <div class="sec-title" style="font-size:13.5px;margin-bottom:10px;"><i class="fas fa-chart-column"></i> Monthly Cash Flow</div>
+          <div id="fin-cashflow-chart" class="bar-chart"></div>
+          <div id="fin-cashflow-empty" class="empty-state" style="display:none;padding:20px 10px;"><i class="fas fa-chart-line"></i><p>No financial data available for this period.</p></div>
+        </div>
+        <div class="chart-box">
+          <div class="sec-title" style="font-size:13.5px;margin-bottom:10px;"><i class="fas fa-tags"></i> Income by Category</div>
+          <div id="fin-income-cats"></div>
+          <div id="fin-income-cats-empty" class="empty-state" style="display:none;padding:20px 10px;"><i class="fas fa-tags"></i><p>No income recorded for this period.</p></div>
+        </div>
+        <div class="chart-box">
+          <div class="sec-title" style="font-size:13.5px;margin-bottom:10px;"><i class="fas fa-receipt"></i> Expenses by Category</div>
+          <div id="fin-expense-cats"></div>
+          <div id="fin-expense-cats-empty" class="empty-state" style="display:none;padding:20px 10px;"><i class="fas fa-receipt"></i><p>No expenses recorded for this period.</p></div>
+        </div>
+        <div class="ff-row" style="margin-bottom:20px;">
+          <button class="ff-btn" data-fin="income"><i class="fas fa-list"></i> Income</button>
+          <button class="ff-btn" data-fin="expense"><i class="fas fa-list"></i> Expenses</button>
+          <button class="ff-btn" data-fin="reports"><i class="fas fa-file-lines"></i> Reports</button>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW: INCOME RECORDS -->
+      <!-- ========================================== -->
+      <div id="v-income" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="finance"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Income Records</div>
+        </div>
+        <div id="inc-list" style="margin-bottom:14px;"></div>
+        <button class="w-btn primary" id="btn-add-income"><i class="fas fa-plus"></i> Add Income</button>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW: EXPENSE RECORDS -->
+      <!-- ========================================== -->
+      <div id="v-expense" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="finance"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Expense Records</div>
+        </div>
+        <div id="exp-list" style="margin-bottom:14px;"></div>
+        <button class="w-btn primary" id="btn-add-expense"><i class="fas fa-plus"></i> Add Expense</button>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW: FINANCIAL REPORTS -->
+      <!-- ========================================== -->
+      <div id="v-reports" class="full-view">
+        <div class="fv-header">
+          <button class="fv-back" data-back="finance"><i class="fas fa-arrow-left"></i> Back</button>
+          <div class="fv-title">Financial Reports</div>
+        </div>
+        <div class="period-row" id="rep-period">
+          <button class="wchip active" data-p="month">Month</button>
+          <button class="wchip" data-p="year">Year</button>
+          <button class="wchip" data-p="all">All Time</button>
+        </div>
+        <div class="report-grid" style="margin-bottom:14px;">
+          <div class="report-card" data-rep="monthly"><i class="fas fa-calendar-alt"></i><div class="rc-title">Monthly Statement</div><div class="rc-sub">Income &amp; expenses by month</div></div>
+          <div class="report-card" data-rep="income"><i class="fas fa-arrow-down"></i><div class="rc-title">Income Statement</div><div class="rc-sub">All income records</div></div>
+          <div class="report-card" data-rep="expense"><i class="fas fa-arrow-up"></i><div class="rc-title">Expense Statement</div><div class="rc-sub">All expense records</div></div>
+          <div class="report-card" data-rep="pnl"><i class="fas fa-scale-balanced"></i><div class="rc-title">Profit &amp; Loss</div><div class="rc-sub">Income &minus; Expenses</div></div>
+          <div class="report-card" data-rep="txns"><i class="fas fa-receipt"></i><div class="rc-title">Transaction Statement</div><div class="rc-sub">Wallet transactions</div></div>
+        </div>
+        <div id="report-print-area">
+          <div id="rep-content"></div>
+        </div>
+        <button class="w-btn secondary" id="btn-print-report" style="margin-top:14px;"><i class="fas fa-print"></i> Print Report</button>
+      </div>
+
+    </div>
   </main>
 
-  <!-- Add Money Modal -->
-  <div class="modal-backdrop" id="add-modal">
-    <div class="modal-box" style="max-width:420px;padding:24px;">
-      <h3><i class="fas fa-plus-circle" style="color:var(--premium-green);margin-right:8px;"></i> Add Money</h3>
-      <p class="modal-sub">Top up your digital wallet</p>
+  <!-- ========================================== -->
+  <!-- FARM FINANCE ENTRY MODAL (Income / Expense) -->
+  <!-- ========================================== -->
+  <div class="w-modal" id="fin-modal">
+    <div class="w-modal-content">
+      <button class="w-modal-close" id="fin-modal-close"><i class="fas fa-times"></i></button>
+      <h3 id="fin-modal-title" style="font-size:17px;font-weight:800;color:var(--w-text);margin-bottom:16px;">Add Income</h3>
+      <div id="fin-modal-err" class="error-msg" style="display:none;"></div>
+      <div class="form-group income-f">
+        <label>Category</label>
+        <input class="form-input" id="fi-category" list="income-cats" placeholder="e.g. Crop Sales" autocomplete="off">
+        <datalist id="income-cats">
+          <option value="Crop Sales"><option value="Livestock Sales"><option value="Produce Sales"><option value="Government Subsidy"><option value="Rent Income"><option value="Other Income">
+        </datalist>
+      </div>
+      <div class="form-group income-f"><label>Source</label><input class="form-input" id="fi-source" placeholder="e.g. Mandi / Direct sale"></div>
+      <div class="form-group income-f"><label>Buyer</label><input class="form-input" id="fi-buyer" placeholder="Buyer / customer name"></div>
+      <div class="form-group expense-f">
+        <label>Category</label>
+        <input class="form-input" id="fe-category" list="expense-cats" placeholder="e.g. Seeds &amp; Inputs" autocomplete="off">
+        <datalist id="expense-cats">
+          <option value="Seeds &amp; Inputs"><option value="Fertilizers"><option value="Pesticides"><option value="Labor"><option value="Machinery"><option value="Irrigation"><option value="Transport"><option value="Other Expense">
+        </datalist>
+      </div>
+      <div class="form-group expense-f"><label>Subcategory</label><input class="form-input" id="fe-sub" placeholder="e.g. Urea / DAP"></div>
+      <div class="form-group expense-f"><label>Vendor</label><input class="form-input" id="fe-vendor" placeholder="Vendor / supplier name"></div>
       <div class="form-group">
-        <label class="form-label">Amount (&#8377;)</label>
-        <input type="number" class="form-input" id="wallet-add-amount" placeholder="Enter amount" min="1" step="1" inputmode="numeric">
+        <label>Amount (&#8377;)</label>
+        <input class="form-input" id="fe-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00">
       </div>
       <div class="form-group">
-        <label class="form-label">Payment Method</label>
-        <select class="form-select" id="wallet-add-method">
-          <option value="UPI">UPI</option>
-          <option value="Net Banking">Net Banking</option>
-          <option value="Card">Debit / Credit Card</option>
+        <label>Record Date</label>
+        <input class="form-input" id="fe-date" type="date">
+      </div>
+      <div class="form-group">
+        <label>Payment Method</label>
+        <select class="form-input" id="fe-method">
+          <option value="cash">Cash</option>
+          <option value="bank_transfer">Bank Transfer</option>
+          <option value="upi">UPI</option>
+          <option value="net_banking">Net Banking</option>
+          <option value="cheque">Cheque</option>
+          <option value="other">Other</option>
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Note (optional)</label>
-        <input type="text" class="form-input" id="wallet-add-note" placeholder="e.g. PM-KISAN installment" maxlength="120">
+        <label>Description</label>
+        <input class="form-input" id="fe-desc" placeholder="Short description">
       </div>
-      <div class="wallet-modal-note"><i class="fas fa-info-circle"></i> In demo mode, money is added to your wallet immediately. Real payment gateway integration is a future enhancement.</div>
-      <div style="display:flex;gap:10px;margin-top:16px;">
-        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('add-modal')">Cancel</button>
-        <button class="btn-primary" style="flex:1;" onclick="walletAddMoney()"><i class="fas fa-check"></i> Add Money</button>
-      </div>
+      <button class="w-btn primary" id="btn-fin-save"><i class="fas fa-check"></i> Save Record</button>
     </div>
   </div>
 
-  <!-- Send Money Modal -->
-  <div class="modal-backdrop" id="send-modal">
-    <div class="modal-box" style="max-width:420px;padding:24px;">
-      <h3><i class="fas fa-paper-plane" style="color:var(--premium-green);margin-right:8px;"></i> Send Money</h3>
-      <p class="modal-sub">Transfer money to any account or UPI ID</p>
-      <div class="chip-quick">
-        <div class="chip-quick-label">Quick pick a beneficiary</div>
-        <div class="chip-quick-list" id="send-quick-list"></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Amount (&#8377;)</label>
-        <input type="number" class="form-input" id="wallet-send-amount" placeholder="Enter amount" min="1" step="1" inputmode="numeric">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Recipient Name</label>
-        <input type="text" class="form-input" id="wallet-send-name" placeholder="Recipient name" maxlength="100">
-      </div>
-      <div class="form-group">
-        <label class="form-label">UPI ID / Phone</label>
-        <input type="text" class="form-input" id="wallet-send-upi" placeholder="e.g. farmer@upi or 98765 43210" maxlength="100">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Note (optional)</label>
-        <input type="text" class="form-input" id="wallet-send-note" placeholder="What is this for?" maxlength="120">
-      </div>
-      <div class="wallet-modal-note"><i class="fas fa-info-circle"></i> Transfers are recorded instantly as wallet transactions in demo mode.</div>
-      <div style="display:flex;gap:10px;margin-top:16px;">
-        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('send-modal')">Cancel</button>
-        <button class="btn-primary" style="flex:1;" onclick="walletSendMoney()"><i class="fas fa-paper-plane"></i> Send</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pay to Phone Modal -->
-  <div class="modal-backdrop" id="phone-modal">
-    <div class="modal-box" style="max-width:420px;padding:24px;">
-      <h3><i class="fas fa-mobile-screen-button" style="color:var(--premium-green);margin-right:8px;"></i> Pay to Phone Number</h3>
-      <p class="modal-sub">Send money using a mobile number</p>
-      <div class="form-group">
-        <label class="form-label">Mobile Number</label>
-        <input type="tel" class="form-input" id="wallet-phone-number" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Amount (&#8377;)</label>
-        <input type="number" class="form-input" id="wallet-phone-amount" placeholder="Enter amount" min="1" inputmode="numeric">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Note (optional)</label>
-        <input type="text" class="form-input" id="wallet-phone-note" placeholder="What is this for?" maxlength="120">
-      </div>
-      <div style="display:flex;gap:10px;margin-top:16px;">
-        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('phone-modal')">Cancel</button>
-        <button class="btn-primary" style="flex:1;" onclick="payToPhone()"><i class="fas fa-paper-plane"></i> Pay</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pay to Farmer ID Modal -->
-  <div class="modal-backdrop" id="fid-modal">
-    <div class="modal-box" style="max-width:420px;padding:24px;">
-      <h3><i class="fas fa-id-card" style="color:var(--premium-green);margin-right:8px;"></i> Pay to Farmer ID</h3>
-      <p class="modal-sub">Send money to another farmer's Farm Assist ID</p>
-      <div class="form-group">
-        <label class="form-label">Farmer ID</label>
-        <input type="text" class="form-input" id="wallet-fid-number" placeholder="e.g. FA-AS-00000012" maxlength="16">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Amount (&#8377;)</label>
-        <input type="number" class="form-input" id="wallet-fid-amount" placeholder="Enter amount" min="1" inputmode="numeric">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Note (optional)</label>
-        <input type="text" class="form-input" id="wallet-fid-note" placeholder="What is this for?" maxlength="120">
-      </div>
-      <div style="display:flex;gap:10px;margin-top:16px;">
-        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('fid-modal')">Cancel</button>
-        <button class="btn-primary" style="flex:1;" onclick="payToFarmerId()"><i class="fas fa-paper-plane"></i> Pay</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scan QR Modal -->
-  <div class="modal-backdrop" id="qr-modal">
-    <div class="modal-box" style="max-width:420px;padding:24px;text-align:center;">
-      <h3><i class="fas fa-qrcode" style="color:var(--premium-green);margin-right:8px;"></i> Scan QR</h3>
-      <p class="modal-sub">Scan a UPI QR to pay a farmer or shop</p>
-      <div class="qr-placeholder" id="qr-placeholder">
-        <div class="qr-grid" id="qr-grid" style="display:none;"></div>
-        <i class="fas fa-qrcode" style="font-size:64px;color:var(--border-dark);"></i>
-        <div class="qr-scan-line"></div>
-      </div>
-      <p id="qr-status" style="font-size:12px;color:var(--text-muted);margin:10px 0 0;">Position the QR code inside the frame to scan</p>
-      <div id="qr-result" style="display:none;text-align:left;margin-top:14px;">
-        <div class="receipt-sheet" id="qr-result-details"></div>
-        <div class="form-group">
-          <label class="form-label">Enter amount (&#8377;)</label>
-          <input type="number" class="form-input" id="qr-result-amount" placeholder="Enter amount" min="1" inputmode="numeric">
+  <!-- ========================================== -->
+  <!-- TRANSACTION DETAILS & RECEIPT MODAL -->
+  <!-- ========================================== -->
+  <div class="w-modal" id="txn-modal">
+    <div class="w-modal-content">
+      <button class="w-modal-close" id="txn-modal-close"><i class="fas fa-times"></i></button>
+      <div id="print-receipt-area">
+        <div style="text-align:center;margin-bottom:16px;">
+          <div style="font-size:18px;font-weight:800;color:var(--w-primary);">Farm Assist</div>
+          <div style="font-size:11px;color:var(--w-text-muted);">Payment Receipt & Transaction Record</div>
         </div>
-        <button class="btn-primary" style="width:100%;" onclick="confirmQrPayment()"><i class="fas fa-check"></i> Confirm Payment</button>
+        <div id="txn-modal-body"></div>
       </div>
-      <button class="btn-secondary" style="width:100%;margin-top:14px;" onclick="closeWalletModal('qr-modal')">Close</button>
-    </div>
-  </div>
-
-  <!-- Receive Money Modal -->
-  <div class="modal-backdrop" id="receive-modal">
-    <div class="modal-box" style="max-width:420px;padding:24px;text-align:center;">
-      <h3><i class="fas fa-arrow-down-to-bracket" style="color:var(--premium-green);margin-right:8px;"></i> Receive Money</h3>
-      <p class="modal-sub">Share your QR or UPI ID to receive money</p>
-      <div class="qr-placeholder" style="position:relative;background:#F4F9F4;">
-        <div class="qr-grid" id="receive-qr-grid"></div>
-      </div>
-      <div class="receive-upi" id="receive-upi-id">farmer@farmassist</div>
-      <p style="font-size:11px;color:var(--text-muted);margin:4px 0 14px;">Ask anyone to scan this QR to send you money instantly</p>
-      <div style="display:flex;gap:10px;">
-        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('receive-modal')">Close</button>
-        <button class="btn-primary" style="flex:1;" onclick="shareReceiveQr()"><i class="fas fa-share-nodes"></i> Share</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Receipt Modal -->
-  <div class="modal-backdrop" id="receipt-modal">
-    <div class="modal-box" style="max-width:420px;padding:24px;">
-      <h3><i class="fas fa-receipt" style="color:var(--premium-green);margin-right:8px;"></i> Payment Receipt</h3>
-      <p class="modal-sub">Transaction summary</p>
-      <div class="receipt-sheet" id="receipt-details"></div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('receipt-modal')">Close</button>
-        <button class="btn-primary" style="flex:1;" onclick="downloadReceipt()"><i class="fas fa-download"></i> Download</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Link Modal -->
-  <div class="modal-backdrop" id="link-modal">
-    <div class="modal-box" style="max-width:420px;padding:24px;">
-      <h3><i class="fas fa-link" style="color:var(--premium-green);margin-right:8px;"></i> <span id="link-modal-title">Link Bank Account</span></h3>
-      <p class="modal-sub">Add a new payment method</p>
-      <div class="form-group">
-        <label class="form-label">Account Holder Name</label>
-        <input type="text" class="form-input" id="link-name" placeholder="Name on account" maxlength="100">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Bank / UPI Handle</label>
-        <input type="text" class="form-input" id="link-id" placeholder="e.g. SBI Savings / myupi@upi" maxlength="100">
-      </div>
-      <div class="wallet-modal-note"><i class="fas fa-info-circle"></i> Linking is simulated in demo mode and stored locally on your device.</div>
-      <div style="display:flex;gap:10px;margin-top:16px;">
-        <button class="btn-secondary" style="flex:1;" onclick="closeWalletModal('link-modal')">Cancel</button>
-        <button class="btn-primary" style="flex:1;" onclick="confirmAddLink()"><i class="fas fa-check"></i> Add</button>
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button class="w-btn secondary" id="btn-print-receipt" style="flex:1;"><i class="fas fa-print"></i> Print / Save</button>
+        <button class="w-btn primary" id="btn-close-txn-modal" style="flex:1;">Close</button>
       </div>
     </div>
   </div>
@@ -499,492 +1593,1371 @@
   <script src="assets/js/navigation.js"></script>
   <script src="assets/js/app.js"></script>
   <script>
-    (function () {
-      'use strict';
+  (function(){
+    'use strict';
 
-      var STORE = {
-        beneficiaries: 'fa-wallet-beneficiaries',
-        banks: 'fa-wallet-banks',
-        upi: 'fa-wallet-upi'
-      };
-
-      var DEFAULT_BENEFICIARIES = [
-        { id: 'b1', name: 'Ramesh Patil', upi: 'ramesh@okhdfc', color: '#2D8659' },
-        { id: 'b2', name: 'Lakshmi Devi', upi: 'lakshmi@ybl', color: '#2563eb' },
-        { id: 'b3', name: 'Suresh Kumar', upi: 'suresh@okaxis', color: '#7c3aed' },
-        { id: 'b4', name: 'Anita Reddy', upi: 'anita@oksbi', color: '#d97706' }
-      ];
-      var DEFAULT_BANKS = [
-        { name: 'State Bank of India', detail: 'Savings A/C •••• 4821', color: '#1B5E3F' },
-        { name: 'HDFC Bank', detail: 'Savings A/C •••• 9034', color: '#2563eb' }
-      ];
-      var DEFAULT_UPI = [
-        { name: 'Personal UPI', detail: 'farmer@farmassist', color: '#0d9488' },
-        { name: 'Business UPI', detail: 'farmbusiness@okhdfc', color: '#7c3aed' }
-      ];
-
-      function load(key, def) {
-        try { var raw = localStorage.getItem(key); if (raw) return JSON.parse(raw); } catch (e) {}
-        return def;
+    var W = window.API && window.API.Wallet;
+    var token = localStorage.getItem('fa-auth-token');
+    var currentUser = {};
+    try {
+      if (window.UserStore && UserStore.getCurrentUser) {
+        currentUser = UserStore.getCurrentUser() || {};
       }
-      function save(key, val) {
-        try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+      if (!currentUser.id) {
+        currentUser = JSON.parse(localStorage.getItem('fa-current-user-data') || '{}');
       }
+    } catch(e) { currentUser = {}; }
 
-      var beneficiaries = load(STORE.beneficiaries, DEFAULT_BENEFICIARIES);
-      var banks = load(STORE.banks, DEFAULT_BANKS);
-      var upiIds = load(STORE.upi, DEFAULT_UPI);
+    var myFarmerId = currentUser.farmer_id || localStorage.getItem('user-farmer-id') || '';
+    var myName = currentUser.full_name || localStorage.getItem('user-name') || 'Farmer';
 
-      function formatINR(amount) {
-        var num = parseFloat(amount) || 0;
-        var sign = num < 0 ? '-' : '';
-        var abs = Math.round(Math.abs(num)).toString();
-        var lastThree = abs.substring(abs.length - 3);
-        var otherNums = abs.substring(0, abs.length - 3);
-        if (otherNums !== '') lastThree = ',' + lastThree;
-        var formatted = otherNums.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
-        return sign + '\u20B9' + formatted;
+    var walletData = null;
+    var summaryData = null;
+    var txns = [];
+    var currentFilter = 'all';
+    var sendState = { recipient: null, amount: 0, note: '', idemKey: null };
+    var F = window.API && window.API.Finance;
+    var financePeriod = 'month';
+    var customStart = '';
+    var customEnd = '';
+    var repPeriod = 'month';
+    var finEditing = null;
+    var balanceHidden = localStorage.getItem('fa-wallet-balance-hidden') === '1';
+    var html5QrCode = null;
+
+    function $(id) { return document.getElementById(id); }
+    function show(id) { var el = $(id); if(el) el.style.display = ''; }
+    function hide(id) { var el = $(id); if(el) el.style.display = 'none'; }
+    function view(id) {
+      ['w-loading','w-setup-view','w-dashboard-view','v-send','v-add','v-receive','v-scan','v-txns','v-bank','v-requests','v-security','v-finance','v-income','v-expense','v-reports'].forEach(function(v){hide(v)});
+      show(id);
+      window.scrollTo(0,0);
+    }
+    function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function inr(n) { return '\u20B9' + (parseFloat(n)||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function fmtDate(s) {
+      if (!s) return '';
+      try {
+        var d = new Date(s.replace(' ','T') + (s.indexOf('Z')===-1 ? 'Z' : ''));
+        return d.toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+      } catch(e) { return s; }
+    }
+    function initials(name) {
+      if (!name) return '?';
+      var p = name.trim().split(/\s+/);
+      return ((p[0]||'')[0] + ((p[p.length-1]||'')[0]||'')).toUpperCase();
+    }
+    function toast(msg, type) {
+      if (typeof window.showToast === 'function') window.showToast(msg, type || 'info');
+      else alert(msg);
+    }
+    function showErr(id, msg) { var el = $(id); if(el){ el.textContent = msg; el.style.display = 'flex'; } }
+    function hideErr(id) { var el = $(id); if(el){ el.style.display = 'none'; } }
+
+    if (!token || !W) {
+      view('w-loading');
+      $('w-loading').innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><p>Please log in to access your Farm Assist Wallet.</p><button class="w-btn primary" style="max-width:200px;margin:14px auto 0;" onclick="window.location.href=\'login.html\'">Log In</button></div>';
+      return;
+    }
+
+    // Load wallet
+    view('w-loading');
+    W.get().then(function(data) {
+      walletData = data;
+      if (!data.is_setup_complete) {
+        view('w-setup-view');
+        return;
       }
+      view('w-dashboard-view');
+      loadSummary();
+    }).catch(function(e) {
+      view('w-loading');
+      $('w-loading').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Unable to load wallet data.</p><button class="w-btn primary" style="max-width:200px;margin:14px auto 0;" onclick="location.reload()">Retry</button></div>';
+    });
 
-      function esc(s) {
-        return String(s == null ? '' : s)
-          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    // Setup wallet PIN
+    $('btn-setup-wallet').addEventListener('click', function() {
+      var p1 = $('pin-new').value.trim();
+      var p2 = $('pin-confirm').value.trim();
+      hideErr('setup-err');
+      if (p1.length < 4 || p1.length > 6 || !/^\d+$/.test(p1)) {
+        showErr('setup-err', 'PIN must be 4 to 6 digits');
+        return;
       }
-
-      function fmtDate(str) {
-        if (!str) return '';
-        try {
-          var d = new Date(str.indexOf('T') !== -1 ? str : str.replace(' ', 'T'));
-          if (isNaN(d.getTime())) return str;
-          return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
-            d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-        } catch (e) { return str; }
+      if (p1 !== p2) {
+        showErr('setup-err', 'PIN and Confirm PIN do not match');
+        return;
       }
-
-      function nowISO() { return new Date().toISOString(); }
-
-      /* ── Pending mock transactions ─────────────────── */
-      function pendingTransactions() {
-        return [
-          { id: 'TX-PN-1024', category: 'Paid to Ramesh Patil', description: 'UPI / ramesh@okhdfc', amount: 450, type: 'expense', status: 'pending', created_at: nowISO() },
-          { id: 'TX-PN-1023', category: 'Received from PM-KISAN', description: 'Govt. direct benefit transfer', amount: 2000, type: 'income', status: 'pending', created_at: nowISO() }
-        ];
-      }
-
-      var txns = [];
-      var filter = 'all';
-      var searchTerm = '';
-
-      function renderTransactions() {
-        var list = document.getElementById('wallet-txn-list');
-        var count = document.getElementById('wallet-txn-count');
-        var filtered = txns.filter(function (t) {
-          if (filter !== 'all') {
-            if (filter === 'credit' && t.type !== 'income') return false;
-            if (filter === 'debit' && t.type !== 'expense') return false;
-            if (filter === 'pending' && t.status !== 'pending') return false;
-          }
-          if (searchTerm) {
-            var hay = ((t.category || '') + ' ' + (t.description || '') + ' ' + (t.id || '')).toLowerCase();
-            if (hay.indexOf(searchTerm) === -1) return false;
-          }
-          return true;
-        });
-
-        if (!filtered.length) {
-          list.innerHTML = '<div class="wallet-empty"><i class="fas fa-wallet"></i><p>No transactions match your filters.</p></div>';
-          if (count) count.textContent = txns.length + ' transaction' + (txns.length !== 1 ? 's' : '');
-          return;
-        }
-        if (count) count.textContent = txns.length + ' transaction' + (txns.length !== 1 ? 's' : '');
-        list.innerHTML = filtered.map(function (t) {
-          var credit = t.type === 'income';
-          var icon = credit ? 'fa-arrow-down' : (t.status === 'pending' ? 'fa-clock' : 'fa-arrow-up');
-          var sign = credit ? '+' : '-';
-          var amountCls = credit ? 'credit' : (t.status === 'pending' ? 'pending' : 'debit');
-          var statusCls = t.status || 'success';
-          var title = t.category || (credit ? 'Money Received' : 'Money Sent');
-          var desc = t.description || '';
-          return '<div class="wallet-txn-item" onclick="openReceipt(\'' + esc(t.id) + '\')">' +
-            '<div class="wallet-txn-icon ' + amountCls + '"><i class="fas ' + icon + '"></i></div>' +
-            '<div class="wallet-txn-info">' +
-              '<h4>' + esc(title) + '</h4>' +
-              '<p>' + esc(desc) + ' &middot; ' + esc(fmtDate(t.created_at || t.transaction_date)) + '</p>' +
-            '</div>' +
-            '<div class="wallet-txn-right">' +
-              '<span class="wallet-txn-amount ' + amountCls + '">' + sign + formatINR(t.amount) + '</span>' +
-              '<span class="wallet-txn-status ' + statusCls + '">' + (statusCls === 'pending' ? 'Pending' : statusCls === 'failed' ? 'Failed' : 'Success') + '</span>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      }
-
-      function loadWallet() {
-        if (!localStorage.getItem('fa-auth-token')) {
-          if (typeof showToast === 'function') showToast('Please sign in to view your wallet.', 'warning');
-        }
-        var done = function () {
-          var pending = pendingTransactions();
-          var pendingTotal = pending.reduce(function (s, p) { return s + (p.amount || 0); }, 0);
-          document.getElementById('wallet-pending').textContent = formatINR(pendingTotal);
-          txns = pending.concat(txns);
-          renderTransactions();
-          renderBeneficiaries();
-          renderLinked();
-          renderSendQuickList();
-        };
-        WalletService.getSummary().then(function (data) {
-          data = data || {};
-          document.getElementById('wallet-balance').textContent = formatINR(data.balance);
-          document.getElementById('wallet-credits').textContent = formatINR(data.total_credits);
-          document.getElementById('wallet-debits').textContent = formatINR(data.total_debits);
-          txns = (data.recent_transactions || []).map(function (t) {
-            t.status = t.status || 'success';
-            return t;
-          });
-          done();
-        }).catch(function () {
-          txns = [];
-          done();
-        });
-      }
-
-      function renderBeneficiaries() {
-        var grid = document.getElementById('beneficiary-grid');
-        if (!grid) return;
-        grid.innerHTML = beneficiaries.map(function (b) {
-          return '<div class="beneficiary-card" onclick="openSendForBeneficiary(\'' + esc(b.name) + '\',\'' + esc(b.upi) + '\')">' +
-            '<div class="beneficiary-avatar" style="background:' + esc(b.color) + ';">' + esc(b.name.charAt(0)) + '</div>' +
-            '<b>' + esc(b.name) + '</b>' +
-            '<span>' + esc(b.upi) + '</span>' +
-          '</div>';
-        }).join('');
-      }
-
-      function renderSendQuickList() {
-        var list = document.getElementById('send-quick-list');
-        if (!list) return;
-        list.innerHTML = beneficiaries.slice(0, 4).map(function (b) {
-          return '<button class="chip-quick-item" type="button" onclick="pickBeneficiary(\'' + esc(b.name) + '\',\'' + esc(b.upi) + '\')">' + esc(b.name) + '</button>';
-        }).join('');
-      }
-
-      function renderLinked() {
-        var bankList = document.getElementById('bank-list');
-        if (bankList) {
-          bankList.innerHTML = banks.map(function (b) {
-            return '<div class="linked-account">' +
-              '<div class="la-ico" style="background:rgba(' + (b.color === '#1B5E3F' ? '27,94,63' : '37,99,235') + ',0.12);color:' + esc(b.color) + ';"><i class="fas fa-building-columns"></i></div>' +
-              '<div class="la-info"><b>' + esc(b.name) + '</b><span>' + esc(b.detail) + '</span></div>' +
-              '<span class="la-status">Linked</span>' +
-            '</div>';
-          }).join('');
-        }
-        var upiList = document.getElementById('upi-list');
-        if (upiList) {
-          upiList.innerHTML = upiIds.map(function (u) {
-            return '<div class="linked-account">' +
-              '<div class="la-ico" style="background:rgba(13,148,136,0.12);color:' + esc(u.color) + ';"><i class="fas fa-mobile"></i></div>' +
-              '<div class="la-info"><b>' + esc(u.name) + '</b><span>' + esc(u.detail) + '</span></div>' +
-              '<span class="la-status">Active</span>' +
-            '</div>';
-          }).join('');
-        }
-      }
-
-      /* ── Modal helpers ─────────────────────────────── */
-      window.openWalletModal = function (id) {
-        var modal = document.getElementById(id);
-        if (!modal) return;
-        modal.classList.add('active');
-        if (id === 'add-modal') { var a = document.getElementById('wallet-add-amount'); if (a) a.focus(); }
-        if (id === 'send-modal') { var s = document.getElementById('wallet-send-amount'); if (s) s.focus(); }
-        if (id === 'qr-modal') startQrScan();
-      };
-
-      window.closeWalletModal = function (id) {
-        var modal = document.getElementById(id);
-        if (modal) modal.classList.remove('active');
-      };
-
-      window.switchWalletTab = function (tab) {
-        document.querySelectorAll('.wallet-tab').forEach(function (t) {
-          t.classList.toggle('active', t.getAttribute('data-tab') === tab);
-        });
-        ['txns', 'benef', 'linked'].forEach(function (p) {
-          var el = document.getElementById('tab-' + p);
-          if (el) el.classList.toggle('active', p === tab);
-        });
-      };
-
-      /* ── Add money ─────────────────────────────────── */
-      window.walletAddMoney = function () {
-        var amount = parseFloat(document.getElementById('wallet-add-amount').value);
-        var method = document.getElementById('wallet-add-method').value;
-        var note = document.getElementById('wallet-add-note').value.trim();
-        if (!amount || amount <= 0) {
-          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
-          return;
-        }
-        WalletService.addMoney({
-          amount: amount,
-          payment_method: method,
-          description: note || undefined
-        }).then(function () {
-          if (typeof showToast === 'function') showToast('Money added to wallet', 'success');
-          closeWalletModal('add-modal');
-          document.getElementById('wallet-add-amount').value = '';
-          document.getElementById('wallet-add-note').value = '';
-          loadWallet();
-        }).catch(function (err) {
-          if (typeof showToast === 'function') showToast(err && err.message ? err.message : 'Failed to add money', 'danger');
-        });
-      };
-
-      /* ── Send money ────────────────────────────────── */
-      window.pickBeneficiary = function (name, upi) {
-        document.getElementById('wallet-send-name').value = name;
-        document.getElementById('wallet-send-upi').value = upi;
-      };
-      window.openSendForBeneficiary = function (name, upi) {
-        pickBeneficiary(name, upi);
-        openWalletModal('send-modal');
-      };
-
-      window.walletSendMoney = function () {
-        var amount = parseFloat(document.getElementById('wallet-send-amount').value);
-        var name = document.getElementById('wallet-send-name').value.trim();
-        var upi = document.getElementById('wallet-send-upi').value.trim();
-        var note = document.getElementById('wallet-send-note').value.trim();
-        if (!amount || amount <= 0) {
-          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
-          return;
-        }
-        var proceed = function () {
-          if (typeof showToast === 'function') showToast('Transfer completed to ' + (name || upi || 'recipient'), 'success');
-          closeWalletModal('send-modal');
-          document.getElementById('wallet-send-amount').value = '';
-          document.getElementById('wallet-send-name').value = '';
-          document.getElementById('wallet-send-upi').value = '';
-          document.getElementById('wallet-send-note').value = '';
-          loadWallet();
-        };
-        WalletService.transfer({
-          amount: amount,
-          recipient: name || undefined,
-          recipient_upi: upi || undefined,
-          note: note || undefined
-        }).then(proceed).catch(function (err) {
-          if (err && err.status === 404 && localStorage.getItem('fa-auth-token')) {
-            if (typeof showToast === 'function') showToast('Transfer recorded locally (backend wallet transfer pending).', 'success');
-            proceed();
-          } else {
-            if (typeof showToast === 'function') showToast(err && err.message ? err.message : 'Transfer failed', 'danger');
-          }
-        });
-      };
-
-      /* ── Pay to phone / farmer id ──────────────────── */
-      window.payToPhone = function () {
-        var phone = document.getElementById('wallet-phone-number').value.trim();
-        var amount = parseFloat(document.getElementById('wallet-phone-amount').value);
-        if (!/^\d{10}$/.test(phone)) {
-          if (typeof showToast === 'function') showToast('Enter a valid 10-digit mobile number', 'warning');
-          return;
-        }
-        if (!amount || amount <= 0) {
-          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
-          return;
-        }
-        closeWalletModal('phone-modal');
-        document.getElementById('wallet-phone-number').value = '';
-        document.getElementById('wallet-phone-amount').value = '';
-        document.getElementById('wallet-phone-note').value = '';
-        if (typeof showToast === 'function') showToast('Payment of ' + formatINR(amount) + ' sent to +91 ' + phone, 'success');
-        loadWallet();
-      };
-
-      window.payToFarmerId = function () {
-        var fid = document.getElementById('wallet-fid-number').value.trim().toUpperCase();
-        var amount = parseFloat(document.getElementById('wallet-fid-amount').value);
-        if (!/^FA-AS-\d{1,16}$/.test(fid)) {
-          if (typeof showToast === 'function') showToast('Enter a valid Farmer ID (e.g. FA-AS-00000012)', 'warning');
-          return;
-        }
-        if (!amount || amount <= 0) {
-          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
-          return;
-        }
-        closeWalletModal('fid-modal');
-        document.getElementById('wallet-fid-number').value = '';
-        document.getElementById('wallet-fid-amount').value = '';
-        document.getElementById('wallet-fid-note').value = '';
-        if (typeof showToast === 'function') showToast('Payment of ' + formatINR(amount) + ' sent to ' + fid, 'success');
-        loadWallet();
-      };
-
-      /* ── QR scan (simulated) ───────────────────────── */
-      var qrScanned = false;
-      function startQrScan() {
-        qrScanned = false;
-        var placeholder = document.getElementById('qr-placeholder');
-        var status = document.getElementById('qr-status');
-        var result = document.getElementById('qr-result');
-        placeholder.style.display = '';
-        result.style.display = 'none';
-        status.textContent = 'Position the QR code inside the frame to scan';
-        status.style.display = '';
-        setTimeout(function () {
-          if (qrScanned) return;
-          qrScanned = true;
-          status.textContent = 'QR scanned!';
-          placeholder.style.display = 'none';
-          result.style.display = '';
-          document.getElementById('qr-result-details').innerHTML =
-            '<div class="rs-row"><span>Shop / Farmer</span><b>Kisan Mandi Supplies</b></div>' +
-            '<div class="rs-row"><span>UPI ID</span><b>mandisupplies@okhdfc</b></div>' +
-            '<div class="rs-row"><span>Note</span><b>Scan &amp; pay</b></div>';
-          if (typeof showToast === 'function') showToast('QR scanned successfully', 'success');
-        }, 2200);
-      }
-
-      window.confirmQrPayment = function () {
-        var amount = parseFloat(document.getElementById('qr-result-amount').value);
-        if (!amount || amount <= 0) {
-          if (typeof showToast === 'function') showToast('Enter a valid amount', 'warning');
-          return;
-        }
-        closeWalletModal('qr-modal');
-        document.getElementById('qr-result-amount').value = '';
-        if (typeof showToast === 'function') showToast('Payment of ' + formatINR(amount) + ' sent to Kisan Mandi Supplies', 'success');
-        loadWallet();
-      };
-
-      /* ── Receive / QR grid ─────────────────────────── */
-      function buildQrGrid(containerId) {
-        var grid = document.getElementById(containerId);
-        if (!grid) return;
-        grid.style.display = 'grid';
-        var html = '';
-        var seed = 7;
-        var rand = function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
-        for (var r = 0; r < 7; r++) {
-          for (var c = 0; c < 7; c++) {
-            var isFinder = (r < 2 && c < 2) || (r < 2 && c > 4) || (r > 4 && c < 2);
-            var on = isFinder ? 1 : (rand() > 0.45 ? 1 : 0);
-            html += '<i style="background:' + (on ? 'var(--premium-green)' : 'transparent') + ';padding-top:100%;display:block;"></i>';
-          }
-        }
-        grid.innerHTML = html;
-      }
-
-      window.shareReceiveQr = function () {
-        if (navigator.share) {
-          navigator.share({ title: 'Farm Assist UPI', text: 'Pay me on Farm Assist: farmer@farmassist' }).catch(function () {});
-        } else if (typeof showToast === 'function') {
-          showToast('UPI ID copied: farmer@farmassist', 'success');
-          try { navigator.clipboard.writeText('farmer@farmassist'); } catch (e) {}
-        }
-      };
-
-      /* ── Receipts ──────────────────────────────────── */
-      var activeReceipt = null;
-      window.openReceipt = function (txnId) {
-        var t = txns.filter(function (x) { return x.id === txnId; })[0];
-        if (!t) return;
-        activeReceipt = t;
-        var credit = t.type === 'income';
-        document.getElementById('receipt-details').innerHTML =
-          '<div class="rs-row"><span>Transaction ID</span><b>' + esc(t.id || '—') + '</b></div>' +
-          '<div class="rs-row"><span>Type</span><b>' + (credit ? 'Credit / Received' : 'Debit / Sent') + '</b></div>' +
-          '<div class="rs-row"><span>Category</span><b>' + esc(t.category || 'Wallet transaction') + '</b></div>' +
-          '<div class="rs-row"><span>Description</span><b>' + esc(t.description || '—') + '</b></div>' +
-          '<div class="rs-row"><span>Date</span><b>' + esc(fmtDate(t.created_at || t.transaction_date)) + '</b></div>' +
-          '<div class="rs-row"><span>Status</span><b>' + esc(t.status || 'success') + '</b></div>' +
-          '<div class="rs-row" style="font-size:14px;"><span>Amount</span><b style="color:' + (credit ? 'var(--primary-green)' : 'var(--danger)') + ';">' + (credit ? '+' : '-') + formatINR(t.amount) + '</b></div>';
-        openWalletModal('receipt-modal');
-      };
-
-      window.downloadReceipt = function () {
-        var t = activeReceipt;
-        if (!t) return;
-        var text =
-          'FARM ASSIST - PAYMENT RECEIPT\n' +
-          '================================\n' +
-          'Transaction ID : ' + (t.id || '—') + '\n' +
-          'Type           : ' + (t.type === 'income' ? 'Credit / Received' : 'Debit / Sent') + '\n' +
-          'Category       : ' + (t.category || 'Wallet transaction') + '\n' +
-          'Description    : ' + (t.description || '—') + '\n' +
-          'Date           : ' + fmtDate(t.created_at || t.transaction_date) + '\n' +
-          'Status         : ' + (t.status || 'success') + '\n' +
-          'Amount         : ' + (t.type === 'income' ? '+' : '-') + formatINR(t.amount) + '\n' +
-          '================================\n' +
-          'Generated by Farm Assist • farmer@farmassist\n';
-        var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'FarmAssist_Receipt_' + (t.id || 'txn') + '.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(a.href);
-        if (typeof showToast === 'function') showToast('Receipt downloaded', 'success');
-      };
-
-      /* ── Link accounts ─────────────────────────────── */
-      var linkMode = 'bank';
-      document.addEventListener('click', function (e) {
-        var t = e.target;
-        if (t.id === 'add-bank-btn') { linkMode = 'bank'; document.getElementById('link-modal-title').textContent = 'Link Bank Account'; openWalletModal('link-modal'); }
-        if (t.id === 'add-upi-btn') { linkMode = 'upi'; document.getElementById('link-modal-title').textContent = 'Add UPI ID'; openWalletModal('link-modal'); }
-        if (t.classList.contains('modal-backdrop')) t.classList.remove('active');
+      this.disabled = true;
+      this.textContent = 'Setting up...';
+      W.setup({ wallet_pin: p1, confirm_pin: p2 }).then(function(res) {
+        walletData = res.data;
+        toast('Wallet set up successfully!', 'success');
+        view('w-dashboard-view');
+        loadSummary();
+      }).catch(function(e) {
+        showErr('setup-err', (e && e.message) || 'Setup failed');
+      }).finally(function() {
+        $('btn-setup-wallet').disabled = false;
+        $('btn-setup-wallet').textContent = 'Set Up Wallet';
       });
+    });
 
-      window.confirmAddLink = function () {
-        var name = document.getElementById('link-name').value.trim();
-        var id = document.getElementById('link-id').value.trim();
-        if (!name || !id) {
-          if (typeof showToast === 'function') showToast('Fill in both fields', 'warning');
-          return;
-        }
-        if (linkMode === 'bank') {
-          banks.push({ name: name, detail: id, color: '#1B5E3F' });
-          save(STORE.banks, banks);
+    function loadSummary() {
+      W.getSummary().then(function(data) {
+        summaryData = data;
+        var balance = parseFloat(data.balance)||0;
+        $('bal-amount').textContent = (balance).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        $('meta-credits').textContent = inr(data.total_credits);
+        $('meta-debits').textContent = inr(data.total_debits);
+        $('dash-upi-id').textContent = data.upi_id || ((myFarmerId||'farmer').toLowerCase() + '@farmassist');
+        renderBalancePrivacy();
+
+        var statusEl = $('bal-status-text');
+        var badgeEl = $('bal-status-badge');
+        if (data.is_active) {
+          statusEl.textContent = 'Active';
+          badgeEl.className = 'bal-status';
         } else {
-          upiIds.push({ name: name, detail: id, color: '#0d9488' });
-          save(STORE.upi, upiIds);
+          statusEl.textContent = 'Inactive';
+          badgeEl.className = 'bal-status inactive';
         }
-        document.getElementById('link-name').value = '';
-        document.getElementById('link-id').value = '';
-        closeWalletModal('link-modal');
-        renderLinked();
-        if (typeof showToast === 'function') showToast((linkMode === 'bank' ? 'Bank account' : 'UPI ID') + ' linked', 'success');
+
+        // Dashboard Farm Finance cards (all-time figures)
+        var inc = data.income || { total: 0, count: 0 };
+        var exp = data.expenses || { total: 0, count: 0 };
+        var net = (parseFloat(inc.total)||0) - (parseFloat(exp.total)||0);
+        $('dash-income').textContent = inr(inc.total);
+        $('dash-income-count').textContent = (inc.count||0) + ' records';
+        $('dash-expense').textContent = inr(exp.total);
+        $('dash-expense-count').textContent = (exp.count||0) + ' records';
+        $('dash-net').textContent = inr(net);
+        $('dash-net-label').textContent = (net >= 0 ? 'Profit' : 'Loss') + ' • All time';
+
+        txns = data.recent_transactions || [];
+        renderTxnList(txns, 'txn-list');
+      }).catch(function(e) {
+        console.error('Failed to load wallet summary:', e);
+      });
+    }
+
+    function renderBalancePrivacy() {
+      var shown = !balanceHidden;
+      $('bal-eye-icon').className = 'fas ' + (shown ? 'fa-eye' : 'fa-eye-slash');
+      $('bal-amount').innerHTML = shown
+        ? ((parseFloat(summaryData && summaryData.balance)||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}))
+        : '&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;';
+    }
+
+    $('btn-toggle-balance').addEventListener('click', function() {
+      balanceHidden = !balanceHidden;
+      try { localStorage.setItem('fa-wallet-balance-hidden', balanceHidden ? '1' : '0'); } catch(e) {}
+      renderBalancePrivacy();
+    });
+
+    function renderTxnList(items, containerId) {
+      var container = $(containerId);
+      if (!container) return;
+      var filtered = currentFilter === 'all' ? items : items.filter(function(t){ return t.transaction_type === currentFilter; });
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-receipt"></i><p>No wallet transactions found.</p></div>';
+        return;
+      }
+      var html = '';
+      filtered.forEach(function(t) {
+        var isCredit = t.transaction_type === 'credit';
+        var icon = isCredit ? 'fa-arrow-down-left' : 'fa-arrow-up-right';
+        var iconCls = isCredit ? 'credit' : 'debit';
+        var amtCls = isCredit ? 'credit' : 'debit';
+        var prefix = isCredit ? '+' : '-';
+        var title = t.description || (isCredit ? 'Money Received' : 'Money Sent');
+
+        html += '<div class="txn-item" data-tid="' + esc(t.transaction_id) + '">' +
+          '<div class="txn-icon ' + iconCls + '"><i class="fas ' + (isCredit ? 'fa-arrow-down' : 'fa-arrow-up') + '"></i></div>' +
+          '<div class="txn-info">' +
+            '<div class="txn-title">' + esc(title) + '</div>' +
+            '<div class="txn-sub">' + fmtDate(t.created_at) + (t.reference_id ? ' &bull; ' + esc(t.reference_id) : '') + '</div>' +
+          '</div>' +
+          '<div class="txn-amt">' +
+            '<div class="txn-val ' + amtCls + '">' + prefix + ' ' + inr(t.amount) + '</div>' +
+            '<div class="txn-status">' + esc(t.status || 'completed') + '</div>' +
+          '</div>' +
+        '</div>';
+      });
+      container.innerHTML = html;
+
+      container.querySelectorAll('.txn-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          var tid = this.getAttribute('data-tid');
+          openTxnDetails(tid);
+        });
+      });
+    }
+
+    // Filter Chips binding
+    function bindFilter(containerId, listId) {
+      var container = $(containerId);
+      if (!container) return;
+      container.querySelectorAll('.wchip').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          container.querySelectorAll('.wchip').forEach(function(b){ b.classList.remove('active'); });
+          btn.classList.add('active');
+          currentFilter = btn.getAttribute('data-f');
+          renderTxnList(txns, listId);
+        });
+      });
+    }
+    bindFilter('txn-filter', 'txn-list');
+    bindFilter('txn-filter-full', 'txn-list-full');
+
+    // Quick Actions Click Handler
+    $('qgrid').addEventListener('click', function(e) {
+      var item = e.target.closest('.qitem');
+      if (!item) return;
+      var action = item.getAttribute('data-action');
+      if (action === 'send') {
+        sendState = { recipient: null, amount: 0, note: '' };
+        resetSendFlow();
+        view('v-send');
+      } else if (action === 'add') {
+        $('add-amount').value = '';
+        $('add-note').value = '';
+        hideErr('add-err');
+        view('v-add');
+      } else if (action === 'receive') {
+        renderReceive();
+        view('v-receive');
+      } else if (action === 'scan') {
+        startScanner();
+        view('v-scan');
+      } else if (action === 'txns') {
+        loadAllTxns();
+        view('v-txns');
+      } else if (action === 'bank') {
+        loadBankAccounts();
+        view('v-bank');
+      } else if (action === 'requests') {
+        loadRequests();
+        view('v-requests');
+      } else if (action === 'security') {
+        loadSecurity();
+        view('v-security');
+      } else if (action === 'finance') {
+        loadFinanceOverview();
+        view('v-finance');
+      } else if (action === 'income') {
+        loadIncomeList();
+        view('v-income');
+      } else if (action === 'expense') {
+        loadExpenseList();
+        view('v-expense');
+      } else if (action === 'reports') {
+        loadReport('monthly');
+        view('v-reports');
+      }
+    });
+
+    // Farm Finance quick links on dashboard
+    $('link-open-finance').addEventListener('click', function() {
+      loadFinanceOverview();
+      view('v-finance');
+    });
+    document.querySelectorAll('.ff-row .ff-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var target = this.getAttribute('data-fin');
+        if (target === 'income') { loadIncomeList(); view('v-income'); }
+        else if (target === 'expense') { loadExpenseList(); view('v-expense'); }
+        else if (target === 'reports') { loadReport('monthly'); view('v-reports'); }
+      });
+    });
+
+    $('link-view-all-txns').addEventListener('click', function() {
+      loadAllTxns();
+      view('v-txns');
+    });
+
+    // Back Buttons
+    document.querySelectorAll('.fv-back').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        stopScanner();
+        var target = this.getAttribute('data-back');
+        if (target === 'finance') {
+          loadFinanceOverview();
+          view('v-finance');
+        } else {
+          view('w-dashboard-view');
+          loadSummary();
+        }
+      });
+    });
+
+    // Copy UPI in Dashboard
+    $('btn-copy-upi-dash').addEventListener('click', function() {
+      var upi = $('dash-upi-id').textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(upi).then(function() { toast('UPI ID copied: ' + upi, 'success'); });
+      } else { toast('UPI ID: ' + upi, 'info'); }
+    });
+
+    // ==========================================
+    // SEND MONEY FLOW
+    // ==========================================
+    var sendSearchTimer = null;
+    function resetSendFlow() {
+      $('send-step1').style.display = '';
+      $('send-step2').style.display = 'none';
+      $('send-step3').style.display = 'none';
+      $('send-step4').style.display = 'none';
+      $('send-step5').style.display = 'none';
+      $('send-search').value = '';
+      $('send-search-result').innerHTML = '';
+      hideErr('send-search-err');
+      updateSendSteps(1);
+    }
+
+    function updateSendSteps(step) {
+      $('send-steps').querySelectorAll('.step-dot').forEach(function(d) {
+        var s = parseInt(d.getAttribute('data-step'));
+        d.className = 'step-dot' + (s < step ? ' done' : s === step ? ' active' : '');
+        d.innerHTML = s < step ? '<i class="fas fa-check" style="font-size:11px"></i>' : s;
+      });
+      $('send-steps').querySelectorAll('.step-line').forEach(function(l, i) {
+        l.className = 'step-line' + (i < step - 1 ? ' done' : '');
+      });
+    }
+
+    $('send-search').addEventListener('input', function() {
+      clearTimeout(sendSearchTimer);
+      var q = this.value.trim();
+      hideErr('send-search-err');
+      if (q.length < 2) {
+        $('send-search-result').innerHTML = '';
+        return;
+      }
+      sendSearchTimer = setTimeout(function() {
+        W.searchUser(q).then(function(res) {
+          if (!res.found) {
+            showErr('send-search-err', res.message || 'No farmer account found');
+            $('send-search-result').innerHTML = '';
+            return;
+          }
+          hideErr('send-search-err');
+          var u = res.user;
+          sendState.recipient = u;
+          var avatarContent = u.profile_image
+            ? '<img src="' + esc(u.profile_image) + '">'
+            : initials(u.full_name);
+
+          $('send-search-result').innerHTML = '<div class="recipient-card">' +
+            '<div class="rc-avatar-lg">' + avatarContent + '</div>' +
+            '<div class="rc-name-lg">' + esc(u.full_name) + '</div>' +
+            '<div class="rc-id-lg">' + esc(u.farmer_id) + (u.masked_phone ? ' &bull; ' + esc(u.masked_phone) : '') + '</div>' +
+          '</div>' +
+          '<button class="w-btn primary" id="btn-send-continue-1">Continue to Enter Amount</button>';
+
+          $('btn-send-continue-1').addEventListener('click', function() {
+            proceedToAmountStep();
+          });
+        }).catch(function(e) {
+          showErr('send-search-err', (e && e.message) || 'Search failed');
+        });
+      }, 350);
+    });
+
+    function proceedToAmountStep() {
+      $('send-step1').style.display = 'none';
+      $('send-step2').style.display = '';
+      var u = sendState.recipient;
+      $('send-recipient-banner').innerHTML = '<div style="display:flex;align-items:center;gap:12px;background:var(--w-light);border:1px solid var(--w-border);border-radius:12px;padding:12px;">' +
+        '<div style="width:40px;height:40px;border-radius:50%;background:var(--w-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">' + initials(u.full_name) + '</div>' +
+        '<div><div style="font-weight:800;font-size:14px;">' + esc(u.full_name) + '</div><div style="font-size:11.5px;color:var(--w-text-sec);">' + esc(u.farmer_id) + '</div></div>' +
+      '</div>';
+      $('send-bal-note').textContent = 'Available Balance: ' + inr(summaryData ? summaryData.balance : 0);
+      $('send-amount').value = '';
+      $('send-note').value = '';
+      hideErr('send-amount-err');
+      updateSendSteps(2);
+    }
+
+    // Amount chips
+    document.querySelectorAll('#send-step2 .chip-amt').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        $('send-amount').value = this.getAttribute('data-amt');
+      });
+    });
+
+    $('btn-send-review').addEventListener('click', function() {
+      var amt = parseFloat($('send-amount').value);
+      hideErr('send-amount-err');
+      if (!amt || amt <= 0) {
+        showErr('send-amount-err', 'Please enter a valid transfer amount');
+        return;
+      }
+      var curBal = summaryData ? summaryData.balance : (walletData ? walletData.balance : 0);
+      if (amt > curBal) {
+        showErr('send-amount-err', 'Insufficient wallet balance (Available: ' + inr(curBal) + ')');
+        return;
+      }
+      sendState.amount = amt;
+      sendState.note = $('send-note').value.trim();
+
+      $('send-step2').style.display = 'none';
+      $('send-step3').style.display = '';
+
+      var afterBal = curBal - amt;
+      $('send-review-data').innerHTML = '<div class="review-row"><span class="rr-label">Paying To</span><span class="rr-val">' + esc(sendState.recipient.full_name) + ' (' + esc(sendState.recipient.farmer_id) + ')</span></div>' +
+        '<div class="review-row"><span class="rr-label">Transfer Amount</span><span class="rr-val" style="color:var(--w-primary);font-size:16px;">' + inr(amt) + '</span></div>' +
+        (sendState.note ? '<div class="review-row"><span class="rr-label">Note</span><span class="rr-val">' + esc(sendState.note) + '</span></div>' : '') +
+        '<div class="review-row"><span class="rr-label">Payment Source</span><span class="rr-val">Farm Assist Wallet</span></div>' +
+        '<div class="review-row"><span class="rr-label">Current Balance</span><span class="rr-val">' + inr(curBal) + '</span></div>' +
+        '<div class="review-row"><span class="rr-label">Balance After</span><span class="rr-val">' + inr(afterBal) + '</span></div>';
+      updateSendSteps(3);
+    });
+
+    $('btn-send-edit').addEventListener('click', function() {
+      $('send-step3').style.display = 'none';
+      $('send-step2').style.display = '';
+      updateSendSteps(2);
+    });
+
+    $('btn-send-proceed').addEventListener('click', function() {
+      $('send-step3').style.display = 'none';
+      $('send-step4').style.display = '';
+      $('send-pin').value = '';
+      hideErr('send-pin-err');
+      sendState.idemKey = sendState.idemKey || ('FAID' + Date.now() + Math.random().toString(36).slice(2, 8));
+      $('send-pin-prompt').textContent = 'Enter PIN to authorize payment of ' + inr(sendState.amount) + ' to ' + sendState.recipient.full_name;
+      updateSendSteps(4);
+    });
+
+    var isSending = false;
+    var lastConfirmedTxn = null;
+    $('btn-send-confirm').addEventListener('click', function() {
+      if (isSending) return;
+      var pin = $('send-pin').value.trim();
+      hideErr('send-pin-err');
+      if (!pin || pin.length < 4) {
+        showErr('send-pin-err', 'Enter your 4-6 digit Wallet PIN');
+        return;
+      }
+      isSending = true;
+      this.disabled = true;
+      this.textContent = 'Processing Transfer...';
+
+      W.transfer({
+        recipient_id: sendState.recipient.farmer_id || sendState.recipient.id,
+        amount: sendState.amount,
+        note: sendState.note || null,
+        wallet_pin: pin,
+        idempotency_key: sendState.idemKey
+      }).then(function(res) {
+        isSending = false;
+        $('btn-send-confirm').disabled = false;
+        $('btn-send-confirm').textContent = 'Confirm & Send';
+
+        lastConfirmedTxn = res.data ? res.data.transaction : null;
+
+        $('send-step4').style.display = 'none';
+        $('send-step5').style.display = '';
+        $('send-success-msg').textContent = 'You have successfully sent ' + inr(sendState.amount) + ' to ' + sendState.recipient.full_name + '.';
+        $('send-success-detail').innerHTML = '<div class="review-row"><span class="rr-label">Recipient</span><span class="rr-val">' + esc(sendState.recipient.full_name) + '</span></div>' +
+          '<div class="review-row"><span class="rr-label">Amount</span><span class="rr-val" style="color:#059669;">' + inr(sendState.amount) + '</span></div>' +
+          '<div class="review-row"><span class="rr-label">Transaction ID</span><span class="rr-val">' + esc(lastConfirmedTxn ? lastConfirmedTxn.transaction_id : '') + '</span></div>' +
+          '<div class="review-row"><span class="rr-label">Reference ID</span><span class="rr-val">' + esc(lastConfirmedTxn ? lastConfirmedTxn.reference_id : '') + '</span></div>' +
+          '<div class="review-row"><span class="rr-label">Date & Time</span><span class="rr-val">' + fmtDate(lastConfirmedTxn ? lastConfirmedTxn.created_at : new Date().toISOString()) + '</span></div>';
+        updateSendSteps(5);
+        toast('Transfer successful!', 'success');
+      }).catch(function(e) {
+        isSending = false;
+        $('btn-send-confirm').disabled = false;
+        $('btn-send-confirm').textContent = 'Confirm & Send';
+        showErr('send-pin-err', (e && e.message) || 'Transfer failed');
+      });
+    });
+
+    $('btn-send-done').addEventListener('click', function() {
+      view('w-dashboard-view');
+      loadSummary();
+    });
+
+    $('btn-send-share-receipt').addEventListener('click', function() {
+      if (lastConfirmedTxn) {
+        openTxnReceipt(lastConfirmedTxn);
+      }
+    });
+
+    // ==========================================
+    // ADD MONEY FLOW
+    // ==========================================
+    document.querySelectorAll('#v-add .chip-amt').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        $('add-amount').value = this.getAttribute('data-amt');
+      });
+    });
+
+    $('btn-add-money').addEventListener('click', function() {
+      var amt = parseFloat($('add-amount').value);
+      hideErr('add-err');
+      if (!amt || amt <= 0) {
+        showErr('add-err', 'Please enter a valid amount');
+        return;
+      }
+      this.disabled = true;
+      this.textContent = 'Adding money...';
+      W.addMoney({
+        amount: amt,
+        payment_method: $('add-method').value,
+        note: $('add-note').value.trim() || null,
+        idempotency_key: 'FAADD' + Date.now()
+      }).then(function(res) {
+        toast('₹' + amt.toFixed(2) + ' added to your wallet successfully!', 'success');
+        view('w-dashboard-view');
+        loadSummary();
+      }).catch(function(e) {
+        showErr('add-err', (e && e.message) || 'Failed to add money');
+      }).finally(function() {
+        $('btn-add-money').disabled = false;
+        $('btn-add-money').textContent = 'Add Money Securely';
+      });
+    });
+
+    // ==========================================
+    // RECEIVE MONEY FLOW
+    // ==========================================
+    function renderReceive() {
+      var upi = (walletData && walletData.upi_id) || ((myFarmerId||'farmer').toLowerCase() + '@farmassist');
+      $('recv-name').textContent = myName;
+      $('recv-fid').textContent = myFarmerId;
+      $('recv-upi').textContent = upi;
+      $('recv-avatar').textContent = initials(myName);
+
+      generateQR(upi || myFarmerId);
+    }
+
+    $('btn-copy-upi-recv').addEventListener('click', function() {
+      var upi = $('recv-upi').textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(upi).then(function() { toast('UPI ID copied: ' + upi, 'success'); });
+      } else { toast('UPI ID: ' + upi, 'info'); }
+    });
+
+    function generateQR(text) {
+      var container = $('qr-container');
+      container.innerHTML = '';
+      // Generate clean QR code via QuickChart QR API or SVG fallback
+      var img = document.createElement('img');
+      img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(text);
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'contain';
+      img.onerror = function() {
+        // SVG grid fallback
+        container.innerHTML = '<div style="font-size:12px;color:var(--w-text-muted);"><i class="fas fa-qrcode" style="font-size:48px;display:block;margin-bottom:8px;color:var(--w-primary);"></i>' + esc(text) + '</div>';
       };
+      container.appendChild(img);
+    }
 
-      /* ── Search & filter ───────────────────────────── */
-      document.addEventListener('DOMContentLoaded', function () {
-        loadWallet();
-        buildQrGrid('receive-qr-grid');
+    // ==========================================
+    // SCAN & PAY FLOW
+    // ==========================================
+    function startScanner() {
+      hideErr('scan-err');
+      if (typeof window.Html5Qrcode === 'undefined') {
+        showErr('scan-err', 'QR scanner is loading. You can also upload a QR image.');
+        return;
+      }
+      try {
+        if (!html5QrCode) {
+          html5QrCode = new window.Html5Qrcode('qr-reader-wallet');
+        }
+        html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          function(decodedText) {
+            handleScanSuccess(decodedText);
+          },
+          function() {}
+        ).catch(function(err) {
+          console.warn('Camera error:', err);
+          showErr('scan-err', 'Camera access unavailable. Please upload a QR image or enter Farmer ID directly.');
+        });
+      } catch(e) {
+        showErr('scan-err', 'Could not initialize scanner.');
+      }
+    }
 
-        var searchInput = document.getElementById('wallet-txn-search');
-        if (searchInput) {
-          searchInput.addEventListener('input', function () {
-            searchTerm = searchInput.value.trim().toLowerCase();
-            renderTransactions();
+    function stopScanner() {
+      if (html5QrCode) {
+        html5QrCode.stop().catch(function(){}).finally(function() {
+          html5QrCode.clear().catch(function(){});
+          html5QrCode = null;
+        });
+      }
+    }
+
+    function handleScanSuccess(text) {
+      stopScanner();
+      var clean = text.trim();
+      W.searchUser(clean).then(function(res) {
+        if (!res.found) {
+          toast('Recipient not recognized from QR: ' + clean, 'error');
+          view('w-dashboard-view');
+          return;
+        }
+        sendState = { recipient: res.user, amount: 0, note: '' };
+        view('v-send');
+        proceedToAmountStep();
+        toast('Recipient verified: ' + res.user.full_name, 'success');
+      }).catch(function() {
+        toast('Could not find farmer for scanned QR', 'error');
+      });
+    }
+
+    $('btn-scan-upload').addEventListener('click', function() {
+      $('scan-file-input').click();
+    });
+
+    $('scan-file-input').addEventListener('change', function() {
+      if (this.files && this.files[0]) {
+        var file = this.files[0];
+        if (typeof window.Html5Qrcode !== 'undefined') {
+          var scanner = new window.Html5Qrcode('qr-reader-wallet');
+          scanner.scanFile(file, true).then(function(decodedText) {
+            handleScanSuccess(decodedText);
+          }).catch(function() {
+            showErr('scan-err', 'No valid QR code found in uploaded image');
           });
         }
+      }
+    });
 
-        document.querySelectorAll('.wf-chip').forEach(function (chip) {
-          chip.addEventListener('click', function () {
-            document.querySelectorAll('.wf-chip').forEach(function (c) { c.classList.remove('active'); });
-            chip.classList.add('active');
-            filter = chip.getAttribute('data-filter');
-            renderTransactions();
+    // ==========================================
+    // ALL TRANSACTIONS FLOW
+    // ==========================================
+    function loadAllTxns() {
+      W.listTransactions({ limit: 100 }).then(function(res) {
+        txns = res.items || [];
+        currentFilter = 'all';
+        $('txn-filter-full').querySelectorAll('.wchip').forEach(function(b){ b.classList.remove('active'); });
+        $('txn-filter-full').querySelector('.wchip[data-f="all"]').classList.add('active');
+        renderTxnList(txns, 'txn-list-full');
+      });
+    }
+
+    var txnsSearchTimer = null;
+    $('txns-search-input').addEventListener('input', function() {
+      clearTimeout(txnsSearchTimer);
+      var q = this.value.trim();
+      txnsSearchTimer = setTimeout(function() {
+        W.listTransactions({ q: q || undefined, limit: 100 }).then(function(res) {
+          txns = res.items || [];
+          renderTxnList(txns, 'txn-list-full');
+        });
+      }, 300);
+    });
+
+    // ==========================================
+    // BANK ACCOUNTS FLOW
+    // ==========================================
+    function loadBankAccounts() {
+      W.listBankAccounts().then(function(res) {
+        var items = res.items || [];
+        var list = $('bank-list');
+        if (items.length === 0) {
+          list.innerHTML = '<div class="empty-state"><i class="fas fa-building-columns"></i><p>No linked bank accounts found.<br>Link your bank account below to manage withdrawals.</p></div>';
+          return;
+        }
+        var html = '';
+        items.forEach(function(a) {
+          html += '<div class="bank-card">' +
+            '<div class="bank-icon"><i class="fas fa-building-columns"></i></div>' +
+            '<div class="bank-info">' +
+              '<div class="bank-name">' + esc(a.bank_name) + '</div>' +
+              '<div class="bank-num">' + esc(a.masked_account_number) + ' &bull; ' + esc(a.ifsc_code) + '</div>' +
+              (a.is_primary ? '<span class="bank-badge">Primary Account</span>' : '') +
+            '</div>' +
+            (!a.is_primary ? '<button class="bank-del" style="color:var(--w-primary);" data-setprimary="' + esc(a.account_id) + '" title="Set as primary account"><i class="fas fa-star"></i></button>' : '') +
+            '<button class="bank-del" data-aid="' + esc(a.account_id) + '" title="Unlink account"><i class="fas fa-trash-alt"></i></button>' +
+          '</div>';
+        });
+        list.innerHTML = html;
+
+        list.querySelectorAll('[data-setprimary]').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var b = this;
+            var aid = b.getAttribute('data-setprimary');
+            b.disabled = true;
+            W.setDefaultBankAccount(aid).then(function() {
+              toast('Default bank account updated', 'success');
+              loadBankAccounts();
+            }).catch(function(e) {
+              toast((e && e.message) || 'Failed to set default account', 'error');
+              b.disabled = false;
+            });
+          });
+        });
+
+        list.querySelectorAll('.bank-del').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var aid = this.getAttribute('data-aid');
+            if (confirm('Are you sure you want to unlink this bank account?')) {
+              W.removeBankAccount(aid).then(function() {
+                toast('Bank account unlinked', 'info');
+                loadBankAccounts();
+              }).catch(function(e) {
+                toast((e && e.message) || 'Failed to unlink account', 'error');
+              });
+            }
           });
         });
       });
-    })();
+    }
+
+    $('btn-add-bank').addEventListener('click', function() {
+      var name = $('bnk-name').value.trim();
+      var holder = $('bnk-holder').value.trim();
+      var acct = $('bnk-acct').value.trim();
+      var ifsc = $('bnk-ifsc').value.trim();
+      hideErr('bnk-err');
+      if (!name || !holder || !acct || !ifsc) {
+        showErr('bnk-err', 'Please fill in all bank details');
+        return;
+      }
+      if (acct.length < 8 || !/^\d+$/.test(acct)) {
+        showErr('bnk-err', 'Invalid account number');
+        return;
+      }
+      this.disabled = true;
+      this.textContent = 'Linking...';
+      W.addBankAccount({
+        bank_name: name,
+        account_holder_name: holder,
+        account_number: acct,
+        ifsc_code: ifsc,
+        account_type: 'savings'
+      }).then(function() {
+        toast('Bank account linked successfully!', 'success');
+        $('bnk-name').value = '';
+        $('bnk-holder').value = '';
+        $('bnk-acct').value = '';
+        $('bnk-ifsc').value = '';
+        loadBankAccounts();
+      }).catch(function(e) {
+        showErr('bnk-err', (e && e.message) || 'Failed to link account');
+      }).finally(function() {
+        $('btn-add-bank').disabled = false;
+        $('btn-add-bank').textContent = 'Link Account Securely';
+      });
+    });
+
+    // ==========================================
+    // MONEY REQUESTS FLOW
+    // ==========================================
+    function loadRequests(filterType) {
+      var type = filterType || 'received';
+      W.listMoneyRequests({ type: type }).then(function(res) {
+        var items = res.items || [];
+        var list = $('req-list');
+        if (items.length === 0) {
+          list.innerHTML = '<div class="empty-state"><i class="fas fa-hand-holding-dollar"></i><p>No ' + (type === 'received' ? 'received' : 'sent') + ' money requests.</p></div>';
+          return;
+        }
+        var html = '';
+        items.forEach(function(r) {
+          var isSent = r.receiver_farmer_id === myFarmerId;
+          var otherName = isSent ? r.sender_name : r.receiver_name;
+          var otherId = isSent ? r.sender_farmer_id : r.receiver_farmer_id;
+          var isPending = r.status === 'pending';
+
+          html += '<div class="form-card" style="margin-bottom:10px;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+              '<div style="display:flex;align-items:center;gap:10px;">' +
+                '<div style="width:38px;height:38px;border-radius:50%;background:var(--w-light);color:var(--w-primary);display:flex;align-items:center;justify-content:center;font-weight:700;">' + initials(otherName) + '</div>' +
+                '<div><div style="font-weight:800;font-size:14px;">' + esc(otherName || 'Farmer') + '</div><div style="font-size:11px;color:var(--w-text-muted);">' + esc(otherId || '') + '</div></div>' +
+              '</div>' +
+              '<div style="font-size:16px;font-weight:800;color:var(--w-primary);">' + inr(r.amount) + '</div>' +
+            '</div>' +
+            (r.note ? '<div style="font-size:12px;color:var(--w-text-sec);margin-bottom:10px;background:var(--w-bg);padding:6px 10px;border-radius:8px;">' + esc(r.note) + '</div>' : '') +
+            '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+              '<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--w-light);color:var(--w-primary);text-transform:capitalize;">' + esc(r.status) + '</span>';
+
+          if (isPending && !isSent) {
+            html += '<div style="display:flex;gap:6px;">' +
+              '<button class="w-btn primary btn-req-pay" data-rid="' + esc(r.request_id) + '" data-amt="' + r.amount + '" style="padding:6px 14px;font-size:12px;width:auto;">Pay Now</button>' +
+              '<button class="w-btn secondary btn-req-dec" data-rid="' + esc(r.request_id) + '" style="padding:6px 12px;font-size:12px;width:auto;">Decline</button>' +
+            '</div>';
+          } else if (isPending && isSent) {
+            html += '<button class="w-btn danger btn-req-cancel" data-rid="' + esc(r.request_id) + '" style="padding:6px 12px;font-size:12px;width:auto;">Cancel</button>';
+          }
+
+          html += '</div></div>';
+        });
+        list.innerHTML = html;
+
+        list.querySelectorAll('.btn-req-pay').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var rid = this.getAttribute('data-rid');
+            var pin = prompt('Enter your 4-6 digit Wallet PIN to approve payment of ' + inr(this.getAttribute('data-amt')) + ':');
+            if (!pin) return;
+            W.acceptMoneyRequest(rid, pin).then(function() {
+              toast('Payment completed successfully!', 'success');
+              loadRequests('received');
+              loadSummary();
+            }).catch(function(e) {
+              toast((e && e.message) || 'Payment failed', 'error');
+            });
+          });
+        });
+
+        list.querySelectorAll('.btn-req-dec').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var rid = this.getAttribute('data-rid');
+            W.declineMoneyRequest(rid).then(function() {
+              toast('Request declined', 'info');
+              loadRequests('received');
+            });
+          });
+        });
+
+        list.querySelectorAll('.btn-req-cancel').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var rid = this.getAttribute('data-rid');
+            W.cancelMoneyRequest(rid).then(function() {
+              toast('Request cancelled', 'info');
+              loadRequests('sent');
+            });
+          });
+        });
+      });
+    }
+
+    $('req-filter').querySelectorAll('.wchip').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        $('req-filter').querySelectorAll('.wchip').forEach(function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
+        loadRequests(btn.getAttribute('data-f'));
+      });
+    });
+
+    // ==========================================
+    // WALLET SECURITY FLOW
+    // ==========================================
+    function loadSecurity() {
+      W.securityInfo().then(function(res) {
+        var d = res.data || {};
+        $('sec-info').innerHTML = '<div class="form-card" style="padding:14px;margin-bottom:12px;">' +
+          '<div class="review-row"><span class="rr-label">Wallet PIN Status</span><span class="rr-val" style="color:#059669;"><i class="fas fa-check-circle"></i> ' + (d.pin_set ? 'Configured & Active' : 'Not Set') + '</span></div>' +
+          '<div class="review-row"><span class="rr-label">Wallet Status</span><span class="rr-val">' + (d.wallet_active ? 'Active' : 'Inactive') + '</span></div>' +
+          '<div class="review-row"><span class="rr-label">30-Day Transactions</span><span class="rr-val">' + (d.last_30_days_activity || 0) + '</span></div>' +
+          '<div class="review-row"><span class="rr-label">Primary UPI ID</span><span class="rr-val">' + esc(d.upi_id || '-') + '</span></div>' +
+        '</div>';
+      });
+    }
+
+    $('btn-change-pin').addEventListener('click', function() {
+      var cur = $('sec-cur').value.trim();
+      var pnew = $('sec-new').value.trim();
+      var conf = $('sec-confirm').value.trim();
+      hideErr('sec-err');
+      if (!cur || !pnew || !conf) {
+        showErr('sec-err', 'Please fill in all fields');
+        return;
+      }
+      if (pnew.length < 4 || pnew.length > 6 || !/^\d+$/.test(pnew)) {
+        showErr('sec-err', 'New PIN must be 4 to 6 digits');
+        return;
+      }
+      if (pnew !== conf) {
+        showErr('sec-err', 'New PIN and Confirm PIN do not match');
+        return;
+      }
+      this.disabled = true;
+      this.textContent = 'Updating...';
+      W.changePin({
+        current_pin: cur,
+        new_pin: pnew,
+        confirm_pin: conf
+      }).then(function() {
+        toast('Wallet PIN updated successfully!', 'success');
+        $('sec-cur').value = '';
+        $('sec-new').value = '';
+        $('sec-confirm').value = '';
+        loadSecurity();
+      }).catch(function(e) {
+        showErr('sec-err', (e && e.message) || 'Failed to update PIN');
+      }).finally(function() {
+        $('btn-change-pin').disabled = false;
+        $('btn-change-pin').textContent = 'Update PIN';
+      });
+    });
+
+    // ==========================================
+    // TRANSACTION DETAILS & RECEIPT
+    // ==========================================
+    function openTxnDetails(tid) {
+      W.getTransaction(tid).then(function(res) {
+        var t = res.data || res;
+        openTxnReceipt(t);
+      }).catch(function() {
+        toast('Could not load transaction details', 'error');
+      });
+    }
+
+    function openTxnReceipt(t) {
+      var isCredit = t.transaction_type === 'credit';
+      var body = $('txn-modal-body');
+      body.innerHTML = '<div style="text-align:center;padding:12px 0 16px;border-bottom:1px dashed var(--w-border);">' +
+        '<div style="font-size:26px;font-weight:800;color:' + (isCredit ? '#059669' : '#DC2626') + ';">' + (isCredit ? '+' : '-') + ' ' + inr(t.amount) + '</div>' +
+        '<div style="font-size:12px;font-weight:700;color:var(--w-text-muted);margin-top:2px;">' + (isCredit ? 'CREDIT RECEIVED' : 'DEBIT TRANSFER') + '</div>' +
+      '</div>' +
+      '<div style="padding:14px 0;">' +
+        '<div class="review-row"><span class="rr-label">Status</span><span class="rr-val" style="color:#059669;"><i class="fas fa-check-circle"></i> ' + esc(t.status || 'Completed') + '</span></div>' +
+        '<div class="review-row"><span class="rr-label">Transaction ID</span><span class="rr-val">' + esc(t.transaction_id) + '</span></div>' +
+        '<div class="review-row"><span class="rr-label">Reference Number</span><span class="rr-val">' + esc(t.reference_id || '-') + '</span></div>' +
+        '<div class="review-row"><span class="rr-label">Date & Time</span><span class="rr-val">' + fmtDate(t.created_at) + '</span></div>' +
+        (t.description ? '<div class="review-row"><span class="rr-label">Description</span><span class="rr-val">' + esc(t.description) + '</span></div>' : '') +
+        (t.counterparty_name ? '<div class="review-row"><span class="rr-label">Paid To</span><span class="rr-val">' + esc(t.counterparty_name) + '</span></div>' : '') +
+        (t.payment_method ? '<div class="review-row"><span class="rr-label">Method</span><span class="rr-val">' + esc(t.payment_method) + '</span></div>' : '') +
+        '<div class="review-row"><span class="rr-label">Wallet Balance After</span><span class="rr-val">' + inr(t.balance_after) + '</span></div>' +
+      '</div>';
+
+      $('txn-modal').classList.add('active');
+    }
+
+    $('txn-modal-close').addEventListener('click', function() { $('txn-modal').classList.remove('active'); });
+    $('btn-close-txn-modal').addEventListener('click', function() { $('txn-modal').classList.remove('active'); });
+    $('btn-print-receipt').addEventListener('click', function() { window.print(); });
+
+    // ==========================================
+    // FARM FINANCE
+    // ==========================================
+    function finPeriodParams() {
+      if (financePeriod === 'custom') {
+        return { period: 'custom', start_date: customStart || undefined, end_date: customEnd || undefined };
+      }
+      return { period: financePeriod };
+    }
+    function shortMonth(m) {
+      if (!m) return '';
+      var names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var n = parseInt(String(m).slice(5,7), 10);
+      return (names[n-1] || '') + ' \'' + String(m).slice(2,4);
+    }
+    function fmtDateOnly(s) {
+      if (!s) return '';
+      try {
+        var d = new Date(s.indexOf('T') > -1 ? s.replace(' ','T') : s);
+        return d.toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+      } catch(e) { return s; }
+    }
+
+    $('fin-period').querySelectorAll('.wchip').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        financePeriod = btn.getAttribute('data-p');
+        if (financePeriod === 'custom') {
+          if (!$('fin-date-start').value) $('fin-date-start').value = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0') + '-01';
+          if (!$('fin-date-end').value) $('fin-date-end').value = new Date().toISOString().slice(0,10);
+        }
+        loadFinanceOverview();
+      });
+    });
+    $('btn-apply-custom').addEventListener('click', function() {
+      customStart = $('fin-date-start').value || '';
+      customEnd = $('fin-date-end').value || '';
+      financePeriod = 'custom';
+      loadFinanceOverview();
+    });
+
+    function loadFinanceOverview() {
+      $('fin-period').querySelectorAll('.wchip').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-p') === financePeriod); });
+      $('fin-custom-range').classList.toggle('show', financePeriod === 'custom');
+      show('fin-loading');
+      if ($('fin-overview')) $('fin-overview').innerHTML = '';
+      W.getSummary(finPeriodParams()).then(function(data) {
+        hide('fin-loading');
+        renderFinanceOverview(data);
+      }).catch(function(e) {
+        hide('fin-loading');
+        $('fin-overview').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>' + esc((e && e.message) || 'Could not load farm finance data') + '</p></div>';
+      });
+    }
+
+    function renderFinanceOverview(data) {
+      var inc = data.income || { total: 0, count: 0, by_category: [] };
+      var exp = data.expenses || { total: 0, count: 0, by_category: [] };
+      var net = (parseFloat(inc.total)||0) - (parseFloat(exp.total)||0);
+      var ov = $('fin-overview');
+      ov.innerHTML = '<div class="pnl-grid">' +
+        '<div class="pnl-card income"><div class="pnl-label"><i class="fas fa-arrow-down"></i> Income</div><div class="pnl-val">' + inr(inc.total) + '</div><div class="pnl-sub">' + (inc.count||0) + ' records</div></div>' +
+        '<div class="pnl-card expense"><div class="pnl-label"><i class="fas fa-arrow-up"></i> Expenses</div><div class="pnl-val">' + inr(exp.total) + '</div><div class="pnl-sub">' + (exp.count||0) + ' records</div></div>' +
+        '<div class="pnl-card net"><div class="pnl-label"><i class="fas fa-scale-balanced"></i> Net Profit</div><div class="pnl-val">' + inr(net) + '</div><div class="pnl-sub">' + (net >= 0 ? 'Profit' : 'Loss') + '</div></div>' +
+      '</div>';
+      renderCashflowChart(data.monthly_cashflow || []);
+      renderCats($('fin-income-cats'), $('fin-income-cats-empty'), inc.by_category || [], inc.total);
+      renderCats($('fin-expense-cats'), $('fin-expense-cats-empty'), exp.by_category || [], exp.total);
+    }
+
+    function renderCashflowChart(cf) {
+      var chart = $('fin-cashflow-chart');
+      var empty = $('fin-cashflow-empty');
+      var hasData = (cf || []).some(function(m){ return (m.income || 0) > 0 || (m.expenses || 0) > 0; });
+      if (!cf || !cf.length || !hasData) {
+        chart.style.display = 'none';
+        chart.innerHTML = '';
+        empty.style.display = '';
+        return;
+      }
+      chart.style.display = '';
+      empty.style.display = 'none';
+      var max = 1;
+      cf.forEach(function(m){ max = Math.max(max, m.income||0, m.expenses||0); });
+      var html = '';
+      cf.forEach(function(m) {
+        var ih = Math.max(2, Math.round(((m.income||0)/max)*100));
+        var eh = Math.max(2, Math.round(((m.expenses||0)/max)*100));
+        html += '<div class="bar-col" title="' + esc(shortMonth(m.month)) + ' — Income ' + inr(m.income) + ', Expenses ' + inr(m.expenses) + '">' +
+          '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;width:100%;">' +
+            '<div class="bar-fill inc" style="height:' + ih + '%"></div>' +
+            '<div class="bar-fill exp" style="height:' + eh + '%"></div>' +
+          '</div>' +
+          '<div class="bar-mlbl">' + esc(shortMonth(m.month)) + '</div>' +
+        '</div>';
+      });
+      chart.innerHTML = html;
+    }
+
+    function renderCats(containerEl, emptyEl, cats, total) {
+      if (!containerEl) return;
+      total = parseFloat(total)||0;
+      if (!cats || !cats.length || !total) {
+        containerEl.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = '';
+        return;
+      }
+      if (emptyEl) emptyEl.style.display = 'none';
+      var sorted = cats.slice().sort(function(a,b){ return (b.amount||0) - (a.amount||0); }).slice(0,6);
+      var maxAmt = sorted[0] ? (sorted[0].amount||0) : 0;
+      var html = '';
+      sorted.forEach(function(c) {
+        var w = maxAmt ? Math.max(4, Math.round(((c.amount||0)/maxAmt)*100)) : 0;
+        html += '<div class="cat-row"><div class="cat-top"><b>' + esc(c.category || 'Other') + '</b><span>' + inr(c.amount) + '</span></div>' +
+          '<div class="cat-bar"><div class="cat-fill" style="width:' + w + '%"></div></div></div>';
+      });
+      containerEl.innerHTML = html;
+    }
+
+    function finRow(type, r) {
+      var t = type === 'income';
+      var title = r.category || (t ? 'Income Record' : 'Expense Record');
+      var subParts = [];
+      if (t && r.buyer) subParts.push(r.buyer);
+      if (t && r.source) subParts.push(r.source);
+      if (!t && r.vendor) subParts.push(r.vendor);
+      if (!t && r.subcategory) subParts.push(r.subcategory);
+      if (r.description) subParts.push(r.description);
+      subParts.push(fmtDateOnly(r.income_date || r.expense_date || r.created_at));
+      var rid = t ? r.income_id : r.expense_id;
+      return '<div class="fin-item ' + type + '" data-fintype="' + type + '" data-fid="' + esc(rid) + '">' +
+        '<div class="fi-icon"><i class="fas ' + (t ? 'fa-arrow-down' : 'fa-arrow-up') + '"></i></div>' +
+        '<div class="fi-info"><div class="fi-title">' + esc(title) + '</div><div class="fi-sub">' + esc(subParts.filter(Boolean).join(' • ')) + '</div></div>' +
+        '<div class="fi-amt"><div class="fi-val">' + inr(r.amount) + '</div>' +
+          (r.payment_method ? '<div style="font-size:10px;color:var(--w-text-muted);margin-top:2px;text-transform:capitalize;">' + esc(r.payment_method) + '</div>' : '') +
+        '</div>' +
+        '<div class="fi-actions"><button class="fi-act" data-act="edit" title="Edit"><i class="fas fa-pen"></i></button><button class="fi-act del" data-act="del" title="Delete"><i class="fas fa-trash-alt"></i></button></div>' +
+      '</div>';
+    }
+
+    function bindFinItemEvents(container, type) {
+      container.querySelectorAll('.fin-item').forEach(function(item) {
+        item.addEventListener('click', function(ev) {
+          var btn = ev.target.closest('.fi-act');
+          if (!btn) return;
+          var rid = item.getAttribute('data-fid');
+          var act = btn.getAttribute('data-act');
+          if (act === 'edit') openFinModal(type, rid);
+          else if (act === 'del') deleteFinRecord(type, rid);
+        });
+      });
+    }
+
+    function loadIncomeList() {
+      var list = $('inc-list');
+      list.innerHTML = '<div class="w-skel"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>';
+      if (!F) { list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Finance services unavailable.</p></div>'; return; }
+      F.listIncome('').then(function(data) {
+        var items = (data && data.items) || [];
+        if (!items.length) {
+          list.innerHTML = '<div class="empty-state"><i class="fas fa-arrow-down"></i><p>No income records found.<br>Add your first income record to track farm earnings.</p></div>';
+          return;
+        }
+        var html = '';
+        items.forEach(function(r){ html += finRow('income', r); });
+        list.innerHTML = html;
+        bindFinItemEvents(list, 'income');
+      }).catch(function(e) {
+        list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>' + esc((e && e.message) || 'Failed to load income records') + '</p></div>';
+      });
+    }
+
+    function loadExpenseList() {
+      var list = $('exp-list');
+      list.innerHTML = '<div class="w-skel"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>';
+      if (!F) { list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Finance services unavailable.</p></div>'; return; }
+      F.listExpenses('').then(function(data) {
+        var items = (data && data.items) || [];
+        if (!items.length) {
+          list.innerHTML = '<div class="empty-state"><i class="fas fa-arrow-up"></i><p>No expense records found.<br>Add your first expense record to track farm costs.</p></div>';
+          return;
+        }
+        var html = '';
+        items.forEach(function(r){ html += finRow('expense', r); });
+        list.innerHTML = html;
+        bindFinItemEvents(list, 'expense');
+      }).catch(function(e) {
+        list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>' + esc((e && e.message) || 'Failed to load expense records') + '</p></div>';
+      });
+    }
+
+    $('btn-add-income').addEventListener('click', function() { openFinModal('income'); });
+    $('btn-add-expense').addEventListener('click', function() { openFinModal('expense'); });
+
+    function openFinModal(type, id) {
+      finEditing = id ? { type: type, id: id } : null;
+      var isIncome = type === 'income';
+      document.querySelectorAll('.income-f').forEach(function(el){ el.style.display = isIncome ? '' : 'none'; });
+      document.querySelectorAll('.expense-f').forEach(function(el){ el.style.display = isIncome ? 'none' : ''; });
+      $('fin-modal-title').textContent = (id ? 'Edit ' : 'Add ') + (isIncome ? 'Income' : 'Expense');
+      resetFinFormFields();
+      if (id) {
+        var p = isIncome ? F.getIncome(id) : F.getExpense(id);
+        p.then(function(r) {
+          if (!r) return;
+          if (isIncome) {
+            $('fi-category').value = r.category || '';
+            $('fi-source').value = r.source || '';
+            $('fi-buyer').value = r.buyer || '';
+          } else {
+            $('fe-category').value = r.category || '';
+            $('fe-sub').value = r.subcategory || '';
+            $('fe-vendor').value = r.vendor || '';
+          }
+          $('fe-amount').value = r.amount != null ? r.amount : '';
+          $('fe-method').value = r.payment_method || 'cash';
+          $('fe-desc').value = r.description || '';
+          var d = r.income_date || r.expense_date || '';
+          $('fe-date').value = d ? String(d).slice(0,10) : '';
+        }).catch(function(e) {
+          toast((e && e.message) || 'Could not load record', 'error');
+        });
+      }
+      hideErr('fin-modal-err');
+      $('fin-modal').classList.add('active');
+    }
+
+    function resetFinFormFields() {
+      ['fi-category','fi-source','fi-buyer','fe-category','fe-sub','fe-vendor','fe-amount','fe-desc','fe-date'].forEach(function(id){ if ($(id)) $(id).value = ''; });
+      $('fe-method').value = 'cash';
+    }
+
+    function refreshAfterFinChange() {
+      if ($('v-income').style.display !== 'none') loadIncomeList();
+      if ($('v-expense').style.display !== 'none') loadExpenseList();
+      if ($('v-finance').style.display !== 'none') loadFinanceOverview();
+      loadSummary();
+    }
+
+    var isFinSaving = false;
+    $('btn-fin-save').addEventListener('click', function() {
+      if (isFinSaving) return;
+      var isIncome = finEditing ? finEditing.type === 'income' : true;
+      var catEl = isIncome ? $('fi-category') : $('fe-category');
+      var amt = parseFloat($('fe-amount').value);
+      hideErr('fin-modal-err');
+      if (!catEl.value.trim()) { showErr('fin-modal-err', 'Category is required'); return; }
+      if (!amt || amt <= 0) { showErr('fin-modal-err', 'Amount must be greater than zero'); return; }
+      var date = $('fe-date').value || null;
+      var payload = {
+        category: catEl.value.trim(),
+        amount: amt,
+        payment_method: $('fe-method').value,
+        description: $('fe-desc').value.trim() || null
+      };
+      if (date) payload[isIncome ? 'income_date' : 'expense_date'] = date;
+      if (isIncome) {
+        payload.source = $('fi-source').value.trim() || null;
+        payload.buyer = $('fi-buyer').value.trim() || null;
+      } else {
+        payload.subcategory = $('fe-sub').value.trim() || null;
+        payload.vendor = $('fe-vendor').value.trim() || null;
+      }
+      isFinSaving = true;
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      var call = finEditing
+        ? (isIncome ? F.updateIncome(finEditing.id, payload) : F.updateExpense(finEditing.id, payload))
+        : (isIncome ? F.createIncome(payload) : F.createExpense(payload));
+      call.then(function() {
+        toast((finEditing ? 'Record updated' : 'Record added') + ' successfully!', 'success');
+        $('fin-modal').classList.remove('active');
+        finEditing = null;
+        refreshAfterFinChange();
+      }).catch(function(e) {
+        showErr('fin-modal-err', (e && e.message) || 'Failed to save record');
+      }).finally(function() {
+        isFinSaving = false;
+        btn.disabled = false;
+        btn.textContent = 'Save Record';
+      });
+    });
+
+    function deleteFinRecord(type, id) {
+      if (!confirm('Delete this ' + type + ' record? This cannot be undone.')) return;
+      var call = type === 'income' ? F.deleteIncome(id) : F.deleteExpense(id);
+      call.then(function() {
+        toast(type + ' record deleted', 'info');
+        refreshAfterFinChange();
+      }).catch(function(e) {
+        toast((e && e.message) || 'Failed to delete record', 'error');
+      });
+    }
+
+    $('fin-modal-close').addEventListener('click', function() { $('fin-modal').classList.remove('active'); });
+    $('fin-modal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
+
+    // ---------- Financial Reports ----------
+    var currentRep = 'monthly';
+    $('rep-period').querySelectorAll('.wchip').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        $('rep-period').querySelectorAll('.wchip').forEach(function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
+        repPeriod = btn.getAttribute('data-p');
+        loadReport(currentRep);
+      });
+    });
+    $('v-reports').querySelectorAll('.report-card').forEach(function(card) {
+      card.addEventListener('click', function() {
+        $('v-reports').querySelectorAll('.report-card').forEach(function(c){ c.style.borderColor = ''; });
+        card.style.borderColor = 'var(--w-primary)';
+        currentRep = card.getAttribute('data-rep');
+        loadReport(currentRep);
+      });
+    });
+    $('btn-print-report').addEventListener('click', function() { window.print(); });
+
+    function reportHeader(title, sub) {
+      return '<div style="text-align:center;padding:4px 0 14px;border-bottom:1px dashed var(--w-border);margin-bottom:12px;">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--w-text-muted);">Farm Assist • <span id="rep-period-label">' + esc(repLabel()) + '</span></div>' +
+        '<div style="font-size:17px;font-weight:800;color:var(--w-primary);margin-top:4px;">' + esc(title) + '</div>' +
+        '<div style="font-size:11px;color:var(--w-text-muted);margin-top:3px;">' + esc(sub || '') + '</div>' +
+      '</div>';
+    }
+    function repLabel() {
+      return repPeriod === 'month' ? 'This month' : repPeriod === 'year' ? 'This year' : 'All time';
+    }
+    function emptyMsg(s) {
+      return '<div class="empty-state"><i class="fas fa-file-invoice"></i><p>' + esc(s || 'No data available for this period.') + '</p></div>';
+    }
+
+    function loadReport(kind) {
+      var content = $('rep-content');
+      content.innerHTML = '<div class="w-skel" style="padding:12px;"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>';
+      if (kind === 'monthly') loadMonthlyReport(content);
+      else if (kind === 'income') loadIncomeReport(content);
+      else if (kind === 'expense') loadExpenseReport(content);
+      else if (kind === 'pnl') loadPnlReport(content);
+      else if (kind === 'txns') loadTxnReport(content);
+    }
+
+    function loadMonthlyReport(content) {
+      W.getSummary({ period: 'year' }).then(function(data) {
+        var cf = data.monthly_cashflow || [];
+        if (!cf.length || !cf.some(function(m){ return (m.income||0) > 0 || (m.expenses||0) > 0; })) {
+          content.innerHTML = reportHeader('Monthly Statement', 'Income & expenses by month') + emptyMsg('No financial data available for this period.');
+          return;
+        }
+        var tInc = 0, tExp = 0;
+        var rows = '';
+        cf.forEach(function(m) {
+          tInc += m.income || 0; tExp += m.expenses || 0;
+          rows += '<tr><td>' + esc(shortMonth(m.month) || m.month) + '</td><td class="num" style="color:#059669;">' + inr(m.income) + '</td><td class="num" style="color:#DC2626;">' + inr(m.expenses) + '</td><td class="num">' + inr((m.income||0) - (m.expenses||0)) + '</td></tr>';
+        });
+        content.innerHTML = reportHeader('Monthly Statement', 'Income & expenses by month') +
+          '<table class="report-table"><thead><tr><th>Month</th><th class="num">Income</th><th class="num">Expenses</th><th class="num">Net</th></tr></thead><tbody>' + rows +
+          '</tbody><tfoot>' + '<tr class="total"><td>Total</td><td class="num" style="color:#059669;">' + inr(tInc) + '</td><td class="num" style="color:#DC2626;">' + inr(tExp) + '</td><td class="num">' + inr(tInc - tExp) + '</td></tr></tfoot></table>';
+      }).catch(function(e) {
+        content.innerHTML = emptyMsg((e && e.message) || 'Could not load report');
+      });
+    }
+
+    function loadIncomeReport(content) {
+      if (!F) { content.innerHTML = emptyMsg('Finance services unavailable'); return; }
+      F.listIncome('').then(function(data) {
+        var items = (data && data.items) || [];
+        if (!items.length) { content.innerHTML = reportHeader('Income Statement', 'Farm income records') + emptyMsg('No income records found.'); return; }
+        var total = 0;
+        var rows = '';
+        items.forEach(function(r) {
+          total += parseFloat(r.amount) || 0;
+          rows += '<tr><td>' + esc(r.category || '-') + '</td><td>' + esc(fmtDateOnly(r.income_date || r.created_at)) + '</td><td>' + esc(r.buyer || r.source || '-') + '</td><td class="num">' + inr(r.amount) + '</td></tr>';
+        });
+        content.innerHTML = reportHeader('Income Statement', (data.total || items.length) + ' income record(s)') +
+          '<table class="report-table"><thead><tr><th>Category</th><th>Date</th><th>Buyer / Source</th><th class="num">Amount</th></tr></thead><tbody>' + rows +
+          '</tbody><tfoot><tr class="total"><td colspan="3">Total Income</td><td class="num" style="color:#059669;">' + inr(total) + '</td></tr></tfoot></table>';
+      }).catch(function(e) { content.innerHTML = emptyMsg((e && e.message) || 'Could not load report'); });
+    }
+
+    function loadExpenseReport(content) {
+      if (!F) { content.innerHTML = emptyMsg('Finance services unavailable'); return; }
+      F.listExpenses('').then(function(data) {
+        var items = (data && data.items) || [];
+        if (!items.length) { content.innerHTML = reportHeader('Expense Statement', 'Farm expense records') + emptyMsg('No expense records found.'); return; }
+        var total = 0;
+        var rows = '';
+        items.forEach(function(r) {
+          total += parseFloat(r.amount) || 0;
+          rows += '<tr><td>' + esc(r.category || '-') + '</td><td>' + esc(r.subcategory || '-') + '</td><td>' + esc(fmtDateOnly(r.expense_date || r.created_at)) + '</td><td>' + esc(r.vendor || '-') + '</td><td class="num">' + inr(r.amount) + '</td></tr>';
+        });
+        content.innerHTML = reportHeader('Expense Statement', (data.total || items.length) + ' expense record(s)') +
+          '<table class="report-table"><thead><tr><th>Category</th><th>Subcategory</th><th>Date</th><th>Vendor</th><th class="num">Amount</th></tr></thead><tbody>' + rows +
+          '</tbody><tfoot><tr class="total"><td colspan="4">Total Expenses</td><td class="num" style="color:#DC2626;">' + inr(total) + '</td></tr></tfoot></table>';
+      }).catch(function(e) { content.innerHTML = emptyMsg((e && e.message) || 'Could not load report'); });
+    }
+
+    function loadPnlReport(content) {
+      var params = repPeriod === 'month' ? { period: 'month' } : repPeriod === 'year' ? { period: 'year' } : {};
+      W.getSummary(params).then(function(data) {
+        var inc = data.income || { total: 0, count: 0 };
+        var exp = data.expenses || { total: 0, count: 0 };
+        var net = (parseFloat(inc.total)||0) - (parseFloat(exp.total)||0);
+        content.innerHTML = reportHeader('Profit & Loss Statement', 'Income minus expenses for the selected period') +
+          '<table class="report-table"><tbody>' +
+          '<tr><td>Total Income</td><td class="num" style="color:#059669;">' + inr(inc.total) + '</td></tr>' +
+          '<tr><td>Record count</td><td class="num">' + (inc.count||0) + '</td></tr>' +
+          '<tr><td>Total Expenses</td><td class="num" style="color:#DC2626;">' + inr(exp.total) + '</td></tr>' +
+          '<tr><td>Record count</td><td class="num">' + (exp.count||0) + '</td></tr>' +
+          '</tbody><tfoot><tr class="total"><td>Net Profit</td><td class="num" style="color:' + (net >= 0 ? '#059669' : '#DC2626') + ';">' + inr(net) + '</td></tr></tfoot></table>';
+      }).catch(function(e) { content.innerHTML = emptyMsg((e && e.message) || 'Could not load report'); });
+    }
+
+    function loadTxnReport(content) {
+      W.listTransactions({ limit: 100 }).then(function(data) {
+        var items = (data && data.items) || [];
+        if (!items.length) { content.innerHTML = reportHeader('Transaction Statement', 'Wallet transactions') + emptyMsg('No wallet transactions found.'); return; }
+        var tCred = 0, tDeb = 0;
+        var rows = '';
+        items.forEach(function(t) {
+          var isCredit = t.transaction_type === 'credit';
+          if (isCredit) tCred += parseFloat(t.amount)||0; else tDeb += parseFloat(t.amount)||0;
+          rows += '<tr><td>' + esc(t.description || (isCredit ? 'Money Received' : 'Money Sent')) + '</td><td>' + esc(fmtDateOnly(t.created_at)) + '</td><td>' + esc(t.reference_id || '-') + '</td><td class="num" style="color:' + (isCredit ? '#059669' : '#DC2626') + ';">' + (isCredit ? '+' : '-') + ' ' + inr(t.amount) + '</td></tr>';
+        });
+        content.innerHTML = reportHeader('Transaction Statement', 'Wallet transactions') +
+          '<table class="report-table"><thead><tr><th>Description</th><th>Date</th><th>Reference</th><th class="num">Amount</th></tr></thead><tbody>' + rows +
+          '</tbody><tfoot><tr class="total"><td>Received</td><td class="num" style="color:#059669;">' + inr(tCred) + '</td><td>Sent</td><td class="num" style="color:#DC2626;">' + inr(tDeb) + '</td></tr></tfoot></table>';
+      }).catch(function(e) { content.innerHTML = emptyMsg((e && e.message) || 'Could not load report'); });
+    }
+
+  })();
   </script>
 </body>
 </html>

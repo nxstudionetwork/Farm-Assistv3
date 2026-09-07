@@ -5,7 +5,8 @@ import httpx
 
 from app.database.connection import get_db
 from app.utils.auth import get_current_user
-from app.models.user import User
+from app.models.user import User, UserAddress
+from app.models.farm import Farm
 from app.models.ai import WeatherCache
 
 router = APIRouter(prefix="/api/v1", tags=["Weather"])
@@ -48,13 +49,73 @@ def _weather_condition(code) -> str:
     return _WMO_CONDITIONS.get(int(code), "Partly Cloudy") if code is not None else "Partly Cloudy"
 
 
+def _wind_direction(degrees):
+    if degrees is None:
+        return None
+    directions = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+    return directions[int((float(degrees) + 22.5) // 45) % 8]
+
+
+def _resolve_location(latitude, longitude, current_user, db):
+    if latitude is not None and longitude is not None:
+        return latitude, longitude, "Selected location"
+    farm = (db.query(Farm)
+            .filter(Farm.user_id == current_user.id, Farm.is_active == True,
+                    Farm.latitude.isnot(None), Farm.longitude.isnot(None))
+            .order_by(Farm.created_at.asc()).first())
+    if farm:
+        return farm.latitude, farm.longitude, farm.district or farm.farm_name or "Farm location"
+    address = (db.query(UserAddress)
+               .filter(UserAddress.user_id == current_user.id, UserAddress.is_primary == True,
+                       UserAddress.latitude.isnot(None), UserAddress.longitude.isnot(None))
+               .first())
+    if address:
+        return address.latitude, address.longitude, address.district or address.village or "Saved location"
+    raise HTTPException(status_code=422, detail="Set a farm or saved address location to view weather")
+
+
+def _weather_insights(current, daily):
+    alerts, advice = [], []
+    rain = float(current.get("rain") or 0)
+    wind = float(current.get("wind_speed_10m") or 0)
+    temperature = float(current.get("temperature_2m") or 0)
+    humidity = float(current.get("relative_humidity_2m") or 0)
+    codes = daily.get("weather_code", [])
+    precipitation = daily.get("precipitation_sum", [])
+    max_wind = max([float(value or 0) for value in daily.get("wind_speed_10m_max", [])] or [wind])
+    max_temp = max([float(value or 0) for value in daily.get("temperature_2m_max", [])] or [temperature])
+    min_temp = min([float(value or 0) for value in daily.get("temperature_2m_min", [])] or [temperature])
+    heavy_rain = max([float(value or 0) for value in precipitation] or [rain]) >= 20
+    storm = any(int(code or 0) >= 95 for code in codes)
+    if heavy_rain or rain >= 10:
+        alerts.append({"severity": "warning", "title": "Heavy rain risk", "detail": "Rainfall may affect field access and harvest plans in the forecast period.", "period": "Next 7 days", "action": "Clear drainage and delay spraying or harvest during rain."})
+        advice.append({"type": "warning", "category": "Irrigation", "title": "Reduce irrigation", "detail": "Check soil moisture before watering and use the forecast rainfall to avoid over-irrigation."})
+        advice.append({"type": "info", "category": "Field work", "title": "Plan around rain", "detail": "Keep drainage channels clear and avoid working wet soil to prevent compaction."})
+    if max_wind >= 40 or wind >= 30:
+        alerts.append({"severity": "danger", "title": "Strong wind risk", "detail": "Strong winds may damage supports, covers, or young plants.", "period": "Forecast period", "action": "Secure loose materials and postpone spraying."})
+        advice.append({"type": "warning", "category": "Crop protection", "title": "Secure vulnerable crops", "detail": "Support young plants and secure shade nets, covers, and equipment before strong winds."})
+    if max_temp >= 38 or temperature >= 38:
+        alerts.append({"severity": "danger", "title": "High temperature", "detail": "Heat stress risk is elevated for crops and livestock.", "period": "Forecast period", "action": "Provide water and shade and avoid midday field work."})
+        advice.append({"type": "warning", "category": "Livestock", "title": "Protect livestock from heat", "detail": "Keep clean drinking water and shade available and check animals more often."})
+    if min_temp <= 5:
+        alerts.append({"severity": "warning", "title": "Low temperature risk", "detail": "Sensitive crops may be affected by low overnight temperatures.", "period": "Forecast period", "action": "Protect seedlings and monitor frost-prone areas."})
+    if storm:
+        alerts.append({"severity": "danger", "title": "Thunderstorm risk", "detail": "Thunderstorms are present in the forecast.", "period": "Forecast period", "action": "Avoid open fields during storms and disconnect exposed equipment."})
+    if not advice and humidity >= 80:
+        advice.append({"type": "info", "category": "Crop protection", "title": "Monitor for fungal disease", "detail": "High humidity can increase disease pressure; inspect leaves and improve airflow."})
+    if not advice:
+        advice.append({"type": "success", "category": "General", "title": "Favourable field conditions", "detail": "Conditions are suitable for routine field work. Check soil moisture before irrigation."})
+    return alerts, advice
+
+
 @router.get("/weather/current")
 def get_current_weather(
-    latitude: float = Query(..., ge=-90, le=90),
-    longitude: float = Query(..., ge=-180, le=180),
+    latitude: float | None = Query(None, ge=-90, le=90),
+    longitude: float | None = Query(None, ge=-180, le=180),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    latitude, longitude, location_label = _resolve_location(latitude, longitude, current_user, db)
     cache = (
         db.query(WeatherCache)
         .filter(
@@ -66,7 +127,7 @@ def get_current_weather(
         .first()
     )
 
-    if cache and cache.fetched_at:
+    if cache and cache.fetched_at and cache.data.get("alerts") is not None:
         age_minutes = (datetime.utcnow() - cache.fetched_at).total_seconds() / 60
         if age_minutes < 30:
             return {"status": "success", "data": cache.data, "cached": True, "fetched_at": str(cache.fetched_at)}
@@ -78,7 +139,9 @@ def get_current_weather(
                 params={
                     "latitude": latitude,
                     "longitude": longitude,
-                    "current": "temperature_2m,relative_humidity_2m,rain,wind_speed_10m,weather_code",
+                    "current": "temperature_2m,relative_humidity_2m,apparent_temperature,rain,wind_speed_10m,wind_direction_10m,weather_code",
+                    "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,sunrise,sunset",
+                    "forecast_days": 7,
                     "timezone": "auto",
                 },
             )
@@ -97,12 +160,18 @@ def get_current_weather(
         "temperature": current.get("temperature_2m"),
         "humidity": current.get("relative_humidity_2m"),
         "rain": current.get("rain"),
+        "feels_like": current.get("apparent_temperature"),
         "wind_speed": current.get("wind_speed_10m"),
+        "wind_direction": _wind_direction(current.get("wind_direction_10m")),
         "weather_code": weather_code,
         "weather_condition": _weather_condition(weather_code),
         "description": _weather_condition(weather_code),
         "time": current.get("time"),
+        "location_label": location_label,
+        "sunrise": (data.get("daily", {}).get("sunrise") or [None])[0],
+        "sunset": (data.get("daily", {}).get("sunset") or [None])[0],
     }
+    result["alerts"], result["advice"] = _weather_insights(current, data.get("daily", {}))
 
     cache_entry = WeatherCache(
         latitude=round(latitude, 2),
@@ -118,11 +187,12 @@ def get_current_weather(
 
 @router.get("/weather/forecast")
 def get_forecast(
-    latitude: float = Query(..., ge=-90, le=90),
-    longitude: float = Query(..., ge=-180, le=180),
+    latitude: float | None = Query(None, ge=-90, le=90),
+    longitude: float | None = Query(None, ge=-180, le=180),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    latitude, longitude, _ = _resolve_location(latitude, longitude, current_user, db)
     cache = (
         db.query(WeatherCache)
         .filter(
@@ -134,7 +204,7 @@ def get_forecast(
         .first()
     )
 
-    if cache and cache.fetched_at:
+    if cache and cache.fetched_at and len(cache.data.get("forecast", [])) >= 14:
         age_minutes = (datetime.utcnow() - cache.fetched_at).total_seconds() / 60
         if age_minutes < 60:
             return {"status": "success", "data": cache.data, "cached": True, "fetched_at": str(cache.fetched_at)}
@@ -146,8 +216,9 @@ def get_forecast(
                 params={
                     "latitude": latitude,
                     "longitude": longitude,
-                    "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code",
+                    "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,wind_direction_10m_max,sunrise,sunset",
                     "current": "temperature_2m",
+                    "forecast_days": 14,
                     "timezone": "auto",
                 },
             )
@@ -169,6 +240,9 @@ def get_forecast(
             "temperature_max": daily.get("temperature_2m_max", [])[i] if i < len(daily.get("temperature_2m_max", [])) else None,
             "temperature_min": daily.get("temperature_2m_min", [])[i] if i < len(daily.get("temperature_2m_min", [])) else None,
             "precipitation": daily.get("precipitation_sum", [])[i] if i < len(daily.get("precipitation_sum", [])) else None,
+            "precipitation_probability": daily.get("precipitation_probability_max", [])[i] if i < len(daily.get("precipitation_probability_max", [])) else None,
+            "wind_speed": daily.get("wind_speed_10m_max", [])[i] if i < len(daily.get("wind_speed_10m_max", [])) else None,
+            "wind_direction": _wind_direction(daily.get("wind_direction_10m_max", [])[i] if i < len(daily.get("wind_direction_10m_max", [])) else None),
             "weather_code": wc,
             "weather_condition": _weather_condition(wc),
             "description": _weather_condition(wc),

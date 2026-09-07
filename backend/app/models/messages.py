@@ -33,6 +33,8 @@ class ConversationParticipant(Base):
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     joined_at = Column(DateTime, default=datetime.utcnow)
     last_read_at = Column(DateTime, nullable=True)
+    muted = Column(Boolean, default=False)
+    deleted_at = Column(DateTime, nullable=True)
 
     conversation = relationship("Conversation", back_populates="participants")
     user = relationship("User")
@@ -48,6 +50,9 @@ class Message(Base):
     content = Column(Text, nullable=False)
     message_type = Column(String(10), nullable=False, default="text")
     attachment_url = Column(String(500), nullable=True)
+    status = Column(String(10), nullable=False, default="sent")  # sent | delivered | read
+    delivered_at = Column(DateTime, nullable=True)
+    read_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

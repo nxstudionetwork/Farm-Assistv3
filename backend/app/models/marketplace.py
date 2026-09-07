@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import (
-    Column, String, DateTime, Float, Integer, ForeignKey, Text, JSON, Boolean
+    Column, String, DateTime, Float, Integer, ForeignKey, Text, JSON, Boolean, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
 from app.database.base import Base
@@ -60,6 +60,41 @@ class Product(Base):
     category = relationship("ProductCategory")
     seller = relationship("Seller")
     order_items = relationship("OrderItem", back_populates="product")
+
+
+class MarketplaceCart(Base):
+    __tablename__ = "marketplace_carts"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    items = relationship("MarketplaceCartItem", back_populates="cart", cascade="all, delete-orphan")
+
+
+class MarketplaceCartItem(Base):
+    __tablename__ = "marketplace_cart_items"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    cart_id = Column(String(36), ForeignKey("marketplace_carts.id"), nullable=False, index=True)
+    product_id = Column(String(36), ForeignKey("products.id"), nullable=False, index=True)
+    quantity = Column(Float, nullable=False, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    cart = relationship("MarketplaceCart", back_populates="items")
+    product = relationship("Product")
+
+
+class MarketplaceWishlist(Base):
+    __tablename__ = "marketplace_wishlist"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    product_id = Column(String(36), ForeignKey("products.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    product = relationship("Product")
+
+    __table_args__ = (UniqueConstraint("user_id", "product_id", name="uq_marketplace_wishlist_user_product"),)
 
 
 class MarketplaceOrder(Base):

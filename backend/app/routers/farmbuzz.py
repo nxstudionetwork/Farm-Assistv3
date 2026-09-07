@@ -15,6 +15,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -25,13 +26,24 @@ from app.models.notification import Notification
 from app.models.farmbuzz import (
     FarmBuzzPost, FarmBuzzComment, FarmBuzzLike, FarmBuzzSave,
     FarmBuzzShare, FarmBuzzFollow, FarmBuzzHashtag, FarmBuzzTrend,
+    FarmBuzzStory, FarmBuzzStoryViewer, FarmBuzzView, FarmBuzzReport,
+    FarmBuzzInteraction,
 )
+from app.services.farmbuzz_recommender import ALLOWED_EVENTS, rank_shorts
 
 router = APIRouter(prefix="/api/v1/farmbuzz", tags=["FarmBuzz"])
 
 CATEGORIES = {
-    "Farming", "Crop", "Machinery", "Market", "Success Story",
-    "Question", "Tip", "Community", "Other",
+    # Core legacy categories (kept for backwards compatibility)
+    "Farming", "Crop", "Crops", "Machinery", "Market", "Success Story",
+    "Success Stories", "Question", "Tip", "Community", "Other",
+    # Agriculture discovery categories
+    "Farm Techniques", "Livestock", "Weather", "Organic Farming",
+    "Technology", "Government", "Horticulture", "Irrigation", "Soil",
+    "Dairy", "Poultry", "Sustainable Farming", "Finance",
+    # Shorts rail categories (frontend SHORT_CATS)
+    "Farmer Techniques", "Farmer Tricks", "Farming Scenes", "Farmer Life",
+    "Farming Comedy", "Quick Knowledge", "Educational", "Expert Shorts",
 }
 CONTENT_TYPES = {"post", "short"}
 IMAGE_EXTS = {"jpg", "jpeg", "png", "gif", "webp"}
@@ -74,6 +86,20 @@ class CommentCreate(BaseModel):
     content: str
 
 
+class ReportCreate(BaseModel):
+    reason: str = "Other"
+    description: Optional[str] = None
+
+
+class StoryCreate(BaseModel):
+    media_url: Optional[str] = None
+    media_type: str = "text"  # image | video | text
+    thumbnail_url: Optional[str] = None
+    caption: Optional[str] = None
+    background_color: Optional[str] = None
+    expires_in_hours: Optional[int] = 24
+
+
 class ProfileUpdate(BaseModel):
     display_name: Optional[str] = None
     bio: Optional[str] = None
@@ -95,6 +121,33 @@ def _resolve_post(db: Session, post_id: str) -> FarmBuzzPost:
     return post
 
 
+def _can_view_post(db: Session, post: FarmBuzzPost, viewer: Optional[User]) -> bool:
+    """Enforce post visibility: public for everyone; followers-only for author +
+    followers; private only for the author."""
+    if post.visibility == "public":
+        return True
+    if viewer is None:
+        return False
+    if post.user_id == viewer.id:
+        return True
+    if post.visibility == "followers":
+        followed = (
+            db.query(FarmBuzzFollow)
+            .filter(
+                FarmBuzzFollow.follower_id == viewer.id,
+                FarmBuzzFollow.following_id == post.user_id,
+            )
+            .first()
+        )
+        return followed is not None
+    return False
+
+
+def _assert_can_view(db: Session, post: FarmBuzzPost, viewer: Optional[User]) -> None:
+    if not _can_view_post(db, post, viewer):
+        raise HTTPException(status_code=404, detail="Post not found")
+
+
 def _author_of(db: Session, user_id: str) -> dict:
     u = db.query(User).filter(User.id == user_id).first()
     if not u:
@@ -104,6 +157,7 @@ def _author_of(db: Session, user_id: str) -> dict:
         "farmer_id": u.farmer_id,
         "full_name": u.full_name,
         "profile_image": u.profile_image,
+        "verified": bool(getattr(u, "is_verified", False)),
     }
 
 
@@ -168,6 +222,47 @@ def _sync_hashtags(db: Session, post: FarmBuzzPost, tags: List[str]) -> None:
         else:
             db.add(FarmBuzzHashtag(tag=tag, post_count=1))
     post.hashtags = sorted(normalized)
+
+
+def _comment_to_dict(db: Session, comment: FarmBuzzComment, current_user: Optional[User] = None) -> dict:
+    return {
+        "id": comment.id,
+        "user_id": comment.user_id,
+        "post_id": comment.post_id,
+        "content": comment.content,
+        "created_at": str(comment.created_at) if comment.created_at else None,
+        "author": _author_of(db, comment.user_id),
+        "is_mine": bool(current_user and comment.user_id == current_user.id),
+    }
+
+
+def _story_to_dict(db: Session, story: FarmBuzzStory, current_user: Optional[User] = None) -> dict:
+    return {
+        "id": story.id,
+        "story_id": story.story_id,
+        "user_id": story.user_id,
+        "author": _author_of(db, story.user_id),
+        "media_url": story.media_url,
+        "media_type": story.media_type,
+        "thumbnail_url": story.thumbnail_url,
+        "caption": story.caption,
+        "background_color": story.background_color,
+        "views_count": story.views_count or 0,
+        "expires_at": str(story.expires_at) if story.expires_at else None,
+        "created_at": str(story.created_at) if story.created_at else None,
+        "is_mine": bool(current_user and story.user_id == current_user.id),
+    }
+
+
+def _resolve_story(db: Session, story_id: str) -> FarmBuzzStory:
+    story = db.query(FarmBuzzStory).filter(FarmBuzzStory.id == story_id).first()
+    if not story:
+        story = db.query(FarmBuzzStory).filter(FarmBuzzStory.story_id == story_id).first()
+    if not story or not story.is_active:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if story.expires_at and story.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=404, detail="Story expired")
+    return story
 
 
 def _notify(
@@ -237,6 +332,7 @@ def _profile_dict(db: Session, user: User, current_user: Optional[User] = None) 
         .limit(12)
         .all()
     )
+    recent = [p for p in recent if _can_view_post(db, p, current_user)]
     return {
         "id": user.id,
         "farmer_id": user.farmer_id,
@@ -292,11 +388,36 @@ def get_feed(
     category: Optional[str] = None,
     crop: Optional[str] = None,
     search: Optional[str] = None,
-    sort: str = Query("recent", pattern="^(recent|trending)$"),
+    sort: str = Query("recent", pattern="^(recent|trending|recommended)$"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     q = db.query(FarmBuzzPost).filter(FarmBuzzPost.is_active == True)
+
+    # Visibility filtering: public posts are visible to everyone. "followers"-only
+    # posts are visible to the author and their followers. "private" posts are only
+    # visible to the author.
+    viewer_id = current_user.id if current_user else None
+    if viewer_id:
+        followers_of = (
+            db.query(FarmBuzzFollow.following_id)
+            .filter(FarmBuzzFollow.follower_id == viewer_id)
+            .subquery()
+        )
+        # public OR own OR (followers-only AND author is followed)
+        q = q.filter(
+            or_(
+                FarmBuzzPost.visibility == "public",
+                FarmBuzzPost.user_id == viewer_id,
+                and_(
+                    FarmBuzzPost.visibility == "followers",
+                    FarmBuzzPost.user_id.in_(followers_of),
+                ),
+            )
+        )
+    else:
+        q = q.filter(FarmBuzzPost.visibility == "public")
+
     if content_type != "all":
         q = q.filter(FarmBuzzPost.content_type == content_type)
     if category and category.lower() != "all":
@@ -312,14 +433,31 @@ def get_feed(
         )
 
     total = q.count()
-    if sort == "trending":
+    if sort == "recommended":
+        # Personalized ranking: score a bounded candidate pool in Python,
+        # then paginate the ranked order (deterministic per request).
+        pool = q.order_by(FarmBuzzPost.created_at.desc()).limit(500).all()
+        crops: list = []
+        try:
+            fp = getattr(current_user, "farmer_profile", None) if current_user else None
+            raw = getattr(fp, "preferred_crops", None) if fp else None
+            if isinstance(raw, str) and raw.strip():
+                crops = [c.strip() for c in raw.split(",") if c.strip()]
+            elif isinstance(raw, list):
+                crops = [str(c).strip() for c in raw if str(c).strip()]
+        except Exception:
+            crops = []
+        ranked = rank_shorts(db, current_user, pool, crops)
+        items = ranked[(page - 1) * limit: (page - 1) * limit + limit]
+    elif sort == "trending":
         order = (
             FarmBuzzPost.likes_count + FarmBuzzPost.comments_count * 2
             + FarmBuzzPost.shares_count * 3 + FarmBuzzPost.views_count * 0.05
         ).desc()
+        items = q.order_by(order).offset((page - 1) * limit).limit(limit).all()
     else:
         order = FarmBuzzPost.created_at.desc()
-    items = q.order_by(order).offset((page - 1) * limit).limit(limit).all()
+        items = q.order_by(order).offset((page - 1) * limit).limit(limit).all()
 
     return {
         "status": "success",
@@ -355,6 +493,71 @@ def list_shorts(
     return get_feed("short", page, limit, category, None, None, "recent", db, current_user)
 
 
+@router.get("/shorts/recommended")
+def recommended_shorts(
+    page: int = Query(1, ge=1),
+    limit: int = Query(15, ge=1, le=50),
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Personalized Shorts feed (Instagram/Reels-style discovery).
+
+    Returns ranked shorts without exposing internal scores. Cold-start
+    users (no history) receive popular + recent + diverse content.
+    """
+    return get_feed("short", page, limit, category, None, None, "recommended", db, current_user)
+
+
+class InteractionEvent(BaseModel):
+    event_type: str = "watch"
+    watch_duration_ms: Optional[int] = 0
+    completion_pct: Optional[int] = 0
+
+
+@router.post("/posts/{post_id}/event", status_code=201)
+def record_interaction_event(
+    post_id: str,
+    payload: InteractionEvent,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Stores watch-behaviour signals for the recommendation engine.
+
+    Callers should batch/debounce (e.g. send on threshold crossed, on
+    completion, on skip) rather than on every playback tick.
+    """
+    post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
+    etype = (payload.event_type or "").strip().lower()
+    if etype not in ALLOWED_EVENTS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"event_type must be one of {sorted(ALLOWED_EVENTS)}",
+        )
+    try:
+        duration = int(payload.watch_duration_ms or 0)
+    except (TypeError, ValueError):
+        duration = 0
+    try:
+        completion = int(payload.completion_pct or 0)
+    except (TypeError, ValueError):
+        completion = 0
+    duration = max(0, min(duration, 3600000))
+    completion = max(0, min(completion, 100))
+    if post.user_id == current_user.id and etype in {"qualified_view", "watch", "complete", "skip", "replay"}:
+        return {"status": "success", "data": {"post_id": post.post_id, "recorded": False}}
+    db.add(FarmBuzzInteraction(
+        post_id=post.id,
+        user_id=current_user.id,
+        event_type=etype,
+        watch_duration_ms=duration,
+        completion_pct=completion,
+    ))
+    db.commit()
+    return {"status": "success", "data": {"post_id": post.post_id, "recorded": True}}
+
+
 @router.get("/posts/{post_id}")
 def get_post(
     post_id: str,
@@ -362,8 +565,7 @@ def get_post(
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     post = _resolve_post(db, post_id)
-    post.views_count = (post.views_count or 0) + 1
-    db.commit()
+    _assert_can_view(db, post, current_user)
 
     comments = (
         db.query(FarmBuzzComment)
@@ -373,13 +575,7 @@ def get_post(
     )
     comment_list = []
     for c in comments:
-        comment_list.append({
-            "id": c.id,
-            "user_id": c.user_id,
-            "content": c.content,
-            "created_at": str(c.created_at) if c.created_at else None,
-            "author": _author_of(db, c.user_id),
-        })
+        comment_list.append(_comment_to_dict(db, c, current_user))
 
     data = _post_to_dict(db, post, current_user)
     data["comments"] = comment_list
@@ -492,6 +688,7 @@ def toggle_like(
     current_user: User = Depends(get_current_user),
 ):
     post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
     existing = (
         db.query(FarmBuzzLike)
         .filter(FarmBuzzLike.post_id == post.id, FarmBuzzLike.user_id == current_user.id)
@@ -524,6 +721,31 @@ def toggle_like(
     }
 
 
+@router.delete("/posts/{post_id}/like")
+def unlike_post(
+    post_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Idempotent unlike (DELETE alias for clients that prefer REST semantics)."""
+    post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
+    existing = (
+        db.query(FarmBuzzLike)
+        .filter(FarmBuzzLike.post_id == post.id, FarmBuzzLike.user_id == current_user.id)
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        post.likes_count = max((post.likes_count or 1) - 1, 0)
+        db.commit()
+        db.refresh(post)
+    return {
+        "status": "success",
+        "data": {"post_id": post.post_id, "is_liked": False, "likes_count": post.likes_count or 0},
+    }
+
+
 @router.post("/posts/{post_id}/comment", status_code=201)
 def add_comment(
     post_id: str,
@@ -537,6 +759,7 @@ def add_comment(
     if len(content) > 1000:
         raise HTTPException(status_code=400, detail="Comment too long (max 1000 chars)")
     post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
 
     comment = FarmBuzzComment(post_id=post.id, user_id=current_user.id, content=content)
     db.add(comment)
@@ -566,6 +789,126 @@ def add_comment(
     }
 
 
+@router.get("/posts/{post_id}/comments")
+def list_comments(
+    post_id: str,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
+    q = db.query(FarmBuzzComment).filter(FarmBuzzComment.post_id == post.id)
+    total = q.count()
+    items = (
+        q.order_by(FarmBuzzComment.created_at.asc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+    return {
+        "status": "success",
+        "data": {
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "items": [_comment_to_dict(db, c, current_user) for c in items],
+        },
+    }
+
+
+@router.delete("/posts/{post_id}/comments/{comment_id}")
+def delete_comment(
+    post_id: str,
+    comment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
+    comment = (
+        db.query(FarmBuzzComment)
+        .filter(FarmBuzzComment.id == comment_id, FarmBuzzComment.post_id == post.id)
+        .first()
+    )
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    if comment.user_id != current_user.id and post.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only delete your own comments")
+    db.delete(comment)
+    post.comments_count = max((post.comments_count or 1) - 1, 0)
+    db.commit()
+    return {"status": "success", "data": {"comment_id": comment_id, "message": "Comment deleted"}}
+
+
+@router.post("/posts/{post_id}/view")
+def record_view(
+    post_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Records a genuine view. Views are attributed once per authenticated
+    viewer per post, so page loads and component re-renders never inflate the
+    counter and duplicate requests cannot flood it."""
+    post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
+    if current_user and current_user.id == post.user_id:
+        return {
+            "status": "success",
+            "data": {"post_id": post.post_id, "is_new_view": False, "views_count": post.views_count or 0},
+        }
+    existing = None
+    if current_user:
+        existing = (
+            db.query(FarmBuzzView)
+            .filter(FarmBuzzView.post_id == post.id, FarmBuzzView.user_id == current_user.id)
+            .first()
+        )
+    if not existing:
+        if current_user:
+            db.add(FarmBuzzView(post_id=post.id, user_id=current_user.id))
+        post.views_count = (post.views_count or 0) + 1
+        is_new = True
+    else:
+        is_new = False
+    db.commit()
+    db.refresh(post)
+    return {
+        "status": "success",
+        "data": {"post_id": post.post_id, "is_new_view": is_new, "views_count": post.views_count or 0},
+    }
+
+
+@router.post("/posts/{post_id}/report", status_code=201)
+def report_post(
+    post_id: str,
+    payload: ReportCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
+    if post.user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot report your own post")
+    reason = (payload.reason or "").strip()[:120] or "Other"
+    existing = (
+        db.query(FarmBuzzReport)
+        .filter(FarmBuzzReport.post_id == post.id, FarmBuzzReport.user_id == current_user.id)
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="You have already reported this post")
+    db.add(FarmBuzzReport(
+        post_id=post.id,
+        user_id=current_user.id,
+        reason=reason,
+        description=payload.description,
+    ))
+    db.commit()
+    return {"status": "success", "data": {"post_id": post.post_id, "message": "Report submitted. Thank you for keeping FarmBuzz safe."}}
+
+
 @router.post("/posts/{post_id}/save")
 def toggle_save(
     post_id: str,
@@ -573,6 +916,7 @@ def toggle_save(
     current_user: User = Depends(get_current_user),
 ):
     post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
     existing = (
         db.query(FarmBuzzSave)
         .filter(FarmBuzzSave.post_id == post.id, FarmBuzzSave.user_id == current_user.id)
@@ -596,6 +940,31 @@ def toggle_save(
     }
 
 
+@router.delete("/posts/{post_id}/save")
+def unsave_post(
+    post_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Idempotent unsave (DELETE alias for clients that prefer REST semantics)."""
+    post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
+    existing = (
+        db.query(FarmBuzzSave)
+        .filter(FarmBuzzSave.post_id == post.id, FarmBuzzSave.user_id == current_user.id)
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        post.saves_count = max((post.saves_count or 1) - 1, 0)
+        db.commit()
+        db.refresh(post)
+    return {
+        "status": "success",
+        "data": {"post_id": post.post_id, "is_saved": False, "saves_count": post.saves_count or 0},
+    }
+
+
 @router.post("/posts/{post_id}/share")
 def share_post(
     post_id: str,
@@ -603,6 +972,7 @@ def share_post(
     current_user: User = Depends(get_current_user),
 ):
     post = _resolve_post(db, post_id)
+    _assert_can_view(db, post, current_user)
     db.add(FarmBuzzShare(post_id=post.id, user_id=current_user.id))
     post.shares_count = (post.shares_count or 0) + 1
     if post.user_id != current_user.id:
@@ -619,6 +989,36 @@ def share_post(
     return {
         "status": "success",
         "data": {"post_id": post.post_id, "shares_count": post.shares_count, "message": "Shared"},
+    }
+
+
+@router.get("/saved")
+def saved_posts(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = (
+        db.query(FarmBuzzPost)
+        .join(FarmBuzzSave, FarmBuzzSave.post_id == FarmBuzzPost.id)
+        .filter(
+            FarmBuzzSave.user_id == current_user.id,
+            FarmBuzzPost.is_active == True,
+        )
+        .order_by(FarmBuzzSave.created_at.desc())
+    )
+    total = q.count()
+    items = q.offset((page - 1) * limit).limit(limit).all()
+    return {
+        "status": "success",
+        "data": {
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total + limit - 1) // limit,
+            "items": [_post_to_dict(db, p, current_user) for p in items],
+        },
     }
 
 
@@ -751,6 +1151,7 @@ def search(
             .limit(limit)
             .all()
         )
+        posts = [p for p in posts if _can_view_post(db, p, current_user)]
         result["posts"] = [_post_to_dict(db, p, current_user) for p in posts]
 
     if type in ("all", "short"):
@@ -766,6 +1167,7 @@ def search(
             .limit(limit)
             .all()
         )
+        shorts = [s for s in shorts if _can_view_post(db, s, current_user)]
         result["shorts"] = [_post_to_dict(db, s, current_user) for s in shorts]
 
     if type in ("all", "farmer"):
@@ -826,6 +1228,7 @@ def get_trends(
         .limit(10)
         .all()
     )
+    hot_posts = [p for p in hot_posts if _can_view_post(db, p, current_user)]
 
     return {
         "status": "success",
@@ -845,6 +1248,123 @@ def get_trends(
             ],
             "hot_posts": [_post_to_dict(db, p, current_user) for p in hot_posts],
         },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Stories
+# ---------------------------------------------------------------------------
+@router.get("/stories")
+def list_stories(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Active (unexpired) stories, newest first. Authors with no visible story
+    are omitted; each returned story carries its own author metadata."""
+    now = datetime.utcnow()
+    q = db.query(FarmBuzzStory).filter(
+        FarmBuzzStory.is_active == True,
+        or_(FarmBuzzStory.expires_at.is_(None), FarmBuzzStory.expires_at >= now),
+    )
+    # A user's own expired-check; followers-only / private visibility is not
+    # supported for stories (all public), but soft-deleted users are excluded.
+    q = q.join(User).filter(User.is_active == True)
+    items = q.order_by(FarmBuzzStory.created_at.desc()).all()
+    return {
+        "status": "success",
+        "data": {
+            "total": len(items),
+            "items": [_story_to_dict(db, s, current_user) for s in items],
+        },
+    }
+
+
+@router.post("/stories", status_code=201)
+def create_story(
+    payload: StoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    media_type = (payload.media_type or "text").lower()
+    if media_type not in {"image", "video", "text"}:
+        raise HTTPException(status_code=400, detail="media_type must be image, video or text")
+    if media_type != "text" and not payload.media_url:
+        raise HTTPException(status_code=400, detail="media_url is required for image/video stories")
+    if media_type == "text" and not (payload.caption or "").strip():
+        raise HTTPException(status_code=400, detail="Add a caption to your text story")
+    if payload.media_url and not str(payload.media_url).startswith("/api/v1/farmbuzz/media/"):
+        raise HTTPException(status_code=400, detail="media_url must come from a FarmBuzz upload")
+
+    expires_hours = payload.expires_in_hours or 24
+    if not (1 <= expires_hours <= 168):
+        raise HTTPException(status_code=400, detail="expires_in_hours must be between 1 and 168")
+
+    story_id = generate_id("FA-ST", db, FarmBuzzStory)
+    story = FarmBuzzStory(
+        story_id=story_id,
+        user_id=current_user.id,
+        media_url=payload.media_url,
+        media_type=media_type,
+        thumbnail_url=payload.thumbnail_url,
+        caption=payload.caption,
+        background_color=payload.background_color,
+        is_active=True,
+        expires_at=datetime.utcnow() + timedelta(hours=expires_hours),
+    )
+    db.add(story)
+    db.commit()
+    db.refresh(story)
+    return {
+        "status": "success",
+        "data": {**_story_to_dict(db, story, current_user), "message": "Story published"},
+    }
+
+
+@router.delete("/stories/{story_id}")
+def delete_story(
+    story_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    story = _resolve_story(db, story_id)
+    if story.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only delete your own stories")
+    story.is_active = False
+    db.commit()
+    return {"status": "success", "data": {"story_id": story.story_id, "message": "Story deleted"}}
+
+
+@router.post("/stories/{story_id}/view")
+def view_story(
+    story_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    story = _resolve_story(db, story_id)
+    if current_user and current_user.id == story.user_id:
+        return {
+            "status": "success",
+            "data": {"story_id": story.story_id, "is_new_view": False, "views_count": story.views_count or 0},
+        }
+    existing = None
+    if current_user:
+        existing = (
+            db.query(FarmBuzzStoryViewer)
+            .filter(FarmBuzzStoryViewer.story_id == story.id, FarmBuzzStoryViewer.user_id == current_user.id)
+            .first()
+        )
+    if not existing:
+        if current_user:
+            db.add(FarmBuzzStoryViewer(story_id=story.id, user_id=current_user.id))
+        story.views_count = (story.views_count or 0) + 1
+        is_new = True
+    else:
+        is_new = False
+    db.commit()
+    db.refresh(story)
+    return {
+        "status": "success",
+        "data": {"story_id": story.story_id, "is_new_view": is_new, "views_count": story.views_count or 0},
     }
 
 

@@ -406,6 +406,44 @@ class TestCommunity:
         )
         assert response.status_code in [200, 201]
 
+    def test_post_ownership_and_saved_data_are_user_scoped(self, db, auth_headers):
+        post = client.post(
+            "/api/v1/posts",
+            json={"content": "A private test discussion", "title": "Ownership"},
+            headers=auth_headers,
+        ).json()["data"]
+
+        other = User(
+            full_name="Second Farmer",
+            phone_number="8888888888",
+            email="second@farm.com",
+            password_hash=hash_password("1234"),
+            preferred_language="en",
+            role="farmer",
+            is_active=True,
+        )
+        db.add(other)
+        db.commit()
+        login = client.post("/api/v1/auth/login", json={
+            "phone_number": "8888888888", "password": "1234"
+        })
+        other_token = login.json()["data"]["access_token"]
+        other_headers = {"Authorization": f"Bearer {other_token}"}
+
+        assert client.patch(
+            f"/api/v1/posts/{post['id']}",
+            json={"content": "Unauthorized edit"},
+            headers=other_headers,
+        ).status_code == 403
+        assert client.delete(
+            f"/api/v1/posts/{post['id']}", headers=other_headers
+        ).status_code == 403
+
+        client.post(f"/api/v1/posts/{post['id']}/save", headers=auth_headers)
+        saved_for_other = client.get("/api/v1/posts/saved/list", headers=other_headers)
+        assert saved_for_other.status_code == 200
+        assert saved_for_other.json()["data"]["items"] == []
+
     def test_create_post_rejects_query_params(self, auth_headers):
         response = client.post(
             "/api/v1/posts?content=hello",
@@ -443,10 +481,94 @@ class TestUsers:
 
 
 class TestStorage:
-    def test_storage_get_requires_auth(self):
-        response = client.get("/api/v1/storage/test.txt")
-        assert response.status_code in [401, 403]
+    def test_storage_public_get_no_auth(self):
+        # Public dirs are served without auth so they can be used in <img>/<video>
+        # (browsers cannot attach Authorization headers). Missing file -> 404.
+        response = client.get("/api/v1/storage/profile-pictures/does-not-exist.png")
+        assert response.status_code == 404
+
+    def test_storage_documents_protected(self):
+        # documents/ is never served through the generic route.
+        response = client.get("/api/v1/storage/documents/any.pdf")
+        assert response.status_code in [400, 404, 403]
+
+    def test_storage_messages_require_auth_or_participant(self, auth_headers):
+        # Unknown message-file paths return 404 even for authenticated users.
+        response = client.get("/api/v1/storage/messages/does-not-exist.png", headers=auth_headers)
+        assert response.status_code in [400, 404, 403]
 
     def test_storage_traversal_blocked(self, auth_headers):
         response = client.get("/api/v1/storage/..%2F..%2F.env", headers=auth_headers)
         assert response.status_code in [400, 404, 403]
+
+
+class TestServices:
+    def test_list_services_catalog(self):
+        response = client.get("/api/v1/services")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        items = data["data"]["items"]
+        assert len(items) >= 80
+
+    def test_category_filtering(self):
+        response = client.get("/api/v1/services?category=crop-cultivation")
+        assert response.status_code == 200
+        items = response.json()["data"]["items"]
+        assert len(items) >= 10
+        assert all(item["category"] == "crop-cultivation" for item in items)
+
+    def test_search_services(self):
+        response = client.get("/api/v1/services?search=drip")
+        assert response.status_code == 200
+        items = response.json()["data"]["items"]
+        assert len(items) >= 1
+
+    def test_create_service_request_validates_phone(self, auth_headers):
+        # Invalid 5-digit phone
+        resp = client.post("/api/v1/service-requests", json={
+            "service_name": "Soil NPK Test",
+            "contact_phone": "12345",
+            "preferred_date": "2026-09-01"
+        }, headers=auth_headers)
+        assert resp.status_code == 422
+
+    def test_create_service_request_success(self, auth_headers):
+        resp = client.post("/api/v1/service-requests", json={
+            "service_name": "Drone Pesticide Spraying",
+            "service_category": "pest-disease",
+            "contact_phone": "9876543210",
+            "preferred_date": "2026-09-10",
+            "description": "3 acres paddy spray"
+        }, headers=auth_headers)
+        assert resp.status_code == 201
+        data = resp.json()["data"]
+        assert data["service_request_id"].startswith("FA-SRQ")
+        assert data["status"] == "pending"
+
+    def test_list_farmer_service_requests(self, auth_headers):
+        resp = client.get("/api/v1/service-requests", headers=auth_headers)
+        assert resp.status_code == 200
+        items = resp.json()["data"]["items"]
+        assert isinstance(items, list)
+
+    def test_status_update_and_rating(self, auth_headers):
+        # Create request
+        req = client.post("/api/v1/service-requests", json={
+            "service_name": "Soil Test",
+            "contact_phone": "9876543210",
+            "preferred_date": "2026-09-12"
+        }, headers=auth_headers).json()["data"]
+
+        req_id = req["service_request_id"]
+
+        # Complete request
+        upd = client.put(f"/api/v1/service-requests/{req_id}/status", json={"status": "completed"}, headers=auth_headers)
+        assert upd.status_code == 200
+        assert upd.json()["data"]["status"] == "completed"
+
+        # Rate request
+        rate = client.post(f"/api/v1/service-requests/{req_id}/rate", json={"rating": 5, "rating_feedback": "Excellent service"}, headers=auth_headers)
+        assert rate.status_code == 200
+        assert rate.json()["data"]["rating"] == 5
+

@@ -1,22 +1,43 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, cast, String
 
 from app.database.connection import get_db
 from app.utils.auth import get_current_user, generate_id
 from app.models.user import User
 from app.models.government import (
-    GovernmentScheme, SchemeApplication,
+    GovernmentScheme, SavedScheme, SchemeApplication,
     InsurancePolicy, InsuranceClaim,
 )
+from app.services.notification_service import create_scheme_notification
 
 router = APIRouter(prefix="/api/v1", tags=["Government & Insurance"])
+
+# Fixed category list used by the UI's quick-filter bar.
+SCHEME_CATEGORIES = [
+    "Income Support", "Crop Insurance", "Agricultural Loans", "Subsidies",
+    "Irrigation", "Equipment & Machinery", "Seeds & Fertilizers", "Livestock",
+    "Horticulture", "Organic Farming", "Women Farmers", "Small & Marginal Farmers",
+    "Farmer Welfare", "State Schemes", "Central Schemes",
+]
 
 
 class SchemeApplyRequest(BaseModel):
     notes: Optional[str] = None
+
+
+class EligibilityRequest(BaseModel):
+    farmer_type: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+    land_size_hectares: Optional[float] = None
+    crop: Optional[str] = None
+    age: Optional[int] = None
+    income_category: Optional[str] = None
+    gender: Optional[str] = None
 
 
 class InsurancePolicyCreate(BaseModel):
@@ -57,81 +78,327 @@ def list_schemes(
     state: Optional[str] = None,
     category: Optional[str] = None,
     status: Optional[str] = None,
+    sort: Optional[str] = None,
+    saved_only: int = Query(0, ge=0, le=1),
+    recommended: int = Query(0, ge=0, le=1),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     q = db.query(GovernmentScheme)
-    if search:
-        q = q.filter(
-            GovernmentScheme.name.ilike(f"%{search}%")
-            | GovernmentScheme.description.ilike(f"%{search}%")
-        )
-    if state:
-        q = q.filter(GovernmentScheme.state.ilike(f"%{state}%"))
-    if category:
-        q = q.filter(GovernmentScheme.category.ilike(f"%{category}%"))
+
+    # Recommended scope is resolved separately (below) so the base list query
+    # is not polluted by the per-user scratch filtering logic.
+    if not recommended:
+        if search:
+            like = f"%{search}%"
+            q = q.filter(
+                or_(
+                    GovernmentScheme.name.ilike(like),
+                    GovernmentScheme.description.ilike(like),
+                    GovernmentScheme.department.ilike(like),
+                    GovernmentScheme.category.ilike(like),
+                    GovernmentScheme.state.ilike(like),
+                    GovernmentScheme.crop.ilike(like),
+                    GovernmentScheme.benefit_type.ilike(like),
+                    GovernmentScheme.benefits.ilike(like),
+                    GovernmentScheme.eligibility.ilike(like),
+                    cast(GovernmentScheme.related_crops, String).ilike(like),
+                    cast(GovernmentScheme.eligible_farmer_types, String).ilike(like),
+                )
+            )
+        if state:
+            q = q.filter(GovernmentScheme.state.ilike(f"%{state}%"))
+        if category:
+            base = category.lower()
+            if base in ("central", "central schemes"):
+                q = q.filter(GovernmentScheme.level == "central")
+            elif base in ("state", "state schemes"):
+                q = q.filter(GovernmentScheme.level == "state")
+            else:
+                q = q.filter(GovernmentScheme.category.ilike(f"%{category}%"))
+
     if status:
         q = q.filter(GovernmentScheme.status == status)
     else:
         q = q.filter(GovernmentScheme.status == "active")
 
+    # ----- user-specific saved scope -----
+    saved_ids = {s.scheme_id for s in _saved(db, current_user.id)} if saved_only else set()
+    if saved_only:
+        q = q.filter(GovernmentScheme.id.in_(saved_ids))
+
+    total = q.count()
+
+    if recommended:
+        items = _recommended(db, current_user, q)
+        q_total = len(items)
+    else:
+        q_total = total
+        if sort == "deadline":
+            q = q.order_by(GovernmentScheme.application_deadline.asc())
+        elif sort == "alpha":
+            q = q.order_by(GovernmentScheme.name.asc())
+        elif sort == "recent":
+            q = q.order_by(GovernmentScheme.updated_at.desc(), GovernmentScheme.created_at.desc())
+        else:
+            q = q.order_by(GovernmentScheme.created_at.desc())
+        items = q.offset((page - 1) * limit).limit(limit).all()
+
+    payload = [_scheme_dict(s, saved_ids) for s in items]
+    return {
+        "status": "success",
+        "data": {
+            "total": q_total,
+            "page": page,
+            "limit": limit,
+            "total_pages": (q_total + limit - 1) // limit if q_total else 0,
+            "items": payload,
+        },
+    }
+
+
+def _saved(db: Session, farmer_id: str):
+    return db.query(SavedScheme).filter(SavedScheme.farmer_id == farmer_id).all()
+
+
+def _scheme_dict(s: GovernmentScheme, saved_ids=None) -> dict:
+    saved_ids = saved_ids or set()
+    return {
+        "id": s.id,
+        "scheme_id": s.scheme_id,
+        "name": s.name,
+        "description": s.description,
+        "department": s.department,
+        "level": s.level,
+        "category": s.category,
+        "benefit_type": s.benefit_type,
+        "eligibility": s.eligibility,
+        "benefits": s.benefits,
+        "overview": s.overview,
+        "objectives": s.objectives,
+        "state": s.state,
+        "crop": s.crop,
+        "application_deadline": s.application_deadline,
+        "start_date": s.start_date,
+        "documents_required": s.documents_required or [],
+        "how_to_apply": s.how_to_apply,
+        "application_process": s.application_process,
+        "website": s.website,
+        "source": s.source,
+        "source_url": s.source_url,
+        "contact_information": s.contact_information,
+        "faqs": s.faqs or [],
+        "eligible_farmer_types": s.eligible_farmer_types or [],
+        "land_category": s.land_category,
+        "income_category": s.income_category,
+        "status": s.status,
+        "last_verified_at": str(s.last_verified_at) if s.last_verified_at else None,
+        "created_at": str(s.created_at) if s.created_at else None,
+        "is_saved": s.id in saved_ids,
+    }
+
+
+@router.get("/government-schemes/categories")
+def list_categories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from sqlalchemy import func
+    rows = db.query(GovernmentScheme.category, func.count(GovernmentScheme.id)).filter(
+        GovernmentScheme.status == "active"
+    ).group_by(GovernmentScheme.category).all()
+    counts = {k: v for k, v in rows if k}
+    fixed = [{"name": c, "has_schemes": bool(counts.get(c))} for c in SCHEME_CATEGORIES if counts.get(c)]
+    return {"status": "success", "data": {"categories": fixed}}
+
+
+@router.get("/government-schemes/saved")
+def saved_schemes(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    saved = _saved(db, current_user.id)
+    saved_ids = {s.scheme_id for s in saved}
+    q = db.query(GovernmentScheme).filter(GovernmentScheme.id.in_(saved_ids))
     total = q.count()
     items = q.order_by(GovernmentScheme.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
-
     return {
         "status": "success",
         "data": {
             "total": total,
             "page": page,
             "limit": limit,
-            "total_pages": (total + limit - 1) // limit,
-            "items": [
-                {
-                    "id": s.id,
-                    "scheme_id": s.scheme_id,
-                    "name": s.name,
-                    "description": s.description,
-                    "eligibility": s.eligibility,
-                    "benefits": s.benefits,
-                    "state": s.state,
-                    "crop": s.crop,
-                    "category": s.category,
-                    "application_deadline": s.application_deadline,
-                    "status": s.status,
-                }
-                for s in items
-            ],
+            "items": [_scheme_dict(s, saved_ids) for s in items],
         },
     }
+
+
+@router.post("/government-schemes/{scheme_id}/save", status_code=201)
+def save_scheme(scheme_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    scheme = _find_scheme(db, scheme_id)
+    if not scheme:
+        raise HTTPException(status_code=404, detail="Scheme not found")
+    existing = (
+        db.query(SavedScheme)
+        .filter(SavedScheme.farmer_id == current_user.id, SavedScheme.scheme_id == scheme.id)
+        .first()
+    )
+    if existing:
+        return {"status": "success", "data": {"is_saved": True, "message": "Scheme already saved"}}
+    db.add(SavedScheme(farmer_id=current_user.id, scheme_id=scheme.id))
+    db.commit()
+    return {"status": "success", "data": {"is_saved": True, "message": "Scheme saved"}}
+
+
+@router.delete("/government-schemes/{scheme_id}/save")
+def unsave_scheme(scheme_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    scheme = _find_scheme(db, scheme_id)
+    if not scheme:
+        raise HTTPException(status_code=404, detail="Scheme not found")
+    rec = (
+        db.query(SavedScheme)
+        .filter(SavedScheme.farmer_id == current_user.id, SavedScheme.scheme_id == scheme.id)
+        .first()
+    )
+    if rec:
+        db.delete(rec)
+        db.commit()
+    return {"status": "success", "data": {"is_saved": False, "message": "Scheme removed from saved"}}
+
+
+@router.post("/government-schemes/check-eligibility")
+def check_eligibility(payload: EligibilityRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    schemes = db.query(GovernmentScheme).filter(GovernmentScheme.status == "active").all()
+    results = []
+    for s in schemes:
+        reasons = _match_reasons(s, payload)
+        eligible = len(reasons) == 0
+        results.append({
+            "scheme_id": s.scheme_id,
+            "id": s.id,
+            "name": s.name,
+            "category": s.category,
+            "likely_eligible": eligible,
+            "matching": list(reasons),
+        })
+    results.sort(key=lambda x: not x["likely_eligible"])
+    return {
+        "status": "success",
+        "data": {
+            "results": results,
+            "disclaimer": "Based on the information provided, you may meet the listed criteria. Final eligibility is determined by the government department.",
+            "total_results": len(results),
+        },
+    }
+
+
+@router.get("/government-schemes/recommended")
+def recommended_schemes(
+    limit: int = Query(6, ge=1, le=20),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = db.query(GovernmentScheme).filter(GovernmentScheme.status == "active")
+    items = _recommended(db, current_user, q)[:limit]
+    saved_ids = {s.scheme_id for s in _saved(db, current_user.id)}
+    return {
+        "status": "success",
+        "data": {"items": [_scheme_dict(s, saved_ids) for s in items], "total": len(items)},
+    }
+
+
+def _find_scheme(db: Session, scheme_id: str):
+    scheme = db.query(GovernmentScheme).filter(GovernmentScheme.id == scheme_id).first()
+    if not scheme:
+        scheme = db.query(GovernmentScheme).filter(GovernmentScheme.scheme_id == scheme_id).first()
+    return scheme
 
 
 @router.get("/government-schemes/{scheme_id}")
 def get_scheme(scheme_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    scheme = db.query(GovernmentScheme).filter(GovernmentScheme.id == scheme_id).first()
-    if not scheme:
-        scheme = db.query(GovernmentScheme).filter(GovernmentScheme.scheme_id == scheme_id).first()
+    scheme = _find_scheme(db, scheme_id)
     if not scheme:
         raise HTTPException(status_code=404, detail="Scheme not found")
+    saved_ids = {s.scheme_id for s in _saved(db, current_user.id)}
+    return {"status": "success", "data": _scheme_dict(scheme, saved_ids)}
 
-    return {
-        "status": "success",
-        "data": {
-            "id": scheme.id,
-            "scheme_id": scheme.scheme_id,
-            "name": scheme.name,
-            "description": scheme.description,
-            "eligibility": scheme.eligibility,
-            "benefits": scheme.benefits,
-            "state": scheme.state,
-            "crop": scheme.crop,
-            "category": scheme.category,
-            "application_deadline": scheme.application_deadline,
-            "documents_required": scheme.documents_required,
-            "how_to_apply": scheme.how_to_apply,
-            "website": scheme.website,
-            "status": scheme.status,
-        },
-    }
+
+# ---------------------------------------------------------------------------
+# Eligibility matching + recommendations helpers
+# ---------------------------------------------------------------------------
+def _match_reasons(s: GovernmentScheme, p: EligibilityRequest) -> List[str]:
+    """Return the list of *unmet* criteria. An empty list means all declared
+    criteria match and the user is considered 'likely eligible'."""
+    reasons = []
+    low = s.eligibility or ""
+
+    if s.eligible_farmer_types:
+        ftype = (p.farmer_type or "").lower()
+        if ftype and ftype not in ("", "any", "all"):
+            allowed = [x.lower() for x in s.eligible_farmer_types]
+            joined = " ".join(s.eligible_farmer_types).lower()
+            if ftype not in allowed and ftype not in joined:
+                reasons.append("Farmer type")
+        elif s.land_category and p.land_size_hectares is not None:
+            try:
+                if s.land_category and s.land_category not in ("All", "all"):
+                    reasons.append("Land holding size")
+            except Exception:
+                pass
+
+    if p.age is not None and s.name and ("Maan Dhan" in s.name.lower() or "pension" in s.name.lower()):
+        if not (18 <= p.age <= 40):
+            reasons.append("Age (18-40 for pension schemes)")
+
+    return reasons
+
+
+def _recommended(db: Session, user: User, base_query) -> list:
+    """Return schemes ordered by relevance to the authenticated farmer."""
+    profile = getattr(user, "farmer_profile", None)
+    state = None
+    crops = []
+    land = None
+    farmer_type = None
+    if profile:
+        if profile.farm_location:
+            # farm_location may contain a state/district label
+            state = profile.farm_location
+        if profile.preferred_crops:
+            crops = [c.strip().lower() for c in profile.preferred_crops.split(",") if c.strip()]
+        if profile.farming_type:
+            farmer_type = profile.farming_type
+    addr = None
+    try:
+        from app.models.user import UserAddress
+        addr = db.query(UserAddress).filter(UserAddress.user_id == user.id, UserAddress.is_primary == True).first()  # noqa: E712
+    except Exception:
+        addr = None
+    if addr and addr.state:
+        state = state or addr.state
+
+    schemes = base_query.all()
+
+    def score(s: GovernmentScheme) -> int:
+        sc = 0
+        text = (s.name + " " + (s.description or "") + " " + (s.eligibility or "")).lower()
+        if s.related_crops:
+            for c in crops:
+                if any(c in (rc or "").lower() for rc in s.related_crops):
+                    sc += 3
+                    break
+        if state and s.state and state.lower() in s.state.lower():
+            sc += 2
+        if farmer_type:
+            ft = farmer_type.lower()
+            if s.eligible_farmer_types and ft in [x.lower() for x in s.eligible_farmer_types]:
+                sc += 2
+        if s.level == "central":
+            sc += 1
+        return sc
+
+    scored = sorted(schemes, key=lambda s: score(s), reverse=True)
+    nonzero = [s for s in scored if score(s) > 0] or scored
+    return nonzero
 
 
 @router.post("/government-schemes/{scheme_id}/apply", status_code=201)
@@ -141,9 +408,7 @@ def apply_scheme(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    scheme = db.query(GovernmentScheme).filter(GovernmentScheme.id == scheme_id).first()
-    if not scheme:
-        scheme = db.query(GovernmentScheme).filter(GovernmentScheme.scheme_id == scheme_id).first()
+    scheme = _find_scheme(db, scheme_id)
     if not scheme:
         raise HTTPException(status_code=404, detail="Scheme not found")
 
@@ -170,6 +435,8 @@ def apply_scheme(
     db.commit()
     db.refresh(application)
 
+    create_scheme_notification(db, current_user.id, scheme.name, "submitted")
+
     return {
         "status": "success",
         "data": {
@@ -195,7 +462,23 @@ def list_scheme_applications(
         q = q.filter(SchemeApplication.status == status)
 
     total = q.count()
-    items = q.order_by(SchemeApplication.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    items = q.order_by(SchemeApplication.application_date.desc()).offset((page - 1) * limit).limit(limit).all()
+
+    result = []
+    for a in items:
+        scheme = db.query(GovernmentScheme).filter(GovernmentScheme.id == a.scheme_id).first()
+        result.append({
+            "id": a.id,
+            "application_id": a.application_id,
+            "scheme_id": a.scheme_id,
+            "scheme_name": scheme.name if scheme else None,
+            "scheme_category": scheme.category if scheme else None,
+            "deadline": scheme.application_deadline if scheme else None,
+            "status": a.status,
+            "notes": a.notes,
+            "applied_date": str(a.application_date) if a.application_date else None,
+            "updated_at": str(a.updated_at) if a.updated_at else None,
+        })
 
     return {
         "status": "success",
@@ -203,17 +486,7 @@ def list_scheme_applications(
             "total": total,
             "page": page,
             "limit": limit,
-            "items": [
-                {
-                    "id": a.id,
-                    "application_id": a.application_id,
-                    "scheme_id": a.scheme_id,
-                    "status": a.status,
-                    "notes": a.notes,
-                    "application_date": str(a.application_date) if a.application_date else None,
-                }
-                for a in items
-            ],
+            "items": result,
         },
     }
 
@@ -355,9 +628,25 @@ def create_insurance_claim(
     policy = db.query(InsurancePolicy).filter(InsurancePolicy.id == payload.policy_id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Insurance policy not found")
+    if policy.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only create a claim for your own policy")
 
     reason = payload.reason or payload.description or "General claim"
     claim_amount = payload.claim_amount if payload.claim_amount is not None else payload.amount
+
+    # Validate and cap the claim amount against the policy coverage
+    if claim_amount is not None:
+        try:
+            claim_amount = round(float(claim_amount), 2)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Invalid claim amount")
+        if claim_amount <= 0:
+            raise HTTPException(status_code=400, detail="Claim amount must be greater than zero")
+        if policy.coverage_amount and claim_amount > float(policy.coverage_amount):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Claim amount exceeds policy coverage of {policy.coverage_amount}",
+            )
 
     claim_id = generate_id("FA-CLM", db, InsuranceClaim)
     claim = InsuranceClaim(

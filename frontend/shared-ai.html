@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <title>Shared Conversation - Farm Assist AI</title>
+
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --g1: #0b3d2e;
+      --g2: #1b6b47;
+      --g3: #2f8b5d;
+      --soft: #eaf5ed;
+      --bg: #f5f8f5;
+      --border: #dce8df;
+      --text: #173b2c;
+      --muted: #718077;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+    }
+
+    .top {
+      background: linear-gradient(135deg, var(--g1) 0%, var(--g2) 48%, var(--g3) 100%);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 4px 18px rgba(11,61,46,.18);
+    }
+
+    .top-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .top-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .top h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .top .sub {
+      font-size: 10px;
+      color: rgba(255,255,255,.75);
+      margin-top: 2px;
+    }
+
+    .top .actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .top a {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(255,255,255,.28);
+      background: rgba(255,255,255,.1);
+      color: white;
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: .2s;
+    }
+
+    .top a:hover {
+      background: rgba(255,255,255,.22);
+    }
+
+    .wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 26px 18px 60px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--soft);
+      border: 1px solid #c9dfd0;
+      color: var(--g2);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 11px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+
+    .chat-title {
+      margin: 0 0 4px;
+      font-size: clamp(19px, 3vw, 26px);
+      font-weight: 850;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+
+    .chat-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 26px;
+    }
+
+    .messages {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .message {
+      display: flex;
+      gap: 11px;
+    }
+
+    .message.user {
+      flex-direction: row-reverse;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .message.ai .avatar {
+      background: linear-gradient(135deg, var(--g1), var(--g2));
+      color: white;
+    }
+
+    .message.user .avatar {
+      background: var(--soft);
+      color: var(--g2);
+    }
+
+    .label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      margin: 0 0 5px;
+    }
+
+    .message.user .label {
+      text-align: right;
+    }
+
+    .bubble {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-width: min(700px, 82%);
+    }
+
+    .message.user .bubble {
+      background: linear-gradient(135deg, #1b6b47, #2d8659);
+      border: 0;
+      color: white;
+    }
+
+    .empty {
+      text-align: center;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .empty i {
+      display: block;
+      font-size: 30px;
+      color: #b6c8bd;
+      margin-bottom: 12px;
+    }
+
+    .error-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    @media (max-width: 520px) {
+      .top .sub {
+        display: none;
+      }
+      .top a span.txt {
+        display: none;
+      }
+      .bubble {
+        max-width: 88%;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <div class="top">
+
+    <div class="top-left">
+
+      <div class="top-logo">
+        <i class="fas fa-seedling"></i>
+      </div>
+
+      <div>
+        <h1>Farm Assist AI</h1>
+        <div class="sub">Shared conversation view</div>
+      </div>
+
+    </div>
+
+    <div class="actions">
+      <a href="index.html">
+        <i class="fas fa-house"></i>
+        <span class="txt">Home</span>
+      </a>
+    </div>
+
+  </div>
+
+
+  <div class="wrap">
+
+    <div class="badge">
+      <i class="fas fa-eye"></i>
+      Shared by a Farm Assist farmer
+    </div>
+
+    <h1 class="chat-title" id="chat-title">Loading...</h1>
+    <div class="chat-meta" id="chat-meta"></div>
+
+    <div class="messages" id="messages"></div>
+
+  </div>
+
+
+  <script>
+
+    (function () {
+
+      "use strict";
+
+      var API_BASE = window.API_BASE_URL || (window.location.origin + "/api/v1");
+
+      var tokenMatch = window.location.search.match(/[?&]c=([^&]+)/);
+
+      var token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
+
+      var titleEl = document.getElementById("chat-title");
+
+      var metaEl = document.getElementById("chat-meta");
+
+      var messagesEl = document.getElementById("messages");
+
+      function esc(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function fmt(value) {
+        if (!value) return "";
+        var d = new Date(value);
+        if (isNaN(d.getTime())) return "";
+        return d.toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      }
+
+      function addMessage(role, content, createdAt) {
+        var msg = document.createElement("div");
+        msg.className = "message " + (role === "user" ? "user" : "ai");
+
+        var avatar = document.createElement("div");
+        avatar.className = "avatar";
+        avatar.innerHTML = role === "user" ? '<i class="fas fa-user"></i>' : '<i class="fas fa-seedling"></i>';
+
+        var box = document.createElement("div");
+        var label = document.createElement("div");
+        label.className = "label";
+        label.textContent = role === "user" ? "You" : "Assist";
+
+        var bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = content || "";
+
+        box.appendChild(label);
+        box.appendChild(bubble);
+
+        msg.appendChild(avatar);
+        msg.appendChild(box);
+
+        messagesEl.appendChild(msg);
+      }
+
+      if (!token) {
+
+        titleEl.textContent = "No conversation found";
+
+        messagesEl.innerHTML =
+          '<div class="empty"><i class="fas fa-link-slash"></i>' +
+          "This link is missing the conversation details." +
+          "</div>";
+
+        return;
+
+      }
+
+      fetch(API_BASE + "/ai/shared/" + encodeURIComponent(token))
+        .then(function (response) {
+
+          if (!response.ok) {
+
+            return response.json().then(function (data) {
+
+              throw new Error(data && data.detail ? data.detail : "Not found");
+
+            });
+
+          }
+
+          return response.json();
+
+        })
+        .then(function (body) {
+
+          var data = body && body.data;
+
+          if (!data || !data.messages) {
+
+            throw new Error("This conversation is empty.");
+
+          }
+
+          titleEl.textContent = data.title || "Shared conversation";
+
+          metaEl.textContent =
+            (data.messages.length || 0) +
+            " message" +
+            (data.messages.length === 1 ? "" : "s");
+
+          if (!data.messages.length) {
+
+            messagesEl.innerHTML =
+              '<div class="empty"><i class="fas fa-comment-slash"></i>' +
+              "This conversation has no messages." +
+              "</div>";
+
+            return;
+
+          }
+
+          data.messages.forEach(function (m) {
+
+            addMessage(
+              m.role,
+              m.content,
+              m.created_at
+            );
+
+          });
+
+        })
+        .catch(function (error) {
+
+          titleEl.textContent = "Not available";
+
+          messagesEl.innerHTML =
+
+            '<div class="empty"><i class="fas fa-eye-slash"></i>' +
+            esc(error && error.message ? error.message : "This shared conversation is no longer available.") +
+            '</div>' +
+
+            '<div class="error-note">' +
+            "The owner may have revoked or deleted the share link." +
+            "</div>";
+
+        });
+
+    })();
+
+  </script>
+
+</body>
+</html>

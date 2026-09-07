@@ -16,6 +16,7 @@ class Feedback(Base):
     name = Column(String(200), nullable=False)
     email = Column(String(200), nullable=True)
     feedback_type = Column(String(50), nullable=False)
+    category = Column(String(50), nullable=True)
     rating = Column(Integer, nullable=False)
     message = Column(Text, nullable=False)
     related_page = Column(String(100), nullable=True)

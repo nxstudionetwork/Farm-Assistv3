@@ -1084,6 +1084,31 @@ def forgot_pin(payload: ForgotPinRequest, db: Session = Depends(get_db)):
     if not latest_otp:
         raise HTTPException(status_code=400, detail="Please verify OTP first before changing PIN")
 
+    # Security: the verified OTP must belong to the same user, be unexpired, and be fresh
+    # (verified within the last 10 minutes) to prevent PIN reset via a stale/foreign OTP.
+    now = datetime.utcnow()
+    expires_at = latest_otp.expires_at
+    if expires_at.tzinfo is not None:
+        now_aware = now.replace(tzinfo=expires_at.tzinfo)
+        expired = now_aware > expires_at
+    else:
+        expired = now > expires_at
+    if latest_otp.user_id and latest_otp.user_id != user.id:
+        raise HTTPException(status_code=403, detail="OTP does not belong to this account")
+    if expired:
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+    if latest_otp.verified_at:
+        if latest_otp.verified_at.tzinfo is not None:
+            v_now = now.replace(tzinfo=latest_otp.verified_at.tzinfo)
+            fresh = (v_now - latest_otp.verified_at).total_seconds() <= 600
+        else:
+            fresh = (now - latest_otp.verified_at).total_seconds() <= 600
+        if not fresh:
+            raise HTTPException(
+                status_code=400,
+                detail="OTP verification too old. Please verify a new OTP to change PIN.",
+            )
+
     user.password_hash = hash_password(payload.new_pin)
     db.commit()
 
@@ -1227,5 +1252,92 @@ def normalize_fid(payload: dict, db: Session = Depends(get_db)):
             "original": raw,
             "normalized": normalized,
             "exists": user is not None,
+        },
+    }
+
+
+@router.post("/auth/send-phone-change-otp", response_model=dict)
+def send_phone_change_otp(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    new_phone = (payload.get("new_phone_number") or "").strip()
+    if not new_phone or not new_phone.isdigit() or len(new_phone) != 10 or new_phone[0] not in "6789":
+        raise HTTPException(status_code=400, detail="Invalid 10-digit phone number")
+    if new_phone == current_user.phone_number:
+        raise HTTPException(status_code=400, detail="New phone number is same as current")
+    existing = db.query(User).filter(User.phone_number == new_phone, User.id != current_user.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Phone number already registered to another account")
+
+    otp_code = f"{random.randint(0, 999999):06d}"
+    otp_hash = hash_password(otp_code)
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+
+    otp_record = OTPVerification(
+        user_id=current_user.id,
+        phone=new_phone,
+        otp_hash=otp_hash,
+        expires_at=expires_at,
+    )
+    db.add(otp_record)
+    db.commit()
+
+    real_provider_configured = bool(
+        settings.SMS_API_KEY or (settings.SMTP_HOST and settings.SMTP_USER)
+    )
+    masked = new_phone[:3] + "****" + new_phone[-2:]
+    response = {
+        "status": "success",
+        "message": f"OTP sent to {masked}",
+        "masked_phone": masked,
+        "expires_in_seconds": 600,
+    }
+    if settings.DEBUG and not real_provider_configured:
+        response["debug_otp"] = otp_code
+        response["debug_mode"] = True
+    return response
+
+
+@router.post("/auth/verify-phone-change-otp", response_model=dict)
+def verify_phone_change_otp(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    new_phone = (payload.get("new_phone_number") or "").strip()
+    otp_code = (payload.get("otp_code") or "").strip()
+    if not new_phone or not otp_code:
+        raise HTTPException(status_code=400, detail="Phone number and OTP code required")
+
+    q = db.query(OTPVerification).filter(
+        OTPVerification.user_id == current_user.id,
+        OTPVerification.phone == new_phone,
+        OTPVerification.verified_at.is_(None),
+        OTPVerification.expires_at > datetime.utcnow(),
+    )
+    otp_record = q.order_by(OTPVerification.created_at.desc()).first()
+    if not otp_record:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+    if otp_record.attempts >= 5:
+        raise HTTPException(status_code=400, detail="Too many attempts. Request a new OTP.")
+
+    otp_record.attempts += 1
+    if not verify_password(otp_code, otp_record.otp_hash):
+        db.commit()
+        raise HTTPException(status_code=400, detail="Incorrect OTP")
+
+    otp_record.verified_at = datetime.utcnow()
+    current_user.phone_number = new_phone
+    current_user.is_verified = True
+    db.commit()
+
+    profile_data = UserResponse.model_validate(current_user).model_dump()
+    return {
+        "status": "success",
+        "message": "Phone number updated successfully",
+        "data": {
+            "user": profile_data,
         },
     }

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["Feedback"])
 
 
-async def _send_feedback_email(feedback_id, name, farmer_id, feedback_type, rating, message, related_page, user_email):
+async def _send_feedback_email(feedback_id, name, farmer_id, feedback_type, category, rating, message, related_page, user_email):
     try:
         await EmailService.send_feedback_email(feedback_id, name, farmer_id, feedback_type, rating, message, related_page, user_email)
     except Exception as e:
@@ -43,6 +43,7 @@ def _feedback_dict(f):
         "farmer_id": f.farmer_id,
         "email": f.email,
         "feedback_type": f.feedback_type,
+        "category": f.category or "",
         "rating": f.rating,
         "message": f.message,
         "related_page": f.related_page,
@@ -55,13 +56,12 @@ def _feedback_dict(f):
 
 @router.post("/feedback")
 async def create_feedback(payload: dict, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    feedback_type = (payload.get("feedback_type") or "").strip()
+    feedback_type = (payload.get("feedback_type") or "General").strip()
+    category = (payload.get("category") or "").strip()
     rating = payload.get("rating")
     message = (payload.get("message") or "").strip()
     related_page = (payload.get("related_page") or "").strip()
 
-    if not feedback_type:
-        raise HTTPException(status_code=400, detail="Feedback type is required")
     if not rating or not isinstance(rating, int) or rating < 1 or rating > 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
     if not message or len(message) < 5:
@@ -86,6 +86,7 @@ async def create_feedback(payload: dict, db: Session = Depends(get_db), user=Dep
         name=name,
         email=getattr(user, "email", "") or "",
         feedback_type=feedback_type,
+        category=category or None,
         rating=rating,
         message=message,
         related_page=related_page,
@@ -95,7 +96,7 @@ async def create_feedback(payload: dict, db: Session = Depends(get_db), user=Dep
     db.commit()
     db.refresh(feedback)
 
-    asyncio.create_task(_send_feedback_email(feedback.feedback_id, name, user.farmer_id or "", feedback_type, rating, message, related_page, getattr(user, "email", "") or ""))
+    asyncio.create_task(_send_feedback_email(feedback.feedback_id, name, user.farmer_id or "", feedback_type, category, rating, message, related_page, getattr(user, "email", "") or ""))
 
     result = _feedback_dict(feedback)
     return {"status": "success", "data": result}

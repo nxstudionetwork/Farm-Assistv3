@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="api-base-url" content="/api/v1">
+  <script>
+    window._API_BASE_URL = '/api/v1';
+  </script>
   <title>Farm Assist - Weather Forecast</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
@@ -11,7 +15,7 @@
     .stat-box .stat-icon { font-size: 22px; margin-bottom: 6px; }
     .stat-box .stat-value { font-size: 18px; font-weight: 700; }
     .stat-box .stat-label { font-size: 11px; color: var(--text-muted, #6c757d); margin-top: 2px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
@@ -46,99 +50,141 @@
     .sunrise-set i { font-size: 28px; margin-bottom: 6px; }
     .sunrise-set .time { font-size: 16px; font-weight: 700; }
     .sunrise-set .label { font-size: 11px; color: var(--text-muted, #6c757d); }
-    .demo-badge { display: inline-block; background: #6f42c1; color: #fff; padding: 3px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-bottom: 14px; }
-    .demo-badge.hidden { display: none; }
+    .weather-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .weather-status { width: 100%; margin: 0 0 12px; }
     .section-title { font-size: 16px; margin-bottom: 14px; }
     .forecast-hidden { display: none !important; }
     .weather-empty { text-align: center; padding: 20px 16px; color: var(--text-muted, #6c757d); font-size: 13px; }
     .weather-empty i { font-size: 28px; margin-bottom: 8px; display: block; opacity: 0.5; }
-    @media(max-width:480px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } .grid-3 { grid-template-columns: repeat(2, 1fr); } }
-    @media(max-width:340px) { .forecast-card { padding: 10px 6px; } .forecast-card .day-icon { font-size: 20px; } }
+
+    /* Responsive Layout - 2-column grid on desktop/tablet, single-column on mobile */
+    @media (min-width: 769px) {
+      .weather-content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .weather-content-grid {
+        display: block;
+      }
+      .grid-2 { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .weather-actions { width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .forecast-card { padding: 10px 6px; }
+      .forecast-card .day-icon { font-size: 20px; }
+    }
+
+    @media (max-width: 340px) {
+      .forecast-card { padding: 8px 4px; }
+      .forecast-card .day-icon { font-size: 18px; }
+      .stat-box { padding: 10px 6px; }
+      .stat-box .stat-value { font-size: 16px; }
+    }
   </style>
 </head>
 <body>
 
   <main class="page-container">
 
-
     <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
       <h1><i class="fas fa-cloud-sun"></i> Weather Forecast</h1>
-      <span class="demo-badge" id="demo-badge"><i class="fas fa-flask"></i> Demo Weather Data</span>
+      <div class="weather-actions">
+        <button class="btn-secondary btn-sm" id="btn-use-location" type="button"><i class="fas fa-location-crosshairs"></i> Use my location</button>
+        <button class="btn-primary btn-sm" id="btn-refresh-weather" type="button"><i class="fas fa-rotate"></i> Refresh</button>
+      </div>
     </div>
 
-    <!-- Current Weather -->
-    <section class="card-premium" style="margin-bottom:16px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
-        <h2 style="font-size:16px; margin:0;" id="weather-location-label">Your Area Weather</h2>
-        <span style="font-size:11px; color:var(--text-muted, #6c757d);" id="weather-updated-label">Loading...</span>
+    <div class="weather-content-grid">
+      <!-- Left Column: Current Weather & Forecast -->
+      <div>
+        <!-- Current Weather -->
+        <section class="card-premium" style="margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+            <h2 style="font-size:16px; margin:0;" id="weather-location-label">Your Area Weather</h2>
+            <span style="font-size:11px; color:var(--text-muted, #6c757d);" id="weather-updated-label">Loading...</span>
+          </div>
+          <div id="weather-status" class="weather-status" aria-live="polite"></div>
+
+          <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:16px;">
+            <i class="fas fa-cloud-sun-rain" style="font-size:52px;" id="weather-main-icon"></i>
+            <div>
+              <div class="weather-temp" style="font-size:40px;" id="weather-temp">--Â°C</div>
+              <div style="font-size:14px; font-weight:500;" id="weather-condition">Loading...</div>
+            </div>
+          </div>
+
+          <div class="grid-4" style="margin-bottom:4px;">
+            <div class="stat-box">
+              <div class="stat-icon"><i class="fas fa-thermometer-half"></i></div>
+              <div class="stat-value" id="stat-feels-like">--Â°C</div>
+              <div class="stat-label">Feels Like</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-icon"><i class="fas fa-tint"></i></div>
+              <div class="stat-value" id="stat-humidity">--%</div>
+              <div class="stat-label">Humidity</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-icon"><i class="fas fa-wind"></i></div>
+              <div class="stat-value" id="stat-wind">-- km/h</div>
+              <div class="stat-label">Wind Speed</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-icon"><i class="fas fa-location-arrow"></i></div>
+              <div class="stat-value" id="stat-wind-dir">--</div>
+              <div class="stat-label">Wind Direction</div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:6px;">
+            <div class="stat-box">
+              <div class="stat-icon" style="color:#e67e22;"><i class="fas fa-sunrise"></i></div>
+              <div class="stat-value" id="stat-sunrise">--:--</div>
+              <div class="stat-label">Sunrise</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-icon" style="color:#e74c3c;"><i class="fas fa-sunset"></i></div>
+              <div class="stat-value" id="stat-sunset">--:--</div>
+              <div class="stat-label">Sunset</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7-Day + 14-Day Forecast -->
+        <section class="card-premium" style="margin-bottom:16px;">
+          <h3 class="section-title"><i class="fas fa-calendar-alt" style="color:var(--premium-green, #1f7a4c); margin-right:8px;"></i> Multi-Day Forecast</h3>
+          <div id="forecast-grid" class="grid-4"></div>
+          <div id="forecast-grid-extra" class="grid-4" style="margin-top:12px;"></div>
+          <div style="text-align:center; margin-top:12px;">
+            <button class="btn-primary btn-sm" id="btn-show-14" onclick="window.toggle14Day()"><i class="fas fa-chevron-down"></i> Show 14-Day Forecast</button>
+          </div>
+        </section>
       </div>
 
-      <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:16px;">
-        <i class="fas fa-cloud-sun-rain" style="font-size:52px;" id="weather-main-icon"></i>
-        <div>
-          <div class="weather-temp" style="font-size:40px;" id="weather-temp">--Â°C</div>
-          <div style="font-size:14px; font-weight:500;" id="weather-condition">Loading...</div>
-        </div>
+      <!-- Right Column: Alerts & Advice -->
+      <div>
+        <!-- Weather Alerts -->
+        <section class="card-premium" style="margin-bottom:16px;">
+          <h3 class="section-title"><i class="fas fa-exclamation-triangle" style="color:var(--danger, #e74c3c); margin-right:8px;"></i> Weather Alerts</h3>
+          <div id="weather-alerts-container"></div>
+        </section>
+
+        <!-- Farming Advice -->
+        <section class="card-premium" style="margin-bottom:16px;">
+          <h3 class="section-title"><i class="fas fa-leaf" style="color:var(--premium-green, #1f7a4c); margin-right:8px;"></i> Farming Advice</h3>
+          <div id="farming-advice-container"></div>
+        </section>
       </div>
-
-      <div class="grid-4" style="margin-bottom:4px;">
-        <div class="stat-box">
-          <div class="stat-icon"><i class="fas fa-thermometer-half"></i></div>
-          <div class="stat-value" id="stat-feels-like">--Â°C</div>
-          <div class="stat-label">Feels Like</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-icon"><i class="fas fa-tint"></i></div>
-          <div class="stat-value" id="stat-humidity">--%</div>
-          <div class="stat-label">Humidity</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-icon"><i class="fas fa-wind"></i></div>
-          <div class="stat-value" id="stat-wind">-- km/h</div>
-          <div class="stat-label">Wind Speed</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-icon"><i class="fas fa-location-arrow"></i></div>
-          <div class="stat-value" id="stat-wind-dir">--</div>
-          <div class="stat-label">Wind Direction</div>
-        </div>
-      </div>
-
-      <div class="grid-2" style="margin-top:6px;">
-        <div class="stat-box">
-          <div class="stat-icon" style="color:#e67e22;"><i class="fas fa-sunrise"></i></div>
-          <div class="stat-value" id="stat-sunrise">--:--</div>
-          <div class="stat-label">Sunrise</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-icon" style="color:#e74c3c;"><i class="fas fa-sunset"></i></div>
-          <div class="stat-value" id="stat-sunset">--:--</div>
-          <div class="stat-label">Sunset</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 7-Day + 14-Day Forecast -->
-    <section class="card-premium" style="margin-bottom:16px;">
-      <h3 class="section-title"><i class="fas fa-calendar-alt" style="color:var(--premium-green, #1f7a4c); margin-right:8px;"></i> Multi-Day Forecast</h3>
-      <div id="forecast-grid" class="grid-4"></div>
-      <div id="forecast-grid-extra" class="grid-4" style="margin-top:12px;"></div>
-      <div style="text-align:center; margin-top:12px;">
-        <button class="btn-primary btn-sm" id="btn-show-14" onclick="window.toggle14Day()"><i class="fas fa-chevron-down"></i> Show 14-Day Forecast</button>
-      </div>
-    </section>
-
-    <!-- Farming Advice -->
-    <section class="card-premium" style="margin-bottom:16px;">
-      <h3 class="section-title"><i class="fas fa-leaf" style="color:var(--premium-green, #1f7a4c); margin-right:8px;"></i> Farming Advice</h3>
-      <div id="farming-advice-container"></div>
-    </section>
-
-    <!-- Weather Alerts -->
-    <section class="card-premium" style="margin-bottom:16px;">
-      <h3 class="section-title"><i class="fas fa-exclamation-triangle" style="color:var(--danger, #e74c3c); margin-right:8px;"></i> Weather Alerts</h3>
-      <div id="weather-alerts-container"></div>
-    </section>
+    </div>
 
   </main>
 
@@ -150,37 +196,14 @@
   (function () {
     'use strict';
 
-    var demo = {
-      current: {
-        temperature: 31,
-        feels_like: 33,
-        humidity: 68,
-        wind_speed: 14,
-        wind_dir: 'SSW',
-        weather_code: 2,
-        description: 'Partly Cloudy',
-        rain: 0,
-        sunrise: '05:48',
-        sunset: '18:32'
-      },
+    var weatherData = {
+      current: null,
       alerts: [],
       advice: [],
-      forecast: [
-        { day: 'Today', icon: 'fa-cloud-sun', tempHigh: 31, tempLow: 23, condition: 'Partly Cloudy', rainProb: 10, windSpeed: 12, windDir: 'SSW' },
-        { day: 'Tomorrow', icon: 'fa-cloud-showers-heavy', tempHigh: 28, tempLow: 22, condition: 'Heavy Thunderstorms', rainProb: 80, windSpeed: 22, windDir: 'SW' },
-        { day: 'Saturday', icon: 'fa-cloud', tempHigh: 27, tempLow: 21, condition: 'Mostly Cloudy', rainProb: 45, windSpeed: 16, windDir: 'W' },
-        { day: 'Sunday', icon: 'fa-sun', tempHigh: 33, tempLow: 24, condition: 'Bright Sunshine', rainProb: 5, windSpeed: 8, windDir: 'N' },
-        { day: 'Monday', icon: 'fa-cloud-sun', tempHigh: 30, tempLow: 22, condition: 'Partly Cloudy', rainProb: 20, windSpeed: 10, windDir: 'NE' },
-        { day: 'Tuesday', icon: 'fa-sun', tempHigh: 35, tempLow: 25, condition: 'Sunny', rainProb: 0, windSpeed: 6, windDir: 'E' },
-        { day: 'Wednesday', icon: 'fa-bolt', tempHigh: 26, tempLow: 20, condition: 'Thunderstorms', rainProb: 70, windSpeed: 28, windDir: 'SE' },
-        { day: 'Thu', icon: 'fa-cloud-rain', tempHigh: 25, tempLow: 19, condition: 'Rain Showers', rainProb: 65, windSpeed: 20, windDir: 'S' },
-        { day: 'Fri', icon: 'fa-cloud-sun-rain', tempHigh: 27, tempLow: 20, condition: 'Scattered Showers', rainProb: 55, windSpeed: 18, windDir: 'SW' },
-        { day: 'Sat', icon: 'fa-cloud', tempHigh: 26, tempLow: 19, condition: 'Overcast', rainProb: 40, windSpeed: 14, windDir: 'W' },
-        { day: 'Sun', icon: 'fa-cloud-sun', tempHigh: 29, tempLow: 21, condition: 'Partly Cloudy', rainProb: 25, windSpeed: 11, windDir: 'NW' },
-        { day: 'Mon', icon: 'fa-sun', tempHigh: 32, tempLow: 23, condition: 'Sunny', rainProb: 5, windSpeed: 7, windDir: 'N' },
-        { day: 'Tue', icon: 'fa-cloud-sun', tempHigh: 30, tempLow: 22, condition: 'Partly Cloudy', rainProb: 15, windSpeed: 9, windDir: 'E' },
-        { day: 'Wed', icon: 'fa-cloud-rain', tempHigh: 24, tempLow: 18, condition: 'Light Rain', rainProb: 60, windSpeed: 17, windDir: 'SE' }
-      ]
+      forecast: [],
+      locationLabel: 'Your Area',
+      isLoading: true,
+      error: null
     };
 
     function wmoIcon(code) {
@@ -211,44 +234,76 @@
     }
 
     function getFallbackCoords() {
-      return { lat: 17.3850, lon: 78.4867 };
+      return { lat: null, lon: null };
     }
 
     function getCoords() {
       return new Promise(function (resolve) {
-        if (!navigator.geolocation) {
-          resolve(getFallbackCoords());
+        // First check if user has manually provided coordinates via location button
+        if (window.weatherCoords && window.weatherCoords.lat && window.weatherCoords.lon) {
+          resolve(window.weatherCoords);
           return;
         }
-        navigator.geolocation.getCurrentPosition(function (pos) {
-          resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude });
-        }, function () {
-          resolve(getFallbackCoords());
-        }, { timeout: 5000 });
+
+        // Try geolocation
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(function (pos) {
+            resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+          }, function () {
+            // Return null to let backend use saved farm location
+            resolve({ lat: null, lon: null });
+          }, { timeout: 10000 });
+        } else {
+          // Return null to let backend use saved farm location
+          resolve({ lat: null, lon: null });
+        }
       });
     }
 
     function loadLiveWeather() {
-      if (!window.API) return Promise.resolve(false);
+      if (!window.API) {
+        showError('Weather service not available');
+        return Promise.resolve(false);
+      }
+
+      setLoading(true);
+      clearError();
+
       return getCoords().then(function (coords) {
-        return Promise.all([
-          window.API.Weather.getCurrent(coords.lat, coords.lon),
-          window.API.Weather.getForecast(coords.lat, coords.lon)
-        ]).then(function (results) {
+        // Build API request with or without coordinates
+        var currentPromise, forecastPromise;
+
+        if (coords.lat !== null && coords.lon !== null) {
+          currentPromise = window.API.Weather.getCurrent(coords.lat, coords.lon);
+          forecastPromise = window.API.Weather.getForecast(coords.lat, coords.lon);
+        } else {
+          // Let backend use saved farm location
+          currentPromise = window.API.Weather.getCurrent();
+          forecastPromise = window.API.Weather.getForecast();
+        }
+
+        return Promise.all([currentPromise, forecastPromise]).then(function (results) {
           var current = results[0];
           var forecastData = results[1];
+
           if (current && typeof current.temperature === 'number') {
-            demo.current.temperature = current.temperature;
-            demo.current.feels_like = typeof current.feels_like === 'number' ? current.feels_like : current.temperature;
-            demo.current.humidity = current.humidity;
-            demo.current.wind_speed = current.wind_speed;
-            demo.current.rain = current.rain;
-            demo.current.weather_code = current.weather_code;
-            demo.current.description = current.description || current.weather_condition || wmoCondition(current.weather_code);
-            demo.current.wind_dir = current.wind_direction || current.wind_dir || '--';
+            weatherData.current = {
+              temperature: current.temperature,
+              feels_like: typeof current.feels_like === 'number' ? current.feels_like : current.temperature,
+              humidity: current.humidity,
+              wind_speed: current.wind_speed,
+              rain: current.rain,
+              weather_code: current.weather_code,
+              description: current.description || current.weather_condition || wmoCondition(current.weather_code),
+              wind_dir: current.wind_direction || current.wind_dir || '--',
+              sunrise: formatTime(current.sunrise),
+              sunset: formatTime(current.sunset)
+            };
+            weatherData.locationLabel = current.location_label || 'Your Area';
           }
+
           if (forecastData && forecastData.forecast && forecastData.forecast.length) {
-            demo.forecast = forecastData.forecast.map(function (f, i) {
+            weatherData.forecast = forecastData.forecast.map(function (f, i) {
               var d = new Date((f.date || '').replace(/-/g, '/'));
               if (isNaN(d.getTime())) d = new Date(Date.now() + i * 86400000);
               var code = f.weather_code;
@@ -258,38 +313,117 @@
                 tempHigh: Math.round(f.temperature_max || 0),
                 tempLow: Math.round(f.temperature_min || 0),
                 condition: f.description || f.weather_condition || wmoCondition(code),
-                rainProb: Math.round(f.precipitation || 0) > 0 ? Math.min(100, Math.round(f.precipitation * 3)) : 0,
-                windSpeed: f.wind_speed || 0,
+                rainProb: Math.round(f.precipitation_probability || 0) || 0,
+                windSpeed: Math.round(f.wind_speed || 0),
                 windDir: f.wind_direction || '--'
               };
             });
           }
+
           if (current && (current.alerts || current.advice)) {
-            demo.alerts = (current.alerts || []).map(normalizeAlert);
-            demo.advice = (current.advice || []).map(normalizeAdvice);
+            weatherData.alerts = (current.alerts || []).map(normalizeAlert);
+            weatherData.advice = (current.advice || []).map(normalizeAdvice);
           }
+
+          weatherData.isLoading = false;
           return true;
+        }).catch(function (error) {
+          console.error('Weather loading error:', error);
+          showError('Unable to load weather data. Please try again.');
+          weatherData.isLoading = false;
+          return false;
         });
-      }).catch(function () { return false; });
+      }).catch(function (error) {
+        console.error('Location error:', error);
+        showError('Unable to get your location. Please set your farm location in profile.');
+        weatherData.isLoading = false;
+        return false;
+      });
+    }
+
+    function formatTime(timestamp) {
+      if (!timestamp) return '--:--';
+      var date = new Date(timestamp);
+      if (isNaN(date.getTime())) return '--:--';
+      var hours = date.getHours();
+      var minutes = date.getMinutes();
+      return (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+    }
+
+    function setLoading(loading) {
+      weatherData.isLoading = loading;
+      var statusEl = document.getElementById('weather-status');
+      if (statusEl) {
+        if (loading) {
+          statusEl.innerHTML = '<div class="weather-empty"><i class="fas fa-spinner fa-spin"></i><div>Loading weather data...</div></div>';
+        } else {
+          statusEl.innerHTML = '';
+        }
+      }
+    }
+
+    function showError(message) {
+      weatherData.error = message;
+      var statusEl = document.getElementById('weather-status');
+      if (statusEl) {
+        statusEl.innerHTML = '<div class="weather-empty" style="color: var(--danger, #e74c3c);"><i class="fas fa-exclamation-circle"></i><div>' + message + '</div></div>';
+      }
+    }
+
+    function clearError() {
+      weatherData.error = null;
     }
 
     function normalizeAlert(a) {
+      var severityMap = {
+        'danger': 'danger',
+        'warning': 'warning',
+        'info': 'info',
+        'success': 'success'
+      };
+      var iconMap = {
+        'danger': 'fa-exclamation-triangle',
+        'warning': 'fa-exclamation-circle',
+        'info': 'fa-info-circle',
+        'success': 'fa-check-circle'
+      };
+      var badgeClassMap = {
+        'danger': 'badge-danger',
+        'warning': 'badge-warning',
+        'info': 'badge-info',
+        'success': 'badge-success'
+      };
       return {
-        type: a.severity === 'danger' ? 'danger' : (a.severity || 'warning'),
-        icon: a.icon || 'fa-exclamation-triangle',
+        type: severityMap[a.severity] || 'warning',
+        icon: iconMap[a.severity] || 'fa-exclamation-triangle',
         title: a.title || 'Weather Alert',
         detail: a.detail || a.description || '',
         badge: a.badge || 'Active',
-        badgeClass: a.badgeClass || 'badge-warning'
+        badgeClass: badgeClassMap[a.severity] || 'badge-warning',
+        period: a.period || '',
+        action: a.action || ''
       };
     }
 
     function normalizeAdvice(a) {
+      var typeMap = {
+        'warning': 'warning',
+        'danger': 'danger',
+        'info': 'info',
+        'success': 'success'
+      };
+      var iconMap = {
+        'warning': 'fa-exclamation-triangle',
+        'danger': 'fa-exclamation-circle',
+        'info': 'fa-info-circle',
+        'success': 'fa-check-circle'
+      };
       return {
-        type: a.type || 'info',
-        icon: a.icon || 'fa-info-circle',
+        type: typeMap[a.type] || 'info',
+        icon: iconMap[a.type] || 'fa-info-circle',
         title: a.title || 'Farm Advisory',
-        detail: a.detail || a.description || ''
+        detail: a.detail || a.description || '',
+        category: a.category || ''
       };
     }
 
@@ -317,14 +451,33 @@
     }
 
     function updateCurrentWeather() {
-      var d = demo.current;
+      var d = weatherData.current;
       var el = document.getElementById('weather-location-label');
       var district = getUserDistrict();
-      if (el) el.textContent = (district || 'Your Area') + ' Weather';
+      if (el) el.textContent = (weatherData.locationLabel || district || 'Your Area') + ' Weather';
 
       var tempEl = document.getElementById('weather-temp');
       var condEl = document.getElementById('weather-condition');
       var iconEl = document.getElementById('weather-main-icon');
+
+      if (weatherData.isLoading) {
+        if (tempEl) tempEl.textContent = '--\u00b0C';
+        if (condEl) condEl.textContent = 'Loading...';
+        return;
+      }
+
+      if (weatherData.error) {
+        if (tempEl) tempEl.textContent = '--\u00b0C';
+        if (condEl) condEl.textContent = 'Weather unavailable';
+        return;
+      }
+
+      if (!d) {
+        if (tempEl) tempEl.textContent = '--\u00b0C';
+        if (condEl) condEl.textContent = 'No data available';
+        return;
+      }
+
       if (tempEl) tempEl.textContent = Math.round(d.temperature) + '\u00b0C';
       if (condEl) condEl.textContent = d.description;
       if (iconEl) {
@@ -372,10 +525,28 @@
       var extraContainer = document.getElementById('forecast-grid-extra');
       if (!container) return;
 
+      if (weatherData.isLoading) {
+        container.innerHTML = '<div class="weather-empty" style="grid-column: 1/-1;"><i class="fas fa-spinner fa-spin"></i><div>Loading forecast...</div></div>';
+        if (extraContainer) extraContainer.innerHTML = '';
+        return;
+      }
+
+      if (weatherData.error) {
+        container.innerHTML = '<div class="weather-empty" style="grid-column: 1/-1;"><i class="fas fa-exclamation-circle"></i><div>Unable to load forecast</div></div>';
+        if (extraContainer) extraContainer.innerHTML = '';
+        return;
+      }
+
+      if (!weatherData.forecast || weatherData.forecast.length === 0) {
+        container.innerHTML = '<div class="weather-empty" style="grid-column: 1/-1;"><i class="fas fa-calendar-times"></i><div>No forecast data available</div></div>';
+        if (extraContainer) extraContainer.innerHTML = '';
+        return;
+      }
+
       var html = '';
       var extraHtml = '';
-      for (var i = 0; i < demo.forecast.length; i++) {
-        var item = demo.forecast[i];
+      for (var i = 0; i < weatherData.forecast.length; i++) {
+        var item = weatherData.forecast[i];
         if (i < 7) {
           html = html + buildForecastCard(item, i);
         } else {
@@ -403,17 +574,30 @@
     function renderFarmingAdvice() {
       var container = document.getElementById('farming-advice-container');
       if (!container) return;
-      if (!demo.advice.length) {
+
+      if (weatherData.isLoading) {
+        container.innerHTML = '<div class="weather-empty"><i class="fas fa-spinner fa-spin"></i><div>Loading farming advice...</div></div>';
+        return;
+      }
+
+      if (weatherData.error) {
+        container.innerHTML = '<div class="weather-empty"><i class="fas fa-exclamation-circle"></i><div>Unable to load farming advice</div></div>';
+        return;
+      }
+
+      if (!weatherData.advice || weatherData.advice.length === 0) {
         container.innerHTML = '<div class="weather-empty"><i class="fas fa-leaf"></i><div>No farming advice available right now. Advice appears based on current weather conditions.</div></div>';
         return;
       }
+
       var html = '';
-      for (var i = 0; i < demo.advice.length; i++) {
-        var a = demo.advice[i];
+      for (var i = 0; i < weatherData.advice.length; i++) {
+        var a = weatherData.advice[i];
+        var categoryLabel = a.category ? '<span class="badge badge-secondary" style="margin-left:8px;">' + a.category + '</span>' : '';
         html = html + '<div class="alert-strip ' + a.type + '">' +
           '<i class="fas ' + a.icon + '" style="font-size:16px; margin-top:2px;"></i>' +
           '<div class="alert-content">' +
-          '<strong>' + a.title + '</strong>' +
+          '<strong>' + a.title + categoryLabel + '</strong>' +
           '<div>' + a.detail + '</div>' +
           '</div>' +
           '</div>';
@@ -424,18 +608,34 @@
     function renderAlerts() {
       var container = document.getElementById('weather-alerts-container');
       if (!container) return;
-      if (!demo.alerts.length) {
+
+      if (weatherData.isLoading) {
+        container.innerHTML = '<div class="weather-empty"><i class="fas fa-spinner fa-spin"></i><div>Loading weather alerts...</div></div>';
+        return;
+      }
+
+      if (weatherData.error) {
+        container.innerHTML = '<div class="weather-empty"><i class="fas fa-exclamation-circle"></i><div>Unable to load weather alerts</div></div>';
+        return;
+      }
+
+      if (!weatherData.alerts || weatherData.alerts.length === 0) {
         container.innerHTML = '<div class="weather-empty"><i class="fas fa-shield-halved"></i><div>No weather alerts for your area. We\'ll notify you when conditions change.</div></div>';
         return;
       }
+
       var html = '';
-      for (var i = 0; i < demo.alerts.length; i++) {
-        var a = demo.alerts[i];
+      for (var i = 0; i < weatherData.alerts.length; i++) {
+        var a = weatherData.alerts[i];
+        var periodLabel = a.period ? '<div style="font-size:11px; color:var(--text-muted); margin-top:4px;"><i class="fas fa-clock"></i> ' + a.period + '</div>' : '';
+        var actionLabel = a.action ? '<div style="font-size:11px; color:var(--text-muted); margin-top:2px;"><i class="fas fa-check-circle"></i> ' + a.action + '</div>' : '';
         html = html + '<div class="alert-strip ' + a.type + '">' +
           '<i class="fas ' + a.icon + '" style="font-size:18px; margin-top:2px;"></i>' +
           '<div class="alert-content">' +
           '<strong>' + a.title + '</strong>' +
           '<div>' + a.detail + '</div>' +
+          periodLabel +
+          actionLabel +
           '</div>' +
           '<span class="badge ' + a.badgeClass + '" style="white-space:nowrap;">' + a.badge + '</span>' +
           '</div>';
@@ -444,14 +644,59 @@
     }
 
     function initWeather() {
+      // Set up event listeners
+      var refreshBtn = document.getElementById('btn-refresh-weather');
+      var locationBtn = document.getElementById('btn-use-location');
+
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+          loadLiveWeather().then(function (loaded) {
+            if (loaded) {
+              updateCurrentWeather();
+              renderForecast();
+              renderFarmingAdvice();
+              renderAlerts();
+            }
+          });
+        });
+      }
+
+      if (locationBtn) {
+        locationBtn.addEventListener('click', function() {
+          if (navigator.geolocation) {
+            locationBtn.disabled = true;
+            locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
+            navigator.geolocation.getCurrentPosition(function (pos) {
+              // Force refresh with new coordinates
+              window.weatherCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+              loadLiveWeather().then(function (loaded) {
+                locationBtn.disabled = false;
+                locationBtn.innerHTML = '<i class="fas fa-location-crosshairs"></i> Use my location';
+                if (loaded) {
+                  updateCurrentWeather();
+                  renderForecast();
+                  renderFarmingAdvice();
+                  renderAlerts();
+                }
+              });
+            }, function (error) {
+              locationBtn.disabled = false;
+              locationBtn.innerHTML = '<i class="fas fa-location-crosshairs"></i> Use my location';
+              showError('Unable to get your location. Please enable location services.');
+            }, { timeout: 10000 });
+          } else {
+            showError('Geolocation not supported by your browser');
+          }
+        });
+      }
+
+      // Initial load
       updateCurrentWeather();
       renderForecast();
       renderFarmingAdvice();
       renderAlerts();
       loadLiveWeather().then(function (loaded) {
         if (loaded) {
-          var badge = document.getElementById('demo-badge');
-          if (badge) badge.classList.add('hidden');
           updateCurrentWeather();
           renderForecast();
           renderFarmingAdvice();

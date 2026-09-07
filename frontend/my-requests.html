@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="my-requests">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Requests - Farm Assist</title>
+  <meta name="description" content="Your complete request and activity history in Farm Assist.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root{--mr-green:#1B5E2F;--mr-green-light:#E8F5E9;--mr-green-mid:#52B788;--mr-red:#D32F2F;--mr-orange:#E65100;--mr-blue:#1565C0;--mr-radius:12px;--mr-radius-sm:8px;--mr-shadow:0 2px 8px rgba(0,0,0,0.06)}
+    .mr-page{padding:0 16px 100px;max-width:520px;margin:0 auto}
+    .mr-header{display:flex;align-items:center;gap:12px;padding:14px 0 6px}
+    .mr-back{width:36px;height:36px;border-radius:12px;border:1px solid #e8e8e8;background:#fff;color:var(--mr-green);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;text-decoration:none;flex-shrink:0;transition:background 0.15s}
+    .mr-back:hover{background:var(--mr-green-light)}
+    .mr-title-wrap{flex:1;min-width:0}
+    .mr-title{font-size:18px;font-weight:700;margin:0;color:var(--text-primary)}
+    .mr-sub{font-size:11px;color:var(--text-muted);margin:2px 0 0}
+    .mr-summary{display:flex;gap:12px;margin:16px 0}
+    .mr-sum-box{flex:1;background:#fff;border:1px solid #f0f0f0;border-radius:var(--mr-radius-sm);padding:12px 8px;text-align:center}
+    .mr-sum-box .num{font-size:18px;font-weight:700;color:var(--mr-green);line-height:1}
+    .mr-sum-box .lbl{font-size:10px;color:var(--text-muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.3px}
+    .mr-section{margin-bottom:24px}
+    .mr-day-label{font-size:12px;font-weight:700;color:var(--text-muted);margin:18px 0 8px;display:flex;align-items:center;gap:6px}
+    .mr-day-label i{color:var(--mr-green-mid);font-size:11px}
+    .mr-timeline{position:relative;padding-left:22px}
+    .mr-timeline:before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:#e6f2ea}
+    .mr-item{position:relative;padding:0 0 16px}
+    .mr-item:last-child{padding-bottom:0}
+    .mr-dot{position:absolute;left:-22px;top:4px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--mr-green-mid);box-shadow:0 0 0 2px #fff}
+    .mr-card{background:#fff;border:1px solid #f0f0f0;border-radius:var(--mr-radius);padding:14px;box-shadow:var(--mr-shadow)}
+    .mr-row{display:flex;gap:10px;align-items:flex-start}
+    .mr-item-icon{width:38px;height:38px;border-radius:10px;background:var(--mr-green-light);color:var(--mr-green);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+    .mr-item-icon.blue{background:#E3F2FD;color:var(--mr-blue)}
+    .mr-item-icon.orange{background:#FFF3E0;color:var(--mr-orange)}
+    .mr-item-icon.red{background:#FFEBEE;color:var(--mr-red)}
+    .mr-item-icon.purple{background:#F3E5F5;color:#6A1B9A}
+    .mr-body{flex:1;min-width:0}
+    .mr-type{font-size:10px;font-weight:700;color:var(--mr-green);text-transform:uppercase;letter-spacing:0.3px}
+    .mr-title-line{display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap}
+    .mr-name{font-size:13px;font-weight:600;color:var(--text-primary);word-break:break-word}
+    .mr-ref{font-size:10px;color:var(--text-muted);font-family:monospace}
+    .mr-desc{font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.4}
+    .mr-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:8px;font-size:11px;color:var(--text-muted)}
+    .mr-meta i{width:13px;color:var(--mr-green-mid)}
+    .mr-amount{font-weight:700;color:var(--mr-green)}
+    .mr-status{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;text-transform:capitalize}
+    .mr-status.pending,.mr-status.requested,.mr-status.new,.mr-status.scheduled{background:#FFF8E1;color:#8D6E00}
+    .mr-status.confirmed,.mr-status.processing,.mr-status.completed,.mr-status.delivered,.mr-status.paid,.mr-status.active{background:var(--mr-green-light);color:var(--mr-green)}
+    .mr-status.cancelled,.mr-status.rejected,.mr-status.failed{background:#FFEBEE;color:var(--mr-red)}
+    .mr-status.in-progress{background:#E3F2FD;color:var(--mr-blue)}
+    .mr-status.in-progress{background:#E3F2FD;color:var(--mr-blue)}
+    .mr-status-text{font-size:10px;font-weight:700}
+    .mr-action{display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;font-weight:600;color:var(--mr-green);text-decoration:none;background:none;border:none;padding:0;cursor:pointer}
+    .mr-empty{text-align:center;padding:40px 20px;background:#fff;border:1px solid #f0f0f0;border-radius:var(--mr-radius)}
+    .mr-empty i{font-size:48px;display:block;margin-bottom:12px;opacity:0.3;color:var(--mr-green)}
+    .mr-empty h3{font-size:16px;font-weight:700;margin:0 0 4px;color:var(--text-primary)}
+    .mr-empty p{font-size:12px;color:var(--text-muted);margin:0 0 16px}
+    .mr-empty .mr-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--mr-radius-sm);background:var(--mr-green);color:#fff;font-size:12px;font-weight:600;text-decoration:none}
+    .mr-loading{text-align:center;padding:24px;color:var(--text-muted);font-size:12px}
+    .mr-loading i{animation:mr-spin 1s linear infinite;margin-right:6px}
+    @keyframes mr-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    .mr-error{text-align:center;padding:30px 20px;background:#fff;border:1px solid #f0f0f0;border-radius:var(--mr-radius)}
+    .mr-error i{font-size:40px;color:var(--mr-red);opacity:0.6;display:block;margin-bottom:10px}
+    .mr-error p{font-size:13px;color:var(--text-muted);margin:0 0 14px}
+    .mr-btn-retry{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--mr-radius-sm);background:var(--mr-green);color:#fff;font-size:12px;font-weight:600;border:none;cursor:pointer}
+    .mr-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:var(--mr-radius-sm);color:#fff;font-size:13px;font-weight:600;z-index:2000;opacity:0;transition:opacity 0.3s;pointer-events:none;max-width:90%;text-align:center}
+    .mr-toast.show{opacity:1}
+    .mr-toast.error{background:#C62828}
+    .mr-toast.success{background:#2E7D32}
+    .mr-toast.info{background:#1565C0}
+    @media(min-width:540px){ .mr-page{max-width:640px} }
+  </style>
+</head>
+<body>
+<main class="mr-page">
+
+  <!-- HEADER -->
+  <div class="mr-header">
+    <a class="mr-back" href="profile.html" title="Back to Profile" aria-label="Back to Profile"><i class="fas fa-arrow-left"></i></a>
+    <div class="mr-title-wrap">
+      <h1 class="mr-title">My Requests</h1>
+      <p class="mr-sub">Your complete request &amp; activity history</p>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="mr-summary" id="mr-summary" style="display:none">
+    <div class="mr-sum-box"><div class="num" id="mr-total">0</div><div class="lbl">Activities</div></div>
+    <div class="mr-sum-box"><div class="num" id="mr-count-orders">0</div><div class="lbl">Orders</div></div>
+    <div class="mr-sum-box"><div class="num" id="mr-count-services">0</div><div class="lbl">Services</div></div>
+    <div class="mr-sum-box"><div class="num" id="mr-count-bookings">0</div><div class="lbl">Bookings</div></div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="mr-section">
+    <div id="mr-container">
+      <div class="mr-loading"><i class="fas fa-spinner"></i> Loading your activity...</div>
+    </div>
+  </div>
+
+</main>
+
+<div class="mr-toast" id="mr-toast"></div>
+
+<script src="js/database.js"></script>
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  function hasApi(){ return window.API && localStorage.getItem('fa-auth-token'); }
+
+  function showToast(msg, type){
+    var t = document.getElementById('mr-toast');
+    t.textContent = msg;
+    t.className = 'mr-toast ' + (type||'info') + ' show';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+  }
+
+  function esc(s){ if(!s) return ''; var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  function fmtDay(dateStr){
+    if(!dateStr) return 'Other';
+    var today = new Date();
+    var d = new Date(String(dateStr).slice(0,10) + 'T00:00:00');
+    if(isNaN(d.getTime())) return dateStr;
+    var toY = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    var diff = Math.round((toY - d) / 86400000);
+    if(diff === 0) return 'Today';
+    if(diff === 1) return 'Yesterday';
+    var m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getDate()+' '+m[d.getMonth()]+' '+d.getFullYear();
+  }
+
+  function kindIcon(kind){
+    switch(kind){
+      case 'order': return {icon:'fa-box', cls:'blue'};
+      case 'service_request': return {icon:'fa-concierge-bell', cls:'orange'};
+      case 'worker_booking': return {icon:'fa-user-gear', cls:'purple'};
+      case 'equipment_booking': return {icon:'fa-truck-field', cls:'blue'};
+      case 'consultation': return {icon:'fa-user-doctor', cls:'green'};
+      case 'feedback': return {icon:'fa-star', cls:'orange'};
+      default: return {icon:'fa-circle-check', cls:'green'};
+    }
+  }
+
+  function fmtMoney(v){
+    if(v === null || v === undefined || isNaN(v)) return null;
+    return '\u20B9' + Number(v).toLocaleString('en-IN');
+  }
+
+  function statusClass(s){
+    var s2 = String(s||'pending').toLowerCase().replace(/ /g,'-');
+    return s2;
+  }
+
+  function cardHtml(it){
+    var ki = kindIcon(it.kind);
+    var amount = fmtMoney(it.amount);
+    var html = '<div class="mr-item"><div class="mr-dot"></div><div class="mr-card"><div class="mr-row">';
+    html += '<div class="mr-item-icon ' + ki.cls + '"><i class="fas ' + ki.icon + '"></i></div>';
+    html += '<div class="mr-body">';
+    html += '<div class="mr-type">' + esc(it.type || 'Activity') + '</div>';
+    html += '<div class="mr-title-line"><span class="mr-name">' + esc(it.title || 'Activity') + '</span>';
+    if(it.reference) html += '<span class="mr-ref">#' + esc(it.reference) + '</span>';
+    html += '</div>';
+    if(it.subtitle) html += '<div class="mr-desc">' + esc(it.subtitle) + '</div>';
+    if(it.description && it.description !== it.subtitle && it.description !== it.title) html += '<div class="mr-desc">' + esc(it.description) + '</div>';
+    html += '<div class="mr-meta">';
+    if(it.date) html += '<span><i class="fas fa-calendar-day"></i>' + fmtDay(it.date) + '</span>';
+    if(it.time) html += '<span><i class="fas fa-clock"></i>' + esc(it.time) + '</span>';
+    if(amount) html += '<span class="mr-amount"><i class="fas fa-indian-rupee-sign"></i> ' + esc(amount.replace('\u20B9','')) + '</span>';
+    if(it.status) html += '<span class="mr-status ' + statusClass(it.status) + '">' + esc(it.status_label || it.status) + '</span>';
+    if(it.rating) html += '<span><i class="fas fa-star" style="color:#F9A825"></i> ' + esc(it.rating) + '/5</span>';
+    html += '</div>';
+    html += '</div></div></div></div>';
+    return html;
+  }
+
+  function renderTimeline(data){
+    var items = (data && data.items) || [];
+    var container = document.getElementById('mr-container');
+
+    var counts = {orders:0, services:0, bookings:0};
+    items.forEach(function(it){
+      if(it.kind === 'order') counts.orders++;
+      else if(it.kind === 'service_request') counts.services++;
+      else if(it.kind === 'worker_booking' || it.kind === 'equipment_booking' || it.kind === 'consultation') counts.bookings++;
+    });
+    var total = data && data.total !== undefined ? data.total : items.length;
+    document.getElementById('mr-total').textContent = total;
+    document.getElementById('mr-count-orders').textContent = counts.orders;
+    document.getElementById('mr-count-services').textContent = counts.services;
+    document.getElementById('mr-count-bookings').textContent = counts.bookings;
+    document.getElementById('mr-summary').style.display = 'flex';
+
+    if(!items.length){
+      document.getElementById('mr-summary').style.display = 'none';
+      document.getElementById('mr-container').innerHTML =
+        '<div class="mr-empty"><i class="fas fa-inbox"></i><h3>No activity yet</h3>' +
+        '<p>You do not have any requests, orders, bookings or feedback yet. Explore Farm Assist services to get started.</p>' +
+        '<a class="mr-btn" href="services.html"><i class="fas fa-concierge-bell"></i> Explore Services</a></div>';
+      return;
+    }
+
+    // Group items newest-first by date label (backend already sorts by timestamp)
+    var groups = [];
+    var map = {};
+    items.forEach(function(it){
+      var label = fmtDay(it.date);
+      if(!map[label]){ map[label]=[]; groups.push(label); }
+      map[label].push(it);
+    });
+
+    var html = '';
+    groups.forEach(function(label){
+      html += '<div class="mr-day-label"><i class="fas fa-circle"></i>' + esc(label) + '</div><div class="mr-timeline">';
+      map[label].forEach(function(it){ html += cardHtml(it); });
+      html += '</div>';
+    });
+    container.innerHTML = html;
+  }
+
+  function loadTimeline(){
+    var container = document.getElementById('mr-container');
+    container.innerHTML = '<div class="mr-loading"><i class="fas fa-spinner"></i> Loading your activity...</div>';
+    if(!hasApi()){
+      container.innerHTML = '<div class="mr-error"><i class="fas fa-lock"></i><p>Please log in to view your requests.</p><button class="mr-btn-retry" onclick="window.location.href=\'login.html\'">Go to Login</button></div>';
+      return;
+    }
+    API.Profile.getRequestsTimeline(200).then(function(data){
+      renderTimeline(data);
+    }).catch(function(err){
+      document.getElementById('mr-summary').style.display = 'none';
+      container.innerHTML = '<div class="mr-error"><i class="fas fa-circle-exclamation"></i><p>Could not load your activity. Please try again.</p><button class="mr-btn-retry" onclick="loadTimeline()"><i class="fas fa-rotate"></i> Retry</button></div>';
+      showToast('Could not load your profile activity', 'error');
+    });
+  }
+
+  window.loadTimeline = loadTimeline;
+
+  // INIT
+  loadTimeline();
+})();
+</script>
+</body>
+</html>

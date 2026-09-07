@@ -3,3 +3,5 @@ from app.routers import marketplace, government, community, notifications
 from app.routers import weather, maps, ai
 from app.routers import loans, sensors, storage, news, translation, qrcode, analytics
 from app.routers import services
+from app.routers import wallet
+from app.routers import documents

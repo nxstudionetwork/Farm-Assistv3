@@ -8,7 +8,8 @@ from app.database.connection import get_db
 from app.utils.auth import get_current_user, generate_id
 from app.models.user import User
 from app.models.marketplace import (
-    ProductCategory, Product, MarketplaceOrder, OrderItem
+    ProductCategory, Product, MarketplaceCart, MarketplaceCartItem, MarketplaceWishlist,
+    MarketplaceOrder, OrderItem
 )
 
 router = APIRouter(prefix="/api/v1", tags=["Marketplace"])
@@ -41,6 +42,43 @@ class OrderCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class CartItemPayload(BaseModel):
+    product_id: str
+    quantity: float = Field(default=1, ge=1)
+
+
+def _product_payload(product: Product) -> dict:
+    return {
+        "id": product.id, "product_id": product.product_id, "name": product.name,
+        "description": product.description, "price": product.price,
+        "original_price": product.original_price, "unit": product.unit,
+        "stock_quantity": product.stock_quantity, "min_order_quantity": product.min_order_quantity,
+        "image_url": product.image_url, "images": product.images, "brand": product.brand,
+        "rating": product.rating, "total_reviews": product.total_reviews,
+        "category_id": product.category_id, "seller_id": product.seller_id, "tags": product.tags,
+    }
+
+
+def _cart_for_user(db: Session, user_id: str) -> MarketplaceCart:
+    cart = db.query(MarketplaceCart).filter(MarketplaceCart.user_id == user_id).first()
+    if not cart:
+        cart = MarketplaceCart(user_id=user_id)
+        db.add(cart)
+        db.flush()
+    return cart
+
+
+def _cart_payload(cart: MarketplaceCart) -> dict:
+    items = []
+    for item in cart.items:
+        product = item.product
+        if not product or not product.is_active:
+            continue
+        price = float(product.price or 0)
+        items.append({"id": item.id, "quantity": item.quantity, "subtotal": round(price * item.quantity, 2), "product": _product_payload(product)})
+    return {"items": items, "total": round(sum(i["subtotal"] for i in items), 2), "count": len(items)}
+
+
 @router.get("/products")
 def list_products(
     page: int = Query(1, ge=1),
@@ -49,6 +87,7 @@ def list_products(
     category_id: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
+    in_stock: bool = False,
     sort_by: Optional[str] = Query("created_at", regex="^(price|rating|created_at|name)$"),
     sort_order: Optional[str] = Query("desc", regex="^(asc|desc)$"),
     db: Session = Depends(get_db),
@@ -67,6 +106,8 @@ def list_products(
         q = q.filter(Product.price >= min_price)
     if max_price is not None:
         q = q.filter(Product.price <= max_price)
+    if in_stock:
+        q = q.filter(Product.stock_quantity > 0)
 
     sort_col = getattr(Product, sort_by, Product.created_at)
     if sort_order == "asc":
@@ -85,22 +126,7 @@ def list_products(
             "limit": limit,
             "total_pages": (total + limit - 1) // limit,
             "items": [
-                {
-                    "id": p.id,
-                    "product_id": p.product_id,
-                    "name": p.name,
-                    "description": p.description,
-                    "price": p.price,
-                    "original_price": p.original_price,
-                    "unit": p.unit,
-                    "stock_quantity": p.stock_quantity,
-                    "image_url": p.image_url,
-                    "brand": p.brand,
-                    "rating": p.rating,
-                    "total_reviews": p.total_reviews,
-                    "category_id": p.category_id,
-                    "seller_id": p.seller_id,
-                }
+                _product_payload(p)
                 for p in items
             ],
         },
@@ -142,6 +168,81 @@ def create_product(
             "message": "Product created successfully",
         },
     }
+
+
+@router.get("/cart")
+def get_cart(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return {"status": "success", "data": _cart_payload(_cart_for_user(db, current_user.id))}
+
+
+@router.post("/cart")
+def add_to_cart(payload: CartItemPayload, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    product = db.query(Product).filter((Product.id == payload.product_id) | (Product.product_id == payload.product_id), Product.is_active == True).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    cart = _cart_for_user(db, current_user.id)
+    item = db.query(MarketplaceCartItem).filter(MarketplaceCartItem.cart_id == cart.id, MarketplaceCartItem.product_id == product.id).first()
+    quantity = payload.quantity + (item.quantity if item else 0)
+    if quantity > float(product.stock_quantity or 0):
+        raise HTTPException(status_code=409, detail="Requested quantity is not available")
+    if item:
+        item.quantity = quantity
+    else:
+        db.add(MarketplaceCartItem(cart_id=cart.id, product_id=product.id, quantity=payload.quantity))
+    db.commit()
+    return {"status": "success", "data": _cart_payload(_cart_for_user(db, current_user.id))}
+
+
+@router.patch("/cart/{item_id}")
+def update_cart_item(item_id: str, payload: CartItemPayload, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    cart = _cart_for_user(db, current_user.id)
+    item = db.query(MarketplaceCartItem).filter(MarketplaceCartItem.id == item_id, MarketplaceCartItem.cart_id == cart.id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Cart item not found")
+    if payload.quantity > float(item.product.stock_quantity or 0):
+        raise HTTPException(status_code=409, detail="Requested quantity is not available")
+    item.quantity = payload.quantity
+    db.commit()
+    return {"status": "success", "data": _cart_payload(_cart_for_user(db, current_user.id))}
+
+
+@router.delete("/cart/{item_id}")
+def remove_cart_item(item_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    cart = _cart_for_user(db, current_user.id)
+    item = db.query(MarketplaceCartItem).filter(MarketplaceCartItem.id == item_id, MarketplaceCartItem.cart_id == cart.id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Cart item not found")
+    db.delete(item)
+    db.commit()
+    return {"status": "success", "data": _cart_payload(_cart_for_user(db, current_user.id))}
+
+
+@router.get("/wishlist")
+def get_wishlist(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    rows = db.query(MarketplaceWishlist).filter(MarketplaceWishlist.user_id == current_user.id).order_by(MarketplaceWishlist.created_at.desc()).all()
+    return {"status": "success", "data": {"items": [{"id": row.id, "product": _product_payload(row.product)} for row in rows if row.product and row.product.is_active]}}
+
+
+@router.post("/wishlist/{product_id}", status_code=201)
+def save_wishlist(product_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    product = db.query(Product).filter((Product.id == product_id) | (Product.product_id == product_id), Product.is_active == True).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    saved = db.query(MarketplaceWishlist).filter(MarketplaceWishlist.user_id == current_user.id, MarketplaceWishlist.product_id == product.id).first()
+    if not saved:
+        db.add(MarketplaceWishlist(user_id=current_user.id, product_id=product.id))
+        db.commit()
+    return {"status": "success", "data": {"product_id": product.id}}
+
+
+@router.delete("/wishlist/{product_id}")
+def remove_wishlist(product_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    saved = db.query(MarketplaceWishlist).filter(MarketplaceWishlist.user_id == current_user.id, MarketplaceWishlist.product_id == product_id).first()
+    if not saved:
+        raise HTTPException(status_code=404, detail="Saved product not found")
+    db.delete(saved)
+    db.commit()
+    return {"status": "success"}
 
 
 @router.get("/products/{product_id}")
@@ -223,13 +324,34 @@ def create_order(
     db.add(order)
     db.flush()
 
-    order_items = []
+    # Validate all line items up-front (positive quantity, existing product,
+    # sufficient stock) so no order can oversell or contain phantom items.
+    resolved: List[tuple] = []
     for item in payload.items:
-        product_id = item.product_id
-        quantity = item.quantity
-        product = db.query(Product).filter(Product.product_id == product_id).first()
+        product = db.query(Product).filter(Product.product_id == item.product_id).first()
         if not product:
-            continue
+            db.rollback()
+            raise HTTPException(status_code=404, detail=f"Product not found: {item.product_id}")
+        quantity = item.quantity
+        try:
+            quantity = float(quantity)
+        except (TypeError, ValueError):
+            db.rollback()
+            raise HTTPException(status_code=400, detail="Invalid item quantity")
+        if quantity <= 0:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=f"Quantity must be greater than zero for {product.name}")
+        available = product.stock_quantity if product.stock_quantity is not None else 0
+        if available < quantity:
+            db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail=f"Insufficient stock for {product.name}: requested {quantity}, available {available}",
+            )
+        resolved.append((product, quantity))
+
+    order_items = []
+    for product, quantity in resolved:
         unit_price = product.price
         item_total = unit_price * quantity
         total_amount += item_total
@@ -244,9 +366,7 @@ def create_order(
         )
         db.add(oi)
         order_items.append(oi)
-
-        if product.stock_quantity >= quantity:
-            product.stock_quantity -= quantity
+        product.stock_quantity -= quantity
 
     order.total_amount = total_amount
     db.commit()
@@ -358,12 +478,28 @@ def update_order(
         valid = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]
         if status not in valid:
             raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(valid)}")
-        order.status = status
+        # The buyer may only cancel their own order (e.g. before fulfilment);
+        # fulfilment/delivery transitions are performed by the seller/admin flow.
+        if status == "cancelled" and order.status not in ["delivered", "cancelled"]:
+            order.status = status
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="Buyers may only cancel an order. Other status updates are not permitted.",
+            )
     if payment_status:
         valid_pay = ["pending", "paid", "failed", "refunded"]
         if payment_status not in valid_pay:
             raise HTTPException(status_code=400, detail=f"Invalid payment status. Must be one of: {', '.join(valid_pay)}")
-        order.payment_status = payment_status
+        # Payment status must reflect a legitimate payment flow; a buyer cannot
+        # self-mark an order as paid or refunded without an actual gateway.
+        if payment_status in ("paid", "refunded"):
+            raise HTTPException(
+                status_code=403,
+                detail="Payment confirmation is handled by the payment gateway.",
+            )
+        if payment_status in ("pending", "failed"):
+            order.payment_status = payment_status
     order.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(order)

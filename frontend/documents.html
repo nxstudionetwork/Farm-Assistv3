@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light" data-page="documents">
 <head>
   <meta charset="UTF-8">
@@ -7,262 +7,2097 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    .doc-toolbar { display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
-    .doc-search { flex:1; min-width:200px; position:relative; }
-    .doc-search input { width:100%; padding:10px 14px 10px 38px; border:1px solid var(--border-light); border-radius:var(--radius-sm); font-size:13px; background:white; }
-    .doc-search input:focus { border-color:var(--primary-green); box-shadow:0 0 0 3px rgba(27,94,63,0.08); outline:none; }
-    .doc-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:13px; }
-    .doc-view-toggle { display:flex; gap:4px; }
-    .doc-view-btn { width:36px; height:36px; border:1px solid var(--border-light); background:white; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-muted); transition:all 0.2s; }
-    .doc-view-btn:hover { border-color:var(--primary-green); color:var(--primary-green); }
-    .doc-view-btn.active { background:var(--primary-green); color:white; border-color:var(--primary-green); }
-    .doc-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
-    .doc-list { display:flex; flex-direction:column; gap:8px; }
-    .doc-item { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; text-align:center; }
-    .doc-item:hover { border-color:var(--primary-green); box-shadow:var(--shadow-sm); transform:translateY(-2px); }
-    .doc-item.list-view { flex-direction:row; text-align:left; align-items:center; }
-    .doc-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:10px; }
-    .doc-item.list-view .doc-icon { margin-bottom:0; margin-right:12px; width:40px; height:40px; font-size:18px; }
-    .doc-icon.folder { background:#FFC107; color:#fff; }
-    .doc-icon.pdf { background:#F44336; color:#fff; }
-    .doc-icon.image { background:#4CAF50; color:#fff; }
-    .doc-icon.doc { background:#2196F3; color:#fff; }
-    .doc-icon.other { background:#9E9E9E; color:#fff; }
-    .doc-name { font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
-    .doc-item.list-view .doc-name { flex:1; margin-bottom:0; }
-    .doc-meta { font-size:11px; color:var(--text-muted); }
-    .doc-item.list-view .doc-meta { min-width:120px; }
-    .doc-actions { display:flex; gap:4px; margin-top:8px; }
-    .doc-item.list-view .doc-actions { margin-top:0; }
-    .doc-action-btn { width:28px; height:28px; border:1px solid var(--border-light); background:var(--bg-card-soft); border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px; transition:all 0.2s; }
-    .doc-action-btn:hover { background:var(--primary-green); color:white; border-color:var(--primary-green); }
-    .doc-action-btn.delete:hover { background:var(--danger); border-color:var(--danger); }
-    .folder-section { margin-bottom:20px; }
-    .folder-title { font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
-    .folder-title i { color:var(--primary-green); }
-    .storage-bar { background:var(--bg-card-soft); border-radius:var(--radius-sm); height:8px; overflow:hidden; margin-top:8px; }
-    .storage-fill { background:var(--primary-green); height:100%; transition:width 0.3s; }
-    .storage-info { display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top:4px; }
+    /* ===== TOOLBAR & SEARCH ===== */
+    .doc-toolbar { 
+      display: flex; 
+      gap: 10px; 
+      align-items: center; 
+      margin-bottom: 16px; 
+      flex-wrap: wrap;
+    }
+    
+    .doc-search {
+      flex: 1;
+      min-width: 240px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    
+    .doc-search input {
+      width: 100%;
+      padding: 10px 52px 10px 38px;
+      border: 1px solid var(--border-light); 
+      border-radius: var(--radius-sm); 
+      font-size: 13px; 
+      background: white;
+    }
+    
+    .doc-search input:focus { 
+      border-color: var(--primary-green); 
+      box-shadow: 0 0 0 3px rgba(27, 94, 63, 0.08); 
+      outline: none;
+    }
+    
+    .doc-search > .fa-search {
+      position: absolute; 
+      left: 12px; 
+      top: 50%; 
+      transform: translateY(-50%); 
+      color: var(--text-muted); 
+      font-size: 13px;
+    }
+
+    .doc-search .doc-filter-btn {
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 30px;
+      height: 30px;
+      border: 0;
+      background: transparent;
+    }
+
+    .doc-search .doc-filter-btn:hover,
+    .doc-search .doc-filter-btn.active {
+      background: var(--bg-card-soft);
+      border: 0;
+    }
+
+    /* ===== TOOLBAR BUTTONS ===== */
+    .doc-toolbar-buttons {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .doc-filter-btn {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border-light);
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .doc-filter-btn:hover {
+      border-color: var(--primary-green);
+      color: var(--primary-green);
+    }
+
+    .doc-filter-btn.active {
+      background: var(--primary-green);
+      color: white;
+      border-color: var(--primary-green);
+    }
+
+    .filter-indicator {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: var(--danger);
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      border: 2px solid white;
+    }
+
+    .btn-primary.btn-sm {
+      padding: 9px 14px;
+      font-size: 13px;
+    }
+
+    /* ===== VIEW TOGGLE ===== */
+    .doc-view-toggle { 
+      display: flex; 
+      gap: 4px;
+    }
+    
+    .doc-view-btn { 
+      width: 36px; 
+      height: 36px; 
+      border: 1px solid var(--border-light); 
+      background: white; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      color: var(--text-muted); 
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    
+    .doc-view-btn:hover { 
+      border-color: var(--primary-green); 
+      color: var(--primary-green);
+    }
+    
+    .doc-view-btn.active { 
+      background: var(--primary-green); 
+      color: white; 
+      border-color: var(--primary-green);
+    }
+
+    /* ===== ACTIVE FILTER CHIPS ===== */
+    .filter-chips-container {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .filter-chips-container.empty {
+      display: none;
+    }
+
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--primary-green);
+      color: white;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .filter-chip-remove {
+      cursor: pointer;
+      font-weight: 700;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+
+    .filter-chip-remove:hover {
+      opacity: 1;
+    }
+
+    /* ===== FILTER DRAWER ===== */
+    .filter-drawer-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 999;
+    }
+
+    .filter-drawer-overlay.active {
+      display: block;
+    }
+
+    .filter-drawer {
+      position: fixed;
+      top: 0;
+      right: -100%;
+      width: 100%;
+      max-width: 350px;
+      height: 100vh;
+      background: white;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      transition: right 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .filter-drawer.active {
+      right: 0;
+    }
+
+    /* Mobile: Bottom sheet */
+    @media (max-width: 640px) {
+      .filter-drawer {
+        position: fixed;
+        bottom: -100%;
+        right: auto;
+        top: auto;
+        left: 0;
+        width: 100%;
+        max-width: none;
+        height: auto;
+        max-height: 85vh;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+        transition: bottom 0.3s ease;
+      }
+
+      .filter-drawer.active {
+        bottom: 0;
+        right: auto;
+      }
+    }
+
+    .filter-drawer-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .filter-drawer-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .filter-apply-top {
+      border: 0;
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      background: var(--primary-green);
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .filter-apply-top:hover {
+      opacity: 0.9;
+    }
+
+    .filter-drawer-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .filter-drawer-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 18px;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+
+    .filter-drawer-close:hover {
+      color: var(--text-primary);
+    }
+
+    .filter-drawer-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .filter-drawer-footer {
+      padding: 16px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+      position: sticky;
+      bottom: 0;
+      background: white;
+      z-index: 1;
+    }
+
+    .filter-drawer-footer button {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--border-light);
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-drawer-footer .btn-clear {
+      color: var(--text-muted);
+    }
+
+    .filter-drawer-footer .btn-clear:hover {
+      background: var(--bg-card-soft);
+      color: var(--text-primary);
+    }
+
+    .filter-drawer-footer .btn-apply {
+      background: var(--primary-green);
+      color: white;
+      border-color: var(--primary-green);
+    }
+
+    .filter-drawer-footer .btn-apply:hover {
+      opacity: 0.9;
+    }
+
+    /* ===== FILTER GROUP ===== */
+    .filter-group {
+      margin-bottom: 20px;
+    }
+
+    .filter-group-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .filter-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .filter-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .filter-option:hover {
+      background: var(--bg-card-soft);
+    }
+
+    .filter-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      background: white;
+      flex-shrink: 0;
+    }
+
+    .filter-checkbox:checked {
+      background: var(--primary-green);
+      border-color: var(--primary-green);
+    }
+
+    .filter-checkbox:checked::after {
+      content: '✓';
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .filter-option label {
+      flex: 1;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    /* Radio buttons for date range */
+    .filter-radio {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+      flex-shrink: 0;
+    }
+
+    .filter-radio:checked {
+      background: var(--primary-green);
+      border-color: var(--primary-green);
+    }
+
+    .filter-radio:checked::after {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      background: white;
+      border-radius: 50%;
+      margin: 3px;
+    }
+
+    .filter-option input[type="radio"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+      flex-shrink: 0;
+    }
+
+    .filter-option input[type="radio"]:checked {
+      background: var(--primary-green);
+      border-color: var(--primary-green);
+    }
+
+    /* ===== DOCUMENT GRID & LIST ===== */
+    .doc-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .doc-grid {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+        gap: 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .doc-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+      }
+    }
+    
+    .doc-list { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 8px;
+    }
+    
+    .doc-item { 
+      background: white; 
+      border: 1px solid var(--border-light); 
+      border-radius: var(--radius-md); 
+      padding: 16px; 
+      transition: all 0.2s; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      text-align: center;
+      cursor: pointer;
+      min-width: 0;
+    }
+
+    .doc-item:not(.list-view) .doc-info {
+      width: 100%;
+    }
+
+    .doc-item:not(.list-view) .doc-name {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
+
+    .doc-item:not(.list-view) .doc-meta {
+      overflow-wrap: anywhere;
+    }
+
+    .doc-item:not(.list-view) .doc-more-wrap {
+      align-self: stretch;
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
+    }
+    
+    .doc-item:hover { 
+      border-color: var(--primary-green); 
+      box-shadow: var(--shadow-sm); 
+      transform: translateY(-2px);
+    }
+    
+    .doc-item.list-view { 
+      flex-direction: row; 
+      text-align: left; 
+      align-items: center;
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr) auto;
+      gap: 12px;
+      min-width: 0;
+    }
+    
+    .doc-icon { 
+      width: 48px; 
+      height: 48px; 
+      border-radius: 12px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 22px; 
+      margin-bottom: 10px; 
+      flex-shrink: 0;
+    }
+    
+    .doc-item.list-view .doc-icon { 
+      margin-bottom: 0; 
+      width: 40px; 
+      height: 40px; 
+      font-size: 18px;
+    }
+    
+    .doc-icon.pdf { background: #F44336; color: #fff; }
+    .doc-icon.image { background: #4CAF50; color: #fff; }
+    .doc-icon.doc { background: #2196F3; color: #fff; }
+    .doc-icon.xlsx { background: #2E7D32; color: #fff; }
+    .doc-icon.csv { background: #FF9800; color: #fff; }
+    .doc-icon.ppt { background: #E91E63; color: #fff; }
+    .doc-icon.other { background: #9E9E9E; color: #fff; }
+    
+    .doc-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .doc-item.list-view .doc-info {
+      text-align: left;
+    }
+    
+    .doc-name { 
+      font-size: 13px; 
+      font-weight: 600; 
+      color: var(--text-primary); 
+      margin-bottom: 4px; 
+      overflow: hidden; 
+      text-overflow: ellipsis; 
+      white-space: nowrap; 
+      max-width: 100%;
+    }
+    
+    .doc-item.list-view .doc-name { 
+      margin-bottom: 2px;
+    }
+    
+    .doc-meta { 
+      font-size: 11px; 
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    
+    .doc-actions { 
+      display: flex; 
+      gap: 4px; 
+      margin-top: 8px;
+    }
+    
+    .doc-item.list-view .doc-actions { 
+      margin-top: 0;
+      gap: 8px;
+    }
+
+    .doc-more-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .doc-more-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border-light);
+      background: var(--bg-card-soft);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    .doc-more-btn:hover,
+    .doc-more-btn[aria-expanded="true"] {
+      background: var(--primary-green);
+      color: white;
+      border-color: var(--primary-green);
+    }
+
+    .doc-more-menu {
+      display: none;
+      position: absolute;
+      z-index: 20;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 140px;
+      padding: 5px;
+      background: white;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
+    }
+
+    .doc-more-menu.open { display: block; }
+
+    .doc-more-menu button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border: 0;
+      background: transparent;
+      color: var(--text-primary);
+      padding: 8px 9px;
+      border-radius: 5px;
+      text-align: left;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .doc-more-menu button:hover { background: var(--bg-card-soft); }
+    .doc-more-menu button.delete { color: var(--danger); }
+    
+    .doc-action-btn { 
+      width: 28px; 
+      height: 28px; 
+      border: 1px solid var(--border-light); 
+      background: var(--bg-card-soft); 
+      border-radius: 6px; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      color: var(--text-muted); 
+      font-size: 12px; 
+      transition: all 0.2s;
+    }
+    
+    .doc-action-btn:hover { 
+      background: var(--primary-green); 
+      color: white; 
+      border-color: var(--primary-green);
+    }
+    
+    .doc-action-btn.delete:hover { 
+      background: var(--danger); 
+      border-color: var(--danger);
+    }
+
+    /* ===== CATEGORY TABS ===== */
+    .category-tabs { 
+      display: flex; 
+      gap: 6px; 
+      margin-bottom: 14px; 
+      flex-wrap: wrap;
+      max-height: 60px;
+      overflow-y: auto;
+    }
+    
+    .category-tab { 
+      padding: 6px 14px; 
+      border-radius: 20px; 
+      font-size: 12px; 
+      font-weight: 600; 
+      border: 1px solid var(--border-light); 
+      background: white; 
+      color: var(--text-muted); 
+      cursor: pointer; 
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    
+    .category-tab:hover { 
+      border-color: var(--primary-green); 
+      color: var(--primary-green);
+    }
+    
+    .category-tab.active { 
+      background: var(--primary-green); 
+      color: white; 
+      border-color: var(--primary-green);
+    }
+
+    /* ===== STATES ===== */
+    .empty-state { 
+      text-align: center; 
+      padding: 48px 20px; 
+      color: var(--text-muted);
+    }
+    
+    .empty-state i { 
+      font-size: 48px; 
+      margin-bottom: 12px; 
+      display: block; 
+      opacity: 0.4;
+    }
+    
+    .empty-state p { 
+      font-size: 13px; 
+      margin: 0 0 12px 0;
+    }
+
+    .empty-state .btn-primary {
+      margin-top: 12px;
+    }
+
+    .loading-spinner { 
+      text-align: center; 
+      padding: 40px; 
+      color: var(--text-muted); 
+      font-size: 13px;
+    }
+    
+    .loading-spinner i { 
+      animation: spin 1s linear infinite; 
+      margin-right: 8px;
+    }
+    
+    @keyframes spin { 
+      from { transform: rotate(0deg); } 
+      to { transform: rotate(360deg); }
+    }
+
+    /* ===== STORAGE SECTION ===== */
+    .storage-section {
+      background: #fff;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .storage-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .storage-title {
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .storage-percent {
+      color: var(--primary-green);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .storage-bar {
+      display: flex;
+      gap: 3px;
+      background: #e8ece9;
+      border-radius: 6px;
+      height: 12px;
+      overflow: hidden;
+      margin-top: 12px;
+      padding: 2px;
+    }
+
+    .storage-fill {
+      background: var(--primary-green);
+      border-radius: 3px;
+      height: 100%;
+      min-width: 0;
+      transition: width 0.4s ease, background-color 0.4s ease;
+    }
+
+    .storage-fill.warning { background: #d97706; }
+    .storage-fill.danger { background: var(--danger); }
+
+    .storage-info {
+      display: flex; 
+      justify-content: space-between; 
+      gap: 12px;
+      font-size: 11px;
+      color: var(--text-muted); 
+      margin-top: 8px;
+    }
+
+    .storage-info strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    /* ===== RESPONSIVE TOOLBAR ===== */
+    @media (max-width: 640px) {
+      .doc-toolbar {
+        flex-wrap: wrap;
+      }
+
+      .doc-search {
+        order: 1;
+        flex-basis: 100%;
+        min-width: unset;
+      }
+
+      .doc-toolbar-buttons {
+        order: 2;
+        width: 100%;
+      }
+
+      .doc-view-toggle {
+        flex: 1;
+      }
+    }
+
+    /* ===== MODAL ===== */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 20px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card-soft);
+      color: var(--text-primary);
+      border: 1px solid var(--border-light);
+      padding: 9px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: var(--border-light);
+    }
+
+    /* ===== VIEWER MODAL ===== */
+    .viewer-box {
+      max-width: 860px;
+      width: 94%;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .viewer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-light);
+      flex-shrink: 0;
+    }
+
+    .viewer-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .viewer-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .viewer-body {
+      flex: 1;
+      overflow: auto;
+      background: #f5f6f5;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .viewer-body iframe {
+      width: 100%;
+      height: 100%;
+      min-height: 500px;
+      border: none;
+      background: #fff;
+    }
+
+    .viewer-body img {
+      max-width: 100%;
+      max-height: 80vh;
+      display: block;
+    }
+
+    .viewer-body pre {
+      width: 100%;
+      margin: 0;
+      padding: 18px;
+      background: #fff;
+      font-family: Consolas, Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      word-break: break-word;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
 
-  <main class="page-container">
+<main class="page-container">
 
-    <section class="hero-dashboard" style="background:var(--gradient-primary); margin-bottom:20px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div>
-          <h2><i class="fas fa-cloud"></i> Document Vault</h2>
-          <p style="font-size:13px; color:rgba(255,255,255,0.9); margin-top:5px;">
-            Your cloud storage for farm documents
-          </p>
-        </div>
-        <div style="background:rgba(255,255,255,0.15); padding:12px 16px; border-radius:12px;">
-          <div style="font-size:11px; color:rgba(255,255,255,0.8);">Storage Used</div>
-          <div style="font-size:18px; font-weight:700; color:white;">2.4 GB / 10 GB</div>
-          <div class="storage-bar" style="background:rgba(255,255,255,0.3);">
-            <div class="storage-fill" style="width:24%; background:white;"></div>
-          </div>
-        </div>
+  <!-- HERO SECTION -->
+  <section class="hero-dashboard" style="background: var(--gradient-primary); margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <h2 style="color: white; margin: 0 0 8px 0;"><i class="fas fa-cloud"></i> Document Vault</h2>
+        <p style="font-size: 13px; color: rgba(255, 255, 255, 0.9); margin: 0;">
+          Securely store and manage your farm documents
+        </p>
       </div>
-    </section>
+      <div style="background: rgba(255, 255, 255, 0.15); padding: 12px 16px; border-radius: 12px;">
+        <div style="font-size: 11px; color: rgba(255, 255, 255, 0.8);">Documents</div>
+        <div style="font-size: 18px; font-weight: 700; color: white;" id="storage-count">0 files</div>
+      </div>
+    </div>
+  </section>
 
-    <div class="doc-toolbar">
-      <div class="doc-search">
-        <i class="fas fa-search"></i>
-        <input type="text" id="docSearch" placeholder="Search files and folders..." oninput="filterDocs()">
-      </div>
-      <button class="btn-primary btn-sm" onclick="document.getElementById('file-input').click()">
+  <!-- STORAGE WIDGET -->
+  <div class="storage-section" id="storage-widget">
+    <div class="storage-header">
+      <div class="storage-title"><i class="fas fa-hard-drive"></i> Storage used</div>
+      <div class="storage-percent" id="storage-percent">0%</div>
+    </div>
+    <div class="storage-bar">
+      <div class="storage-fill" id="storage-fill" style="width: 0%;"></div>
+    </div>
+    <div class="storage-info">
+      <span id="storage-used"><strong>0 MB</strong> used</span>
+      <span id="storage-limit">of 10 GB</span>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="doc-toolbar">
+    <div class="doc-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="docSearch" placeholder="Search documents...">
+      <button class="doc-filter-btn" id="filter-btn" title="Filters">
+        <i class="fas fa-filter"></i>
+        <span class="filter-indicator" id="filter-indicator" style="display: none;">0</span>
+      </button>
+    </div>
+    <div class="doc-toolbar-buttons">
+      <button class="btn-primary btn-sm" id="upload-btn">
         <i class="fas fa-upload"></i> Upload
       </button>
       <div class="doc-view-toggle">
-        <button class="doc-view-btn active" id="gridViewBtn" onclick="setView('grid')">
-          <i class="fas fa-th-large"></i>
-        </button>
-        <button class="doc-view-btn" id="listViewBtn" onclick="setView('list')">
-          <i class="fas fa-list"></i>
-        </button>
+        <button class="doc-view-btn active" id="gridViewBtn" title="Grid view"><i class="fas fa-th-large"></i></button>
+        <button class="doc-view-btn" id="listViewBtn" title="List view"><i class="fas fa-list"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILE INPUT (HIDDEN) -->
+  <input type="file" id="file-input" style="display: none;">
+
+  <!-- DOCUMENTS CONTAINER -->
+  <div id="files-container">
+    <div class="loading-spinner"><i class="fas fa-spinner"></i> Loading documents...</div>
+  </div>
+
+</main>
+
+<!-- FILTER DRAWER OVERLAY -->
+<div class="filter-drawer-overlay" id="filter-overlay"></div>
+
+<!-- FILTER DRAWER -->
+<div class="filter-drawer" id="filter-drawer">
+  <div class="filter-drawer-header">
+    <h3 class="filter-drawer-title">Filters</h3>
+    <div class="filter-drawer-header-actions">
+      <button class="filter-apply-top" id="filter-apply-top-btn" type="button"><i class="fas fa-check"></i> Apply Filters</button>
+      <button class="filter-drawer-close" id="filter-close-btn" type="button" aria-label="Close filters"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+
+  <div class="filter-drawer-content" id="filter-drawer-content">
+    <!-- Document Type -->
+    <div class="filter-group">
+      <div class="filter-group-title">Document Type</div>
+      <div class="filter-options" id="filter-types"></div>
+    </div>
+
+    <!-- Date Range -->
+    <div class="filter-group">
+      <div class="filter-group-title">Date Range</div>
+      <div class="filter-options" id="filter-dates">
+        <div class="filter-option">
+          <input type="radio" name="date_range" value="all" id="date-all" class="filter-radio" checked>
+          <label for="date-all">All</label>
+        </div>
+        <div class="filter-option">
+          <input type="radio" name="date_range" value="today" id="date-today" class="filter-radio">
+          <label for="date-today">Today</label>
+        </div>
+        <div class="filter-option">
+          <input type="radio" name="date_range" value="this_week" id="date-week" class="filter-radio">
+          <label for="date-week">This Week</label>
+        </div>
+        <div class="filter-option">
+          <input type="radio" name="date_range" value="this_month" id="date-month" class="filter-radio">
+          <label for="date-month">This Month</label>
+        </div>
+        <div class="filter-option">
+          <input type="radio" name="date_range" value="this_year" id="date-year" class="filter-radio">
+          <label for="date-year">This Year</label>
+        </div>
       </div>
     </div>
 
-    <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)" multiple>
-
-    <!-- Folders Section -->
-    <div class="folder-section" id="folders-section">
-      <div class="folder-title"><i class="fas fa-folder"></i> Folders</div>
-      <div class="doc-grid" id="folders-grid"></div>
+    <!-- Status (if applicable) -->
+    <div class="filter-group" id="status-filter-group" style="display: none;">
+      <div class="filter-group-title">Status</div>
+      <div class="filter-options" id="filter-statuses"></div>
     </div>
 
-    <!-- Files Section -->
-    <div class="folder-section">
-      <div class="folder-title"><i class="fas fa-file"></i> Files</div>
-      <div class="doc-grid" id="files-grid"></div>
+    <!-- Sort Options -->
+    <div class="filter-group">
+      <div class="filter-group-title">Sort By</div>
+      <div class="filter-options" id="filter-sort">
+        <div class="filter-option">
+          <input type="radio" name="sort_by" value="newest" id="sort-newest" class="filter-radio" checked>
+          <label for="sort-newest">Newest First</label>
+        </div>
+        <div class="filter-option">
+          <input type="radio" name="sort_by" value="oldest" id="sort-oldest" class="filter-radio">
+          <label for="sort-oldest">Oldest First</label>
+        </div>
+        <div class="filter-option">
+          <input type="radio" name="sort_by" value="name_asc" id="sort-name-asc" class="filter-radio">
+          <label for="sort-name-asc">Name (A-Z)</label>
+        </div>
+        <div class="filter-option">
+          <input type="radio" name="sort_by" value="name_desc" id="sort-name-desc" class="filter-radio">
+          <label for="sort-name-desc">Name (Z-A)</label>
+        </div>
+        <div class="filter-option">
+          <input type="radio" name="sort_by" value="updated" id="sort-updated" class="filter-radio">
+          <label for="sort-updated">Recently Updated</label>
+        </div>
+      </div>
     </div>
+  </div>
 
-  </main>
+  <div class="filter-drawer-footer">
+    <button class="btn-clear" id="filter-clear-btn" type="button">Clear All</button>
+    <button class="btn-apply" id="filter-apply-btn" type="button"><i class="fas fa-check"></i> Apply Filters</button>
+  </div>
+</div>
 
-  <script src="js/database.js"></script>
-  <script src="js/services.js"></script>
-  <script src="js/userStore.js"></script>
-  <script src="assets/js/navigation.js"></script>
-  <script src="assets/js/app.js"></script>
-  <script src="js/script.js"></script>
-  <script>
-    var currentView = 'grid';
-    var folders = [
-      { id: 1, name: 'Land Records', icon: 'fa-folder', color: '#FFC107', count: 8 },
-      { id: 2, name: 'Insurance', icon: 'fa-folder', color: '#FFC107', count: 5 },
-      { id: 3, name: 'Invoices', icon: 'fa-folder', color: '#FFC107', count: 12 },
-      { id: 4, name: 'Government Docs', icon: 'fa-folder', color: '#FFC107', count: 6 },
-      { id: 5, name: 'Crop Records', icon: 'fa-folder', color: '#FFC107', count: 4 }
-    ];
+<!-- DELETE CONFIRMATION MODAL -->
+<div class="modal-backdrop" id="delete-modal">
+  <div class="modal-box">
+    <h3 style="margin: 0 0 12px; font-size: 15px; font-weight: 700;">
+      <i class="fas fa-trash" style="color: var(--danger);"></i> Delete Document
+    </h3>
+    <p id="delete-msg" style="font-size: 13px; color: var(--text-muted); margin: 0;"></p>
+    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
+      <button class="btn-secondary" id="delete-cancel-btn">Cancel</button>
+      <button class="btn-primary" id="delete-confirm-btn" style="background: var(--danger); border-color: var(--danger);">Delete</button>
+    </div>
+  </div>
+</div>
 
-    var files = [
-      { id: 1, name: '7_12_Extract.pdf', type: 'pdf', size: '2.4 MB', date: 'Jan 15, 2026', folder: 'Land Records' },
-      { id: 2, name: 'Land_Tax_Receipt.pdf', type: 'pdf', size: '1.1 MB', date: 'Jan 10, 2026', folder: 'Land Records' },
-      { id: 3, name: 'Crop_Insurance_Policy.pdf', type: 'pdf', size: '3.2 MB', date: 'Dec 20, 2025', folder: 'Insurance' },
-      { id: 4, name: 'Fertilizer_Invoice.pdf', type: 'pdf', size: '856 KB', date: 'Feb 5, 2026', folder: 'Invoices' },
-      { id: 5, name: 'Seeds_Purchase.pdf', type: 'pdf', size: '1.5 MB', date: 'Feb 1, 2026', folder: 'Invoices' },
-      { id: 6, name: 'PM_Kisan_Certificate.pdf', type: 'pdf', size: '2.1 MB', date: 'Nov 15, 2025', folder: 'Government Docs' },
-      { id: 7, name: 'Farm_Map.jpg', type: 'image', size: '4.5 MB', date: 'Jan 5, 2026', folder: 'Land Records' },
-      { id: 8, name: 'Soil_Test_Report.pdf', type: 'pdf', size: '1.8 MB', date: 'Jan 20, 2026', folder: 'Crop Records' }
-    ];
+<!-- UPLOAD MODAL -->
+<div class="modal-backdrop" id="upload-modal">
+  <div class="modal-box" style="max-width: 460px;">
+    <h3 style="margin: 0 0 14px; font-size: 15px; font-weight: 700;">
+      <i class="fas fa-cloud-upload-alt" style="color: var(--primary-green);"></i> Upload Document
+    </h3>
+    <div id="upload-dropzone" style="border: 2px dashed var(--border-light); border-radius: 12px; padding: 28px 16px; text-align: center; cursor: pointer; background: var(--bg-card-soft); margin-bottom: 14px;">
+      <div style="font-size: 32px; color: var(--primary-green); margin-bottom: 8px;"><i class="fas fa-file-arrow-up"></i></div>
+      <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Click to choose a file</div>
+      <div id="upload-file-info" style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">PDF, DOC, DOCX, XLS, XLSX, CSV, JPG, PNG, GIF, WEBP, TXT (max 25 MB)</div>
+    </div>
+    <div style="margin-bottom: 12px;">
+      <label style="font-size: 12px; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 6px;">Document Type</label>
+      <select id="upload-category" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 13px; background: #fff;">
+        <option value="Other">Other</option>
+        <option value="Land Documents">Land Documents</option>
+        <option value="Identity Documents">Identity Documents</option>
+        <option value="Crop Documents">Crop Documents</option>
+        <option value="Farm Documents">Farm Documents</option>
+        <option value="Government Documents">Government Documents</option>
+        <option value="Insurance Documents">Insurance Documents</option>
+        <option value="Loan/Finance Documents">Loan/Finance Documents</option>
+        <option value="Receipts">Receipts</option>
+        <option value="Reports">Reports</option>
+      </select>
+    </div>
+    <div style="margin: 0 0 8px 0;">
+      <input id="upload-description" placeholder="Add a description (optional)" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 13px;">
+    </div>
+    <div style="display: none;" id="upload-progress-wrap">
+      <div class="storage-bar" style="height: 8px; margin: 10px 0 4px;">
+        <div class="storage-fill" id="upload-progress-bar" style="width: 0%;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+        <span id="upload-progress-label">0%</span>
+        <span id="upload-progress-file"></span>
+      </div>
+    </div>
+    <div id="upload-error" style="display:none; color: var(--danger); font-size: 12px; margin: 6px 0 0;"></div>
+    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
+      <button class="btn-secondary" id="upload-cancel-btn">Cancel</button>
+      <button class="btn-primary" id="upload-confirm-btn"><i class="fas fa-upload"></i> Upload</button>
+    </div>
+  </div>
+</div>
 
-    function getFileIcon(type) {
-      var icons = {
-        'pdf': { icon: 'fa-file-pdf', class: 'pdf' },
-        'image': { icon: 'fa-file-image', class: 'image' },
-        'doc': { icon: 'fa-file-word', class: 'doc' },
-        'docx': { icon: 'fa-file-word', class: 'doc' },
-        'xls': { icon: 'fa-file-excel', class: 'doc' },
-        'xlsx': { icon: 'fa-file-excel', class: 'doc' }
-      };
-      return icons[type] || { icon: 'fa-file', class: 'other' };
+<!-- RENAME MODAL -->
+<div class="modal-backdrop" id="rename-modal">
+  <div class="modal-box">
+    <h3 style="margin: 0 0 12px; font-size: 15px; font-weight: 700;">
+      <i class="fas fa-i-cursor" style="color: var(--primary-green);"></i> Rename Document
+    </h3>
+    <input id="rename-input" placeholder="Enter a new name" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 13px;">
+    <div id="rename-error" style="display:none; color: var(--danger); font-size: 12px; margin-top: 8px;"></div>
+    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
+      <button class="btn-secondary" id="rename-cancel-btn">Cancel</button>
+      <button class="btn-primary" id="rename-confirm-btn">Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEWER MODAL -->
+<div class="modal-backdrop" id="viewer-modal">
+  <div class="modal-box viewer-box">
+    <div class="viewer-header">
+      <div class="viewer-title" id="viewer-title">Document</div>
+      <div class="viewer-actions">
+        <button class="doc-action-btn" id="viewer-rename-btn" title="Rename"><i class="fas fa-i-cursor"></i></button>
+        <button class="doc-action-btn" id="viewer-download-btn" title="Download"><i class="fas fa-download"></i></button>
+        <button class="doc-action-btn" id="viewer-close-btn" title="Close"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+    <div class="viewer-body" id="viewer-body">
+      <div class="loading-spinner"><i class="fas fa-spinner"></i> Loading...</div>
+    </div>
+  </div>
+</div>
+
+<script src="js/database.js"></script>
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="js/script.js"></script>
+
+<script>
+(function() {
+  'use strict';
+
+  // ===== STATE =====
+  var currentView = 'grid';
+  var allDocs = [];
+  var filterOptions = {};
+  var pendingDeleteId = null;
+  var pendingRenameId = null;
+  var viewerDoc = null;
+  var viewerBlobUrl = null;
+  var pendingUploadFile = null;
+  var uploadXhr = null;
+
+  // Debounce helpers for search
+  var searchTimer = null;
+
+  // Filter state
+  var activeFilters = {
+    doc_type: [],
+    date_range: 'all',
+    status: [],
+    sort_by: 'newest',
+    search: ''
+  };
+  var pendingFilters = cloneFilters(activeFilters);
+
+  const CATEGORIES = ['All', 'Land Documents', 'Identity Documents', 'Crop Documents', 
+                       'Farm Documents', 'Government Documents', 'Insurance Documents', 
+                       'Loan/Finance Documents', 'Receipts', 'Reports', 'Other'];
+  var categoryCounts = {};
+  CATEGORIES.forEach(function(c) { categoryCounts[c] = 0; });
+
+  // ===== HELPER FUNCTIONS =====
+  function hasApi() {
+    return window.API && window.API.Documents && localStorage.getItem('fa-auth-token');
+  }
+
+  function getBaseUrl() {
+    if (window.API && API.config && API.config.BASE_URL) return API.config.BASE_URL;
+    if (window._API_BASE_URL) return window._API_BASE_URL;
+    var meta = document.querySelector('meta[name="api-base-url"], meta[name="api-base"]');
+    if (meta && meta.content) return meta.content;
+    var origin = window.location.origin || '';
+    if (!origin || origin === 'null' || origin.indexOf('file:') === 0) {
+      origin = 'http://localhost:8000';
     }
+    return origin + '/api/v1';
+  }
 
-    function setView(view) {
-      currentView = view;
-      document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
-      document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
-      renderFolders();
-      renderFiles();
+  function showToast(msg, type) {
+    if (window.showToast) window.showToast(msg, type);
+  }
+
+  function getIconInfo(type) {
+    if (!type) return { icon: 'fa-file', cls: 'other' };
+    var t = type.toLowerCase();
+    if (t === 'pdf') return { icon: 'fa-file-pdf', cls: 'pdf' };
+    if (t === 'jpg' || t === 'jpeg' || t === 'png' || t === 'gif' || t === 'webp') return { icon: 'fa-file-image', cls: 'image' };
+    if (t === 'doc' || t === 'docx') return { icon: 'fa-file-word', cls: 'doc' };
+    if (t === 'xls' || t === 'xlsx') return { icon: 'fa-file-excel', cls: 'xlsx' };
+    if (t === 'csv') return { icon: 'fa-file-csv', cls: 'csv' };
+    if (t === 'ppt' || t === 'pptx') return { icon: 'fa-file-powerpoint', cls: 'ppt' };
+    return { icon: 'fa-file', cls: 'other' };
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  }
+
+  function formatSize(bytes) {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ===== FILTER MANAGEMENT =====
+  function cloneFilters(filters) {
+    return {
+      doc_type: filters.doc_type.slice(),
+      date_range: filters.date_range,
+      status: filters.status.slice(),
+      sort_by: filters.sort_by,
+      search: filters.search
+    };
+  }
+
+  function resetPendingFilters() {
+    pendingFilters = {
+      doc_type: [],
+      date_range: 'all',
+      status: [],
+      sort_by: 'newest',
+      search: activeFilters.search
+    };
+  }
+
+  function syncFilterForm() {
+    document.getElementById('filter-types').querySelectorAll('input[type="radio"]').forEach(function(radio) {
+      radio.checked = pendingFilters.doc_type.length === 0 ? radio.value === 'All' : radio.value === pendingFilters.doc_type[0];
+    });
+    document.querySelectorAll('input[name="date_range"]').forEach(function(radio) {
+      radio.checked = radio.value === pendingFilters.date_range;
+    });
+    document.getElementById('filter-statuses').querySelectorAll('input[type="radio"]').forEach(function(radio) {
+      radio.checked = pendingFilters.status.indexOf(radio.value) !== -1;
+    });
+    document.querySelectorAll('input[name="sort_by"]').forEach(function(radio) {
+      radio.checked = radio.value === pendingFilters.sort_by;
+    });
+  }
+
+  function getActiveFilterCount() {
+    var count = 0;
+    if (activeFilters.doc_type.length > 0) count += activeFilters.doc_type.length;
+    if (activeFilters.date_range !== 'all') count++;
+    if (activeFilters.status.length > 0) count += activeFilters.status.length;
+    return count;
+  }
+
+  function updateFilterIndicator() {
+    var count = getActiveFilterCount();
+    var indicator = document.getElementById('filter-indicator');
+    if (count > 0) {
+      indicator.textContent = count;
+      indicator.style.display = 'flex';
+      document.getElementById('filter-btn').classList.add('active');
+    } else {
+      indicator.style.display = 'none';
+      document.getElementById('filter-btn').classList.remove('active');
     }
+  }
 
-    function renderFolders() {
-      var container = document.getElementById('folders-grid');
-      if (!container) return;
-      
-      container.className = currentView === 'grid' ? 'doc-grid' : 'doc-list';
-      var html = '';
-      
-      folders.forEach(function(folder) {
-        var itemClass = currentView === 'grid' ? 'doc-item' : 'doc-item list-view';
-        html += '<div class="' + itemClass + '" onclick="openFolder(' + folder.id + ')">' +
-          '<div class="doc-icon folder"><i class="fas ' + folder.icon + '"></i></div>' +
-          '<div class="doc-name">' + folder.name + '</div>' +
-          '<div class="doc-meta">' + folder.count + ' items</div>' +
-          '</div>';
+  function buildFilterChips() {
+    return;
+  }
+
+  // ===== LOAD FILTER OPTIONS =====
+  function loadFilterOptions() {
+    var renderTypes = function(types) {
+      var html = '<div class="filter-option">' +
+        '<input type="radio" name="document_type" value="All" id="type-all" class="filter-radio" checked>' +
+        '<label for="type-all">All</label>' +
+        '</div>';
+      types.forEach(function(type) {
+      html += '<div class="filter-option">' +
+        '<input type="radio" name="document_type" id="type-' + escapeHtml(type) + '" value="' + escapeHtml(type) + '" class="filter-radio">' +
+        '<label for="type-' + escapeHtml(type) + '">' + escapeHtml(type) + '</label>' +
+        '</div>';
       });
-      
-      container.innerHTML = html;
+      document.getElementById('filter-types').innerHTML = html;
+    };
+
+    var fallbackTypes = ['Land Documents', 'Identity Documents', 'Crop Documents',
+      'Farm Documents', 'Government Documents', 'Insurance Documents',
+      'Loan/Finance Documents', 'Receipts', 'Reports', 'Other'];
+    renderTypes(fallbackTypes);
+
+    if (hasApi()) {
+      API.Documents.getFilterOptions().then(function(options) {
+        if (options && Array.isArray(options.document_types) && options.document_types.length) {
+          renderTypes(options.document_types);
+        }
+        if (options && Array.isArray(options.statuses) && options.statuses.length) {
+          var statusGroup = document.getElementById('status-filter-group');
+          var statusHtml = '';
+          options.statuses.forEach(function(status) {
+            var statusId = 'status-' + String(status).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            statusHtml += '<div class="filter-option"><input type="radio" name="document_status" id="' + statusId + '" value="' + escapeHtml(status) + '" class="filter-radio">' +
+              '<label for="' + statusId + '">' + escapeHtml(status) + '</label></div>';
+          });
+          document.getElementById('filter-statuses').innerHTML = statusHtml;
+          statusGroup.style.display = '';
+          document.getElementById('filter-statuses').querySelectorAll('input').forEach(function(input) {
+            input.addEventListener('change', function() {
+              pendingFilters.status = this.checked ? [this.value] : [];
+            });
+          });
+        }
+        syncFilterForm();
+      }).catch(function() {
+        // The fallback options keep the drawer usable if the options request fails.
+      });
     }
 
-    function renderFiles() {
-      var container = document.getElementById('files-grid');
-      if (!container) return;
-      
-      var searchTerm = (document.getElementById('docSearch').value || '').toLowerCase();
-      var filtered = files.filter(function(f) {
-        return f.name.toLowerCase().indexOf(searchTerm) !== -1 || f.folder.toLowerCase().indexOf(searchTerm) !== -1;
+    document.getElementById('filter-types').addEventListener('change', function(event) {
+      if (event.target.matches('input[type="radio"]')) {
+        pendingFilters.doc_type = event.target.value === 'All' ? [] : [event.target.value];
+      }
+    });
+    syncFilterForm();
+  }
+
+  // ===== LOAD DOCUMENTS =====
+  function loadDocs() {
+    if (!hasApi()) {
+      document.getElementById('files-container').innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><p>Please log in to access documents</p></div>';
+      return;
+    }
+
+    document.getElementById('files-container').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i> Loading documents...</div>';
+
+    // Build query params
+    var params = {};
+    if (activeFilters.search) params.search = activeFilters.search;
+    if (activeFilters.doc_type.length > 0) params.doc_type = activeFilters.doc_type[0];
+    if (activeFilters.date_range !== 'all') params.date_range = activeFilters.date_range;
+    if (activeFilters.status.length > 0) params.status = activeFilters.status[0];
+    params.sort_by = activeFilters.sort_by;
+
+    Promise.all([
+      API.Documents.list(params),
+      API.Documents.storageSummary().catch(function() { return null; })
+    ]).then(function(results) {
+      var resp = results[0];
+      var storage = results[1] || {};
+      allDocs = resp.items || [];
+
+      // Recalculate category counts
+      CATEGORIES.forEach(function(c) { categoryCounts[c] = 0; });
+      allDocs.forEach(function(d) {
+        var cat = d.document_category || 'Other';
+        if (categoryCounts[cat] !== undefined) {
+          categoryCounts[cat]++;
+        } else {
+          categoryCounts['Other']++;
+        }
       });
-      
-      container.className = currentView === 'grid' ? 'doc-grid' : 'doc-list';
-      var html = '';
-      
-      if (filtered.length === 0) {
-        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-muted);font-size:13px;">No files found</div>';
+      categoryCounts['All'] = allDocs.length;
+
+      updateStorageWidget(storage.total_size_mb || resp.total_size_mb || 0, storage.limit_mb || 10240);
+      renderDocs();
+    }).catch(function(err) {
+      console.error('Error loading documents:', err);
+      document.getElementById('files-container').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Unable to load documents</h3><p>Something went wrong while loading your documents.</p><button class="btn-primary" id="retry-load-documents">Retry</button></div>';
+      document.getElementById('retry-load-documents').addEventListener('click', loadDocs);
+    });
+  }
+
+  function formatStorage(mb) {
+    if (mb >= 1024) return (mb / 1024).toFixed(2).replace(/\.00$/, '') + ' GB';
+    if (mb > 0 && mb < 1) return (mb * 1024).toFixed(0) + ' KB';
+    return mb.toFixed(1) + ' MB';
+  }
+
+  function updateStorageWidget(mb, limitMb) {
+    var safeUsed = Math.max(0, Number(mb) || 0);
+    var safeLimit = Math.max(1, Number(limitMb) || 10240);
+    var rawPct = (safeUsed / safeLimit) * 100;
+    var pct = Math.min(rawPct, 100);
+    var fill = document.getElementById('storage-fill');
+    fill.style.width = pct.toFixed(1) + '%';
+    fill.classList.toggle('warning', rawPct >= 75 && rawPct < 90);
+    fill.classList.toggle('danger', rawPct >= 90);
+    document.getElementById('storage-used').innerHTML = '<strong>' + formatStorage(safeUsed) + '</strong> used';
+    document.getElementById('storage-limit').textContent = 'of ' + formatStorage(safeLimit);
+    document.getElementById('storage-percent').textContent = rawPct < 0.1 && safeUsed > 0 ? '<0.1%' : Math.round(rawPct) + '%';
+    document.getElementById('storage-count').textContent = allDocs.length + ' file' + (allDocs.length !== 1 ? 's' : '');
+  }
+
+  // ===== RENDER DOCUMENTS =====
+  function renderDocs() {
+    var container = document.getElementById('files-container');
+    var filtered = allDocs.filter(function(doc) {
+      var category = String(doc.document_category || '');
+      var status = String(doc.status || '');
+      var search = String(activeFilters.search || '').trim().toLowerCase();
+      var name = String(doc.document_name || '').toLowerCase();
+      var matchesType = activeFilters.doc_type.length === 0 || activeFilters.doc_type.indexOf(category) !== -1;
+      var matchesStatus = activeFilters.status.length === 0 || activeFilters.status.indexOf(status) !== -1;
+      var matchesSearch = !search || name.indexOf(search) !== -1 || category.toLowerCase().indexOf(search) !== -1;
+      var matchesDate = true;
+
+      if (activeFilters.date_range !== 'all' && doc.created_at) {
+        var createdAt = new Date(doc.created_at);
+        var now = new Date();
+        var start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (activeFilters.date_range === 'this_week') {
+          start.setDate(start.getDate() - start.getDay());
+        } else if (activeFilters.date_range === 'this_month') {
+          start = new Date(now.getFullYear(), now.getMonth(), 1);
+        } else if (activeFilters.date_range === 'this_year') {
+          start = new Date(now.getFullYear(), 0, 1);
+        }
+        matchesDate = !isNaN(createdAt.getTime()) && createdAt >= start;
+      }
+
+      return matchesType && matchesStatus && matchesSearch && matchesDate;
+    });
+
+    filtered.sort(function(a, b) {
+      if (activeFilters.sort_by === 'name_asc' || activeFilters.sort_by === 'name_desc') {
+        var nameCompare = String(a.document_name || '').localeCompare(String(b.document_name || ''));
+        return activeFilters.sort_by === 'name_asc' ? nameCompare : -nameCompare;
+      }
+      var aDate = new Date(a.updated_at || a.created_at || 0).getTime();
+      var bDate = new Date(b.updated_at || b.created_at || 0).getTime();
+      return activeFilters.sort_by === 'oldest' ? aDate - bDate : bDate - aDate;
+    });
+
+    // Handle empty states
+    if (allDocs.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><p>No documents yet. Upload your first document to get started.</p><button class="btn-primary" id="upload-from-empty">Upload Document</button></div>';
+      document.getElementById('upload-from-empty').addEventListener('click', function() {
+        openUploadModal();
+      });
+      return;
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>No documents match your filters.</p></div>';
+      return;
+    }
+
+    var isGrid = currentView === 'grid';
+    container.className = isGrid ? 'doc-grid' : 'doc-list';
+    var html = '';
+
+    filtered.forEach(function(d) {
+      var iconInfo = getIconInfo(d.file_type);
+      var itemClass = isGrid ? 'doc-item' : 'doc-item list-view';
+      var size = d.file_size_mb > 0 ? d.file_size_mb + ' MB' : formatSize(d.file_size_bytes || 0);
+      var date = formatDate(d.created_at);
+      var name = escapeHtml(d.document_name);
+      var cat = escapeHtml(d.document_category || '');
+
+      html += '<div class="' + itemClass + '" data-id="' + escapeHtml(d.id) + '" data-name="' + name + '" data-type="' + escapeHtml(d.file_type || '') + '">' +
+        '<div class="doc-icon ' + iconInfo.cls + '"><i class="fas ' + iconInfo.icon + '"></i></div>' +
+        '<div class="doc-info">' +
+        '<div class="doc-name" title="' + name + '">' + name + '</div>' +
+        '<div class="doc-meta">' + cat + (size ? ' &bull; ' + size : '') + (date ? ' &bull; ' + date : '') + '</div>' +
+        '</div>' +
+        '<div class="doc-more-wrap">' +
+        '<button class="doc-more-btn" data-id="' + escapeHtml(d.id) + '" aria-expanded="false" aria-haspopup="menu" title="More actions"><i class="fas fa-ellipsis-vertical"></i></button>' +
+        '<div class="doc-more-menu" role="menu">' +
+        '<button class="doc-open-btn" data-id="' + escapeHtml(d.id) + '" role="menuitem"><i class="fas fa-eye"></i> View</button>' +
+        '<button class="doc-download-btn" data-id="' + escapeHtml(d.id) + '" role="menuitem"><i class="fas fa-download"></i> Download</button>' +
+        '<button class="doc-share-btn" data-id="' + escapeHtml(d.id) + '" role="menuitem"><i class="fas fa-share-nodes"></i> Share</button>' +
+        '<button class="doc-delete-btn delete" data-id="' + escapeHtml(d.id) + '" data-name="' + name + '" role="menuitem"><i class="fas fa-trash"></i> Delete</button>' +
+        '</div></div>' +
+        '</div>';
+    });
+
+    container.innerHTML = html;
+
+    // Open/Preview handlers
+    container.querySelectorAll('.doc-open-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = btn.getAttribute('data-id');
+        var item = allDocs.find(function(d) { return d.id === id; });
+        if (item) openViewer(item);
+        else showToast('Document not found', 'error');
+      });
+    });
+
+    // Download handlers
+    container.querySelectorAll('.doc-download-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = btn.getAttribute('data-id');
+        var item = allDocs.find(function(d) { return d.id === id; });
+        if (item) doDownload(item);
+      });
+    });
+
+    // Share handlers
+    container.querySelectorAll('.doc-share-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = btn.getAttribute('data-id');
+        var item = allDocs.find(function(d) { return d.id === id; });
+        if (item) shareDocument(item);
+        closeDocumentMenus();
+      });
+    });
+
+    // Delete handlers
+    container.querySelectorAll('.doc-delete-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        pendingDeleteId = btn.getAttribute('data-id');
+        document.getElementById('delete-msg').textContent = 'Are you sure you want to delete "' + btn.getAttribute('data-name') + '"?';
+        document.getElementById('delete-modal').classList.add('active');
+        closeDocumentMenus();
+      });
+    });
+
+    container.querySelectorAll('.doc-more-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var menu = btn.nextElementSibling;
+        var isOpen = menu.classList.contains('open');
+        closeDocumentMenus();
+        if (!isOpen) {
+          menu.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    container.querySelectorAll('.doc-more-menu button').forEach(function(btn) {
+      btn.addEventListener('click', function() { closeDocumentMenus(); });
+    });
+
+    // Clicking a card (not an action) opens the preview
+    container.querySelectorAll('.doc-item').forEach(function(card) {
+      card.addEventListener('click', function() {
+        var id = card.getAttribute('data-id');
+        var item = allDocs.find(function(d) { return d.id === id; });
+        if (item) openViewer(item);
+      });
+    });
+  }
+
+  function closeDocumentMenus() {
+    document.querySelectorAll('.doc-more-menu.open').forEach(function(menu) {
+      menu.classList.remove('open');
+      var trigger = menu.previousElementSibling;
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function shareDocument(doc) {
+    if (!hasApi()) return;
+    API.Documents.fetchBlob(doc.id, true).then(function(blob) {
+      var file = new File([blob], doc.document_name || 'document', { type: blob.type || 'application/octet-stream' });
+      var shareData = { title: doc.document_name || 'Farm document', files: [file] };
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        return navigator.share(shareData).then(function() { showToast('Document shared', 'success'); });
+      }
+      throw new Error('file-share-unavailable');
+    }).catch(function(err) {
+      if (err && err.name === 'AbortError') return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(doc.document_name || '').then(function() {
+          showToast('Document name copied', 'success');
+        }).catch(function() { showToast('Sharing is not available on this device', 'error'); });
+      } else {
+        showToast('Sharing is not available on this device', 'error');
+      }
+    });
+  }
+
+  // ===== UPLOAD =====
+  function openUploadModal() {
+    if (!hasApi()) {
+      showToast('Please log in first', 'error');
+      return;
+    }
+    document.getElementById('upload-error').style.display = 'none';
+    document.getElementById('upload-progress-wrap').style.display = 'none';
+    document.getElementById('upload-progress-bar').style.width = '0%';
+    document.getElementById('upload-progress-label').textContent = '0%';
+    document.getElementById('upload-dropzone').style.borderColor = 'var(--border-light)';
+    document.getElementById('upload-file-info').textContent = 'PDF, DOC, DOCX, XLS, XLSX, CSV, JPG, PNG, GIF, WEBP, TXT (max 25 MB)';
+    pendingUploadFile = null;
+    document.getElementById('upload-modal').classList.add('active');
+  }
+
+  function setUploadFile(file) {
+    pendingUploadFile = file;
+    var info = document.getElementById('upload-file-info');
+    var zone = document.getElementById('upload-dropzone');
+    if (file) {
+      info.textContent = file.name + ' (' + formatSize(file.size) + ')';
+      zone.style.borderColor = 'var(--primary-green)';
+    } else {
+      info.textContent = 'PDF, DOC, DOCX, XLS, XLSX, CSV, JPG, PNG, GIF, WEBP, TXT (max 25 MB)';
+      zone.style.borderColor = 'var(--border-light)';
+    }
+  }
+
+  function doUpload() {
+    if (!hasApi()) return;
+    if (!pendingUploadFile) {
+      document.getElementById('upload-error').textContent = 'Please choose a file to upload.';
+      document.getElementById('upload-error').style.display = 'block';
+      return;
+    }
+
+    var file = pendingUploadFile;
+    var maxSize = 25 * 1024 * 1024;
+    if (file.size > maxSize) {
+      document.getElementById('upload-error').textContent = 'File is too large. Each document must be 25 MB or smaller.';
+      document.getElementById('upload-error').style.display = 'block';
+      showToast('File is too large', 'error');
+      return;
+    }
+    if (file.size === 0) {
+      showToast('Empty file cannot be uploaded', 'error');
+      return;
+    }
+
+    var ext = (file.name.split('.').pop() || '').toLowerCase();
+    var validExts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'txt'];
+    if (validExts.indexOf(ext) === -1) {
+      document.getElementById('upload-error').textContent = 'File type .' + ext + ' is not supported.';
+      document.getElementById('upload-error').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('upload-error').style.display = 'none';
+    document.getElementById('upload-progress-wrap').style.display = 'block';
+    document.getElementById('upload-progress-file').textContent = file.name;
+    document.getElementById('upload-confirm-btn').disabled = true;
+    document.getElementById('upload-cancel-btn').disabled = true;
+
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('document_category', document.getElementById('upload-category').value || 'Other');
+    formData.append('description', document.getElementById('upload-description').value || '');
+
+    // Use XMLHttpRequest for upload progress
+    var token = localStorage.getItem('fa-auth-token');
+    uploadXhr = new XMLHttpRequest();
+    var base = getBaseUrl();
+    uploadXhr.open('POST', base + '/documents/upload');
+    if (token) uploadXhr.setRequestHeader('Authorization', 'Bearer ' + token);
+
+    uploadXhr.upload.onprogress = function(e) {
+      if (e.lengthComputable) {
+        var pct = Math.round((e.loaded / e.total) * 100);
+        document.getElementById('upload-progress-bar').style.width = pct + '%';
+        document.getElementById('upload-progress-label').textContent = pct + '%';
+      }
+    };
+    uploadXhr.onload = function() {
+      document.getElementById('upload-confirm-btn').disabled = false;
+      document.getElementById('upload-cancel-btn').disabled = false;
+      var data = null;
+      try { data = JSON.parse(uploadXhr.responseText); } catch (err) {}
+      if (uploadXhr.status >= 200 && uploadXhr.status < 300) {
+        showToast('Document uploaded successfully', 'success');
+        document.getElementById('upload-modal').classList.remove('active');
+        pendingUploadFile = null;
+        activeFilters.search = '';
+        document.getElementById('docSearch').value = '';
+        loadDocs();
+      } else {
+        var msg = (data && (data.detail || data.message)) || 'Upload failed. Please try again.';
+        document.getElementById('upload-error').textContent = msg;
+        document.getElementById('upload-error').style.display = 'block';
+        showToast(msg, 'error');
+      }
+      uploadXhr = null;
+    };
+    uploadXhr.onerror = function() {
+      document.getElementById('upload-confirm-btn').disabled = false;
+      document.getElementById('upload-cancel-btn').disabled = false;
+      document.getElementById('upload-error').textContent = 'Upload failed. Check your connection.';
+      document.getElementById('upload-error').style.display = 'block';
+      showToast('Upload failed', 'error');
+      uploadXhr = null;
+    };
+    uploadXhr.send(formData);
+  }
+
+  // ===== VIEWER / DOWNLOAD / RENAME =====
+  function closeViewer() {
+    if (viewerBlobUrl) {
+      URL.revokeObjectURL(viewerBlobUrl);
+      viewerBlobUrl = null;
+    }
+    viewerDoc = null;
+    document.getElementById('viewer-modal').classList.remove('active');
+    document.getElementById('viewer-body').innerHTML = '';
+  }
+
+  function doDownload(doc) {
+    if (!hasApi()) return;
+    API.Documents.fetchBlob(doc.id, true).then(function(blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = doc.document_name || 'document';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
+      showToast('Download started', 'success');
+    }).catch(function(err) {
+      console.error('Download error:', err);
+      showToast((err && err.message) || 'Download failed', 'error');
+    });
+  }
+
+  function openViewer(doc) {
+    if (!hasApi()) return;
+    viewerDoc = doc;
+    document.getElementById('viewer-title').textContent = doc.document_name || 'Document';
+    document.getElementById('viewer-modal').classList.add('active');
+    var body = document.getElementById('viewer-body');
+    body.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i> Loading...</div>';
+
+    var type = (doc.file_type || '').toLowerCase();
+    var previewable = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'txt', 'csv'].indexOf(type) !== -1;
+
+    if (!previewable || doc.previewable === false) {
+      body.innerHTML =
+        '<div class="empty-state">' +
+        '<i class="fas ' + getIconInfo(type).icon + '"></i>' +
+        '<p>Preview is not available for this file type.</p>' +
+        '<div style="display:inline-flex; gap:8px; margin-top:10px;">' +
+        '<button class="btn-primary" id="viewer-download-here"><i class="fas fa-download"></i> Download</button>' +
+        '</div></div>';
+      var dlBtn = document.getElementById('viewer-download-here');
+      if (dlBtn) dlBtn.addEventListener('click', function() { if (viewerDoc) doDownload(viewerDoc); });
+      return;
+    }
+
+    if (type === 'txt' || type === 'csv') {
+      API.Documents.getPreview(doc.id).then(function(resp) {
+        if (!viewerDoc || viewerDoc.id !== doc.id) return;
+          var text = (resp && resp.preview) || '';
+        body.innerHTML = '<pre>' + escapeHtml(text) + '</pre>';
+      }).catch(function() {
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-file-alt"></i><p>Could not load text preview.</p></div>';
+      });
+      return;
+    }
+
+    // PDF / image: fetch blob (decrypted server-side) and render via object URL
+    API.Documents.fetchBlob(doc.id, false).then(function(blob) {
+      if (!viewerDoc || viewerDoc.id !== doc.id) {
+        URL.revokeObjectURL(URL.createObjectURL(blob));
         return;
       }
-      
-      filtered.forEach(function(file) {
-        var iconInfo = getFileIcon(file.type);
-        var itemClass = currentView === 'grid' ? 'doc-item' : 'doc-item list-view';
-        html += '<div class="' + itemClass + '">' +
-          '<div class="doc-icon ' + iconInfo.class + '"><i class="fas ' + iconInfo.icon + '"></i></div>' +
-          '<div class="doc-name">' + file.name + '</div>' +
-          '<div class="doc-meta">' + file.size + ' • ' + file.date + '</div>' +
-          '<div class="doc-actions">' +
-          '<button class="doc-action-btn" onclick="downloadFile(' + file.id + ')"><i class="fas fa-download"></i></button>' +
-          '<button class="doc-action-btn" onclick="shareFile(' + file.id + ')"><i class="fas fa-share"></i></button>' +
-          '<button class="doc-action-btn delete" onclick="deleteFile(' + file.id + ')"><i class="fas fa-trash"></i></button>' +
-          '</div>' +
-          '</div>';
-      });
-      
-      container.innerHTML = html;
-    }
-
-    function filterDocs() {
-      renderFiles();
-    }
-
-    function openFolder(id) {
-      var folder = folders.find(function(f) { return f.id === id; });
-      if (folder) {
-        showToast('Opening folder: ' + folder.name, 'info');
-        // In a real implementation, this would filter files by folder
+      if (viewerBlobUrl) URL.revokeObjectURL(viewerBlobUrl);
+      viewerBlobUrl = URL.createObjectURL(blob);
+      if (type === 'pdf') {
+        // Use PDF.js-compatible approach or browser's native PDF viewer
+        body.innerHTML = '<iframe src="' + viewerBlobUrl + '" type="application/pdf" title="' + escapeHtml(doc.document_name) + '" style="width:100%;height:100%;border:none;"></iframe>';
+      } else {
+        body.innerHTML = '<img src="' + viewerBlobUrl + '" alt="' + escapeHtml(doc.document_name) + '" style="max-width:100%;max-height:80vh;object-fit:contain;">';
       }
-    }
-
-    function downloadFile(id) {
-      var file = files.find(function(f) { return f.id === id; });
-      if (file) {
-        showToast('Downloading: ' + file.name, 'info');
-      }
-    }
-
-    function shareFile(id) {
-      var file = files.find(function(f) { return f.id === id; });
-      if (file) {
-        showToast('Share link copied for: ' + file.name, 'success');
-      }
-    }
-
-    function deleteFile(id) {
-      var file = files.find(function(f) { return f.id === id; });
-      if (file && confirm('Are you sure you want to delete ' + file.name + '?')) {
-        files = files.filter(function(f) { return f.id !== id; });
-        renderFiles();
-        showToast('File deleted', 'warning');
-      }
-    }
-
-    function handleFileSelect(e) {
-      if (e.target.files.length > 0) {
-        var file = e.target.files[0];
-        showToast('Uploading: ' + file.name, 'info');
-        
-        // Simulate upload
-        setTimeout(function() {
-          var newFile = {
-            id: files.length + 1,
-            name: file.name,
-            type: file.name.split('.').pop().toLowerCase(),
-            size: (file.size / 1024 / 1024).toFixed(1) + ' MB',
-            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            folder: 'Invoices'
-          };
-          files.unshift(newFile);
-          renderFiles();
-          showToast('File uploaded successfully!', 'success');
-        }, 1500);
-      }
-    }
-
-    window.addEventListener('load', function() {
-      renderFolders();
-      renderFiles();
+    }).catch(function(err) {
+      console.error('Preview error:', err);
+      body.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>' + escapeHtml((err && err.message) || 'Could not preview file.') + '</p></div>';
     });
-  </script>
+  }
+
+  function showRename(doc) {
+    pendingRenameId = doc.id;
+    document.getElementById('rename-input').value = doc.document_name || '';
+    document.getElementById('rename-error').style.display = 'none';
+    document.getElementById('rename-modal').classList.add('active');
+  }
+
+  function doRename() {
+    if (!pendingRenameId || !hasApi()) return;
+    var name = document.getElementById('rename-input').value.trim();
+    if (!name) {
+      document.getElementById('rename-error').textContent = 'Name cannot be empty.';
+      document.getElementById('rename-error').style.display = 'block';
+      return;
+    }
+    if (name.indexOf('/') !== -1 || name.indexOf('\\') !== -1) {
+      document.getElementById('rename-error').textContent = 'Name cannot contain slashes.';
+      document.getElementById('rename-error').style.display = 'block';
+      return;
+    }
+    API.Documents.rename(pendingRenameId, name).then(function() {
+      showToast('Document renamed', 'success');
+      var renamedId = pendingRenameId;
+      pendingRenameId = null;
+      document.getElementById('rename-modal').classList.remove('active');
+      if (viewerDoc && viewerDoc.id === renamedId) {
+        viewerDoc.document_name = name;
+        document.getElementById('viewer-title').textContent = name;
+      }
+      loadDocs();
+    }).catch(function(err) {
+      showToast((err && err.message) || 'Rename failed', 'error');
+    });
+  }
+
+  // ===== FILTER DRAWER HANDLERS =====
+  function openFilterDrawer() {
+    pendingFilters = cloneFilters(activeFilters);
+    syncFilterForm();
+    document.getElementById('filter-drawer').classList.add('active');
+    document.getElementById('filter-overlay').classList.add('active');
+  }
+
+  function closeFilterDrawer() {
+    document.getElementById('filter-drawer').classList.remove('active');
+    document.getElementById('filter-overlay').classList.remove('active');
+  }
+
+  // ===== EVENT LISTENERS =====
+  // Search (debounced)
+  document.getElementById('docSearch').addEventListener('input', function() {
+    activeFilters.search = this.value;
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(function() { loadDocs(); }, 350);
+  });
+
+  // Filter drawer
+  document.getElementById('filter-btn').addEventListener('click', openFilterDrawer);
+  document.getElementById('filter-close-btn').addEventListener('click', closeFilterDrawer);
+  document.getElementById('filter-overlay').addEventListener('click', closeFilterDrawer);
+
+  document.getElementById('filter-apply-top-btn').addEventListener('click', function() {
+    document.getElementById('filter-apply-btn').click();
+  });
+
+  // Date range radio buttons
+  document.querySelectorAll('input[name="date_range"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      pendingFilters.date_range = this.value;
+    });
+  });
+
+  // Sort radio buttons
+  document.querySelectorAll('input[name="sort_by"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      pendingFilters.sort_by = this.value;
+    });
+  });
+
+  // Filter apply/clear
+  document.getElementById('filter-apply-btn').addEventListener('click', function(event) {
+    event.preventDefault();
+    activeFilters = cloneFilters(pendingFilters);
+    closeFilterDrawer();
+    updateFilterIndicator();
+    buildFilterChips();
+    loadDocs();
+  });
+
+  document.getElementById('filter-clear-btn').addEventListener('click', function() {
+    resetPendingFilters();
+    activeFilters = cloneFilters(pendingFilters);
+
+    // Reset form
+    document.getElementById('filter-types').querySelectorAll('input[type="radio"]').forEach(function(radio) {
+      radio.checked = radio.value === 'All';
+    });
+    document.getElementById('date-all').checked = true;
+    document.getElementById('filter-statuses').querySelectorAll('input[type="radio"]').forEach(function(radio) {
+      radio.checked = false;
+    });
+    document.getElementById('sort-newest').checked = true;
+
+    updateFilterIndicator();
+    buildFilterChips();
+    loadDocs();
+  });
+
+  // View toggle
+  document.getElementById('gridViewBtn').addEventListener('click', function() {
+    currentView = 'grid';
+    document.getElementById('gridViewBtn').classList.add('active');
+    document.getElementById('listViewBtn').classList.remove('active');
+    renderDocs();
+  });
+
+  document.getElementById('listViewBtn').addEventListener('click', function() {
+    currentView = 'list';
+    document.getElementById('listViewBtn').classList.add('active');
+    document.getElementById('gridViewBtn').classList.remove('active');
+    renderDocs();
+  });
+
+  // Upload
+  document.getElementById('upload-btn').addEventListener('click', function() {
+    openUploadModal();
+  });
+
+  // Upload modal interactions
+  document.getElementById('upload-dropzone').addEventListener('click', function() {
+    document.getElementById('file-input').click();
+  });
+  document.getElementById('file-input').addEventListener('change', function(e) {
+    if (e.target.files.length > 0) {
+      setUploadFile(e.target.files[0]);
+      e.target.value = '';
+    }
+  });
+  document.getElementById('upload-confirm-btn').addEventListener('click', doUpload);
+  document.getElementById('upload-cancel-btn').addEventListener('click', function() {
+    if (uploadXhr && uploadXhr.readyState !== 4) uploadXhr.abort();
+    uploadXhr = null;
+    document.getElementById('upload-modal').classList.remove('active');
+  });
+  document.getElementById('upload-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      if (uploadXhr && uploadXhr.readyState !== 4) uploadXhr.abort();
+      uploadXhr = null;
+      document.getElementById('upload-modal').classList.remove('active');
+    }
+  });
+
+  // Delete
+  document.getElementById('delete-confirm-btn').addEventListener('click', function() {
+    if (!pendingDeleteId || !hasApi()) return;
+
+    API.Documents.delete(pendingDeleteId).then(function() {
+      showToast('Document deleted', 'success');
+      pendingDeleteId = null;
+      document.getElementById('delete-modal').classList.remove('active');
+      loadDocs();
+    }).catch(function(err) {
+      showToast((err && err.message) || 'Delete failed', 'error');
+    });
+  });
+
+  document.getElementById('delete-cancel-btn').addEventListener('click', function() {
+    pendingDeleteId = null;
+    document.getElementById('delete-modal').classList.remove('active');
+  });
+
+  document.getElementById('delete-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      pendingDeleteId = null;
+      document.getElementById('delete-modal').classList.remove('active');
+    }
+  });
+
+  // Rename modal
+  document.getElementById('rename-confirm-btn').addEventListener('click', doRename);
+  document.getElementById('rename-cancel-btn').addEventListener('click', function() {
+    pendingRenameId = null;
+    document.getElementById('rename-modal').classList.remove('active');
+  });
+  document.getElementById('rename-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      pendingRenameId = null;
+      document.getElementById('rename-modal').classList.remove('active');
+    }
+  });
+  document.getElementById('rename-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doRename();
+  });
+
+  // Viewer modal
+  document.getElementById('viewer-close-btn').addEventListener('click', closeViewer);
+  document.getElementById('viewer-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeViewer();
+  });
+  document.getElementById('viewer-download-btn').addEventListener('click', function() {
+    if (viewerDoc) doDownload(viewerDoc);
+  });
+  document.getElementById('viewer-rename-btn').addEventListener('click', function() {
+    if (viewerDoc) showRename(viewerDoc);
+  });
+
+  // ===== INITIALIZATION =====
+  document.addEventListener('DOMContentLoaded', function() {
+    loadFilterOptions();
+    loadDocs();
+  });
+})();
+</script>
+
 </body>
 </html>

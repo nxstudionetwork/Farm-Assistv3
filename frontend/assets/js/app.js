@@ -1033,9 +1033,7 @@
   function initAppActions() {
     window.AppActions = {
       emergency: function () {
-        if (confirm('EMERGENCY SOS: Send alert to local emergency services and community network?')) {
-          showToast('SOS Alert sent! Help is on the way.', 'danger');
-        }
+        window.location.href = 'emergency.html';
       },
       scanCrop: function () {
         showToast('Opening crop scanner...', 'info');

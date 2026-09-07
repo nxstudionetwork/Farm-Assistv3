@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import (
-    Column, String, DateTime, Float, Integer, ForeignKey, Text, JSON, Boolean
+    Column, String, DateTime, Float, Integer, ForeignKey, Text, JSON, Boolean, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
 from app.database.base import Base
@@ -25,6 +25,41 @@ class GovernmentScheme(Base):
     website = Column(String(500), nullable=True)
     status = Column(String(20), default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # ----- Government scheme enrichment (real, verified scheme metadata) -----
+    department = Column(String(300), nullable=True)          # e.g. Ministry of Agriculture & Farmers Welfare
+    level = Column(String(30), default="central")            # central | state
+    overview = Column(Text, nullable=True)                   # longer official overview
+    objectives = Column(Text, nullable=True)                 # goals as delimited text
+    application_process = Column(Text, nullable=True)        # step-by-step never-steps text
+    contact_information = Column(Text, nullable=True)        # helpdesk / helpline / email
+    source = Column(String(200), nullable=True)              # e.g. Official Government Portal
+    source_url = Column(String(500), nullable=True)          # official scheme page
+    start_date = Column(String(20), nullable=True)           # scheme launch date
+    faqs = Column(JSON, nullable=True)                       # list of {question, answer}
+    eligible_farmer_types = Column(JSON, nullable=True)      # e.g. ["small","marginal","all"]
+    related_crops = Column(JSON, nullable=True)              # crops the scheme targets
+    land_category = Column(String(100), nullable=True)       # e.g. "< 2 hectares"
+    income_category = Column(String(100), nullable=True)     # e.g. "< Rs 2 lakh / yr"
+    benefit_type = Column(String(50), nullable=True)         # subsidy | loan | income | insurance | pension
+    last_verified_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SavedScheme(Base):
+    __tablename__ = "saved_schemes"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    farmer_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    scheme_id = Column(String(36), ForeignKey("government_schemes.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    farmer = relationship("User", back_populates="saved_schemes")
+    scheme = relationship("GovernmentScheme")
+
+    __table_args__ = (
+        UniqueConstraint("farmer_id", "scheme_id", name="uq_saved_schemes_farmer_scheme"),
+    )
 
 
 class SchemeApplication(Base):

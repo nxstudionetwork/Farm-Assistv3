@@ -224,10 +224,7 @@
         <div class="form-group">
           <label class="form-label">Farm</label>
           <select class="form-input" id="ev-farm" style="appearance:auto">
-            <option value="Shiv Sai Farm">Shiv Sai Farm</option>
-            <option value="Plot A - Wheat">Plot A - Wheat</option>
-            <option value="Plot B - Cotton">Plot B - Cotton</option>
-            <option value="Plot C - Vegetables">Plot C - Vegetables</option>
+            <option value="">Select farm</option>
           </select>
         </div>
         <div class="form-group">
@@ -315,89 +312,81 @@
       return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
     }
 
-    // Generate 18 mock events across current and next month
-    function generateMockEvents() {
-      var now = new Date();
-      var m = now.getMonth();
-      var y = now.getFullYear();
-      var types = ['sowing','irrigation','irrigation','fertilizer','spraying','spraying','harvest','harvest','worker','worker','equipment','sowing','irrigation','fertilizer','spraying','harvest','worker','equipment'];
-      var titles = [
-        'Sowing Wheat - Plot A',
-        'Irrigate Wheat field',
-        'Irrigate Cotton field',
-        'Fertilizer Application - Cotton',
-        'Spraying - Neem Oil (Cotton)',
-        'Spraying - Pesticide (Wheat)',
-        'Harvest Tomatoes - Plot C',
-        'Harvest Wheat - Plot A',
-        'Worker Booking - Harvesting',
-        'Worker Booking - Weeding',
-        'Equipment Booking - Tractor',
-        'Sowing Cotton - Plot B',
-        'Irrigate Tomato plants',
-        'Fertilizer - DAP (Wheat)',
-        'Spraying - Fungicide (Tomato)',
-        'Harvest Cotton - Plot B',
-        'Worker Booking - Irrigation',
-        'Equipment Booking - Sprayer'
-      ];
-      var farms = ['Shiv Sai Farm','Plot A - Wheat','Plot B - Cotton','Plot C - Vegetables','Shiv Sai Farm','Plot A - Wheat','Plot C - Vegetables','Plot A - Wheat','Shiv Sai Farm','Shiv Sai Farm','Shiv Sai Farm','Plot B - Cotton','Plot C - Vegetables','Plot A - Wheat','Plot C - Vegetables','Plot B - Cotton','Shiv Sai Farm','Shiv Sai Farm'];
-      var crops = ['Wheat','Wheat','Cotton','Cotton','Cotton','Wheat','Tomato','Wheat','','','','Cotton','Tomato','Wheat','Tomato','Cotton','',''];
-      var descriptions = [
-        'Sowing winter wheat in Plot A using seed drill',
-        'Drip irrigation for 2 hours in the morning',
-        'Flood irrigation for Cotton field',
-        'Apply NPK 20-20-20, 50kg bag',
-        'Neem oil spray for pest prevention',
-        'Chemical pesticide application for aphid control',
-        'First harvest of the season, expected 200 kg',
-        'Harvesting wheat, expected 500 kg yield',
-        'Need 3 workers for tomato harvesting',
-        'Need 2 workers for manual weeding',
-        'Tractor rental for ploughing Plot B',
-        'Sowing BT Cotton seeds in Plot B',
-        'Drip irrigation for tomato plants, 1 hour',
-        'Apply DAP fertilizer 25kg in Wheat field',
-        'Fungicide spray to prevent blight',
-        'Cotton boll harvesting, expected 300 kg',
-        'Hire 1 worker for irrigation duty',
-        'Power sprayer rental for pesticide application'
-      ];
-
-      var result = [];
-      for (var i = 0; i < types.length; i++) {
-        var dayOffset = (i % 20) - 3 + Math.floor(i / 5) * 2;
-        var eventDate = new Date(y, m, now.getDate() + dayOffset);
-        if (eventDate.getMonth() !== m && eventDate.getMonth() !== ((m + 1) % 12)) {
-          eventDate = new Date(y, m, now.getDate() + dayOffset + 15);
-        }
-        result.push({
-          id: 'mock-' + i,
-          title: titles[i],
-          date: formatDate(eventDate),
-          type: types[i],
-          description: descriptions[i],
-          farm: farms[i],
-          crop: crops[i]
+    // Build calendar events from REAL backend data (crop tasks + farm journal).
+    function getAPIEvents() {
+      var out = [];
+      var typeMap = {
+        fertilizer: 'fertilizer', weeding: 'worker', irrigation: 'irrigation',
+        spraying: 'spraying', sowing: 'sowing', harvest: 'harvest',
+        equipment: 'equipment', planting: 'sowing', watering: 'irrigation'
+      };
+      function mapType(cat) {
+        return typeMap[(cat || '').toLowerCase().trim()] || 'fertilizer';
+      }
+      function pushTask(t) {
+        var d = String(t.due_date || '').slice(0, 10);
+        if (!d || d.indexOf('-') !== 4) return;
+        out.push({
+          id: 'api-task-' + (t.task_id || t.id || ''),
+          date: d,
+          type: mapType(t.category),
+          title: t.title || 'Farm task',
+          description: (t.description || '') + (t.status === 'completed' ? ' (completed)' : ''),
+          farm: (t.farm_name || ''),
+          crop: (t.crop_name || ''),
+          completed: t.status === 'completed',
+          api: true
         });
       }
-      return result;
+      function pushJournal(j) {
+        var d = String(j.entry_date || '').slice(0, 10);
+        if (!d || d.indexOf('-') !== 4) return;
+        out.push({
+          id: 'api-journal-' + (j.id || ''),
+          date: d,
+          type: 'worker',
+          title: j.activity || 'Farm activity',
+          description: j.notes || '',
+          farm: (j.farm_name || ''),
+          crop: '',
+          api: true
+        });
+      }
+      var hasTasks = !!(window.API && API.Crop && API.Crop.listTasks);
+      var hasJournal = !!(window.API && API.Crop && API.Crop.listJournal);
+      var p1 = hasTasks ? API.Crop.listTasks().then(function (t) { (t || []).forEach(pushTask); }) : Promise.resolve();
+      var p2 = hasJournal ? API.Crop.listJournal().then(function (j) { (j || []).forEach(pushJournal); }) : Promise.resolve();
+      return Promise.all([p1, p2]).then(function () { return out; });
     }
 
     function loadEvents() {
-      var stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
+      getAPIEvents().then(function (apiEvents) {
+        var stored = [];
         try {
-          events = JSON.parse(stored);
-        } catch(e) {
-          events = generateMockEvents();
-        }
-      } else {
-        events = generateMockEvents();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-      }
-      renderCurrentView();
-      renderSections();
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) stored = JSON.parse(raw) || [];
+        } catch (e) { stored = []; }
+        // Keep only user-created events (id starts with 'ev-'); real events come from the API.
+        stored = stored.filter(function (e) {
+          return e && e.id && String(e.id).indexOf('ev-') === 0;
+        });
+        // De-duplicate API events by id
+        var seen = {};
+        var merged = [];
+        apiEvents.concat(stored).forEach(function (e) {
+          if (!e || !e.id || seen[e.id]) return;
+          seen[e.id] = true;
+          merged.push(e);
+        });
+        events = merged;
+        saveToStorage();
+        renderCurrentView();
+        renderSections();
+      }).catch(function () {
+        events = [];
+        renderCurrentView();
+        renderSections();
+      });
     }
 
     function saveToStorage() {
@@ -904,8 +893,8 @@
       document.getElementById('ev-date').value = formatDate(new Date());
       document.getElementById('ev-type').value = 'sowing';
       document.getElementById('ev-description').value = '';
-      document.getElementById('ev-farm').value = 'Shiv Sai Farm';
-      document.getElementById('ev-crop').value = 'Wheat';
+      document.getElementById('ev-farm').value = (window._calFarms && _calFarms.length) ? _calFarms[0].value : '';
+      document.getElementById('ev-crop').value = '';
     }
 
     function closeEventModal() {
@@ -922,7 +911,7 @@
       document.getElementById('ev-date').value = ev.date;
       document.getElementById('ev-type').value = ev.type;
       document.getElementById('ev-description').value = ev.description || '';
-      document.getElementById('ev-farm').value = ev.farm || 'Shiv Sai Farm';
+      document.getElementById('ev-farm').value = ev.farm || '';
       document.getElementById('ev-crop').value = ev.crop || '';
       document.getElementById('event-modal-backdrop').classList.add('active');
     }
@@ -956,12 +945,47 @@
 
     // ==================== INIT ====================
 
+    // Populate the add-event form's Farm and Crop selects from real backend data.
+    window._calFarms = [];
+    function populateFormFarms() {
+      if (!window.API || !API.Profile || !API.Profile.getFarms) return;
+      API.Profile.getFarms().then(function (farms) {
+        var sel = document.getElementById('ev-farm');
+        if (!sel) return;
+        window._calFarms = [];
+        sel.innerHTML = '<option value="">Select farm</option>';
+        (farms || []).forEach(function (f) {
+          var o = document.createElement('option');
+          o.value = f.farm_name || f.farm_id || '';
+          o.textContent = f.farm_name || 'Farm';
+          sel.appendChild(o);
+          if (o.value) window._calFarms.push({ value: o.value, name: o.textContent });
+        });
+      }).catch(function () {});
+      if (window.API && API.Crop && API.Crop.listCycles) {
+        API.Crop.listCycles().then(function (cycles) {
+          var sel = document.getElementById('ev-crop');
+          if (!sel) return;
+          var names = {};
+          (cycles || []).forEach(function (c) {
+            var n = c.crop_name || c.crop || '';
+            if (n) names[n] = true;
+          });
+          var opts = Object.keys(names);
+          sel.innerHTML = '<option value="">None</option>' + opts.map(function (n) {
+            return '<option value="' + n + '">' + n + '</option>';
+          }).join('');
+        }).catch(function () {});
+      }
+    }
+
     function init() {
       currentMonth = new Date().getMonth();
       currentYear = new Date().getFullYear();
       currentWeekStart = getWeekStart(new Date());
       selectedDate = new Date();
       bindDayPopup();
+      populateFormFarms();
       loadEvents();
     }
 

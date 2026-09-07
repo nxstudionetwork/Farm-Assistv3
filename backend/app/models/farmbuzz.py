@@ -124,3 +124,107 @@ class FarmBuzzTrend(Base):
     extra_data = Column(JSON, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FarmBuzzStory(Base):
+    """A 24-hour story: image, video or plain text posted to the FarmBuzz
+    story rail. Expires automatically after ``expires_at``."""
+
+    __tablename__ = "farmbuzz_stories"
+    __table_args__ = (
+        Index("ix_farmbuzz_stories_expiry", "expires_at"),
+        Index("ix_farmbuzz_stories_author", "user_id"),
+    )
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    story_id = Column(String(20), unique=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    media_url = Column(String(600), nullable=True)
+    media_type = Column(String(10), default="text")  # image | video | text
+    thumbnail_url = Column(String(600), nullable=True)
+    caption = Column(Text, nullable=True)
+    background_color = Column(String(20), nullable=True)
+    views_count = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    expires_at = Column(DateTime, default=None, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
+    viewers = relationship("FarmBuzzStoryViewer", back_populates="story", cascade="all, delete-orphan")
+
+
+class FarmBuzzStoryViewer(Base):
+    """Tracks unique viewers of a story to prevent duplicate view requests."""
+
+    __tablename__ = "farmbuzz_story_viewers"
+    __table_args__ = (
+        UniqueConstraint("story_id", "user_id", name="uq_farmbuzz_story_view"),
+    )
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    story_id = Column(String(36), ForeignKey("farmbuzz_stories.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    viewed_at = Column(DateTime, default=datetime.utcnow)
+
+    story = relationship("FarmBuzzStory", back_populates="viewers")
+
+
+class FarmBuzzView(Base):
+    """Tracks whether an authenticated user has viewed a post/short so the
+    view count is incremented once per viewer, not on every request."""
+
+    __tablename__ = "farmbuzz_views"
+    __table_args__ = (
+        UniqueConstraint("post_id", "user_id", name="uq_farmbuzz_view"),
+    )
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    post_id = Column(String(36), ForeignKey("farmbuzz_posts.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    viewed_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FarmBuzzInteraction(Base):
+    """Watch/behaviour events used by the recommendation engine.
+
+    One row per observed event (not unique per user/post) so repeated
+    watches, skips, replays and completions accumulate over time.
+    Likes/saves/comments/shares/follows remain the source of truth in
+    their own tables; this table only powers ranking.
+    """
+
+    __tablename__ = "farmbuzz_interactions"
+    __table_args__ = (
+        Index("ix_fb_inter_post", "post_id"),
+        Index("ix_fb_inter_user", "user_id"),
+        Index("ix_fb_inter_post_user", "post_id", "user_id"),
+        Index("ix_fb_inter_created", "created_at"),
+    )
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    post_id = Column(String(36), ForeignKey("farmbuzz_posts.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    event_type = Column(String(30), nullable=False, index=True)
+    # qualified_view | watch | complete | skip | replay |
+    # like | unlike | save | unsave | comment | share | follow_author
+    watch_duration_ms = Column(Integer, default=0)
+    completion_pct = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FarmBuzzReport(Base):
+    """Content reports submitted against a post/short. Each user can report
+    a given post once; a moderator can later mark the report resolved."""
+
+    __tablename__ = "farmbuzz_reports"
+    __table_args__ = (
+        UniqueConstraint("post_id", "user_id", name="uq_farmbuzz_report"),
+    )
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    post_id = Column(String(36), ForeignKey("farmbuzz_posts.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    reason = Column(String(120), nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(String(20), default="pending")  # pending | reviewed | dismissed
+    created_at = Column(DateTime, default=datetime.utcnow)

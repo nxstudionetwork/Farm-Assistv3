@@ -9,13 +9,15 @@ Backend: FastAPI served from the same origin (port 8000).
 (function (global) {
   'use strict';
 
-  var API_ORIGIN = 'https://farm-assistv3-k8kk.vercel.app:8000';
-
   function detectBaseUrl() {
     if (window._API_BASE_URL) return window._API_BASE_URL;
     var meta = document.querySelector('meta[name="api-base-url"], meta[name="api-base"]');
     if (meta && meta.content) return meta.content;
-    return API_ORIGIN + '/api/v1';
+    var origin = window.location.origin || '';
+    if (!origin || origin === 'null' || origin.indexOf('file:') === 0) {
+      origin = 'http://localhost:8000';
+    }
+    return origin + '/api/v1';
   }
 
   var Config = {
@@ -245,6 +247,19 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     changePin: function (oldPin, newPin) {
       return http('PUT', '/auth/change-pin', { old_pin: oldPin, new_pin: newPin }).then(unwrap);
+    },
+    sendPhoneChangeOtp: function (newPhoneNumber) {
+      return http('POST', '/auth/send-phone-change-otp', { new_phone_number: newPhoneNumber }).then(unwrap);
+    },
+    verifyPhoneChangeOtp: function (newPhoneNumber, otpCode) {
+      return http('POST', '/auth/verify-phone-change-otp', { new_phone_number: newPhoneNumber, otp_code: otpCode }).then(function (res) {
+        var data = unwrap(res);
+        if (data && data.user) {
+          localStorage.setItem('fa-current-user-data', JSON.stringify(data.user));
+          localStorage.setItem('user-name', data.user.full_name || 'Farmer');
+        }
+        return data;
+      });
     }
   };
 
@@ -272,6 +287,46 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     updateAddress: function (data) {
       return http('PUT', '/users/address', data).then(unwrap);
+    },
+    uploadPicture: function (file) {
+      var formData = new FormData();
+      formData.append('file', file);
+      return http('POST', '/users/profile-picture', formData).then(unwrap);
+    },
+    getStats: function () {
+      return http('GET', '/users/stats').then(unwrap);
+    },
+    getActivity: function (limit) {
+      return http('GET', '/users/activity' + (limit ? '?limit=' + limit : '')).then(unwrap);
+    },
+    getRequestsTimeline: function (limit) {
+      return http('GET', '/users/requests-timeline' + (limit ? '?limit=' + limit : '')).then(unwrap);
+    },
+    getFarms: function () {
+      return http('GET', '/users/farms').then(unwrap);
+    },
+    exportData: function () {
+      return http('GET', '/users/export').then(unwrap);
+    },
+    deleteAccount: function () {
+      return http('POST', '/users/delete-account', { force: true }).then(unwrap);
+    }
+  };
+
+  var SupportService = {
+    listTickets: function () {
+      return http('GET', '/tickets').then(function (res) {
+        var data = unwrap(res);
+        return (data && data.tickets) ? data.tickets : [];
+      });
+    },
+    createTicket: function (data) {
+      return http('POST', '/tickets', {
+        name: data.name,
+        category: data.category,
+        subject: data.subject,
+        description: data.description
+      }).then(unwrap);
     }
   };
 
@@ -356,15 +411,62 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     createIncome: function (data) {
       return http('POST', '/income', data).then(unwrap);
+    },
+    getIncome: function (id) {
+      return http('GET', '/income/' + encodeURIComponent(id)).then(unwrap);
+    },
+    updateIncome: function (id, data) {
+      return http('PUT', '/income/' + encodeURIComponent(id), data).then(unwrap);
+    },
+    deleteIncome: function (id) {
+      return http('DELETE', '/income/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getExpense: function (id) {
+      return http('GET', '/expenses/' + encodeURIComponent(id)).then(unwrap);
+    },
+    updateExpense: function (id, data) {
+      return http('PUT', '/expenses/' + encodeURIComponent(id), data).then(unwrap);
+    },
+    deleteExpense: function (id) {
+      return http('DELETE', '/expenses/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getTransactionDetail: function (id) {
+      return http('GET', '/transactions/' + encodeURIComponent(id)).then(unwrap);
     }
   };
 
   var ServiceService = {
+    listCatalog: function (params) {
+      var qs = '';
+      if (params) {
+        var parts = [];
+        Object.keys(params).forEach(function (k) {
+          if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+            parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+          }
+        });
+        qs = parts.join('&');
+      }
+      return http('GET', '/services' + (qs ? '?' + qs : '')).then(unwrap);
+    },
+    getCatalogItem: function (id) {
+      return http('GET', '/services/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getCategories: function () {
+      return http('GET', '/services/categories').then(unwrap);
+    },
+    getCompleted: function () {
+      return http('GET', '/services/completed').then(unwrap);
+    },
     list: function (params) {
       var qs = '';
       if (params) {
         var parts = [];
-        Object.keys(params).forEach(function (k) { if (params[k]) parts.push(k + '=' + encodeURIComponent(params[k])); });
+        Object.keys(params).forEach(function (k) {
+          if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+            parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+          }
+        });
         qs = parts.join('&');
       }
       return http('GET', '/service-requests' + (qs ? '?' + qs : '')).then(unwrap);
@@ -380,12 +482,30 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     updateStatus: function (id, data) {
       return http('PUT', '/service-requests/' + encodeURIComponent(id) + '/status', data).then(unwrap);
+    },
+    rate: function (id, data) {
+      return http('POST', '/service-requests/' + encodeURIComponent(id) + '/rate', data).then(unwrap);
     }
   };
 
   var WalletService = {
-    getSummary: function () {
-      return http('GET', '/wallet/summary').then(unwrap);
+    get: function () {
+      return http('GET', '/wallet').then(unwrap);
+    },
+    getSummary: function (params) {
+      var qs = '';
+      if (params) {
+        var parts = [];
+        Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k])); });
+        qs = parts.join('&');
+      }
+      return http('GET', '/wallet/summary' + (qs ? '?' + qs : '')).then(unwrap);
+    },
+    setup: function (data) {
+      return http('POST', '/wallet/setup', data).then(unwrap);
+    },
+    verifyPin: function (walletPin) {
+      return http('POST', '/wallet/verify-pin', { wallet_pin: walletPin }).then(unwrap);
     },
     addMoney: function (data) {
       return http('POST', '/wallet/add-money', data).then(unwrap);
@@ -397,10 +517,64 @@ Backend: FastAPI served from the same origin (port 8000).
       var qs = '';
       if (params) {
         var parts = [];
-        Object.keys(params).forEach(function (k) { if (params[k]) parts.push(k + '=' + encodeURIComponent(params[k])); });
+        Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(k + '=' + encodeURIComponent(params[k])); });
         qs = parts.join('&');
       }
-      return http('GET', '/transactions' + (qs ? '?' + qs : '')).then(unwrap);
+      return http('GET', '/wallet/transactions' + (qs ? '?' + qs : '')).then(unwrap);
+    },
+    getTransaction: function (txnId) {
+      return http('GET', '/wallet/transactions/' + txnId).then(unwrap);
+    },
+    listBeneficiaries: function () {
+      return http('GET', '/wallet/beneficiaries').then(unwrap);
+    },
+    addBeneficiary: function (data) {
+      return http('POST', '/wallet/beneficiaries', data).then(unwrap);
+    },
+    removeBeneficiary: function (id) {
+      return http('DELETE', '/wallet/beneficiaries/' + id).then(unwrap);
+    },
+    searchUser: function (query) {
+      return http('POST', '/wallet/search-user', { query: query }).then(unwrap);
+    },
+    listMoneyRequests: function (params) {
+      var qs = '';
+      if (params) {
+        var parts = [];
+        Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(k + '=' + encodeURIComponent(params[k])); });
+        qs = parts.join('&');
+      }
+      return http('GET', '/wallet/money-requests' + (qs ? '?' + qs : '')).then(unwrap);
+    },
+    createMoneyRequest: function (data) {
+      return http('POST', '/wallet/money-requests', data).then(unwrap);
+    },
+    acceptMoneyRequest: function (requestId, walletPin) {
+      return http('POST', '/wallet/money-requests/' + requestId + '/accept', { wallet_pin: walletPin }).then(unwrap);
+    },
+    declineMoneyRequest: function (requestId) {
+      return http('POST', '/wallet/money-requests/' + requestId + '/decline').then(unwrap);
+    },
+    cancelMoneyRequest: function (requestId) {
+      return http('POST', '/wallet/money-requests/' + requestId + '/cancel').then(unwrap);
+    },
+    listBankAccounts: function () {
+      return http('GET', '/wallet/bank-accounts').then(unwrap);
+    },
+    addBankAccount: function (data) {
+      return http('POST', '/wallet/bank-accounts', data).then(unwrap);
+    },
+    removeBankAccount: function (accountId) {
+      return http('DELETE', '/wallet/bank-accounts/' + accountId).then(unwrap);
+    },
+    setDefaultBankAccount: function (accountId) {
+      return http('POST', '/wallet/bank-accounts/' + accountId + '/default').then(unwrap);
+    },
+    changePin: function (data) {
+      return http('POST', '/wallet/change-pin', data).then(unwrap);
+    },
+    securityInfo: function () {
+      return http('GET', '/wallet/security-info').then(unwrap);
     }
   };
 
@@ -473,6 +647,27 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     updateOrder: function (id, data) {
       return http('PUT', '/orders/' + id, data).then(unwrap);
+    },
+    getCart: function () {
+      return http('GET', '/cart').then(unwrap);
+    },
+    addToCart: function (data) {
+      return http('POST', '/cart', data).then(unwrap);
+    },
+    updateCartItem: function (id, data) {
+      return http('PATCH', '/cart/' + encodeURIComponent(id), data).then(unwrap);
+    },
+    removeCartItem: function (id) {
+      return http('DELETE', '/cart/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getWishlist: function () {
+      return http('GET', '/wishlist').then(unwrap);
+    },
+    saveWishlist: function (productId) {
+      return http('POST', '/wishlist/' + encodeURIComponent(productId)).then(unwrap);
+    },
+    removeWishlist: function (productId) {
+      return http('DELETE', '/wishlist/' + encodeURIComponent(productId)).then(unwrap);
     }
   };
 
@@ -481,16 +676,36 @@ Backend: FastAPI served from the same origin (port 8000).
       var qs = '';
       if (params) {
         var parts = [];
-        Object.keys(params).forEach(function (k) { if (params[k]) parts.push(k + '=' + encodeURIComponent(params[k])); });
+        Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(k + '=' + encodeURIComponent(params[k])); });
         qs = parts.join('&');
       }
       return http('GET', '/government-schemes' + (qs ? '?' + qs : '')).then(unwrap);
     },
     getScheme: function (id) {
-      return http('GET', '/government-schemes/' + id).then(unwrap);
+      return http('GET', '/government-schemes/' + encodeURIComponent(id)).then(unwrap);
+    },
+    categories: function () {
+      return http('GET', '/government-schemes/categories').then(unwrap);
+    },
+    savedSchemes: function (params) {
+      var qs = params ? '?page=' + (params.page || 1) + '&limit=' + (params.limit || 50) : '';
+      return http('GET', '/government-schemes/saved' + qs).then(unwrap);
+    },
+    saveScheme: function (id) {
+      return http('POST', '/government-schemes/' + encodeURIComponent(id) + '/save').then(unwrap);
+    },
+    unsaveScheme: function (id) {
+      return http('DELETE', '/government-schemes/' + encodeURIComponent(id) + '/save').then(unwrap);
+    },
+    checkEligibility: function (data) {
+      return http('POST', '/government-schemes/check-eligibility', data || {}).then(unwrap);
+    },
+    recommended: function (params) {
+      var qs = params && params.limit ? '?limit=' + params.limit : '';
+      return http('GET', '/government-schemes/recommended' + qs).then(unwrap);
     },
     applyScheme: function (id, data) {
-      return http('POST', '/government-schemes/' + id + '/apply', data || {}).then(unwrap);
+      return http('POST', '/government-schemes/' + encodeURIComponent(id) + '/apply', data || {}).then(unwrap);
     },
     listApplications: function () {
       return http('GET', '/scheme-applications').then(unwrap);
@@ -509,7 +724,20 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  function cmQ(params) {
+    if (!params) return '';
+    var parts = [];
+    Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k])); });
+    return parts.length ? '?' + parts.join('&') : '';
+  }
+
   var CommunityService = {
+    feed: function (params) {
+      return http('GET', '/communities/feed' + cmQ(params)).then(unwrap);
+    },
+    categories: function () {
+      return http('GET', '/communities/categories').then(unwrap);
+    },
     listPosts: function (params) {
       var qs = '';
       if (params) {
@@ -525,11 +753,71 @@ Backend: FastAPI served from the same origin (port 8000).
     getPost: function (id) {
       return http('GET', '/posts/' + id).then(unwrap);
     },
+    updatePost: function (id, data) {
+      return http('PATCH', '/posts/' + id, data).then(unwrap);
+    },
+    deletePost: function (id) {
+      return http('DELETE', '/posts/' + id).then(unwrap);
+    },
     addComment: function (postId, data) {
       return http('POST', '/posts/' + postId + '/comments', data).then(unwrap);
     },
+    listComments: function (postId) {
+      return http('GET', '/posts/' + postId + '/comments').then(unwrap);
+    },
+    deleteComment: function (commentId) {
+      return http('DELETE', '/comments/' + commentId).then(unwrap);
+    },
     toggleLike: function (postId) {
       return http('POST', '/posts/' + postId + '/like').then(unwrap);
+    },
+    unlike: function (postId) {
+      return http('DELETE', '/posts/' + postId + '/like').then(unwrap);
+    },
+    savePost: function (postId) {
+      return http('POST', '/posts/' + postId + '/save').then(unwrap);
+    },
+    unsave: function (postId) {
+      return http('DELETE', '/posts/' + postId + '/save').then(unwrap);
+    },
+    listSaved: function (params) {
+      return http('GET', '/posts/saved/list' + cmQ(params)).then(unwrap);
+    },
+    sharePost: function (postId) {
+      return http('POST', '/posts/' + postId + '/share').then(unwrap);
+    },
+    addAnswer: function (postId, content) {
+      return http('POST', '/posts/' + postId + '/answers', { content: content }).then(unwrap);
+    },
+    markBestAnswer: function (postId, answerId) {
+      return http('POST', '/posts/' + postId + '/answers/' + answerId + '/best').then(unwrap);
+    },
+    listGroups: function (params) {
+      return http('GET', '/communities/groups' + cmQ(params)).then(unwrap);
+    },
+    getGroup: function (groupId) {
+      return http('GET', '/communities/groups/' + groupId).then(unwrap);
+    },
+    createGroup: function (data) {
+      return http('POST', '/communities/groups', data).then(unwrap);
+    },
+    joinGroup: function (groupId) {
+      return http('POST', '/communities/groups/' + groupId + '/join').then(unwrap);
+    },
+    leaveGroup: function (groupId) {
+      return http('POST', '/communities/groups/' + groupId + '/leave').then(unwrap);
+    },
+    myGroups: function () {
+      return http('GET', '/communities/my-groups').then(unwrap);
+    },
+    myActivity: function (params) {
+      return http('GET', '/communities/my-activity' + cmQ(params)).then(unwrap);
+    },
+    report: function (data) {
+      return http('POST', '/report', data).then(unwrap);
+    },
+    getFarmerProfile: function (farmerId) {
+      return http('GET', '/farmers/' + farmerId + '/profile').then(unwrap);
     },
     listExperts: function (params) {
       var qs = '';
@@ -543,32 +831,65 @@ Backend: FastAPI served from the same origin (port 8000).
     getExpert: function (id) {
       return http('GET', '/experts/' + id).then(unwrap);
     },
+    getExpertSlots: function (expertId, date) {
+      return http('GET', '/experts/' + encodeURIComponent(expertId) + '/slots' + (date ? '?date=' + encodeURIComponent(date) : '')).then(unwrap);
+    },
     bookConsultation: function (data) {
       return http('POST', '/consultations', data).then(unwrap);
     },
-    listConsultations: function () {
-      return http('GET', '/consultations').then(unwrap);
-    }
-  };
-
-  var NotificationService = {
-    list: function (params) {
+    listConsultations: function (params) {
       var qs = '';
       if (params) {
         var parts = [];
         Object.keys(params).forEach(function (k) { if (params[k]) parts.push(k + '=' + encodeURIComponent(params[k])); });
         qs = parts.join('&');
       }
-      return http('GET', '/notifications' + (qs ? '?' + qs : '')).then(unwrap);
+      return http('GET', '/consultations' + (qs ? '?' + qs : '')).then(unwrap);
+    },
+    getConsultation: function (id) {
+      return http('GET', '/consultations/' + id).then(unwrap);
+    },
+    updateConsultation: function (id, data) {
+      return http('PATCH', '/consultations/' + id, data).then(unwrap);
+    },
+    reviewConsultation: function (id, data) {
+      return http('POST', '/consultations/' + id + '/review', data).then(unwrap);
+    }
+  };
+
+  var NotificationService = {
+    list: function (params) {
+      return http('GET', '/notifications' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    listArchived: function (params) {
+      return http('GET', '/notifications/archived' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    get: function (id) {
+      return http('GET', '/notifications/' + encodeURIComponent(id)).then(unwrap);
     },
     unreadCount: function () {
       return http('GET', '/notifications/unread').then(unwrap);
     },
     markRead: function (id) {
-      return http('PUT', '/notifications/' + id + '/read').then(unwrap);
+      return http('PUT', '/notifications/' + encodeURIComponent(id) + '/read').then(unwrap);
+    },
+    markUnread: function (id) {
+      return http('PUT', '/notifications/' + encodeURIComponent(id) + '/unread').then(unwrap);
     },
     markAllRead: function () {
       return http('PUT', '/notifications/read-all').then(unwrap);
+    },
+    archive: function (id) {
+      return http('PUT', '/notifications/' + encodeURIComponent(id) + '/archive').then(unwrap);
+    },
+    unarchive: function (id) {
+      return http('PUT', '/notifications/' + encodeURIComponent(id) + '/unarchive').then(unwrap);
+    },
+    remove: function (id) {
+      return http('DELETE', '/notifications/' + encodeURIComponent(id)).then(unwrap);
+    },
+    create: function (data) {
+      return http('POST', '/notifications', data).then(unwrap);
     }
   };
 
@@ -577,13 +898,16 @@ Backend: FastAPI served from the same origin (port 8000).
       return http(method, '/farmbuzz' + path, body).then(unwrap);
     },
     feed: function (params) {
-      return http('GET', '/farmbuzz/feed' + buildQuery(params)).then(unwrap);
+      var q = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/farmbuzz/feed' + q).then(unwrap);
     },
     posts: function (params) {
-      return http('GET', '/farmbuzz/posts' + buildQuery(params)).then(unwrap);
+      var q = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/farmbuzz/posts' + q).then(unwrap);
     },
     shorts: function (params) {
-      return http('GET', '/farmbuzz/shorts' + buildQuery(params)).then(unwrap);
+      var q = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/farmbuzz/shorts' + q).then(unwrap);
     },
     getPost: function (id) {
       return http('GET', '/farmbuzz/posts/' + id).then(unwrap);
@@ -606,11 +930,36 @@ Backend: FastAPI served from the same origin (port 8000).
     comments: function (id) {
       return http('GET', '/farmbuzz/posts/' + id + '/comments').then(unwrap);
     },
+    deleteComment: function (id, commentId) {
+      return http('DELETE', '/farmbuzz/posts/' + id + '/comments/' + commentId).then(unwrap);
+    },
     save: function (id) {
       return http('POST', '/farmbuzz/posts/' + id + '/save').then(unwrap);
     },
     share: function (id) {
       return http('POST', '/farmbuzz/posts/' + id + '/share').then(unwrap);
+    },
+    view: function (id) {
+      return http('POST', '/farmbuzz/posts/' + id + '/view').then(unwrap);
+    },
+    report: function (id, data) {
+      return http('POST', '/farmbuzz/posts/' + id + '/report', data).then(unwrap);
+    },
+    saved: function (params) {
+      var q = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/farmbuzz/saved' + q).then(unwrap);
+    },
+    stories: function () {
+      return http('GET', '/farmbuzz/stories').then(unwrap);
+    },
+    createStory: function (data) {
+      return http('POST', '/farmbuzz/stories', data).then(unwrap);
+    },
+    deleteStory: function (storyId) {
+      return http('DELETE', '/farmbuzz/stories/' + storyId).then(unwrap);
+    },
+    storyView: function (storyId) {
+      return http('POST', '/farmbuzz/stories/' + storyId + '/view').then(unwrap);
     },
     follow: function (userId) {
       return http('POST', '/farmbuzz/users/' + userId + '/follow').then(unwrap);
@@ -625,26 +974,49 @@ Backend: FastAPI served from the same origin (port 8000).
       return http('GET', '/farmbuzz/users/' + userId + '/profile').then(unwrap);
     },
     search: function (params) {
-      return http('GET', '/farmbuzz/search' + buildQuery(params)).then(unwrap);
+      var q = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/farmbuzz/search' + q).then(unwrap);
     },
     trends: function () {
       return http('GET', '/farmbuzz/trends').then(unwrap);
     },
-    uploadMedia: function (file) {
+    uploadMedia: function (file, kind) {
       var fd = new FormData();
       fd.append('file', file);
-      return http('POST', '/farmbuzz/media/upload', fd).then(unwrap);
+      var k = (kind === 'video') ? 'video' : 'image';
+      return http('POST', '/farmbuzz/media/upload?kind=' + k, fd).then(unwrap);
+    },
+    recommendedShorts: function (params) {
+      var q = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/farmbuzz/shorts/recommended' + q).then(unwrap);
+    },
+    recordEvent: function (id, data) {
+      return http('POST', '/farmbuzz/posts/' + id + '/event', data || {}).then(unwrap);
+    },
+    unlike: function (id) {
+      return http('DELETE', '/farmbuzz/posts/' + id + '/like').then(unwrap);
+    },
+    unsave: function (id) {
+      return http('DELETE', '/farmbuzz/posts/' + id + '/save').then(unwrap);
     }
   };
 
   var WeatherService = {
     getCurrent: function (lat, lon) {
-      return http('GET', '/weather/current?latitude=' + lat + '&longitude=' + lon).then(unwrap).then(function (res) {
+      var query = '';
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        query = '?latitude=' + lat + '&longitude=' + lon;
+      }
+      return http('GET', '/weather/current' + query).then(unwrap).then(function (res) {
         return (res && res.data) ? res.data : res;
       });
     },
     getForecast: function (lat, lon) {
-      return http('GET', '/weather/forecast?latitude=' + lat + '&longitude=' + lon).then(unwrap).then(function (res) {
+      var query = '';
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        query = '?latitude=' + lat + '&longitude=' + lon;
+      }
+      return http('GET', '/weather/forecast' + query).then(unwrap).then(function (res) {
         return (res && res.data) ? res.data : res;
       });
     }
@@ -718,19 +1090,83 @@ Backend: FastAPI served from the same origin (port 8000).
   };
 
   var NewsService = {
-    getNews: function (category, query, page) {
-      var q = '?category=' + (category || 'agriculture') + '&page=' + (page || 1);
-      if (query) q += '&query=' + encodeURIComponent(query);
-      return http('GET', '/news' + q).then(unwrap);
-    }
-  };
-
-  var MarketPriceService = {
+    list: function (params) {
+      return http('GET', '/news' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    get: function (id) {
+      return http('GET', '/news/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getBrief: function () {
+      return http('GET', '/news/brief').then(unwrap);
+    },
+    getCategories: function () {
+      return http('GET', '/news/categories').then(unwrap);
+    },
+    getSources: function () {
+      return http('GET', '/news/sources').then(unwrap);
+    },
+    toggleBookmark: function (id) {
+      return http('POST', '/news/' + encodeURIComponent(id) + '/bookmark').then(unwrap);
+    },
+    getSaved: function (params) {
+      return http('GET', '/news/saved/list' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
     getPrices: function (crop, location) {
       var q = '';
       if (crop) q += '?crop=' + encodeURIComponent(crop);
       if (location) q += (q ? '&' : '?') + 'location=' + encodeURIComponent(location);
       return http('GET', '/market-prices' + q).then(unwrap);
+    }
+  };
+
+  var MarketPriceService = {
+    list: function (params) {
+      return http('GET', '/market-prices' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    get: function (id) {
+      return http('GET', '/market-prices/' + encodeURIComponent(id)).then(unwrap);
+    },
+    search: function (q) {
+      return http('GET', '/market-prices/search?q=' + encodeURIComponent(q)).then(unwrap);
+    },
+    categories: function () {
+      return http('GET', '/market-prices/categories').then(unwrap);
+    },
+    markets: function (params) {
+      return http('GET', '/market-prices/markets' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    summary: function () {
+      return http('GET', '/market-prices/summary').then(unwrap);
+    },
+    history: function (params) {
+      return http('GET', '/market-prices/history' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    compare: function (params) {
+      return http('GET', '/market-prices/compare' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    recommended: function () {
+      return http('GET', '/market-prices/recommended').then(unwrap);
+    },
+    refresh: function (params) {
+      return http('POST', '/market-prices/refresh' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    getWatchlist: function () {
+      return http('GET', '/market-prices/watchlist').then(unwrap);
+    },
+    addWatchlist: function (payload) {
+      return http('POST', '/market-prices/watchlist', payload).then(unwrap);
+    },
+    removeWatchlist: function (watchId) {
+      return http('DELETE', '/market-prices/watchlist/' + encodeURIComponent(watchId)).then(unwrap);
+    },
+    getAlerts: function () {
+      return http('GET', '/market-prices/alerts').then(unwrap);
+    },
+    createAlert: function (payload) {
+      return http('POST', '/market-prices/alerts', payload).then(unwrap);
+    },
+    removeAlert: function (alertId) {
+      return http('DELETE', '/market-prices/alerts/' + encodeURIComponent(alertId)).then(unwrap);
     }
   };
 
@@ -767,6 +1203,9 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     usage: function (days) {
       return http('GET', '/analytics/usage?days=' + (days || 30)).then(unwrap);
+    },
+    farmHealth: function () {
+      return http('GET', '/analytics/farm-health').then(unwrap);
     }
   };
 
@@ -786,6 +1225,15 @@ Backend: FastAPI served from the same origin (port 8000).
     getConversation: function (id) {
       return http('GET', '/messages/conversations/' + id).then(unwrap);
     },
+    deleteConversation: function (id) {
+      return http('DELETE', '/messages/conversations/' + id).then(unwrap);
+    },
+    restoreConversation: function (id) {
+      return http('POST', '/messages/conversations/' + id + '/restore').then(unwrap);
+    },
+    toggleMute: function (id) {
+      return http('PUT', '/messages/conversations/' + id + '/mute').then(unwrap);
+    },
     getMessages: function (conversationId, params) {
       var q = params ? '?' + buildQuery(params) : '';
       return http('GET', '/messages/conversations/' + conversationId + '/messages' + q).then(unwrap);
@@ -793,11 +1241,168 @@ Backend: FastAPI served from the same origin (port 8000).
     sendMessage: function (conversationId, data) {
       return http('POST', '/messages/conversations/' + conversationId + '/messages', data).then(unwrap);
     },
+    deleteMessage: function (conversationId, messageId) {
+      return http('DELETE', '/messages/conversations/' + conversationId + '/messages/' + messageId).then(unwrap);
+    },
     markRead: function (conversationId) {
       return http('PUT', '/messages/conversations/' + conversationId + '/read').then(unwrap);
     },
+    markUnread: function (conversationId) {
+      return http('PUT', '/messages/conversations/' + conversationId + '/unread').then(unwrap);
+    },
     unreadCount: function () {
       return http('GET', '/messages/unread-count').then(unwrap);
+    },
+    listContacts: function () {
+      return http('GET', '/messages/contacts').then(unwrap);
+    },
+    addContact: function (data) {
+      return http('POST', '/messages/contacts', data).then(unwrap);
+    },
+    removeContact: function (id) {
+      return http('DELETE', '/messages/contacts/' + id).then(unwrap);
+    },
+    searchUsers: function (q) {
+      return http('GET', '/messages/users/search?q=' + encodeURIComponent(q)).then(unwrap);
+    },
+    upload: function (file) {
+      var fd = new FormData();
+      fd.append('file', file);
+      var token = localStorage.getItem('fa-auth-token');
+      var origin = window.location.origin || '';
+      if (!origin || origin === 'null' || origin.indexOf('file:') === 0) origin = 'http://localhost:8000';
+      return fetch(origin + '/api/v1/messages/upload', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd
+      }).then(function(r) {
+        return r.json().then(function(d) {
+          if (!r.ok || d.status === 'error') throw new Error(d.message || d.detail || 'Upload failed');
+          return d.data || d;
+        });
+      });
+    },
+    addReaction: function (conversationId, messageId, emoji) {
+      return http('POST', '/messages/conversations/' + conversationId + '/messages/' + messageId + '/reactions', { emoji: emoji }).then(unwrap);
+    },
+    setOnline: function () {
+      return http('POST', '/messages/presence/online').then(unwrap);
+    },
+    setOffline: function () {
+      return http('POST', '/messages/presence/offline').then(unwrap);
+    },
+    getPresence: function (userId) {
+      return http('GET', '/messages/presence/' + userId).then(unwrap);
+    },
+    setTyping: function (conversationId) {
+      return http('POST', '/messages/conversations/' + conversationId + '/typing').then(unwrap);
+    }
+  };
+
+  var DocumentService = {
+    list: function (params) {
+      var query = '';
+      if (params) {
+        var queryParts = [];
+        
+        // Handle backward compatibility: if params is a string (category)
+        if (typeof params === 'string') {
+          if (params && params !== 'All') {
+            queryParts.push('category=' + encodeURIComponent(params));
+          }
+        } else if (typeof params === 'object') {
+          // New params object format
+          if (params.category && params.category !== 'All') {
+            queryParts.push('category=' + encodeURIComponent(params.category));
+          }
+          if (params.doc_type) {
+            queryParts.push('doc_type=' + encodeURIComponent(params.doc_type));
+          }
+          if (params.search) {
+            queryParts.push('search=' + encodeURIComponent(params.search));
+          }
+          if (params.date_range && params.date_range !== 'all') {
+            queryParts.push('date_range=' + encodeURIComponent(params.date_range));
+          }
+          if (params.status) {
+            queryParts.push('status=' + encodeURIComponent(params.status));
+          }
+          if (params.sort_by) {
+            queryParts.push('sort_by=' + encodeURIComponent(params.sort_by));
+          }
+        }
+        
+        if (queryParts.length > 0) {
+          query = '?' + queryParts.join('&');
+        }
+      }
+      return http('GET', '/documents' + query).then(unwrap);
+    },
+    get: function (id) {
+      return http('GET', '/documents/' + id).then(unwrap);
+    },
+    rename: function (id, documentName) {
+      return http('PUT', '/documents/' + id + '/rename', { document_name: documentName }).then(unwrap);
+    },
+    getPreview: function (id) {
+      return http('GET', '/documents/' + id + '/preview').then(unwrap);
+    },
+    getFilterOptions: function () {
+      return http('GET', '/documents/filter/options').then(unwrap);
+    },
+    storageSummary: function () {
+      return http('GET', '/documents/storage/summary').then(unwrap);
+    },
+    fetchBlob: function (id, download) {
+      var token = localStorage.getItem('fa-auth-token');
+      var url = Config.BASE_URL + '/documents/' + id + '/file' + (download ? '?download=true' : '');
+      var headers = {};
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return fetch(url, { method: 'GET', headers: headers, credentials: 'same-origin' }).then(function (r) {
+        if (!r.ok) {
+          return r.json().then(function (data) {
+            var err = new Error((data && data.detail) || 'HTTP ' + r.status);
+            err.status = r.status;
+            throw err;
+          });
+        }
+        return r.blob();
+      });
+    },
+    upload: function (fileOrFormData, category, description) {
+      // Handle both old and new calling conventions
+      var formData;
+      if (fileOrFormData instanceof FormData) {
+        formData = fileOrFormData;
+      } else {
+        // Old convention: (file, category, description)
+        formData = new FormData();
+        formData.append('file', fileOrFormData);
+        formData.append('document_category', category || 'Other');
+        formData.append('description', description || '');
+      }
+      return http('POST', '/documents/upload', formData).then(unwrap);
+    },
+    delete: function (id) {
+      return http('DELETE', '/documents/' + id).then(unwrap);
+    }
+  };
+
+  var UserSettingsService = {
+    get: function () {
+      return http('GET', '/users/settings').then(unwrap);
+    },
+    update: function (data) {
+      return http('PUT', '/users/settings', data).then(unwrap);
+    },
+    getSessions: function () {
+      return http('GET', '/users/sessions').then(unwrap);
+    },
+    updateLanguage: function (lang) {
+      return http('PUT', '/users/language', { language: lang }).then(unwrap);
+    },
+    logoutAllDevices: function () {
+      return http('POST', '/users/logout-all-devices').then(unwrap);
     }
   };
 
@@ -810,6 +1415,51 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     get: function (feedbackId) {
       return http('GET', '/feedback/' + feedbackId).then(unwrap);
+    }
+  };
+
+  var LearningService = {
+    listCourses: function (params) {
+      var q = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/courses' + q).then(unwrap);
+    },
+    getCourse: function (courseId) {
+      return http('GET', '/courses/' + courseId).then(unwrap);
+    },
+    enroll: function (courseId) {
+      return http('POST', '/courses/enroll', { course_id: courseId }).then(unwrap);
+    },
+    myLearning: function (status) {
+      var q = status ? '?status=' + encodeURIComponent(status) : '';
+      return http('GET', '/my-learning' + q).then(unwrap);
+    },
+    completeLesson: function (enrollmentId, lessonId) {
+      return http('POST', '/enrollments/' + enrollmentId + '/complete-lesson/' + lessonId).then(unwrap);
+    },
+    getCategories: function () {
+      return http('GET', '/categories').then(unwrap);
+    }
+  };
+
+  var TechniqueService = {
+    list: function (params) {
+      var q = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/techniques' + q).then(unwrap);
+    },
+    get: function (techniqueId) {
+      return http('GET', '/techniques/' + techniqueId).then(unwrap);
+    },
+    bookmark: function (techniqueId) {
+      return http('POST', '/techniques/' + techniqueId + '/bookmark').then(unwrap);
+    },
+    getBookmarks: function () {
+      return http('GET', '/techniques/bookmarks/list').then(unwrap);
+    },
+    getCategories: function () {
+      return http('GET', '/techniques/categories/all').then(unwrap);
+    },
+    getCrops: function () {
+      return http('GET', '/techniques/crops/all').then(unwrap);
     }
   };
 
@@ -846,6 +1496,7 @@ Backend: FastAPI served from the same origin (port 8000).
     Loan: LoanService,
     Sensor: SensorService,
     FileStorage: StorageService,
+    Documents: DocumentService,
     FarmBuzz: FarmBuzzService,
     News: NewsService,
     MarketPrice: MarketPriceService,
@@ -856,6 +1507,10 @@ Backend: FastAPI served from the same origin (port 8000).
     Integrations: IntegrationService,
     Messages: MessageService,
     Feedback: FeedbackService,
+    UserSettings: UserSettingsService,
+    Support: SupportService,
+    Learning: LearningService,
+    Technique: TechniqueService,
     buildQuery: buildQuery
   };
 
@@ -879,6 +1534,7 @@ Backend: FastAPI served from the same origin (port 8000).
   global.LoanService = LoanService;
   global.SensorService = SensorService;
   global.StorageService = StorageService;
+  global.DocumentService = DocumentService;
   global.NewsService = NewsService;
   global.MarketPriceService = MarketPriceService;
   global.TranslationService = TranslationService;
@@ -887,5 +1543,7 @@ Backend: FastAPI served from the same origin (port 8000).
   global.MessageService = MessageService;
   global.FeedbackService = FeedbackService;
   global.AnalyticsService = AnalyticsService;
+  global.LearningService = LearningService;
+  global.TechniqueService = TechniqueService;
 
 })(window);

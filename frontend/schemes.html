@@ -1,249 +1,1183 @@
 ﻿<!DOCTYPE html>
-<html lang="en" data-theme="light" data-page="schemes">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-  <title>Farm Assist - Government Schemes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Government Schemes | Farm Assist</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/schemes.css">
 </head>
-<body>
-  <main class="page-container">
-    <div class="page-header">
-      <div>
-        <h1>Government Schemes</h1>
-        <p>Subsidies, loans, insurance & eligibility checker</p>
+<body class="app-page">
+
+  <!-- Sidebar / Navigation injected by navigation.js -->
+
+  <main class="page-content" id="page-content" role="main">
+    <div class="schemes-wrap">
+
+      <!-- ============================== PAGE HEADER ============================== -->
+      <header class="schemes-header">
+        <div class="schemes-header-text">
+          <h1 class="schemes-title"><i class="fas fa-landmark" aria-hidden="true"></i> Government Schemes</h1>
+          <p class="schemes-subtitle">Discover government schemes, subsidies, financial assistance and agricultural benefits available to you.</p>
+        </div>
+      </header>
+
+      <!-- ============================== SEARCH + APPLIED ============================== -->
+      <div class="schemes-toolbar">
+        <div class="schemes-search">
+          <i class="fas fa-search schemes-search-icon" aria-hidden="true"></i>
+          <label class="sr-only" for="schemeSearchInput">Search government schemes</label>
+          <input type="text" id="schemeSearchInput" class="schemes-search-input" placeholder="Search schemes, subsidies, crop support..." autocomplete="off" aria-label="Search government schemes">
+          <button type="button" class="schemes-search-clear" id="schemeSearchClear" aria-label="Clear search" hidden><i class="fas fa-times-circle"></i></button>
+        </div>
+        <button type="button" class="schemes-applied-btn" id="appliedBtn" aria-label="My Applications">
+          <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+          <span>Applied</span>
+          <span class="schemes-applied-count" id="appliedCount" hidden>0</span>
+        </button>
       </div>
-      <button class="btn-primary btn-sm" id="check-eligibility-btn">
-        <i class="fas fa-check-circle"></i> Check Eligibility
-      </button>
+
+      <!-- ============================== CATEGORY QUICK FILTERS ============================== -->
+      <nav class="schemes-cats" id="schemesCats" aria-label="Scheme categories">
+        <button type="button" class="schemes-cat-chip is-active" data-cat="" aria-pressed="true">All</button>
+      </nav>
+
+      <!-- ============================== RECOMMENDED FOR YOU ============================== -->
+      <section class="schemes-section" id="recommendedSection" hidden aria-labelledby="recommendedTitle">
+        <h2 class="schemes-section-title" id="recommendedTitle"><i class="fas fa-star" aria-hidden="true"></i> Recommended for You</h2>
+        <div class="schemes-grid" id="recommendedGrid"></div>
+      </section>
+
+      <!-- ============================== ALL SCHEMES ============================== -->
+      <section class="schemes-section" aria-labelledby="allSchemesTitle">
+        <div class="schemes-section-head">
+          <h2 class="schemes-section-title" id="allSchemesTitle"><i class="fas fa-layer-group" aria-hidden="true"></i> All Schemes <span class="schemes-total" id="schemesTotal"></span></h2>
+          <div class="schemes-sort">
+            <label class="sr-only" for="schemeSort">Sort schemes</label>
+            <select id="schemeSort" class="schemes-sort-select" aria-label="Sort schemes">
+              <option value="recent">Most Recent</option>
+              <option value="alpha">Alphabetical</option>
+              <option value="deadline">Deadline</option>
+            </select>
+          </div>
+        </div>
+        <div class="schemes-grid" id="schemesGrid" aria-live="polite"></div>
+        <div class="schemes-loadmore-wrap" id="loadMoreWrap" hidden>
+          <button type="button" class="schemes-loadmore" id="loadMoreBtn">Load More Schemes</button>
+        </div>
+      </section>
     </div>
 
-    <div style="position:relative;margin-bottom:16px;">
-      <input type="text" class="search-input" id="scheme-search" placeholder="Search schemes by name, benefit, or category..." style="padding-left:40px;">
-      <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+    <!-- ============================== SAVED SCHEMES SECTION ============================== -->
+    <section class="schemes-wrap" id="savedSection" hidden aria-labelledby="savedTitle">
+      <h2 class="schemes-section-title" id="savedTitle"><i class="fas fa-bookmark" aria-hidden="true"></i> Saved Schemes</h2>
+      <p class="schemes-section-note">Your bookmarked schemes are saved so you can find them later.</p>
+      <div class="schemes-grid" id="savedGrid"></div>
+    </section>
+
+    <!-- ============================== DETAILS DIALOG ============================== -->
+    <div class="scheme-modal" id="schemeModal" role="dialog" aria-modal="true" aria-labelledby="schemeModalTitle" hidden>
+      <div class="scheme-modal-backdrop" data-close-modal></div>
+      <div class="scheme-modal-panel" role="document">
+        <button type="button" class="scheme-modal-close" data-close-modal aria-label="Close details"><i class="fas fa-times"></i></button>
+        <div id="schemeModalBody"></div>
+      </div>
     </div>
 
-    <div class="filter-tabs" id="filter-tabs">
-      <button class="filter-tab active" data-filter="all">All</button>
-      <button class="filter-tab" data-filter="central">Central</button>
-      <button class="filter-tab" data-filter="state">State</button>
-      <button class="filter-tab" data-filter="subsidy">Subsidy</button>
-      <button class="filter-tab" data-filter="insurance">Insurance</button>
-      <button class="filter-tab" data-filter="loan">Loan</button>
+    <!-- ============================== ELIGIBILITY MODAL ============================== -->
+    <div class="scheme-modal" id="eligModal" role="dialog" aria-modal="true" aria-labelledby="eligModalTitle" hidden>
+      <div class="scheme-modal-backdrop" data-close-elig></div>
+      <div class="scheme-modal-panel scheme-elig-panel" role="document">
+        <button type="button" class="scheme-modal-close" data-close-elig aria-label="Close eligibility checker"><i class="fas fa-times"></i></button>
+        <div id="eligModalBody"></div>
+      </div>
     </div>
 
-    <div id="schemes-content"></div>
+    <!-- ============================== APPLIED DRAWER ============================== -->
+    <div class="scheme-modal" id="appliedModal" role="dialog" aria-modal="true" aria-labelledby="appliedModalTitle" hidden>
+      <div class="scheme-modal-backdrop" data-close-applied></div>
+      <div class="scheme-modal-panel scheme-applied-panel" role="document">
+        <button type="button" class="scheme-modal-close" data-close-applied aria-label="Close applications"><i class="fas fa-times"></i></button>
+        <div id="appliedModalBody"></div>
+      </div>
+    </div>
+
+    <!-- ============================== CONFIRM APPLY MODAL ============================== -->
+    <div class="scheme-modal" id="applyModal" role="dialog" aria-modal="true" aria-labelledby="applyModalTitle" hidden>
+      <div class="scheme-modal-backdrop" data-close-apply></div>
+      <div class="scheme-modal-panel scheme-apply-confirm" role="document">
+        <div id="applyModalBody"></div>
+      </div>
+    </div>
+
   </main>
 
   <script src="js/services.js"></script>
   <script src="js/userStore.js"></script>
   <script src="assets/js/navigation.js"></script>
   <script src="assets/js/app.js"></script>
+
   <script>
     (function () {
-      var allSchemes = [];
-      var currentFilter = 'all';
+      'use strict';
 
-      var categoryIcons = {
-        subsidy: 'fa-hand-holding-usd',
-        insurance: 'fa-shield-alt',
-        loan: 'fa-university',
-        central: 'fa-landmark',
-        state: 'fa-map-marker-alt',
-        general: 'fa-seedling'
+      function esc(s) {
+        if (s === null || s === undefined) return '';
+        return String(s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+
+      function txt(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/[<>]/g, '');
+      }
+
+      function fmtDate(v) {
+        if (!v) return null;
+        var d;
+        var s = String(v).replace(' ', 'T');
+        if (s.indexOf('T') >= 0 || /^\d{4}-\d{2}-\d{2}/.test(s)) {
+          d = new Date(s);
+        } else {
+          d = new Date(v);
+        }
+        if (isNaN(d.getTime())) return null;
+        return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+
+      function showToast(msg, type) {
+        if (window.showToast) window.showToast(msg, type || 'success');
+      }
+
+      function money(v) {
+        if (v === null || v === undefined || v === '' || v === 0) return null;
+        var n = Number(v);
+        if (isNaN(n)) return String(v);
+        if (n >= 10000000) return '₹' + (n / 10000000).toFixed(2).replace(/\.?0+$/, '') + ' Cr';
+        if (n >= 100000) return '₹' + (n / 100000).toFixed(2).replace(/\.?0+$/, '') + ' Lakh';
+        if (n >= 1000) return '₹' + n.toLocaleString('en-IN');
+        return '₹' + n;
+      }
+
+      function benefitText(s) {
+        if (s && s.benefits) {
+          if (Array.isArray(s.benefits) && s.benefits.length) return txt(s.benefits[0]);
+          if (typeof s.benefits === 'string' && s.benefits.trim()) return txt(s.benefits);
+        }
+        if (s && s.benefit) return String(s.benefit);
+        if (s && s.benefit_type) return prettyBenefit(s.benefit_type) || txt(s.benefit_type);
+        return null;
+      }
+
+      function prettyEligType(v) {
+        var s = String(v || '').toLowerCase();
+        if (s.indexOf('small') >= 0) return 'Small Farmers';
+        if (s.indexOf('marginal') >= 0) return 'Marginal Farmers';
+        if (s.indexOf('tenant') >= 0) return 'Tenant Farmers';
+        if (s.indexOf('women') >= 0) return 'Women Farmers';
+        if (s.indexOf('landless') >= 0) return 'Landless Farmers';
+        if (s.indexOf('landhold') >= 0) return 'Landholding Farmers';
+        if (s.indexOf('farmer') >= 0) return 'All Farmers';
+        if (s.trim()) return txt(String(v));
+        return null;
+      }
+
+      function prettyBenefit(v) {
+        var s = String(v || '').toLowerCase();
+        if (s.indexOf('income') >= 0) return 'Direct Income Support';
+        if (s.indexOf('pension') >= 0) return 'Monthly Pension';
+        if (s.indexOf('insurance') >= 0) return 'Insurance Cover';
+        if (s.indexOf('loan') >= 0 || s.indexOf('credit') >= 0) return 'Subsidised Credit';
+        if (s.indexOf('subsid') >= 0) return 'Subsidy Support';
+        if (s.indexOf('grant') >= 0) return 'Grant Support';
+        if (s.indexOf('market') >= 0) return 'Market Access Support';
+        if (s.indexOf('equip') >= 0 || s.indexOf('mechani') >= 0) return 'Equipment Subsidy';
+        if (s.trim()) return txt(String(v));
+        return null;
+      }
+
+      function deadlineInfo(s) {
+        if (!s || !s.application_deadline) return { label: 'Ongoing', cls: 'ongoing' };
+        var d = new Date(s.application_deadline);
+        if (isNaN(d.getTime())) return { label: 'Ongoing', cls: 'ongoing' };
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        d.setHours(0, 0, 0, 0);
+        var days = Math.round((d - today) / 86400000);
+        if (days < 0) return { label: 'Closed ' + fmtDate(s.application_deadline), cls: 'closed' };
+        if (days === 0) return { label: 'Closes today', cls: 'soon' };
+        if (days <= 14) return { label: 'Closes in ' + days + ' day' + (days > 1 ? 's' : ''), cls: 'soon' };
+        return { label: 'Closes ' + fmtDate(s.application_deadline), cls: 'open' };
+      }
+
+      function categoryLabel(s) {
+        if (!s) return 'Scheme';
+        return txt(s.category || s.benefit_type || s.level || 'Scheme').toUpperCase();
+      }
+
+      function statusBadge(s, appliedIds) {
+        if (appliedIds && appliedIds[s.id]) {
+          return '<span class="schemes-badge applied"><i class="fas fa-check-circle"></i> Applied</span>';
+        }
+        return '<span class="schemes-badge"><i class="fas fa-tag"></i> ' + categoryLabel(s) + '</span>';
+      }
+
+      function card(s, appliedIds) {
+        var dl = deadlineInfo(s);
+        var bf = benefitText(s);
+        var savings = '';
+        if (appliedIds && appliedIds[s.id]) {
+          savings = '<span class="schemes-card-saved"><i class="fas fa-check-circle"></i> Applied</span>';
+        }
+        return '<article class="scheme-card" data-id="' + esc(s.id) + '">' +
+          '<div class="scheme-card-top">' +
+            statusBadge(s, appliedIds) +
+            (s.is_saved ? '<span class="schemes-card-bookmarked" title="Saved"><i class="fas fa-bookmark"></i></span>' : '') +
+          '</div>' +
+          '<h3 class="scheme-card-title">' + esc(s.name) + '</h3>' +
+          '<p class="scheme-card-desc">' + (s.description ? esc(s.description) : esc(s.overview || '')) + '</p>' +
+          '<div class="scheme-card-meta">' +
+            (bf !== null ? '<div class="scheme-card-meta-item"><i class="fas fa-wallet"></i><span><small>Benefit</small><strong>' + esc(bf) + '</strong></span></div>' : '') +
+            '<div class="scheme-card-meta-item"><i class="fas fa-user-check"></i><span><small>Eligibility</small><strong>' + esc(eligShort(s)) + '</strong></span></div>' +
+            '<div class="scheme-card-meta-item"><i class="fas fa-building"></i><span><small>Department</small><strong>' + esc(deptShort(s)) + '</strong></span></div>' +
+            '<div class="scheme-card-meta-item"><i class="fas fa-calendar-alt"></i><span><small>Deadline</small><strong class="dl-' + dl.cls + '">' + esc(dl.label) + '</strong></span></div>' +
+          '</div>' +
+          '<div class="scheme-card-actions">' +
+            '<button type="button" class="scheme-card-btn primary" data-view="' + esc(s.id) + '"><i class="fas fa-arrow-right"></i> View Details</button>' +
+            '<button type="button" class="scheme-card-btn ghost" data-toggle-save="' + esc(s.id) + '" aria-label="' + (s.is_saved ? 'Unsave scheme' : 'Save scheme') + '">' +
+              '<i class="fas ' + (s.is_saved ? 'fa-bookmark' : 'fa-bookmark-o') + '"></i></button>' +
+          '</div>' +
+          (savings ? '<div class="scheme-card-applied-flag">' + savings + '</div>' : '') +
+        '</article>';
+      }
+
+      function eligShort(s) {
+        if (s && s.eligible_farmer_types && s.eligible_farmer_types.length) {
+          var p = prettyEligType(s.eligible_farmer_types[0]);
+          if (p) return p;
+        }
+        var e = txt(s.eligibility || '');
+        if (e) return e.length > 34 ? e.slice(0, 34) + '…' : e;
+        return 'Varies by scheme';
+      }
+
+      function deptShort(s) {
+        var d = txt(s.department || s.authority || '');
+        if (!d) {
+          return s.level ? s.level.charAt(0).toUpperCase() + s.level.slice(1) : 'Government';
+        }
+        return d.length > 26 ? d.slice(0, 26) + '…' : d;
+      }
+
+      function grid(el, items, appliedIds) {
+        if (!items || !items.length) return '';
+        var html = '';
+        for (var i = 0; i < items.length; i++) html += card(items[i], appliedIds);
+        el.innerHTML = html;
+        return html;
+      }
+
+      function renderSkeletons(el, n) {
+        var h = '';
+        for (var i = 0; i < (n || 4); i++) {
+          h += '<div class="scheme-card scheme-card-skel">' +
+            '<div class="skeleton-loader" style="height:14px;width:70px;border-radius:6px;"></div>' +
+            '<div class="skeleton-loader" style="height:18px;width:85%;margin:14px 0 8px;border-radius:6px;"></div>' +
+            '<div class="skeleton-loader" style="height:12px;width:100%;margin:4px 0;border-radius:6px;"></div>' +
+            '<div class="skeleton-loader" style="height:12px;width:90%;margin:4px 0;border-radius:6px;"></div>' +
+            '<div class="skeleton-loader" style="height:12px;width:95%;margin:4px 0;border-radius:6px;"></div>' +
+            '<div class="skeleton-loader" style="height:40px;width:100%;margin:16px 0 0;border-radius:10px;"></div>' +
+          '</div>';
+        }
+        el.innerHTML = h;
+        if (window.initSkeletonLoaders) window.initSkeletonLoaders();
+      }
+
+      function state(container, icon, title, sub, retryFn) {
+        var el = typeof container === 'string' ? document.getElementById(container) : container;
+        var html = '<div class="schemes-state">' +
+          '<div class="schemes-state-icon"><i class="fas ' + icon + '"></i></div>' +
+          '<h4>' + title + '</h4>' +
+          (sub ? '<p>' + sub + '</p>' : '') +
+          (retryFn ? '<button type="button" class="schemes-state-btn">Retry</button>' : '') +
+        '</div>';
+        el.innerHTML = html;
+        if (retryFn) {
+          var btn = el.querySelector('.schemes-state-btn');
+          if (btn) btn.addEventListener('click', retryFn);
+        }
+      }
+
+      // =====================================================================
+      // STATE
+      // =====================================================================
+      var State = {
+        all: [],
+        search: '',
+        category: '',
+        sort: 'recent',
+        page: 1,
+        limit: 12,
+        recommended: [],
+        savedIds: {},
+        appliedIds: {},
+        loadFn: null,
+        failCount: 0,
+        loadRequest: 0
       };
 
-      function getCategoryIcon(cat) {
-        if (!cat) return 'fa-seedling';
-        var key = cat.toLowerCase();
-        return categoryIcons[key] || 'fa-seedling';
+      // =====================================================================
+      // DATA LOADING
+      // =====================================================================
+      function loadTokenStores() {
+        var saved = null, applied = null;
+        if (API && API.GovernmentService && API.GovernmentService.savedSchemes) {
+          saved = API.GovernmentService.savedSchemes();
+        }
+        if (API && API.GovernmentService && API.GovernmentService.listApplications) {
+          applied = API.GovernmentService.listApplications();
+        }
+        resetTokenStores(saved, applied);
       }
 
-      function getCategoryBadge(cat) {
-        if (!cat) return '';
-        var color = '#6b7280';
-        var lower = cat.toLowerCase();
-        if (lower === 'subsidy') color = '#059669';
-        else if (lower === 'insurance') color = '#2563eb';
-        else if (lower === 'loan') color = '#d97706';
-        else if (lower === 'central') color = '#7c3aed';
-        else if (lower === 'state') color = '#dc2626';
-        return '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;background:' + color + '18;color:' + color + ';text-transform:uppercase;letter-spacing:0.5px;">' + cat + '</span>';
+      function resetTokenStores(saved, applied) {
+        State.savedIds = {};
+        State.appliedIds = {};
+        Promise.resolve(saved || Promise.resolve({ items: [] })).then(function (r) {
+          var items = (r && (r.items || r)) || [];
+          if (Array.isArray(items)) {
+            for (var i = 0; i < items.length; i++) {
+              var s = items[i];
+              if (s && s.id) State.savedIds[s.id] = true;
+            }
+          }
+          refreshAppliedFlag();
+        }).catch(function () {});
+
+        Promise.resolve(applied || Promise.resolve({ items: [] })).then(function (r) {
+          var items = (r && (r.items || r)) || [];
+          if (Array.isArray(items)) {
+            for (var j = 0; j < items.length; j++) {
+              var a = items[j];
+              if (a && (a.scheme_id || a.schemeId)) State.appliedIds[a.scheme_id || a.schemeId] = true;
+            }
+          }
+          var count = Object.keys(State.appliedIds).length;
+          var el = document.getElementById('appliedCount');
+          if (el) {
+            el.textContent = count;
+            el.hidden = count === 0;
+          }
+          refreshAppliedFlag();
+        }).catch(function () {});
       }
 
-      function renderSchemeCard(scheme) {
-        var icon = getCategoryIcon(scheme.category);
-        var badge = getCategoryBadge(scheme.category);
-        var benefits = scheme.benefits ? scheme.benefits.substring(0, 120) : 'N/A';
-        var eligibility = scheme.eligibility ? scheme.eligibility.substring(0, 120) : 'N/A';
-        var deadline = scheme.application_deadline || 'Ongoing';
-        var stateLabel = scheme.state ? '<span style="font-size:11px;color:var(--text-muted);"><i class="fas fa-map-marker-alt"></i> ' + scheme.state + '</span>' : '';
-        var cropLabel = scheme.crop ? '<span style="font-size:11px;color:var(--text-muted);margin-left:8px;"><i class="fas fa-leaf"></i> ' + scheme.crop + '</span>' : '';
+      function refreshAppliedFlag() {
+        var cards = document.querySelectorAll('#schemesGrid .scheme-card, #recommendedGrid .scheme-card');
+        for (var i = 0; i < cards.length; i++) {
+          var id = cards[i].getAttribute('data-id');
+          if (id && State.appliedIds[id]) {
+            if (!cards[i].querySelector('.scheme-card-applied-flag')) {
+              var flag = document.createElement('div');
+              flag.className = 'scheme-card-applied-flag';
+              flag.innerHTML = '<i class="fas fa-check-circle"></i> Applied';
+              cards[i].appendChild(flag);
+            }
+          }
+        }
+      }
 
-        return '<div class="card-premium" style="margin-bottom:14px;padding:20px;border-radius:16px;background:var(--card-bg);border:1px solid var(--border-color);box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:transform 0.2s,box-shadow 0.2s;" onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(0,0,0,0.08)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.04)\'">' +
-          '<div style="display:flex;align-items:flex-start;gap:14px;">' +
-            '<div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#059669,#10b981);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-              '<i class="fas ' + icon + '" style="font-size:20px;color:#fff;"></i>' +
+      function loadSchemes(reset) {
+        if (reset) { State.page = 1; State.failCount = 0; }
+        var gridEl = document.getElementById('schemesGrid');
+        var requestId = ++State.loadRequest;
+        if (State.page === 1) renderSkeletons(gridEl, 4);
+
+        var params = { limit: State.limit, page: State.page };
+        if (State.search) params.search = State.search;
+        if (State.category) params.category = State.category;
+        if (State.sort) params.sort = State.sort;
+
+        API.GovernmentService.listSchemes(params).then(function (data) {
+          if (requestId !== State.loadRequest) return;
+          var items = (data && data.items) || [];
+          if (State.page === 1) State.all = items;
+          else State.all = State.all.concat(items);
+          var total = (data && data.total) || State.all.length;
+          document.getElementById('schemesTotal').textContent = '(' + total + ')';
+
+          var html = '';
+          for (var i = 0; i < State.all.length; i++) html += card(State.all[i], State.appliedIds);
+          gridEl.innerHTML = html || '';
+          bindCardEvents(gridEl);
+
+          var hasMore = State.all.length < total;
+          if (hasMore) {
+            var lm = document.getElementById('loadMoreWrap');
+            lm.hidden = false;
+          } else {
+            document.getElementById('loadMoreWrap').hidden = true;
+          }
+
+          if (!State.all.length) {
+            if (State.search || State.category) {
+              state(gridEl, 'fa-search-minus', 'No schemes found', 'Try another scheme name, crop, category or keyword.');
+            } else {
+              state(gridEl, 'fa-inbox', 'No schemes available', 'Government schemes will appear here when available.');
+            }
+          }
+          bindDelegatedEvents();
+          maybeLoadRecommended();
+        }).catch(function (err) {
+          if (requestId !== State.loadRequest) return;
+          State.failCount++;
+          if (err && (err.isAuthError || err.status === 401 || err.status === 403)) {
+            state(gridEl, 'fa-lock', 'Sign in required',
+              'You need to sign in to view government schemes and track your applications.',
+              function () { window.location.href = 'login.html'; });
+            return;
+          }
+          if (State.failCount > 1) {
+            state(gridEl, 'fa-exclamation-triangle', 'Unable to load schemes', 'Something went wrong while loading government schemes.', function () { loadSchemes(true); });
+          } else {
+            loadSchemes(false);
+          }
+        });
+      }
+
+      function maybeLoadRecommended() {
+        var sec = document.getElementById('recommendedSection');
+        if (!sec.hidden || !API.GovernmentService.recommended) return;
+        API.GovernmentService.recommended({ limit: 3 }).then(function (data) {
+          var items = (data && data.items) || [];
+          if (!items.length) return;
+          sec.hidden = false;
+          grid(document.getElementById('recommendedGrid'), items, State.appliedIds);
+          bindCardEvents(document.getElementById('recommendedGrid'));
+        }).catch(function () {});
+      }
+
+      function loadCategories() {
+        var catsEl = document.getElementById('schemesCats');
+        if (!API.GovernmentService.categories) return;
+        API.GovernmentService.categories().then(function (data) {
+          var cats = (data && data.categories) || [];
+          var html = '<button type="button" class="schemes-cat-chip is-active" data-cat="" aria-pressed="true">All</button>';
+          var shown = 0;
+          for (var i = 0; i < cats.length; i++) {
+            if (shown >= 14 || !cats[i].has_schemes) continue;
+            html += '<button type="button" class="schemes-cat-chip" data-cat="' + esc(cats[i].name) + '" aria-pressed="false">' + esc(cats[i].name) + '</button>';
+            shown++;
+          }
+          catsEl.innerHTML = html;
+        }).catch(function () {});
+      }
+
+      function loadSaved() {
+        var sec = document.getElementById('savedSection');
+        var gridEl = document.getElementById('savedGrid');
+        if (!API.GovernmentService.savedSchemes) return;
+        API.GovernmentService.savedSchemes({ limit: 100 }).then(function (data) {
+          var items = (data && data.items) || [];
+          if (!items.length) {
+            sec.hidden = true;
+            return;
+          }
+          sec.hidden = false;
+          var html = '';
+          for (var i = 0; i < items.length; i++) html += card(items[i], State.appliedIds);
+          gridEl.innerHTML = html;
+          bindCardEvents(gridEl);
+        }).catch(function () {
+          sec.hidden = true;
+        });
+      }
+
+      // =====================================================================
+      // CARD EVENT BINDING
+      // =====================================================================
+      function bindCardEvents(scope) {
+        if (!scope) return;
+        var views = scope.querySelectorAll('.scheme-card-btn.primary[data-view]');
+        for (var i = 0; i < views.length; i++) views[i].addEventListener('click', onViewDetail);
+        var saves = scope.querySelectorAll('.scheme-card-btn.ghost[data-toggle-save]');
+        for (var j = 0; j < saves.length; j++) saves[j].addEventListener('click', onToggleSave);
+      }
+
+      function bindDelegatedEvents() {
+        // rerun for dynamically rendered grids (grid() uses innerHTML)
+        bindCardEvents(document.getElementById('recommendedGrid'));
+        bindCardEvents(document.getElementById('savedGrid'));
+      }
+
+      function onViewDetail(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openDetails(e.currentTarget.getAttribute('data-view'));
+      }
+
+      function onToggleSave(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var id = e.currentTarget.getAttribute('data-toggle-save');
+        var saved = State.savedIds[id];
+        toggleSave(id, !saved);
+      }
+
+      // =====================================================================
+      // SAVE / UNSAVE
+      // =====================================================================
+      function toggleSave(id, saving) {
+        var card = document.querySelector('[data-id="' + id + '"]');
+        if (!API.GovernmentService) return;
+        var p = saving ? API.GovernmentService.saveScheme(id) : API.GovernmentService.unsaveScheme(id);
+        p.then(function () {
+          if (saving) State.savedIds[id] = true;
+          else delete State.savedIds[id];
+          if (card) {
+            var btn = card.querySelector('.scheme-card-btn.ghost');
+            if (btn) {
+              var ic = btn.querySelector('i');
+              if (ic) ic.className = 'fas ' + (saving ? 'fa-bookmark' : 'fa-bookmark-o');
+              btn.setAttribute('aria-label', saving ? 'Unsave scheme' : 'Save scheme');
+              if (!saving) {
+                var bm = card.querySelector('.schemes-card-bookmarked');
+                if (bm) bm.parentNode && card.querySelector('.scheme-card-top').removeChild(bm);
+              } else {
+                var top = card.querySelector('.scheme-card-top');
+                if (top && !card.querySelector('.schemes-card-bookmarked')) {
+                  var sp = document.createElement('span');
+                  sp.className = 'schemes-card-bookmarked';
+                  sp.title = 'Saved';
+                  sp.innerHTML = '<i class="fas fa-bookmark"></i>';
+                  top.appendChild(sp);
+                }
+              }
+            }
+          }
+          showToast(saving ? 'Scheme saved' : 'Scheme removed from saved', saving ? 'success' : 'info');
+          if (!saving) loadSaved();
+        }).catch(function (err) {
+          var msg = (err && err.message) || 'Could not update saved schemes';
+          showToast(msg, 'error');
+        });
+      }
+
+      // =====================================================================
+      // DETAILS MODAL
+      // =====================================================================
+      function openDetails(id) {
+        var modal = document.getElementById('schemeModal');
+        var body = document.getElementById('schemeModalBody');
+        modal.hidden = false;
+        document.body.classList.add('modal-open');
+        body.innerHTML =
+          '<div class="scheme-detail-loading"><div class="skeleton-loader" style="height:20px;width:60%;border-radius:6px;"></div>' +
+          '<div class="skeleton-loader" style="height:14px;width:80%;margin-top:12px;border-radius:6px;"></div>' +
+          '<div class="skeleton-loader" style="height:90px;width:100%;margin-top:18px;border-radius:10px;"></div></div>';
+        if (window.initSkeletonLoaders) window.initSkeletonLoaders();
+        focusTrap(modal);
+
+        API.GovernmentService.getScheme(id).then(function (s) {
+          body.innerHTML = detailHTML(s);
+          bindDetailActions(s);
+        }).catch(function (err) {
+          body.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
+            '<h4>Unable to load scheme</h4><p>' + esc((err && err.message) || 'Something went wrong.') + '</p></div>';
+        });
+      }
+
+      function detailHTML(s) {
+        var dl = deadlineInfo(s);
+        var bf = benefitText(s);
+        return '<div class="scheme-detail">' +
+          '<div class="scheme-detail-head">' +
+            '<div class="scheme-detail-icon"><i class="fas ' + detailIcon(s) + '"></i></div>' +
+            '<div class="scheme-detail-headtext">' +
+              '<span class="schemes-badge">' + categoryLabel(s) + '</span>' +
+              '<h2 id="schemeModalTitle">' + esc(s.name) + '</h2>' +
+              '<p class="scheme-detail-dept"><i class="fas fa-building"></i> ' + esc(s.department || s.authority || 'Government of India') + '</p>' +
             '</div>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">' +
-                '<h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:0;">' + (scheme.name || 'Untitled Scheme') + '</h3>' +
-                badge +
-              '</div>' +
-              '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">' + stateLabel + cropLabel + '</div>' +
-              '<p style="font-size:12px;color:var(--text-secondary);margin:0 0 6px;line-height:1.5;">' + (scheme.description || '') + '</p>' +
-              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;">' +
-                '<div style="background:var(--surface-color,#f9fafb);padding:10px 12px;border-radius:10px;">' +
-                  '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Benefits</div>' +
-                  '<div style="font-size:12px;color:var(--text-primary);line-height:1.4;">' + benefits + '</div>' +
-                '</div>' +
-                '<div style="background:var(--surface-color,#f9fafb);padding:10px 12px;border-radius:10px;">' +
-                  '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">Eligibility</div>' +
-                  '<div style="font-size:12px;color:var(--text-primary);line-height:1.4;">' + eligibility + '</div>' +
-                '</div>' +
-              '</div>' +
-              '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">' +
-                '<span style="font-size:11px;color:var(--text-muted);"><i class="fas fa-calendar"></i> Deadline: ' + deadline + '</span>' +
-                '<div style="display:flex;gap:6px;">' +
-                  '<button class="btn-secondary btn-sm scheme-apply-btn" data-id="' + scheme.scheme_id + '" style="font-size:11px;padding:6px 14px;border-radius:10px;">Apply</button>' +
-                  '<button class="btn-primary btn-sm scheme-details-btn" data-id="' + scheme.scheme_id + '" style="font-size:11px;padding:6px 14px;border-radius:10px;">Details</button>' +
-                '</div>' +
-              '</div>' +
+          '</div>' +
+
+          '<div class="scheme-detail-stats">' +
+            (bf !== null ? '<div class="scheme-detail-stat"><small>Benefit</small><strong>' + esc(bf) + '</strong></div>' : '') +
+            '<div class="scheme-detail-stat"><small>Deadline</small><strong class="dl-' + dl.cls + '">' + esc(dl.label) + '</strong></div>' +
+            '<div class="scheme-detail-stat"><small>Level</small><strong>' + esc((s.level || 'central').replace(/^\w/, function (c) { return c.toUpperCase(); })) + '</strong></div>' +
+          '</div>' +
+
+          (s.overview ? '<section class="scheme-detail-sec"><h3><i class="fas fa-info-circle"></i> Overview</h3><p>' + esc(s.overview) + '</p></section>' : '') +
+          (s.description ? '<section class="scheme-detail-sec"><h3><i class="fas fa-align-left"></i> Description</h3><p>' + esc(s.description) + '</p></section>' : '') +
+          (s.objectives ? '<section class="scheme-detail-sec"><h3><i class="fas fa-bullseye"></i> Objectives</h3><p>' + esc(s.objectives) + '</p></section>' : '') +
+
+          (benefitList(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-wallet"></i> Benefits</h3><ul class="scheme-detail-list">' + benefitList(s).map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul></section>' : '') +
+
+          (eligibilityList(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-user-check"></i> Eligibility</h3><ul class="scheme-detail-list">' + eligibilityList(s).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></section>' : '') +
+
+          (docList(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-file-alt"></i> Required Documents</h3><ul class="scheme-detail-list">' + docList(s).map(function (d) { return '<li><i class="fas fa-check-circle doc-ok"></i> ' + esc(d) + '</li>'; }).join('') + '</ul></section>' : '') +
+
+          (processList(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-clipboard-list"></i> Application Process</h3><ol class="scheme-detail-steps">' + processList(s).map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol></section>' : '') +
+
+          (faqArr(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-question-circle"></i> FAQs</h3><div class="scheme-faq">' + faqArr(s).map(function (f, i) {
+            return '<div class="scheme-faq-item"><button type="button" class="scheme-faq-q" data-faq="' + i + '" aria-expanded="false"><span>' + esc(f.q) + '</span><i class="fas fa-chevron-down"></i></button>' +
+                   '<div class="scheme-faq-a"><p>' + esc(f.a) + '</p></div></div>';
+          }).join('') + '</div></section>' : '') +
+
+          '<section class="scheme-detail-important">' +
+            '<h3><i class="fas fa-exclamation-circle"></i> Important Information</h3>' +
+            '<div class="scheme-imp-grid">' +
+              '<div class="scheme-imp-item"><small>Application Deadline</small><strong>' + esc(dl.label) + '</strong></div>' +
+              '<div class="scheme-imp-item"><small>Authority</small><strong>' + esc(s.department || s.authority || 'Government of India') + '</strong></div>' +
+              (s.contact_information ? '<div class="scheme-imp-item"><small>Contact</small><strong>' + esc(s.contact_information) + '</strong></div>' : '') +
+              (s.source_url ? '<div class="scheme-imp-item"><small>Official Website</small><strong><a href="' + esc(s.source_url) + '" target="_blank" rel="noopener noreferrer">' + esc(prettyUrl(s.source_url)) + ' <i class="fas fa-external-link-alt"></i></a></strong></div>' : '') +
             '</div>' +
+            (s.source ? '<p class="scheme-source-note"><i class="fas fa-shield-alt"></i> Information verified from ' + esc(s.source) + (s.last_verified_at ? ' · last verified ' + esc(fmtDate(s.last_verified_at)) : '') + '.</p>' : '') +
+          '</section>' +
+
+          '<div class="scheme-detail-actions">' +
+            '<button type="button" class="scheme-card-btn primary" data-apply="' + esc(s.id) + '"><i class="fas ' + (State.appliedIds[s.id] ? 'fa-clipboard-check' : 'fa-paper-plane') + '"></i> ' + (State.appliedIds[s.id] ? 'View Application' : 'Apply Now') + '</button>' +
+            '<button type="button" class="scheme-card-btn ghost wide" data-elig="' + esc(s.id) + '"><i class="fas fa-user-check"></i> Check Eligibility</button>' +
+            '<button type="button" class="scheme-card-btn ghost wide" data-share="' + esc(s.id) + '"><i class="fas fa-share-alt"></i> Share</button>' +
           '</div>' +
         '</div>';
       }
 
-      function getFilteredSchemes() {
-        var query = (document.getElementById('scheme-search').value || '').toLowerCase().trim();
-        var filter = currentFilter;
+      function prettyUrl(u) {
+        try {
+          var p = new URL(u);
+          return p.hostname.replace(/^www\./, '');
+        } catch (e) { return u; }
+      }
 
-        return allSchemes.filter(function (s) {
-          var matchesFilter = filter === 'all' ||
-            (s.category && s.category.toLowerCase() === filter) ||
-            (s.state && filter === 'state');
+      function detailIcon(s) {
+        var c = String((s && s.category) || '').toLowerCase();
+        if (c.indexOf('insurance') >= 0) return 'fa-umbrella';
+        if (c.indexOf('loan') >= 0 || c.indexOf('credit') >= 0) return 'fa-hand-holding-usd';
+        if (c.indexOf('irrigation') >= 0) return 'fa-tint';
+        if (c.indexOf('equipment') >= 0 || c.indexOf('drone') >= 0 || c.indexOf('mechani') >= 0) return 'fa-tractor';
+        if (c.indexOf('organic') >= 0 || c.indexOf('seed') >= 0) return 'fa-seedling';
+        if (c.indexOf('income') >= 0 || c.indexOf('support') >= 0) return 'fa-rupee-sign';
+        if (c.indexOf('subsid') >= 0) return 'fa-percentage';
+        return 'fa-landmark';
+      }
 
-          var matchesSearch = !query ||
-            (s.name && s.name.toLowerCase().indexOf(query) !== -1) ||
-            (s.benefits && s.benefits.toLowerCase().indexOf(query) !== -1) ||
-            (s.category && s.category.toLowerCase().indexOf(query) !== -1) ||
-            (s.description && s.description.toLowerCase().indexOf(query) !== -1);
+      function benefitList(s) {
+        var out = [];
+        if (s && s.benefits) {
+          if (Array.isArray(s.benefits)) out = out.concat(s.benefits.map(String));
+          else if (typeof s.benefits === 'string') out.push(String(s.benefits));
+        }
+        if (s && s.benefit) out.push(String(s.benefit));
+        if (s && s.benefit_amount) out.push('Financial benefit: ' + money(s.benefit_amount));
+        if (s && s.benefit_type && String(s.benefit_type) !== String(s.benefits)) {
+          out.push(prettyBenefit(s.benefit_type) || String(s.benefit_type));
+        }
+        return out.filter(function (x, i) { return x && out.indexOf(x) === i; }).slice(0, 8);
+      }
 
-          return matchesFilter && matchesSearch;
+      function eligibilityList(s) {
+        var out = [];
+        if (s && s.eligible_farmer_types && Array.isArray(s.eligible_farmer_types)) {
+          out = out.concat(s.eligible_farmer_types.map(prettyEligType).filter(Boolean));
+        }
+        var e = txt(s.eligibility || '');
+        if (e) out.push(e);
+        if (s && s.land_category) out.push('Land: ' + txt(s.land_category));
+        if (s && s.income_category) out.push('Income: ' + txt(s.income_category));
+        if (s && s.age_limit) out.push('Age: ' + txt(s.age_limit));
+        return out.filter(function (x, i) { return x && out.indexOf(x) === i; }).slice(0, 10);
+      }
+
+      function docList(s) {
+        var d = s.documents_required || s.documents || s.required_documents;
+        if (Array.isArray(d)) return d.map(String).filter(function (x) { return x && x.trim(); });
+        if (typeof d === 'string') return d.split(/\n|,|;/).map(function (x) { return x.trim(); }).filter(function (x) { return x; });
+        return [];
+      }
+
+      function processList(s) {
+        if (Array.isArray(s && s.application_process)) return s.application_process.map(String);
+        if (typeof (s && s.application_process) === 'string' && s.application_process.trim()) {
+          return s.application_process.split(/\n+/).map(function (x) { return x.trim(); }).filter(function (x) { return x; });
+        }
+        if (s && s.how_to_apply) return String(s.how_to_apply).split(/\n+/).filter(function (x) { return x.trim(); });
+        return [];
+      }
+
+      function faqArr(s) {
+        if (s && s.faqs && Array.isArray(s.faqs)) return s.faqs.filter(function (f) { return f && f.q && f.a; });
+        return [];
+      }
+
+      function bindDetailActions(s) {
+        var applyBtn = document.querySelector('.scheme-detail-actions [data-apply]');
+        if (applyBtn) applyBtn.addEventListener('click', function () { openApply(s); });
+        var eligBtn = document.querySelector('.scheme-detail-actions [data-elig]');
+        if (eligBtn) eligBtn.addEventListener('click', function () { openEligibility(s); });
+        var shareBtn = document.querySelector('.scheme-detail-actions [data-share]');
+        if (shareBtn) shareBtn.addEventListener('click', function () { shareScheme(s); });
+
+        var faqs = document.querySelectorAll('.scheme-faq-q');
+        for (var i = 0; i < faqs.length; i++) {
+          faqs[i].addEventListener('click', function () {
+            var expanded = this.getAttribute('aria-expanded') === 'true';
+            this.setAttribute('aria-expanded', String(!expanded));
+            this.classList.toggle('open', !expanded);
+            var ans = this.nextElementSibling;
+            if (ans) ans.classList.toggle('open', !expanded);
+          });
+        }
+      }
+
+      function shareScheme(s) {
+        var data = {
+          title: s.name + ' — Government Scheme',
+          text: s.name + ': ' + (s.overview || s.description || 'Government scheme available on Farm Assist.'),
+          url: window.location.origin + window.location.pathname.replace('schemes.html', 'scheme_detail.html') + '?id=' + encodeURIComponent(s.id || s.scheme_id)
+        };
+        if (navigator.share) {
+          navigator.share(data).catch(function () {});
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(data.url).then(function () {
+            showToast('Link copied to clipboard', 'success');
+          }).catch(function () { fallbackCopy(data.url); });
+        } else {
+          fallbackCopy(data.url);
+        }
+      }
+
+      function fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); showToast('Link copied to clipboard', 'success'); }
+        catch (e) { showToast('Copy not supported', 'error'); }
+        document.body.removeChild(ta);
+      }
+
+      // =====================================================================
+      // ELIGIBILITY CHECKER
+      // =====================================================================
+      function openEligibility(s) {
+        var modal = document.getElementById('eligModal');
+        var body = document.getElementById('eligModalBody');
+        modal.hidden = false;
+        document.body.classList.add('modal-open');
+        var u = (window.UserStore && UserStore.getCurrentUser()) || {};
+        var addr = (u.addresses && u.addresses[0]) || {};
+        var state = addr.state || '';
+        var crop = '';
+        if (u.preferred_crops && u.preferred_crops.length) crop = u.preferred_crops[0];
+
+        body.innerHTML =
+          '<div class="scheme-elig">' +
+            '<h3 id="eligModalTitle"><i class="fas fa-user-check"></i> Check Eligibility</h3>' +
+            '<p class="scheme-elig-sub">Answer a few questions about your farm to see which schemes you may qualify for.</p>' +
+            '<label class="scheme-field">Farmer Type' +
+              '<select id="eligFarmerType">' +
+                '<option value="Small and Marginal Farmer" ' + (u.farming_type === 'small' ? 'selected' : '') + '>Small / Marginal Farmer</option>' +
+                '<option value="Farmer" ' + (!u.farming_type || u.farming_type === 'large' ? 'selected' : '') + '>Farmer (Any type)</option>' +
+                '<option value="Tenant Farmer">Tenant Farmer</option>' +
+                '<option value="Women Farmer" ' + (u.gender === 'female' ? 'selected' : '') + '>Women Farmer</option>' +
+              '</select>' +
+            '</label>' +
+            '<label class="scheme-field">State' +
+              '<input type="text" id="eligState" value="' + esc(state) + '" placeholder="e.g. Maharashtra">' +
+            '</label>' +
+            '<label class="scheme-field">District' +
+              '<input type="text" id="eligDistrict" value="' + esc(addr.district || '') + '" placeholder="e.g. Pune">' +
+            '</label>' +
+            '<label class="scheme-field">Land Size (hectares)' +
+              '<input type="number" id="eligLand" step="0.1" min="0" value="' + esc(u.land_size || '') + '" placeholder="e.g. 2">' +
+            '</label>' +
+            '<label class="scheme-field">Primary Crop' +
+              '<input type="text" id="eligCrop" value="' + esc(crop) + '" placeholder="e.g. wheat, rice, cotton">' +
+            '</label>' +
+            '<label class="scheme-field">Annual Income Category' +
+              '<select id="eligIncome">' +
+                '<option value="Below 1 Lakh">Below 1 Lakh</option>' +
+                '<option value="1 - 2 Lakh">1 - 2 Lakh</option>' +
+                '<option value="2 - 5 Lakh">2 - 5 Lakh</option>' +
+                '<option value="Above 5 Lakh">Above 5 Lakh</option>' +
+              '</select>' +
+            '</label>' +
+            '<label class="scheme-field">Age' +
+              '<input type="number" id="eligAge" min="18" max="100" value="" placeholder="e.g. 40">' +
+            '</label>' +
+            '<button type="button" class="scheme-card-btn primary wide" id="eligSubmit"><i class="fas fa-search"></i> Check My Eligibility</button>' +
+            '<p class="scheme-elig-disclaimer">This check is an indicative guide based on the information you provide. Final eligibility is determined by the official scheme authority.</p>' +
+          '</div>';
+        focusTrap(modal);
+
+        document.getElementById('eligSubmit').addEventListener('click', function () {
+          var payload = {
+            farmer_type: document.getElementById('eligFarmerType').value,
+            state: document.getElementById('eligState').value.trim(),
+            district: document.getElementById('eligDistrict').value.trim(),
+            land_size_hectares: parseFloat(document.getElementById('eligLand').value) || undefined,
+            crop: document.getElementById('eligCrop').value.trim(),
+            income_category: document.getElementById('eligIncome').value,
+            age: parseInt(document.getElementById('eligAge').value, 10) || undefined
+          };
+          var submitBtn = this;
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+          API.GovernmentService.checkEligibility(payload).then(function (data) {
+            renderEligibilityResults(data, payload);
+          }).catch(function (err) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-search"></i> Check My Eligibility';
+            showToast((err && err.message) || 'Could not check eligibility', 'error');
+          });
         });
       }
 
-      function renderSchemes() {
-        var container = document.getElementById('schemes-content');
-        var filtered = getFilteredSchemes();
+      function renderEligibilityResults(data, payload) {
+        var body = document.getElementById('eligModalBody');
+        var results = (data && data.results) || [];
+        var html = '<div class="scheme-elig">' +
+          '<h3><i class="fas fa-check-circle"></i> Eligibility Results</h3>' +
+          '<p class="scheme-elig-sub">Based on your details: ' + esc(payload.farmer_type || 'Farmer') + (payload.state ? ', ' + esc(payload.state) : '') + (payload.crop ? ', ' + esc(payload.crop) : '') + '.</p>';
+        var eligible = 0, partial = 0;
+        for (var i = 0; i < results.length; i++) {
+          var r = results[i];
+          var rElig = !!r.likely_eligible;
+          var rReasons = r.matching || r.match_reasons || [];
+          var cls = rElig ? 'eligible' : (rReasons.length ? 'partial' : 'noteligible');
+          if (rElig) eligible++;
+          else if (rReasons.length) partial++;
+          html += '<div class="scheme-elig-result ' + cls + '">' +
+            '<div class="scheme-elig-result-head">' +
+              '<span class="scheme-elig-result-icon"><i class="fas ' + (rElig ? 'fa-check' : 'fa-times') + '"></i></span>' +
+              '<div><strong>' + esc(r.name || r.scheme_name || 'Scheme') + '</strong>' +
+              '<span class="scheme-elig-result-label">' + (rElig ? 'Likely Eligible' : (rReasons.length ? 'Maybe Eligible' : 'Not Eligible')) + '</span></div>' +
+            '</div>' +
+            (rReasons.length ? '<ul class="scheme-elig-reasons">' + rReasons.map(function (m) { return '<li><i class="fas fa-chevron-circle-right"></i> ' + esc(m) + '</li>'; }).join('') + '</ul>' : '') +
+            (r.scheme_id || r.id ? '<button type="button" class="scheme-elig-view" data-elig-view="' + esc(r.scheme_id || r.id) + '">View Details</button>' : '') +
+          '</div>';
+        }
+        html += '<p class="scheme-elig-disclaimer">' + esc((data && data.disclaimer) || 'This is an indicative guide only. Final eligibility is determined by the official scheme authority.') + '</p>' +
+          '<div class="scheme-elig-summary">' +
+            '<span class="eligible"><i class="fas fa-check-circle"></i> ' + eligible + ' likely eligible</span>' +
+            '<span class="partial"><i class="fas fa-info-circle"></i> ' + partial + ' maybe eligible</span>' +
+          '</div>' +
+          '<button type="button" class="scheme-card-btn ghost wide" id="eligBack"><i class="fas fa-arrow-left"></i> Adjust Answers</button>' +
+        '</div>';
+        body.innerHTML = html;
 
-        if (filtered.length === 0) {
-          UIState.empty(container, 'No schemes match your filter', 'fa-search');
+        var eligViews = body.querySelectorAll('[data-elig-view]');
+        for (var i2 = 0; i2 < eligViews.length; i2++) {
+          eligViews[i2].addEventListener('click', function () {
+            var rid = this.getAttribute('data-elig-view');
+            document.getElementById('eligModal').hidden = true;
+            document.body.classList.remove('modal-open');
+            openDetails(rid);
+          });
+        }
+        document.getElementById('eligBack').addEventListener('click', function () {
+          renderEligibilityFormBack(payload);
+        });
+      }
+
+      function renderEligibilityFormBack(payload) {
+        var body = document.getElementById('eligModalBody');
+        // Re-open form with previous answers
+        openEligibilityForm(payload);
+      }
+
+      function openEligibilityForm(payload) {
+        var body = document.getElementById('eligModalBody');
+        var p = payload || {};
+        body.innerHTML =
+          '<div class="scheme-elig">' +
+            '<h3><i class="fas fa-user-check"></i> Check Eligibility</h3>' +
+            '<p class="scheme-elig-sub">Answer a few questions about your farm to see which schemes you may qualify for.</p>' +
+            '<label class="scheme-field">Farmer Type<select id="eligFarmerType">' +
+              '<option value="Small and Marginal Farmer" ' + (p.farmer_type === 'Small and Marginal Farmer' ? 'selected' : '') + '>Small / Marginal Farmer</option>' +
+              '<option value="Farmer" ' + (p.farmer_type === 'Farmer' ? 'selected' : '') + '>Farmer (Any type)</option>' +
+              '<option value="Tenant Farmer" ' + (p.farmer_type === 'Tenant Farmer' ? 'selected' : '') + '>Tenant Farmer</option>' +
+              '<option value="Women Farmer" ' + (p.farmer_type === 'Women Farmer' ? 'selected' : '') + '>Women Farmer</option></select></label>' +
+            '<label class="scheme-field">State<input type="text" id="eligState" value="' + esc(p.state || '') + '"></label>' +
+            '<label class="scheme-field">District<input type="text" id="eligDistrict" value="' + esc(p.district || '') + '"></label>' +
+            '<label class="scheme-field">Land Size (hectares)<input type="number" id="eligLand" step="0.1" min="0" value="' + esc(p.land_size_hectares || '') + '"></label>' +
+            '<label class="scheme-field">Primary Crop<input type="text" id="eligCrop" value="' + esc(p.crop || '') + '"></label>' +
+            '<label class="scheme-field">Annual Income Category<select id="eligIncome">' +
+              '<option value="Below 1 Lakh" ' + (p.income_category === 'Below 1 Lakh' ? 'selected' : '') + '>Below 1 Lakh</option>' +
+              '<option value="1 - 2 Lakh" ' + (p.income_category === '1 - 2 Lakh' ? 'selected' : '') + '>1 - 2 Lakh</option>' +
+              '<option value="2 - 5 Lakh" ' + (p.income_category === '2 - 5 Lakh' ? 'selected' : '') + '>2 - 5 Lakh</option>' +
+              '<option value="Above 5 Lakh" ' + (p.income_category === 'Above 5 Lakh' ? 'selected' : '') + '>Above 5 Lakh</option></select></label>' +
+            '<label class="scheme-field">Age<input type="number" id="eligAge" min="18" max="100" value="' + esc(p.age || '') + '"></label>' +
+            '<button type="button" class="scheme-card-btn primary wide" id="eligSubmit"><i class="fas fa-search"></i> Check My Eligibility</button>' +
+            '<p class="scheme-elig-disclaimer">This check is an indicative guide based on the information you provide. Final eligibility is determined by the official scheme authority.</p>' +
+          '</div>';
+        document.getElementById('eligSubmit').addEventListener('click', function () {
+          var payload = {
+            farmer_type: document.getElementById('eligFarmerType').value,
+            state: document.getElementById('eligState').value.trim(),
+            district: document.getElementById('eligDistrict').value.trim(),
+            land_size_hectares: parseFloat(document.getElementById('eligLand').value) || undefined,
+            crop: document.getElementById('eligCrop').value.trim(),
+            income_category: document.getElementById('eligIncome').value,
+            age: parseInt(document.getElementById('eligAge').value, 10) || undefined
+          };
+          var submitBtn = this;
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+          API.GovernmentService.checkEligibility(payload).then(function (data) {
+            renderEligibilityResults(data, payload);
+          }).catch(function (err) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-search"></i> Check My Eligibility';
+            showToast((err && err.message) || 'Could not check eligibility', 'error');
+          });
+        });
+      }
+
+      // =====================================================================
+      // APPLY FLOW
+      // =====================================================================
+      function openApply(s) {
+        if (State.appliedIds[s.id]) {
+          showToast('You have already applied to this scheme', 'info');
+          openApplied();
           return;
         }
-
-        var html = '';
-        filtered.forEach(function (scheme) {
-          html += renderSchemeCard(scheme);
-        });
-        container.innerHTML = html;
-
-        container.querySelectorAll('.scheme-apply-btn').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var id = this.getAttribute('data-id');
-            var self = this;
-            self.disabled = true;
-            self.textContent = 'Applying...';
-            API.Government.applyScheme(id).then(function () {
-              showToast('Application submitted successfully!', 'success');
-              self.textContent = 'Applied';
-              self.style.opacity = '0.6';
-            }).catch(function (err) {
-              showToast(err.message || 'Failed to apply. Please try again.', 'danger');
-              self.disabled = false;
-              self.textContent = 'Apply';
-            });
-          });
-        });
-
-        container.querySelectorAll('.scheme-details-btn').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var id = this.getAttribute('data-id');
-            var scheme = allSchemes.find(function (s) { return s.scheme_id === id; });
-            if (scheme) {
-              showToast(scheme.name + ': ' + (scheme.description || 'No additional details'), 'info');
-            }
-          });
-        });
-      }
-
-      function loadSchemes() {
-        var container = document.getElementById('schemes-content');
-        UIState.loading(container);
-
-        API.Government.listSchemes().then(function (res) {
-          if (Array.isArray(res)) {
-            allSchemes = res;
-          } else if (res && res.items) {
-            allSchemes = res.items;
-          } else {
-            allSchemes = [];
-          }
-          renderSchemes();
-        }).catch(function (err) {
-          UIState.error(container, err.message || 'Failed to load schemes', loadSchemes);
-        });
-      }
-
-      function initTabs() {
-        var tabs = document.querySelectorAll('#filter-tabs .filter-tab');
-        tabs.forEach(function (tab) {
-          tab.addEventListener('click', function () {
-            tabs.forEach(function (t) { t.classList.remove('active'); });
-            this.classList.add('active');
-            currentFilter = this.getAttribute('data-filter') || 'all';
-            renderSchemes();
-          });
-        });
-      }
-
-      function initSearch() {
-        var input = document.getElementById('scheme-search');
-        var debounceTimer;
-        input.addEventListener('input', function () {
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(renderSchemes, 200);
-        });
-      }
-
-      function initEligibilityCheck() {
-        document.getElementById('check-eligibility-btn').addEventListener('click', function () {
-          var self = this;
-          self.disabled = true;
-          self.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
-          API.Government.listApplications().then(function (res) {
-            var applications = Array.isArray(res) ? res : (res && res.items ? res.items : []);
-            if (applications.length === 0) {
-              showToast('No applications found. Apply to a scheme to get started!', 'info');
-            } else {
-              showToast('You have ' + applications.length + ' scheme application(s) on file.', 'success');
-            }
+        var modal = document.getElementById('applyModal');
+        var body = document.getElementById('applyModalBody');
+        modal.hidden = false;
+        document.body.classList.add('modal-open');
+        body.innerHTML =
+          '<div class="scheme-apply">' +
+            '<h3 id="applyModalTitle"><i class="fas fa-paper-plane"></i> Apply for Scheme</h3>' +
+            '<p class="scheme-apply-scheme"><strong>' + esc(s.name) + '</strong></p>' +
+            '<p class="scheme-apply-note">Your application will be submitted to the official scheme authority. A real application reference ID will be generated on confirmation.</p>' +
+            '<button type="button" class="scheme-card-btn primary wide" id="applyConfirm"><i class="fas fa-check"></i> Confirm Application</button>' +
+            '<button type="button" class="scheme-card-btn ghost wide" data-close-apply>Cancel</button>' +
+          '</div>';
+        focusTrap(modal);
+        document.getElementById('applyConfirm').addEventListener('click', function () {
+          var btn = this;
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+          API.GovernmentService.applyScheme(s.id).then(function (data) {
+            State.appliedIds[s.id] = true;
+            var count = Object.keys(State.appliedIds).length;
+            var el = document.getElementById('appliedCount');
+            if (el) { el.textContent = count; el.hidden = count === 0; }
+            modal.hidden = true;
+            document.body.classList.remove('modal-open');
+            refreshAppliedFlag();
+            updateDetailApplyBtn(s.id);
+            showToast('Application submitted successfully', 'success');
+            openApplied();
           }).catch(function (err) {
-            showToast(err.message || 'Unable to check eligibility.', 'warning');
-          }).finally(function () {
-            self.disabled = false;
-            self.innerHTML = '<i class="fas fa-check-circle"></i> Check Eligibility';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Confirm Application';
+            var msg = (err && err.message) || 'Could not submit application';
+            if (msg.toLowerCase().indexOf('already') >= 0) {
+              State.appliedIds[s.id] = true;
+              modal.hidden = true;
+              document.body.classList.remove('modal-open');
+              openApplied();
+            } else {
+              showToast(msg, 'error');
+            }
           });
         });
       }
 
-      document.addEventListener('DOMContentLoaded', function () {
-        initTabs();
-        initSearch();
-        initEligibilityCheck();
-        loadSchemes();
-      });
+      function updateDetailApplyBtn(id) {
+        var btn = document.querySelector('.scheme-detail-actions [data-apply]');
+        if (btn) btn.innerHTML = '<i class="fas fa-clipboard-check"></i> View Application';
+      }
+
+      // =====================================================================
+      // APPLIED DRAWER
+      // =====================================================================
+      function openApplied() {
+        var modal = document.getElementById('appliedModal');
+        var body = document.getElementById('appliedModalBody');
+        modal.hidden = false;
+        document.body.classList.add('modal-open');
+        body.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-spinner fa-spin"></i></div><h4>Loading applications...</h4></div>';
+        focusTrap(modal);
+
+        API.GovernmentService.listApplications().then(function (data) {
+          var items = (data && data.items) || [];
+          var html = '<div class="scheme-applied">' +
+            '<h3 id="appliedModalTitle"><i class="fas fa-clipboard-check"></i> My Applications</h3>';
+          if (!items.length) {
+            html +=
+              '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-file-invoice"></i></div>' +
+              '<h4>No applications yet</h4><p>Your applied government schemes will appear here.</p>' +
+              '<button type="button" class="schemes-state-btn" data-close-applied>Explore Schemes</button></div>';
+          } else {
+            for (var i = 0; i < items.length; i++) {
+              var a = items[i];
+              html += applicationRow(a);
+            }
+          }
+          html += '</div>';
+          body.innerHTML = html;
+          var closeBtns = body.querySelectorAll('[data-close-applied]');
+          for (var j = 0; j < closeBtns.length; j++) {
+            closeBtns[j].addEventListener('click', function () {
+              modal.hidden = true;
+              document.body.classList.remove('modal-open');
+              var sec = document.getElementById('recommendedSection');
+              if (sec && sec.hidden === false) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              else document.getElementById('page-content') && document.getElementById('page-content').scrollIntoView({ behavior: 'smooth' });
+            });
+          }
+        }).catch(function (err) {
+          body.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
+            '<h4>Unable to load applications</h4><p>' + esc((err && err.message) || 'Something went wrong.') + '</p>' +
+            '<button type="button" class="schemes-state-btn" data-close-applied>Close</button></div>';
+          var cb = body.querySelector('[data-close-applied]');
+          if (cb) cb.addEventListener('click', function () { modal.hidden = true; document.body.classList.remove('modal-open'); });
+        });
+      }
+
+      function applicationRow(a) {
+        var status = txt(a.status || 'Applied');
+        var statusIcon = 'fa-file-invoice';
+        var statusCls = 'applied';
+        var lower = status.toLowerCase();
+        if (lower.indexOf('approv') >= 0) { statusIcon = 'fa-check-circle'; statusCls = 'approved'; }
+        else if (lower.indexOf('reject') >= 0) { statusIcon = 'fa-times-circle'; statusCls = 'rejected'; }
+        else if (lower.indexOf('review') >= 0) { statusIcon = 'fa-search'; statusCls = 'review'; }
+        else if (lower.indexOf('information') >= 0) { statusIcon = 'fa-info-circle'; statusCls = 'review'; }
+        else if (lower.indexOf('complete') >= 0) { statusIcon = 'fa-check-double'; statusCls = 'approved'; }
+
+        var ref = txt(a.application_id || a.reference_id || a.id || '');
+        var name = txt(a.scheme_name || a.scheme || 'Scheme');
+        return '<div class="scheme-app-row">' +
+          '<div class="scheme-app-statusicon ' + statusCls + '"><i class="fas ' + statusIcon + '"></i></div>' +
+          '<div class="scheme-app-main">' +
+            '<strong class="scheme-app-name">' + name + '</strong>' +
+            '<span class="scheme-app-ref">Ref: ' + ref + '</span>' +
+            (a.applied_date || a.application_date ? '<span class="scheme-app-date"><i class="fas fa-calendar-alt"></i> Applied ' + esc(fmtDate(a.applied_date || a.application_date)) + '</span>' : '') +
+          '</div>' +
+          '<div class="scheme-app-side">' +
+            '<span class="scheme-app-status ' + statusCls + '"><i class="fas ' + statusIcon + '"></i> ' + status + '</span>' +
+            '<span class="scheme-app-updated">' + (a.updated_at ? 'Updated ' + esc(fmtDate(a.updated_at)) : '') + '</span>' +
+          '</div>' +
+        '</div>';
+      }
+
+      // =====================================================================
+      // MODAL HELPERS
+      // =====================================================================
+      function focusTrap(modal) {
+        var focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusables.length) focusables[0].focus();
+      }
+
+      function closeAllModals() {
+        var modals = document.querySelectorAll('.scheme-modal');
+        for (var i = 0; i < modals.length; i++) {
+          modals[i].hidden = true;
+        }
+        document.body.classList.remove('modal-open');
+      }
+
+      // =====================================================================
+      // WIREUP
+      // =====================================================================
+      function wireEvents() {
+        // Search
+        var searchInput = document.getElementById('schemeSearchInput');
+        var clearBtn = document.getElementById('schemeSearchClear');
+        var debounceTimer = null;
+
+        function doSearch() {
+          State.search = searchInput.value.trim();
+          clearBtn.hidden = searchInput.value.length === 0;
+          loadSchemes(true);
+        }
+
+        searchInput.addEventListener('input', function () {
+          clearBtn.hidden = this.value.length === 0;
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(doSearch, 350);
+        });
+        clearBtn.addEventListener('click', function () {
+          searchInput.value = '';
+          clearBtn.hidden = true;
+          State.search = '';
+          loadSchemes(true);
+          searchInput.focus();
+        });
+
+        // Sort
+        document.getElementById('schemeSort').addEventListener('change', function () {
+          State.sort = this.value;
+          loadSchemes(true);
+        });
+
+        // Load more
+        document.getElementById('loadMoreBtn').addEventListener('click', function () {
+          State.page += 1;
+          loadSchemes(false);
+        });
+
+        // Category chips
+        document.getElementById('schemesCats').addEventListener('click', function (e) {
+          var chip = e.target.closest('.schemes-cat-chip');
+          if (!chip) return;
+          var all = this.querySelectorAll('.schemes-cat-chip');
+          for (var i = 0; i < all.length; i++) {
+            all[i].classList.remove('is-active');
+            all[i].setAttribute('aria-pressed', 'false');
+          }
+          chip.classList.add('is-active');
+          chip.setAttribute('aria-pressed', 'true');
+          State.category = chip.getAttribute('data-cat') || '';
+          loadSchemes(true);
+        });
+
+        // Applied button
+        document.getElementById('appliedBtn').addEventListener('click', openApplied);
+
+        // Modal close buttons (backdrops + closes)
+        var closeSelectors = ['[data-close-modal]', '[data-close-elig]', '[data-close-applied]', '[data-close-apply]'];
+        closeSelectors.forEach(function (sel) {
+          var els = document.querySelectorAll(sel);
+          for (var j = 0; j < els.length; j++) els[j].addEventListener('click', closeAllModals);
+        });
+
+        // Escape key
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            closeAllModals();
+            if (document.activeElement && document.activeElement.id === 'schemeSearchInput') {
+              document.activeElement.blur();
+            }
+          }
+        });
+      }
+
+      function init() {
+        if (!window.API || !API.GovernmentService) return;
+        if (!UserStore.isLoggedIn()) {
+          // still allow browsing; guard handled elsewhere
+        }
+        wireEvents();
+        loadCategories();
+        loadSchemes(true);
+        loadTokenStores();
+        loadSaved();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
     })();
   </script>
 </body>

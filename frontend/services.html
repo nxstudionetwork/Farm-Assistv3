@@ -1,986 +1,1605 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light" data-page="services">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Farm Assist - Services</title>
+  <title>Agriculture Services - Farm Assist</title>
+  <meta name="description" content="Discover, request, and track agricultural services for your farm.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0F2E1E">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    @media (max-width: 900px) { .services-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 540px) { .services-grid { grid-template-columns: 1fr; } }
-    @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr !important; } }
-    .service-card {
-      background: white; border-radius: var(--radius-md); padding: 16px;
-      border: 1px solid var(--border-light); cursor: pointer;
-      transition: all 0.25s; position: relative; display: flex; flex-direction: column;
+    .svc-container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 16px 16px 100px;
     }
-    .service-card:hover { border-color: var(--primary-green); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-    .service-card .service-icon {
-      width: 44px; height: 44px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; color: white; margin-bottom: 10px;
+
+    .svc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
     }
-    .service-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-    .service-card p { font-size: 11px; color: var(--text-muted); flex: 1; margin-bottom: 8px; line-height: 1.5; }
-    .service-card .service-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .service-card .avail-badge {
-      font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
-      display: inline-flex; align-items: center; gap: 4px;
+    .svc-header-info h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    .avail-badge.available { background: var(--soft-green); color: var(--primary-green); }
-    .avail-badge.busy { background: var(--sun-soft); color: #A67C00; }
-    .avail-badge.limited { background: #FFF0F0; color: var(--danger); }
-    .avail-badge i { font-size: 8px; }
-    .service-card .resp-time { font-size: 10px; color: var(--text-muted); }
-    .service-card .card-footer { margin-top: auto; }
-    .service-card .card-footer button {
-      width: 100%; padding: 8px; border-radius: var(--radius-sm); border: none;
-      font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-      background: var(--bg-card-soft); color: var(--primary-green);
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    .svc-header-info h1 i {
+      color: var(--primary-green);
     }
-    .service-card .card-footer button:hover { background: var(--primary-green); color: white; }
-    .service-card .req-badge {
-      position: absolute; top: 12px; right: 12px;
-      background: var(--danger); color: white; font-size: 8px; font-weight: 700;
-      padding: 2px 7px; border-radius: 10px;
+    .svc-header-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0;
     }
-    .service-request-item {
-      background: white; border-radius: var(--radius-md); padding: 14px 16px;
-      border: 1px solid var(--border-light); transition: all 0.2s; cursor: pointer;
-      display: flex; align-items: center; gap: 12px;
+    .svc-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+      min-height: 40px;
     }
-    .service-request-item:hover { border-color: var(--primary-green); box-shadow: var(--shadow-sm); }
-    .service-request-item .sr-icon {
-      width: 40px; height: 40px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    .svc-action-btn:hover {
+      background: var(--soft-green);
+      color: var(--primary-green);
+      border-color: var(--medium-green);
     }
-    .service-request-item .sr-info { flex: 1; min-width: 0; }
-    .service-request-item .sr-info h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-    .service-request-item .sr-info .sr-date { font-size: 10px; color: var(--text-muted); }
-    .sr-status {
-      font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+    .svc-badge-count {
+      background: var(--primary-green);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      line-height: 1;
+    }
+
+    .svc-search-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .svc-search-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .svc-search-box {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .svc-search-box i {
+      position: absolute;
+      left: 14px;
+      color: var(--text-muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+    .svc-search-box input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      border: 1px solid var(--form-outline);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text-primary);
+      background: var(--bg-card-soft);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .svc-search-box input:focus {
+      border-color: var(--primary-green);
+      box-shadow: 0 0 0 3px rgba(27, 94, 63, 0.12);
+      outline: none;
+      background: #ffffff;
+    }
+    .svc-search-clear {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .svc-search-clear:hover {
+      color: var(--primary-green);
+    }
+    .svc-requested-btn {
+      flex-shrink: 0;
+      white-space: nowrap;
+      min-height: 42px;
+    }
+    @media (max-width: 540px) {
+      .svc-search-row {
+        flex-wrap: wrap;
+      }
+      .svc-requested-btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    .svc-cat-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 2px 14px;
+      margin-bottom: 16px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .svc-cat-bar::-webkit-scrollbar {
+      display: none;
+    }
+    .svc-cat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+    .svc-cat-pill:hover {
+      border-color: var(--medium-green);
+      color: var(--primary-green);
+      background: var(--soft-green);
+    }
+    .svc-cat-pill.active {
+      background: var(--primary-green);
+      color: #ffffff;
+      border-color: var(--primary-green);
+      box-shadow: var(--shadow-sm);
+    }
+    .svc-cat-pill i {
+      font-size: 13px;
+    }
+
+    .svc-active-banner {
+      background: linear-gradient(135deg, var(--soft-green) 0%, #f0faf4 100%);
+      border: 1px solid var(--medium-green);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .svc-active-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+    .svc-active-banner-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--primary-green);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
       flex-shrink: 0;
     }
-    .sr-status.pending { background: var(--sun-soft); color: #A67C00; }
-    .sr-status.in-progress { background: var(--sky-soft); color: #1565C0; }
-    .sr-status.completed { background: var(--soft-green); color: var(--primary-green); }
-    .sr-status.cancelled { background: #FFF0F0; color: var(--danger); }
-    .sr-tracking { font-size: 9px; color: var(--text-muted); margin-top: 2px; font-family: monospace; }
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+    .svc-active-banner-info {
+      min-width: 0;
     }
-    .section-header h3 { font-size: 16px; display: flex; align-items: center; gap: 8px; }
-    .section-header h3 i { color: var(--primary-green); }
-    .section-header .sec-count { font-size: 11px; color: var(--text-muted); font-weight: 500; }
-    .request-detail-label { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
-    .request-detail-value { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
-    .progress-steps { display: flex; align-items: center; justify-content: space-between; margin: 20px 0; position: relative; }
-    .progress-steps::before {
-      content: ''; position: absolute; top: 50%; left: 25px; right: 25px;
-      height: 3px; background: var(--border-light); transform: translateY(-50%); border-radius: 2px;
-      z-index: 0;
+    .svc-active-banner-info .svc-active-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--primary-green);
+      margin-bottom: 2px;
     }
-    .progress-step { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; z-index: 1; }
-    .progress-step .ps-dot {
-      width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      font-size: 12px; background: var(--border-light); color: var(--text-muted); transition: all 0.3s;
+    .svc-active-banner-info .svc-active-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .progress-step.completed .ps-dot { background: var(--primary-green); color: white; }
-    .progress-step.active .ps-dot { background: var(--medium-green); color: white; box-shadow: 0 0 0 4px rgba(45,134,89,0.2); }
-    .progress-step .ps-label { font-size: 9px; font-weight: 600; color: var(--text-muted); text-align: center; white-space: nowrap; }
-    .progress-step.completed .ps-label { color: var(--primary-green); }
-    .progress-step.active .ps-label { color: var(--text-primary); font-weight: 700; }
-    .status-timeline-entry { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
-    .status-timeline-entry:last-child { border-bottom: none; }
-    .status-timeline-entry .tl-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
-    .status-timeline-entry .tl-content { font-size: 12px; flex: 1; }
-    .status-timeline-entry .tl-content .tl-title { font-weight: 600; }
-    .status-timeline-entry .tl-content .tl-time { font-size: 10px; color: var(--text-muted); }
-    .filter-chip-group { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 12px; margin-bottom: 4px; }
-    .filter-chip-group::-webkit-scrollbar { display: none; }
-    .filter-chip {
-      flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;
-      background: white; border: 1px solid var(--border-light); color: var(--text-secondary);
-      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    .svc-active-banner-info .svc-active-meta {
+      font-size: 11px;
+      color: var(--text-muted);
     }
-    .filter-chip:hover { border-color: var(--primary-green); color: var(--primary-green); }
-    .filter-chip.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
-    .skeleton-service {
-      background: white; border-radius: var(--radius-md); padding: 16px;
+    .svc-active-banner-btn {
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-green);
+      color: #fff;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .svc-active-banner-btn:hover {
+      background: var(--forest-900);
+    }
+
+    .svc-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (min-width: 640px) {
+      .svc-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 960px) {
+      .svc-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .svc-card {
+      background: var(--bg-card);
       border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
     }
-    .skeleton-service .sk-icon {
-      width: 44px; height: 44px; border-radius: 12px;
-      background: linear-gradient(90deg, var(--border-light) 25%, var(--bg-card) 50%, var(--border-light) 75%);
-      background-size: 200% 100%; animation: shimmer 1.5s infinite; margin-bottom: 10px;
+    .svc-card:hover {
+      border-color: var(--medium-green);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
-    .skeleton-service .sk-line {
-      height: 12px; border-radius: 6px;
-      background: linear-gradient(90deg, var(--border-light) 25%, var(--bg-card) 50%, var(--border-light) 75%);
-      background-size: 200% 100%; animation: shimmer 1.5s infinite; margin-bottom: 8px;
+    .svc-card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
     }
-    .skeleton-service .sk-line.w-60 { width: 60%; }
-    .skeleton-service .sk-line.w-80 { width: 80%; }
-    .skeleton-service .sk-line.w-40 { width: 40%; }
-    .skeleton-service .sk-btn {
-      height: 32px; border-radius: var(--radius-sm); margin-top: 12px;
-      background: linear-gradient(90deg, var(--border-light) 25%, var(--bg-card) 50%, var(--border-light) 75%);
-      background-size: 200% 100%; animation: shimmer 1.5s infinite;
+    .svc-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #ffffff;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-sm);
     }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .sr-tab.active { color: var(--primary-green) !important; border-bottom-color: var(--primary-green) !important; }
-    .sr-tab:hover { color: var(--primary-green); }
+    .svc-card-header-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .svc-card-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 3px;
+      line-height: 1.3;
+    }
+    .svc-cat-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--primary-green);
+      background: var(--soft-green);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .svc-card-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin: 0 0 14px;
+      flex: 1;
+    }
+    .svc-card-details-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-light);
+      margin-bottom: 14px;
+    }
+    .svc-status-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .svc-status-pill.available { background: #E8F5E9; color: #2E7D32; }
+    .svc-status-pill.busy { background: #FFF3E0; color: #E65100; }
+    .svc-status-pill.limited { background: #FFEBEE; color: #C62828; }
+
+    .svc-card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+    .svc-btn-request {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-green);
+      color: #ffffff;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.2s ease;
+      min-height: 38px;
+    }
+    .svc-btn-request:hover {
+      background: var(--forest-900);
+    }
+    .svc-btn-details {
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card-soft);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-light);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+      min-height: 38px;
+    }
+    .svc-btn-details:hover {
+      background: var(--soft-green);
+      color: var(--primary-green);
+      border-color: var(--medium-green);
+    }
+
+    .svc-section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .svc-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .svc-section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .svc-section-title i {
+      color: var(--primary-green);
+    }
+
+    .svc-req-card {
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .svc-req-card:hover {
+      border-color: var(--medium-green);
+      background: var(--soft-green);
+    }
+    .svc-req-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .svc-req-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .svc-req-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      text-transform: capitalize;
+    }
+    .svc-req-badge.pending { background: #FFF3E0; color: #E65100; }
+    .svc-req-badge.received { background: #E3F2FD; color: #1565C0; }
+    .svc-req-badge.accepted { background: #E0F2F1; color: #00695C; }
+    .svc-req-badge.in-progress { background: #E1F5FE; color: #0288D1; }
+    .svc-req-badge.completed { background: #E8F5E9; color: #2E7D32; }
+    .svc-req-badge.cancelled { background: #FFEBEE; color: #C62828; }
+
+    .svc-req-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+    }
+
+    .svc-comp-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 640px) {
+      .svc-comp-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .svc-comp-card {
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      background: var(--bg-card-soft);
+    }
+    .svc-comp-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .svc-comp-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .svc-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 46, 30, 0.5);
+      backdrop-filter: blur(2px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .svc-modal-overlay.active { display: flex; }
+    .svc-modal-container {
+      background: #ffffff;
+      border-radius: var(--radius-md);
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-xl);
+      animation: svcModalIn 0.25s ease-out;
+    }
+    @keyframes svcModalIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .svc-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .svc-modal-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .svc-modal-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .svc-form-group { margin-bottom: 14px; }
+    .svc-form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .svc-form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--form-outline);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text-primary);
+      background: #ffffff;
+      transition: border-color 0.2s ease;
+    }
+    .svc-form-input:focus {
+      border-color: var(--primary-green);
+      box-shadow: 0 0 0 3px rgba(27, 94, 63, 0.12);
+      outline: none;
+    }
+
+    .svc-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .svc-btn-primary { background: var(--primary-green); color: #ffffff; }
+    .svc-btn-primary:hover { background: var(--forest-900); }
+    .svc-btn-secondary { background: var(--bg-card-soft); color: var(--text-primary); border: 1px solid var(--border-light); }
+    .svc-btn-danger { background: #FFEBEE; color: var(--danger); }
+    .svc-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .svc-toast {
+      position: fixed;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 3000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      box-shadow: var(--shadow-lg);
+      max-width: 90%;
+      text-align: center;
+    }
+    .svc-toast.show { opacity: 1; }
+    .svc-toast.success { background: #2E7D32; }
+    .svc-toast.error { background: #C62828; }
+    .svc-toast.info { background: #1565C0; }
+
+    .svc-spin { animation: svcSpin 0.9s linear infinite; }
+    @keyframes svcSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
-<main class="page-container">
+<main class="svc-container">
 
+  <div class="svc-header">
+    <div class="svc-header-info">
+      <h1><i class="fas fa-concierge-bell"></i> Agricultural Services</h1>
+      <p>Find, request, and track trusted agriculture services for your farm.</p>
+    </div>
+    </div>
 
-  <div class="page-header">
-    <div>
-      <h1><i class="fas fa-concierge-bell"></i> Services</h1>
-      <p>Expert assistance for every farming need</p>
+  <div class="svc-search-card">
+    <div class="svc-search-row">
+      <div class="svc-search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="svc-search-input" placeholder="Search services..." oninput="svcOnSearchInput()" aria-label="Search services">
+        <button class="svc-search-clear" id="svc-search-clear" onclick="svcClearSearch()" title="Clear search" aria-label="Clear search" style="display:none"><i class="fas fa-times-circle"></i></button>
+      </div>
+      <button class="svc-action-btn svc-requested-btn" onclick="svcOpenModal('requested-modal')" title="Track Requested Services">
+        <i class="fas fa-clipboard-list"></i> <span>Requested Services</span>
+        <span class="svc-badge-count" id="svc-tracking-badge">0</span>
+      </button>
     </div>
   </div>
 
-  <div class="market-search">
-    <i class="fas fa-search"></i>
-    <input type="text" id="services-search-input" placeholder="Search services...">
+  <div class="svc-cat-bar" id="svc-category-pills">
+    <button class="svc-cat-pill active" onclick="svcSelectCategory('all')">
+      <i class="fas fa-grid-2"></i> <span>All Services</span>
+    </button>
   </div>
 
-  <div class="filter-chip-group" id="service-filter-chips">
-    <button class="filter-chip active" data-filter="all">All</button>
-    <button class="filter-chip" data-filter="consultation">Consultation</button>
-    <button class="filter-chip" data-filter="farm-work">Farm Work</button>
-    <button class="filter-chip" data-filter="documentation">Documentation</button>
-    <button class="filter-chip" data-filter="financial">Financial</button>
+  <div id="svc-active-banner"></div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:700;color:var(--text-primary)" id="svc-catalog-heading">Available Services</div>
+    <div style="font-size:12px;color:var(--text-muted)" id="svc-catalog-count">Loading services...</div>
   </div>
 
-  <section class="card-premium" style="padding:15px 10px;">
-    <div class="section-header" style="padding:0 6px 8px;">
-      <h3><i class="fas fa-tools"></i> All Services</h3>
-      <span class="sec-count" id="service-count">12 services</span>
+  <div class="svc-grid" id="svc-catalog-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">
+      <i class="fas fa-spinner svc-spin" style="font-size:24px;margin-bottom:10px"></i>
+      <div>Loading agriculture service catalog...</div>
     </div>
-    <div id="services-grid" class="services-grid"></div>
-  </section>
+  </div>
 
-  <section class="card-premium" style="border:1px solid var(--primary-green);background:linear-gradient(180deg, var(--soft-green) 0%, white 40%);">
-    <div class="section-header">
-      <h3><i class="fas fa-magic"></i> Customized Service Request</h3>
-      <span class="sec-count" style="color:var(--primary-green);font-weight:600;"><i class="far fa-clock"></i> Response: ~48 hrs</span>
-    </div>
-    <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">Need something beyond our listed services? Describe your requirement and our team will arrange the right expert for you.</p>
-    <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <div class="form-group" style="grid-column:1/-1;">
-        <label class="form-label">Service Title</label>
-        <input type="text" class="form-input" id="cs-title" placeholder="e.g. Drone spray service for 3 acres" maxlength="80">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Category</label>
-        <select class="form-input" id="cs-category">
-          <option value="">Select category</option>
-          <option value="consultation">Consultation</option>
-          <option value="farm-work">Farm Work</option>
-          <option value="documentation">Documentation</option>
-          <option value="financial">Financial</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Urgency</label>
-        <select class="form-input" id="cs-urgency">
-          <option value="normal">Normal (48 hrs)</option>
-          <option value="urgent">Urgent (24 hrs)</option>
-          <option value="asap">ASAP (Immediate)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Budget (Min) &#8377;</label>
-        <input type="number" class="form-input" id="cs-budget-min" min="0" step="50" placeholder="e.g. 500">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Budget (Max) &#8377;</label>
-        <input type="number" class="form-input" id="cs-budget-max" min="0" step="50" placeholder="e.g. 2000">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Preferred Date</label>
-        <input type="date" class="form-input" id="cs-date">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Preferred Time</label>
-        <input type="time" class="form-input" id="cs-time">
-      </div>
-      <div class="form-group" style="grid-column:1/-1;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <label class="form-label" style="margin-bottom:0;">Describe your requirement</label>
-          <span class="form-label" id="cs-char-count" style="font-size:10px;color:var(--text-muted);margin-bottom:0;">0/500</span>
-        </div>
-        <textarea class="form-input" id="cs-desc" rows="3" maxlength="500" placeholder="Tell us what you need, for how many acres, location details, etc. (max 500 characters)" style="resize:vertical;"></textarea>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <button class="btn-primary" style="flex:1;padding:12px;" onclick="submitCustomRequest()"><i class="fas fa-paper-plane"></i> Submit Request</button>
-      <button class="btn-secondary" style="padding:12px;" onclick="clearCustomDraft()" title="Clear saved draft"><i class="fas fa-undo"></i> Reset</button>
-    </div>
-    <div id="cs-save-note" style="display:none;font-size:10px;color:var(--text-muted);margin-top:8px;"><i class="fas fa-check-circle"></i> Draft saved automatically</div>
-  </section>
+  <div style="display:none;justify-content:center;margin-bottom:24px" id="svc-load-more">
+    <button class="svc-btn svc-btn-secondary" onclick="svcLoadMore()" style="padding:10px 28px;font-size:13px" aria-label="Load more services">
+      <i class="fas fa-chevron-down"></i> Load More Services
+    </button>
+  </div>
 
-  <section class="card-premium">
-    <div class="section-header">
-      <h3><i class="fas fa-clipboard-list"></i> My Service Requests</h3>
-      <span class="sec-count" id="request-count">0 requests</span>
+  <div class="svc-section-card">
+    <div class="svc-section-header">
+      <h3 class="svc-section-title"><i class="fas fa-circle-check"></i> Completed Services</h3>
+      <span style="font-size:12px;color:var(--text-muted)" id="svc-completed-count">0 Completed</span>
     </div>
-    <div class="market-search" style="margin-bottom:10px;">
-      <i class="fas fa-search"></i>
-      <input type="text" id="sr-search-input" placeholder="Search requests by name or ID...">
+    <div id="svc-completed-container" class="svc-comp-grid">
+      <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-size:12px">
+        No completed service requests yet.
+      </div>
     </div>
-    <div class="sr-tabs" style="display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid var(--border-light);padding:0 6px;">
-      <button class="sr-tab active" data-sr-tab="active" onclick="switchSRTab('active')" style="flex:1;padding:8px 12px;border:none;background:none;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;position:relative;bottom:-2px;"><i class="fas fa-play-circle"></i> Active</button>
-      <button class="sr-tab" data-sr-tab="completed" onclick="switchSRTab('completed')" style="flex:1;padding:8px 12px;border:none;background:none;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;position:relative;bottom:-2px;"><i class="fas fa-check-circle"></i> Completed</button>
-      <button class="sr-tab" data-sr-tab="history" onclick="switchSRTab('history')" style="flex:1;padding:8px 12px;border:none;background:none;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;position:relative;bottom:-2px;"><i class="fas fa-history"></i> History</button>
-    </div>
-    <div id="service-requests-list"></div>
-    <div id="sr-empty" class="empty-state" style="display:none;">
-      <i class="fas fa-inbox"></i>
-      <h4>No service requests yet</h4>
-      <p>Browse services above and request assistance</p>
-    </div>
-  </section>
+  </div>
 
 </main>
 
-<!-- Request Detail Modal -->
-<div class="modal-backdrop" id="request-detail-modal">
-  <div class="modal-box" style="max-width:480px;padding:24px;position:relative;">
-    <button onclick="closeRequestDetail()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
-    <div id="rd-content"></div>
+<div class="svc-modal-overlay" id="request-modal">
+  <div class="svc-modal-container">
+    <div class="svc-modal-header">
+      <h3 class="svc-modal-title" id="req-modal-title"><i class="fas fa-hand-pointer" style="color:var(--primary-green)"></i> Request Service</h3>
+      <button class="svc-modal-close" onclick="svcCloseModals()"><i class="fas fa-times"></i></button>
+    </div>
+    <form onsubmit="svcSubmitServiceRequest(event)">
+      <div class="svc-form-group">
+        <label class="svc-form-label">Service Selected</label>
+        <input class="svc-form-input" type="text" id="req-service-name" readonly style="background:var(--bg-card-soft);font-weight:700">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="svc-form-group">
+          <label class="svc-form-label">Farmer Name</label>
+          <input class="svc-form-input" type="text" id="req-farmer-name" readonly style="background:var(--bg-card-soft)">
+        </div>
+        <div class="svc-form-group">
+          <label class="svc-form-label">Farmer ID</label>
+          <input class="svc-form-input" type="text" id="req-farmer-id" readonly style="background:var(--bg-card-soft);font-family:monospace">
+        </div>
+      </div>
+      <div class="svc-form-group">
+        <label class="svc-form-label">Select Farm *</label>
+        <select class="svc-form-input" id="req-farm-select" required>
+          <option value="">Loading your farms...</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="svc-form-group">
+          <label class="svc-form-label">Preferred Date *</label>
+          <input class="svc-form-input" type="date" id="req-date" required>
+        </div>
+        <div class="svc-form-group">
+          <label class="svc-form-label">Preferred Time</label>
+          <input class="svc-form-input" type="time" id="req-time">
+        </div>
+      </div>
+      <div class="svc-form-group">
+        <label class="svc-form-label">Contact Phone (10 Digits) *</label>
+        <input class="svc-form-input" type="tel" id="req-phone" required maxlength="10" inputmode="numeric" placeholder="10-digit phone number">
+      </div>
+      <div class="svc-form-group">
+        <label class="svc-form-label">Additional Requirements / Notes</label>
+        <textarea class="svc-form-input" id="req-description" rows="3" placeholder="Describe your requirement in detail..."></textarea>
+      </div>
+      <div class="svc-modal-actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="svc-btn svc-btn-secondary" onclick="svcCloseModals()">Cancel</button>
+        <button type="submit" class="svc-btn svc-btn-primary" id="req-submit-btn"><i class="fas fa-paper-plane"></i> Submit Request</button>
+      </div>
+    </form>
   </div>
 </div>
 
-<!-- Request Service Modal -->
-<div class="modal-backdrop" id="request-service-modal">
-  <div class="modal-box" style="max-width:440px;padding:24px;">
-    <h3 style="font-size:17px;font-weight:700;margin-bottom:4px;" id="rsm-title">Request Service</h3>
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;" id="rsm-subtitle"></p>
-    <div class="form-group">
-      <label class="form-label">Your Name</label>
-      <input type="text" class="form-input" id="rsm-name" placeholder="Enter your name">
+<div class="svc-modal-overlay" id="detail-modal">
+  <div class="svc-modal-container">
+    <div class="svc-modal-header">
+      <h3 class="svc-modal-title" id="dtl-title">Service Details</h3>
+      <button class="svc-modal-close" onclick="svcCloseModals()"><i class="fas fa-times"></i></button>
     </div>
-    <div class="form-group">
-      <label class="form-label">Phone Number</label>
-      <input type="tel" class="form-input" id="rsm-phone" placeholder="Enter phone number">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Preferred Date</label>
-      <input type="date" class="form-input" id="rsm-date">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Additional Notes</label>
-      <textarea class="form-input" id="rsm-notes" rows="3" placeholder="Describe your requirement..." style="resize:vertical;"></textarea>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:16px;">
-      <button class="btn-secondary" style="flex:1;" onclick="closeRequestService()">Cancel</button>
-      <button class="btn-primary" style="flex:1;" onclick="submitServiceRequest()"><i class="fas fa-paper-plane"></i> Submit Request</button>
+    <div id="dtl-content"></div>
+    <div class="svc-modal-actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button type="button" class="svc-btn svc-btn-secondary" onclick="svcCloseModals()">Close</button>
+      <button type="button" class="svc-btn svc-btn-primary" id="dtl-request-btn"><i class="fas fa-hand-pointer"></i> Request This Service</button>
     </div>
   </div>
 </div>
 
-<!-- Custom Request Confirmation Modal -->
-<div class="modal-backdrop" id="custom-confirm-modal">
-  <div class="modal-box" style="max-width:420px;padding:24px;text-align:center;">
-    <div style="width:64px;height:64px;border-radius:50%;background:var(--soft-green);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px;"><i class="fas fa-check"></i></div>
-    <h3 style="font-size:18px;font-weight:700;margin-bottom:4px;">Request Submitted!</h3>
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Your customized service request has been received.</p>
-    <div style="background:var(--bg-card-soft);border-radius:12px;padding:12px;margin-bottom:14px;">
-      <div class="request-detail-label">Tracking ID</div>
-      <div class="request-detail-value" style="font-family:monospace;font-size:13px;" id="cc-id">-</div>
-      <div class="request-detail-label">Estimated Response Time</div>
-      <div class="request-detail-value" style="font-size:13px;" id="cc-eta">-</div>
+<div class="svc-modal-overlay" id="requested-modal">
+  <div class="svc-modal-container" style="max-width:600px">
+    <div class="svc-modal-header">
+      <h3 class="svc-modal-title"><i class="fas fa-clipboard-list" style="color:var(--primary-green)"></i> Track Requested Services</h3>
+      <button class="svc-modal-close" onclick="svcCloseModals()"><i class="fas fa-times"></i></button>
     </div>
-    <button class="btn-primary" style="width:100%;" onclick="closeCustomConfirm()"><i class="fas fa-thumbs-up"></i> Done</button>
+    <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px">
+      <button class="svc-cat-pill active" id="tab-req-active" onclick="svcFilterRequests('active')">Active</button>
+      <button class="svc-cat-pill" id="tab-req-completed" onclick="svcFilterRequests('completed')">Completed</button>
+      <button class="svc-cat-pill" id="tab-req-cancelled" onclick="svcFilterRequests('cancelled')">Cancelled</button>
+      <button class="svc-cat-pill" id="tab-req-all" onclick="svcFilterRequests('all')">All Requests</button>
+    </div>
+    <div id="svc-requests-list">
+      <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px">Loading your service requests...</div>
+    </div>
   </div>
 </div>
 
+<div class="svc-modal-overlay" id="req-item-modal">
+  <div class="svc-modal-container">
+    <div class="svc-modal-header">
+      <h3 class="svc-modal-title" id="rqitem-title">Request Status</h3>
+      <button class="svc-modal-close" onclick="svcCloseModals()"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="rqitem-content"></div>
+    <div class="svc-modal-actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button type="button" class="svc-btn svc-btn-secondary" onclick="svcCloseModals()">Close</button>
+      <button type="button" class="svc-btn svc-btn-danger" id="rqitem-cancel-btn" style="display:none" onclick="svcCancelRequestTrigger()"><i class="fas fa-ban"></i> Cancel Request</button>
+    </div>
+  </div>
+</div>
+
+<div class="svc-modal-overlay" id="rating-modal">
+  <div class="svc-modal-container">
+    <div class="svc-modal-header">
+      <h3 class="svc-modal-title"><i class="fas fa-star" style="color:#F9A825"></i> Rate Completed Service</h3>
+      <button class="svc-modal-close" onclick="svcCloseModals()"><i class="fas fa-times"></i></button>
+    </div>
+    <form onsubmit="svcSubmitRating(event)">
+      <div style="text-align:center;margin:16px 0">
+        <div style="font-size:28px;color:#F9A825;letter-spacing:6px;cursor:pointer" id="rating-stars-box">
+          <i class="fas fa-star" onclick="svcSetRating(1)"></i>
+          <i class="fas fa-star" onclick="svcSetRating(2)"></i>
+          <i class="fas fa-star" onclick="svcSetRating(3)"></i>
+          <i class="fas fa-star" onclick="svcSetRating(4)"></i>
+          <i class="fas fa-star" onclick="svcSetRating(5)"></i>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-top:6px" id="rating-score-lbl">5 / 5 Stars</div>
+      </div>
+      <div class="svc-form-group">
+        <label class="svc-form-label">Optional Feedback</label>
+        <textarea class="svc-form-input" id="rating-feedback-text" rows="3" placeholder="Share your experience with this service..."></textarea>
+      </div>
+      <div class="svc-modal-actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="svc-btn svc-btn-secondary" onclick="svcCloseModals()">Cancel</button>
+        <button type="submit" class="svc-btn svc-btn-primary" id="rating-submit-btn"><i class="fas fa-check"></i> Submit Rating</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="svc-toast" id="svc-toast"></div>
+
+<script src="js/database.js"></script>
 <script src="js/services.js"></script>
 <script src="js/userStore.js"></script>
 <script src="assets/js/navigation.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
-(function () {
+(function() {
   'use strict';
 
-  var SERVICE_CATEGORIES = {
-    consultation: ['Expert Consultation', 'Farm Visit', 'Crop Advisory', 'Soil Testing Assistance'],
-    'farm-work': ['Offline Support', 'Equipment Assistance', 'Worker Assistance', 'Farm Visit'],
-    documentation: ['Government Scheme Assistance', 'Documentation Assistance', 'Insurance Assistance'],
-    financial: ['Insurance Assistance', 'Loan Assistance', 'Government Scheme Assistance']
-  };
+  var currentSelectedCategory = 'all';
+  var catalogServices = [];
+  var userFarms = [];
+  var userRequests = [];
+  var completedServices = [];
+  var selectedServiceForRequest = null;
+  var selectedRequestDetailId = null;
+  var currentSelectedRating = 5;
+  var searchDebounceTimer = null;
+  var activeRequestTab = 'active';
+  var backendCategories = {};
 
-  var SERVICE_DATA = [
-    { id: 'svc-1',  name: 'Offline Support',                icon: 'fa-wifi-slash',    color: '#6C63FF', category: ['farm-work'],              availability: 'available', respTime: 'Instant',   desc: 'Get help when you\'re offline with cached resources and guides' },
-    { id: 'svc-2',  name: 'Expert Consultation',            icon: 'fa-user-tie',      color: '#1B5E3F', category: ['consultation'],           availability: 'available', respTime: '< 30 min', desc: 'Talk to agriculture experts via chat/call' },
-    { id: 'svc-3',  name: 'Farm Visit',                     icon: 'fa-tractor',       color: '#2D8659', category: ['consultation', 'farm-work'], availability: 'busy',     respTime: '24 hrs',   desc: 'Schedule an on-farm visit by experts' },
-    { id: 'svc-4',  name: 'Soil Testing Assistance',        icon: 'fa-flask',         color: '#8D6E63', category: ['consultation'],           availability: 'available', respTime: '< 2 hrs',  desc: 'Get soil tested, understand NPK levels' },
-    { id: 'svc-5',  name: 'Crop Advisory',                  icon: 'fa-seedling',      color: '#4CAF50', category: ['consultation'],           availability: 'available', respTime: '< 1 hr',   desc: 'Crop-specific guidance from sowing to harvest' },
-    { id: 'svc-6',  name: 'Government Scheme Assistance',   icon: 'fa-file-contract', color: '#1565C0', category: ['documentation', 'financial'], availability: 'limited',  respTime: '2-3 days', desc: 'Help with applications, documents, tracking' },
-    { id: 'svc-7',  name: 'Insurance Assistance',           icon: 'fa-shield-alt',    color: '#E65100', category: ['documentation', 'financial'], availability: 'available', respTime: '< 4 hrs',  desc: 'Policy selection, claims, renewals' },
-    { id: 'svc-8',  name: 'Loan Assistance',                icon: 'fa-coins',         color: '#F9A825', category: ['financial'],             availability: 'available', respTime: '< 24 hrs', desc: 'Find and apply for agri loans' },
-    { id: 'svc-9',  name: 'Documentation Assistance',       icon: 'fa-file-alt',      color: '#5D4037', category: ['documentation'],          availability: 'available', respTime: '< 2 hrs',  desc: 'Help with land records, certificates' },
-    { id: 'svc-10', name: 'Equipment Assistance',           icon: 'fa-cogs',          color: '#7B1FA2', category: ['farm-work'],             availability: 'limited',  respTime: '1-2 days', desc: 'Find and book farm equipment' },
-    { id: 'svc-11', name: 'Worker Assistance',              icon: 'fa-users',         color: '#0D47A1', category: ['farm-work'],             availability: 'available', respTime: '< 1 hr',   desc: 'Find skilled farm workers' },
-    { id: 'svc-12', name: 'Technical Support',              icon: 'fa-headset',       color: '#37474F', category: ['farm-work'],             availability: 'available', respTime: '< 30 min', desc: 'App and device support' }
+  var CATEGORY_ORDER = [
+    'crop-cultivation', 'seeds-planting', 'soil-health', 'fertilizers-nutrients',
+    'pest-management', 'crop-disease', 'irrigation-water', 'farm-machinery',
+    'farm-labour', 'harvesting', 'post-harvest', 'storage-warehousing',
+    'transport-logistics', 'livestock', 'veterinary', 'dairy-poultry',
+    'organic-farming', 'sustainable-agri', 'government-schemes', 'agri-finance',
+    'crop-insurance', 'expert-consultancy', 'market-selling', 'agri-technology',
+    'other-services'
   ];
 
-  var MOCK_REQUESTS = [
-    { id: 'SR-20260701-A3K', serviceName: 'Soil Testing Assistance', date: '2026-07-01', status: 'completed', icon: 'fa-flask', color: '#8D6E63', assignedExpert: 'Dr. Meena Sharma', resolutionNotes: 'Soil NPK levels reported. Recommendation: Apply 2 bags DAP and 1 bag Potash per acre.', timeline: [
-      { title: 'Request Submitted', time: 'Jul 01, 2026 09:15 AM', done: true },
-      { title: 'Sample Collected',  time: 'Jul 03, 2026 08:00 AM', done: true },
-      { title: 'Lab Analysis Done', time: 'Jul 08, 2026 02:30 PM', done: true },
-      { title: 'Report Delivered',  time: 'Jul 10, 2026 11:00 AM', done: true }
-    ]},
-    { id: 'SR-20260628-B7K', serviceName: 'Expert Consultation', date: '2026-06-28', status: 'completed', icon: 'fa-user-tie', color: '#1B5E3F', assignedExpert: 'Dr. Arvind Singh', resolutionNotes: 'Consultation completed successfully. Pest management plan and crop rotation schedule provided to farmer.', timeline: [
-      { title: 'Request Submitted', time: 'Jun 28, 2026 10:00 AM', done: true },
-      { title: 'Expert Assigned',   time: 'Jun 28, 2026 10:15 AM', done: true },
-      { title: 'Consultation Done', time: 'Jun 28, 2026 11:30 AM', done: true }
-    ]},
-    { id: 'SR-20260715-C9M', serviceName: 'Insurance Assistance', date: '2026-07-15', status: 'in-progress', icon: 'fa-shield-alt', color: '#E65100', assignedExpert: 'Ravi Patel (Insurance Advisor)', resolutionNotes: '', timeline: [
-      { title: 'Request Submitted', time: 'Jul 15, 2026 08:30 AM', done: true },
-      { title: 'Document Review',   time: 'Jul 15, 2026 02:00 PM', done: true },
-      { title: 'Policy Selection',  time: 'Pending', done: false },
-      { title: 'Policy Issued',     time: 'Pending', done: false }
-    ]},
-    { id: 'SR-20260718-D4P', serviceName: 'Crop Advisory', date: '2026-07-18', status: 'pending', icon: 'fa-seedling', color: '#4CAF50', assignedExpert: 'Pending', resolutionNotes: '', timeline: [
-      { title: 'Request Submitted', time: 'Jul 18, 2026 07:45 AM', done: true },
-      { title: 'Advisor Assigned',  time: 'Pending', done: false },
-      { title: 'Advisory Provided', time: 'Pending', done: false }
-    ]},
-    { id: 'SR-20260710-E5R', serviceName: 'Loan Assistance', date: '2026-07-10', status: 'in-progress', icon: 'fa-coins', color: '#F9A825', assignedExpert: 'SBI Loan Officer - Rajesh K.', resolutionNotes: '', timeline: [
-      { title: 'Request Submitted', time: 'Jul 10, 2026 11:20 AM', done: true },
-      { title: 'Documents Verified', time: 'Jul 12, 2026 04:00 PM', done: true },
-      { title: 'Bank Processing',   time: 'Jul 14, 2026 10:00 AM', done: true },
-      { title: 'Loan Disbursed',    time: 'Pending', done: false }
-    ]},
-    { id: 'SR-20260705-F6S', serviceName: 'Government Scheme Assistance', date: '2026-07-05', status: 'pending', icon: 'fa-file-contract', color: '#1565C0', assignedExpert: 'Pending', resolutionNotes: '', timeline: [
-      { title: 'Request Submitted', time: 'Jul 05, 2026 09:00 AM', done: true },
-      { title: 'Scheme Eligibility Check', time: 'Pending', done: false },
-      { title: 'Application Filed', time: 'Pending', done: false }
-    ]},
-    { id: 'SR-20260625-G7T', serviceName: 'Worker Assistance', date: '2026-06-25', status: 'completed', icon: 'fa-users', color: '#0D47A1', assignedExpert: 'Mahesh Patil (Supervisor)', resolutionNotes: '3 skilled workers assigned for 2 days. Harvesting and loading completed on schedule.', timeline: [
-      { title: 'Request Submitted', time: 'Jun 25, 2026 06:30 AM', done: true },
-      { title: 'Workers Assigned',  time: 'Jun 25, 2026 08:00 AM', done: true },
-      { title: 'Work Completed',    time: 'Jun 27, 2026 05:00 PM', done: true }
-    ]},
-    { id: 'SR-20260720-H8V', serviceName: 'Equipment Assistance', date: '2026-07-20', status: 'pending', icon: 'fa-cogs', color: '#7B1FA2', assignedExpert: 'Pending', resolutionNotes: '', timeline: [
-      { title: 'Request Submitted', time: 'Jul 20, 2026 10:15 AM', done: true },
-      { title: 'Equipment Sourcing', time: 'Pending', done: false },
-      { title: 'Delivery Scheduled', time: 'Pending', done: false }
-    ]}
-  ];
-
-  var allServices = [];
-  var serviceRequests = [];
-  var currentSRTab = 'active';
-
-  function loadFromStorage() {
-    try {
-      var stored = localStorage.getItem('fa-service-requests');
-      if (stored) {
-        var parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          serviceRequests = parsed;
-          return;
-        }
-      }
-    } catch (e) {}
-    serviceRequests = MOCK_REQUESTS.slice();
-    localStorage.setItem('fa-service-requests', JSON.stringify(serviceRequests));
-  }
-
-  function saveRequests() {
-    try { localStorage.setItem('fa-service-requests', JSON.stringify(serviceRequests)); } catch (e) {}
-  }
-
-  function ensureServiceConversation(request) {
-    try {
-      var contacts = [];
-      try { contacts = JSON.parse(localStorage.getItem('farm-chat-contacts')) || []; } catch (e) {}
-      if (!Array.isArray(contacts)) contacts = [];
-      var contactId = 'svc-' + request.id;
-      var existing = contacts.filter(function (c) { return c.id === contactId; });
-      if (existing.length === 0) {
-        contacts.unshift({
-          id: contactId,
-          name: request.serviceName + ' Support',
-          color: request.color || '#2D8659',
-          phone: '',
-          farmerId: request.id,
-          location: 'Farm Assist Service Desk',
-          bio: 'Service request ' + request.id,
-          status: 'online',
-          lastSeen: 'online',
-          unread: 1,
-          serviceRequestId: request.id
-        });
-        try { localStorage.setItem('farm-chat-contacts', JSON.stringify(contacts)); } catch (e) {}
-      }
-      var msgKey = 'farm-chat-' + contactId;
-      var msgs = [];
-      try { msgs = JSON.parse(localStorage.getItem(msgKey)) || []; } catch (e) {}
-      if (!Array.isArray(msgs) || msgs.length === 0) {
-        msgs = [{
-          id: 1,
-          type: 'incoming',
-          text: 'Thank you for your ' + request.serviceName + ' request (' + request.id + '). Our team will respond here. You can track progress and reply in this conversation.',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: 'Today'
-        }];
-        try { localStorage.setItem(msgKey, JSON.stringify(msgs)); } catch (e) {}
-      }
-    } catch (e) {}
-  }
-
-  function renderServiceSkeleton() {
-    var grid = document.getElementById('services-grid');
-    if (!grid) return;
-    var html = '';
-    for (var i = 0; i < 6; i++) {
-      html += '<div class="skeleton-service">' +
-        '<div class="sk-icon"></div>' +
-        '<div class="sk-line w-80"></div>' +
-        '<div class="sk-line w-60"></div>' +
-        '<div class="sk-line w-40"></div>' +
-        '<div class="sk-btn"></div>' +
-      '</div>';
-    }
-    grid.innerHTML = html;
-  }
-
-  function getStatusClass(status) {
-    if (status === 'in-progress') return 'in-progress';
-    return status;
-  }
-
-  function renderServices(items) {
-    var grid = document.getElementById('services-grid');
-    if (!grid) return;
-    if (!items || items.length === 0) {
-      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><h4>No services found</h4><p>Try adjusting your search or filter</p></div>';
-      return;
-    }
-    grid.innerHTML = items.map(function (s) {
-      var dotIcon = s.availability === 'available' ? 'fa-circle' : (s.availability === 'busy' ? 'fa-circle' : 'fa-exclamation-circle');
-      return '<div class="service-card" data-id="' + s.id + '" onclick="openRequestService(\'' + s.id + '\')">' +
-        '<div class="service-icon" style="background:' + s.color + ';"><i class="fas ' + s.icon + '"></i></div>' +
-        '<h4>' + s.name + '</h4>' +
-        '<p>' + s.desc + '</p>' +
-        '<div class="service-meta">' +
-          '<span class="avail-badge ' + s.availability + '"><i class="fas ' + dotIcon + '"></i> ' + s.availability.charAt(0).toUpperCase() + s.availability.slice(1) + '</span>' +
-          '<span class="resp-time"><i class="far fa-clock"></i> ' + s.respTime + '</span>' +
-        '</div>' +
-        '<div class="card-footer"><button><i class="fas fa-hand-paper"></i> Request Service</button></div>' +
-      '</div>';
-    }).join('');
-    var count = document.getElementById('service-count');
-    if (count) count.textContent = items.length + ' service' + (items.length !== 1 ? 's' : '');
-  }
-
-  function renderServiceRequests() {
-    var list = document.getElementById('service-requests-list');
-    var emptyEl = document.getElementById('sr-empty');
-    var countEl = document.getElementById('request-count');
-    if (!list) return;
-    var filtered = [];
-    if (currentSRTab === 'active') {
-      filtered = serviceRequests.filter(function (r) { return r.status === 'pending' || r.status === 'in-progress'; });
-    } else if (currentSRTab === 'completed') {
-      filtered = serviceRequests.filter(function (r) { return r.status === 'completed'; });
-    } else {
-      filtered = serviceRequests.slice();
-    }
-    var query = getSRSearchQuery();
-    if (query) {
-      filtered = filtered.filter(function (r) {
-        return (r.serviceName || '').toLowerCase().indexOf(query) !== -1 ||
-               (r.id || '').toLowerCase().indexOf(query) !== -1;
-      });
-    }
-    if (countEl) countEl.textContent = serviceRequests.length + ' request' + (serviceRequests.length !== 1 ? 's' : '');
-    if (filtered.length === 0) {
-      list.innerHTML = '';
-      if (emptyEl) {
-        emptyEl.style.display = 'block';
-        emptyEl.innerHTML = '<i class="fas fa-inbox"></i><span style="font-size:16px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">No ' + currentSRTab + ' requests</span><span style="font-size:12px;color:var(--text-muted);">' + (query ? 'No results match "' + query + '"' : currentSRTab === 'active' ? 'Browse services above and request assistance' : currentSRTab === 'completed' ? 'Completed requests will appear here' : 'Your request history will appear here') + '</span>';
-      }
-      return;
-    }
-    if (emptyEl) emptyEl.style.display = 'none';
-    list.innerHTML = filtered.map(function (r) {
-      var statusLabel = r.status.charAt(0).toUpperCase() + r.status.slice(1).replace('-', ' ');
-      return '<div class="service-request-item" onclick="openRequestDetail(\'' + r.id + '\')">' +
-        '<div class="sr-icon" style="background:rgba(' + hexToRgb(r.color) + ',0.12);color:' + r.color + ';"><i class="fas ' + r.icon + '"></i></div>' +
-        '<div class="sr-info">' +
-          '<h4>' + r.serviceName + '</h4>' +
-          '<div class="sr-date"><i class="far fa-calendar-alt"></i> ' + formatDate(r.date) + '</div>' +
-          '<div class="sr-tracking">ID: ' + r.id + '</div>' +
-        '</div>' +
-        '<span class="sr-status ' + getStatusClass(r.status) + '">' + statusLabel + '</span>' +
-      '</div>';
-    }).join('');
-  }
-
-  window.switchSRTab = function (tab) {
-    currentSRTab = tab;
-    var tabs = document.querySelectorAll('.sr-tab');
-    for (var i = 0; i < tabs.length; i++) {
-      if (tabs[i].getAttribute('data-sr-tab') === tab) {
-        tabs[i].classList.add('active');
-      } else {
-        tabs[i].classList.remove('active');
-      }
-    }
-    renderServiceRequests();
+  var CATEGORY_ICONS = {
+    'all': 'fa-grid-2',
+    'crop-cultivation': 'fa-seedling',
+    'seeds-planting': 'fa-spa',
+    'soil-health': 'fa-flask-vial',
+    'fertilizers-nutrients': 'fa-vial-circle-check',
+    'pest-management': 'fa-bug',
+    'crop-disease': 'fa-shield-virus',
+    'irrigation-water': 'fa-droplet',
+    'farm-machinery': 'fa-tractor',
+    'farm-labour': 'fa-people-roof',
+    'harvesting': 'fa-wheat-awn',
+    'post-harvest': 'fa-boxes-stacked',
+    'storage-warehousing': 'fa-warehouse',
+    'transport-logistics': 'fa-truck-fast',
+    'livestock': 'fa-cow',
+    'veterinary': 'fa-stethoscope',
+    'dairy-poultry': 'fa-egg',
+    'organic-farming': 'fa-leaf',
+    'sustainable-agri': 'fa-recycle',
+    'government-schemes': 'fa-landmark',
+    'agri-finance': 'fa-coins',
+    'crop-insurance': 'fa-shield-halved',
+    'expert-consultancy': 'fa-user-tie',
+    'market-selling': 'fa-chart-line',
+    'agri-technology': 'fa-satellite-dish',
+    'other-services': 'fa-box-open'
   };
 
-  function hexToRgb(hex) {
-    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? parseInt(result[1], 16) + ',' + parseInt(result[2], 16) + ',' + parseInt(result[3], 16) : '0,0,0';
+  var CATEGORY_LABELS = {
+    'all': 'All Services',
+    'crop-cultivation': 'Crop Cultivation',
+    'seeds-planting': 'Seeds & Planting',
+    'soil-health': 'Soil Testing & Soil Health',
+    'fertilizers-nutrients': 'Fertilizer & Nutrient Management',
+    'pest-management': 'Pest Management',
+    'crop-disease': 'Crop Disease Management',
+    'irrigation-water': 'Irrigation & Water Management',
+    'farm-machinery': 'Farm Equipment & Machinery',
+    'farm-labour': 'Farm Labour',
+    'harvesting': 'Harvesting Services',
+    'post-harvest': 'Post-Harvest Management',
+    'storage-warehousing': 'Storage & Warehousing',
+    'transport-logistics': 'Transportation & Logistics',
+    'livestock': 'Livestock Management',
+    'veterinary': 'Veterinary Services',
+    'dairy-poultry': 'Dairy & Poultry',
+    'organic-farming': 'Organic & Natural Farming',
+    'sustainable-agri': 'Sustainable Agriculture',
+    'government-schemes': 'Government Agriculture Services',
+    'agri-finance': 'Agricultural Finance',
+    'crop-insurance': 'Crop Insurance',
+    'expert-consultancy': 'Agricultural Experts & Consultancy',
+    'market-selling': 'Market & Selling Support',
+    'agri-technology': 'Farm Technology & Smart Farming',
+    'other-services': 'Other Agriculture Services'
+  };
+
+  function hasApi() {
+    return window.API && localStorage.getItem('fa-auth-token');
   }
 
-  function formatDate(dateStr) {
-    if (!dateStr) return '';
-    var parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
-    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return parseInt(parts[2]) + ' ' + months[parseInt(parts[1]) - 1] + ' ' + parts[0];
+  function showToast(msg, type) {
+    var t = document.getElementById('svc-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.className = 'svc-toast ' + (type || 'info') + ' show';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function() {
+      t.classList.remove('show');
+    }, 2800);
   }
 
-  function getActiveFilter() {
-    var active = document.querySelector('.filter-chip.active');
-    return active ? active.getAttribute('data-filter') : 'all';
+  function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
   }
 
-  function getSearchQuery() {
-    var input = document.getElementById('services-search-input');
-    return input ? input.value.toLowerCase().trim() : '';
+  function formatDateLabel(d) {
+    if (!d) return '';
+    try {
+      var parts = String(d).split('T')[0].split('-');
+      if (parts.length === 3) {
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return parseInt(parts[2]) + ' ' + months[parseInt(parts[1])-1] + ' ' + parts[0];
+      }
+    } catch(e) {}
+    return String(d).split(' ')[0];
   }
 
-  function getSRSearchQuery() {
-    var input = document.getElementById('sr-search-input');
-    return input ? input.value.toLowerCase().trim() : '';
-  }
-
-  function filterAndRender() {
-    var filter = getActiveFilter();
-    var query = getSearchQuery();
-    var filtered = allServices;
-    if (filter !== 'all') {
-      filtered = filtered.filter(function (s) {
-        var cats = s.category || [];
-        return cats.indexOf(filter) !== -1;
-      });
-    }
-    if (query) {
-      filtered = filtered.filter(function (s) {
-        return s.name.toLowerCase().indexOf(query) !== -1 ||
-               s.desc.toLowerCase().indexOf(query) !== -1;
-      });
-    }
-    renderServices(filtered);
-  }
-
-  function init() {
-    renderServiceSkeleton();
-    allServices = SERVICE_DATA.slice();
-    loadFromStorage();
-    renderServiceRequests();
-
-    document.querySelectorAll('.filter-chip').forEach(function (chip) {
-      chip.addEventListener('click', function () {
-        document.querySelectorAll('.filter-chip').forEach(function (c) { c.classList.remove('active'); });
-        chip.classList.add('active');
-        filterAndRender();
-      });
+  window.svcCloseModals = function() {
+    document.querySelectorAll('.svc-modal-overlay').forEach(function(m) {
+      m.classList.remove('active');
     });
-
-    var input = document.getElementById('services-search-input');
-    if (input) {
-      var debounce = null;
-      input.addEventListener('input', function () {
-        clearTimeout(debounce);
-        debounce = setTimeout(function () { filterAndRender(); }, 250);
-      });
-    }
-
-    var srInput = document.getElementById('sr-search-input');
-    if (srInput) {
-      srInput.addEventListener('input', function () { renderServiceRequests(); });
-    }
-
-    loadCustomDraft();
-    bindCustomDraft();
-
-    setTimeout(function () {
-      filterAndRender();
-      var params = new URLSearchParams(window.location.search);
-      var bookId = params.get('book');
-      if (bookId) {
-        var target = allServices.filter(function (s) { return s.id === bookId; })[0];
-        if (target) openRequestService(target.id);
-      }
-    }, 300);
-  }
-
-  document.addEventListener('DOMContentLoaded', init);
-
-  window.openRequestService = function (id) {
-    var service = allServices.filter(function (s) { return s.id === id; })[0];
-    if (!service) return;
-    document.getElementById('rsm-title').textContent = 'Request: ' + service.name;
-    document.getElementById('rsm-subtitle').textContent = service.desc;
-    
-    // Pre-fill user data from UserStore if available
-    var user = null;
-    try {
-      if (window.UserStore && UserStore.getCurrentUser) {
-        user = UserStore.getCurrentUser();
-      }
-    } catch (e) {}
-    if (!user) {
-      try {
-        user = JSON.parse(localStorage.getItem('fa-current-user-data') || '{}');
-      } catch (e) {}
-    }
-    
-    var userName = user ? (user.full_name || user.fullName || '') : '';
-    var userPhone = user ? (user.phone_number || user.phone || user.mobile || '') : '';
-    
-    document.getElementById('rsm-name').value = userName;
-    document.getElementById('rsm-phone').value = userPhone;
-    
-    // Set minimum date to today
-    var today = new Date().toISOString().split('T')[0];
-    var dateInput = document.getElementById('rsm-date');
-    dateInput.value = today;
-    dateInput.setAttribute('min', today);
-    
-    document.getElementById('rsm-notes').value = '';
-    document.getElementById('request-service-modal').classList.add('active');
-    window.__currentRequestService = service;
   };
 
-  window.closeRequestService = function () {
-    document.getElementById('request-service-modal').classList.remove('active');
-    window.__currentRequestService = null;
+  window.svcOpenModal = function(modalId) {
+    svcCloseModals();
+    var m = document.getElementById(modalId);
+    if (m) m.classList.add('active');
   };
 
-  window.submitServiceRequest = function () {
-    var service = window.__currentRequestService;
-    if (!service) return;
-    var name = document.getElementById('rsm-name').value.trim();
-    var phone = document.getElementById('rsm-phone').value.trim();
-    if (!name || !phone) {
-      if (typeof showToast === 'function') {
-        showToast('Please fill in your name and phone number', 'warning');
-      } else {
-        alert('Please fill in your name and phone number');
-      }
-      return;
-    }
-    var now = new Date();
-    var dateStr = now.toISOString().split('T')[0];
-    var id = 'SR-' + dateStr.replace(/-/g, '') + '-' + Math.random().toString(36).substring(2, 5).toUpperCase();
-    var newRequest = {
-      id: id,
-      serviceName: service.name,
-      date: dateStr,
-      status: 'pending',
-      icon: service.icon,
-      color: service.color,
-      assignedExpert: 'Pending',
-      resolutionNotes: '',
-      timeline: [
-        { title: 'Request Submitted', time: now.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), done: true },
-        { title: 'Processing', time: 'Pending', done: false },
-        { title: 'Completed', time: 'Pending', done: false }
-      ]
-    };
-    serviceRequests.unshift(newRequest);
-    saveRequests();
-    ensureServiceConversation(newRequest);
-    renderServiceRequests();
-    closeRequestService();
-    if (typeof showToast === 'function') {
-      showToast('Service request submitted! ID: ' + id, 'success');
-    }
-    setTimeout(function () {
-      window.location.href = 'messages.html?svc=' + encodeURIComponent(id);
-    }, 1600);
-  };
-
-  function getProgressStepsHtml(status, color) {
-    var steps = ['Submitted', 'Under Review', 'In Progress', 'Completed', 'Closed'];
-    var icons = ['fa-check', 'fa-search', 'fa-spinner', 'fa-check-double', 'fa-flag-checkered'];
-    var activeIdx = 0;
-    if (status === 'pending') activeIdx = 1;
-    else if (status === 'in-progress') activeIdx = 2;
-    else if (status === 'completed') activeIdx = 3;
-    var html = '<div class="progress-steps">';
-    for (var i = 0; i < steps.length; i++) {
-      var cls = '';
-      if (i < activeIdx) cls = 'completed';
-      else if (i === activeIdx) cls = 'active';
-      html += '<div class="progress-step ' + cls + '">' +
-        '<div class="ps-dot"><i class="fas ' + icons[i] + '"></i></div>' +
-        '<div class="ps-label">' + steps[i] + '</div>' +
-      '</div>';
-    }
-    html += '</div>';
-    return html;
-  }
-
-  window.openRequestDetail = function (id) {
-    var req = serviceRequests.filter(function (r) { return r.id === id; })[0];
-    if (!req) return;
-    var statusLabel = req.status.charAt(0).toUpperCase() + req.status.slice(1).replace('-', ' ');
-    var progressHtml = getProgressStepsHtml(req.status, req.color);
-    var timelineHtml = (req.timeline || []).map(function (t) {
-      return '<div class="status-timeline-entry">' +
-        '<div class="tl-dot" style="background:' + (t.done ? req.color : 'var(--border-light)') + ';"></div>' +
-        '<div class="tl-content">' +
-          '<div class="tl-title" style="color:' + (t.done ? 'var(--text-primary)' : 'var(--text-muted)') + ';">' + t.title + '</div>' +
-          '<div class="tl-time">' + t.time + '</div>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-    var assignedHtml = '';
-    if (req.assignedExpert && req.assignedExpert !== 'Pending') {
-      assignedHtml = '<div class="request-detail-label">Assigned Expert</div><div class="request-detail-value" style="display:flex;align-items:center;gap:6px;"><i class="fas fa-user-tie" style="color:' + req.color + ';font-size:14px;"></i> ' + req.assignedExpert + '</div>';
-    } else {
-      assignedHtml = '<div class="request-detail-label">Assigned Expert</div><div class="request-detail-value" style="color:var(--text-muted);font-weight:400;">Awaiting assignment</div>';
-    }
-    var notesHtml = '';
-    if (req.resolutionNotes) {
-      notesHtml = '<div class="request-detail-label">Resolution Notes</div><div class="request-detail-value" style="font-size:12px;font-weight:400;background:var(--soft-green);padding:10px 12px;border-radius:8px;line-height:1.5;">' + req.resolutionNotes + '</div>';
-    }
-
-    document.getElementById('rd-content').innerHTML =
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">' +
-        '<div class="sr-icon" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(' + hexToRgb(req.color) + ',0.12);color:' + req.color + ';flex-shrink:0;"><i class="fas ' + req.icon + '"></i></div>' +
-        '<div><h4 style="font-size:16px;margin-bottom:2px;">' + req.serviceName + '</h4><span class="sr-status ' + getStatusClass(req.status) + '">' + statusLabel + '</span></div>' +
-      '</div>' +
-      progressHtml +
-      '<div class="request-detail-label">Tracking ID</div>' +
-      '<div class="request-detail-value" style="font-family:monospace;font-size:12px;">' + req.id + '</div>' +
-      '<div class="request-detail-label">Requested On</div>' +
-      '<div class="request-detail-value">' + formatDate(req.date) + '</div>' +
-      assignedHtml +
-      notesHtml +
-      '<div style="margin-top:16px;"><h4 style="font-size:14px;margin-bottom:8px;">Status Timeline</h4>' + timelineHtml + '</div>' +
-      '<button class="btn-secondary" style="width:100%;margin-top:16px;" onclick="closeRequestDetail()">Close</button>';
-
-    document.getElementById('request-detail-modal').classList.add('active');
-  };
-
-  window.closeRequestDetail = function () {
-    document.getElementById('request-detail-modal').classList.remove('active');
-  };
-
-  var CUSTOM_DRAFT_KEY = 'fa-custom-request-draft';
-
-  function escText(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
-  function getCustomDraft() {
-    var draft = {};
-    try {
-      var raw = localStorage.getItem(CUSTOM_DRAFT_KEY);
-      if (raw) draft = JSON.parse(raw) || {};
-    } catch (e) { draft = {}; }
-    return draft;
-  }
-
-  function saveCustomDraft() {
-    var draft = {
-      title: document.getElementById('cs-title').value,
-      category: document.getElementById('cs-category').value,
-      urgency: document.getElementById('cs-urgency').value,
-      budgetMin: document.getElementById('cs-budget-min').value,
-      budgetMax: document.getElementById('cs-budget-max').value,
-      date: document.getElementById('cs-date').value,
-      time: document.getElementById('cs-time').value,
-      desc: document.getElementById('cs-desc').value
-    };
-    try { localStorage.setItem(CUSTOM_DRAFT_KEY, JSON.stringify(draft)); } catch (e) {}
-    var note = document.getElementById('cs-save-note');
-    if (note) { note.style.display = 'block'; setTimeout(function () { note.style.display = 'none'; }, 2500); }
-  }
-
-  function loadCustomDraft() {
-    var draft = getCustomDraft();
-    var idMap = {
-      'cs-title': draft.title || '',
-      'cs-category': draft.category || '',
-      'cs-urgency': draft.urgency || 'normal',
-      'cs-budget-min': draft.budgetMin || '',
-      'cs-budget-max': draft.budgetMax || '',
-      'cs-date': draft.date || '',
-      'cs-time': draft.time || '',
-      'cs-desc': draft.desc || ''
-    };
-    Object.keys(idMap).forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.value = idMap[id];
+  document.querySelectorAll('.svc-modal-overlay').forEach(function(overlay) {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) svcCloseModals();
     });
-    updateCharCount();
-  }
-
-  function bindCustomDraft() {
-    var ids = ['cs-title', 'cs-category', 'cs-urgency', 'cs-budget-min', 'cs-budget-max', 'cs-date', 'cs-time', 'cs-desc'];
-    ids.forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.addEventListener('input', function () { saveCustomDraft(); });
-    });
-  }
-
-  function updateCharCount() {
-    var el = document.getElementById('cs-desc');
-    var count = document.getElementById('cs-char-count');
-    if (!el || !count) return;
-    var len = el.value.length;
-    count.textContent = len + '/500';
-    count.style.color = len >= 450 ? (len >= 500 ? 'var(--danger)' : '#A67C00') : 'var(--text-muted)';
-  }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    var descEl = document.getElementById('cs-desc');
-    if (descEl) descEl.addEventListener('input', updateCharCount);
   });
 
-  window.clearCustomDraft = function () {
-    try { localStorage.removeItem(CUSTOM_DRAFT_KEY); } catch (e) {}
-    var ids = ['cs-title', 'cs-category', 'cs-budget-min', 'cs-budget-max', 'cs-date', 'cs-time', 'cs-desc'];
-    ids.forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.value = id === 'cs-urgency' ? 'normal' : '';
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') svcCloseModals();
+  });
+
+  // === LOAD CATEGORIES FROM BACKEND ===
+  function loadCategories() {
+    API.Service.getCategories().then(function(res) {
+      var data = res.data || res;
+      backendCategories = data || {};
+      renderCategoryPills();
+    }).catch(function() {
+      renderCategoryPills();
     });
-    updateCharCount();
-    if (typeof showToast === 'function') showToast('Draft cleared', 'info');
+  }
+
+  function renderCategoryPills() {
+    var container = document.getElementById('svc-category-pills');
+    var html = '<button class="svc-cat-pill active" onclick="svcSelectCategory(\'all\')">' +
+      '<i class="fas ' + (CATEGORY_ICONS['all'] || 'fa-grid-2') + '"></i> <span>All Services</span>' +
+      '</button>';
+
+    var cats = Object.keys(backendCategories).filter(function(k) { return k !== 'all'; });
+    cats.sort(function(a, b) {
+      var ia = CATEGORY_ORDER.indexOf(a);
+      var ib = CATEGORY_ORDER.indexOf(b);
+      if (ia === -1 && ib === -1) return a < b ? -1 : a > b ? 1 : 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+
+    cats.forEach(function(cat) {
+      var count = backendCategories[cat] || 0;
+      var icon = CATEGORY_ICONS[cat] || 'fa-tag';
+      var label = CATEGORY_LABELS[cat] || cat.replace(/-/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+      html += '<button class="svc-cat-pill" onclick="svcSelectCategory(\'' + esc(cat) + '\')">' +
+        '<i class="fas ' + esc(icon) + '"></i> <span>' + esc(label) + ' (' + count + ')</span>' +
+        '</button>';
+    });
+
+    container.innerHTML = html;
+    restoreActiveCategoryPill();
+  }
+
+  function restoreActiveCategoryPill() {
+    document.querySelectorAll('#svc-category-pills .svc-cat-pill').forEach(function(pill) {
+      pill.classList.remove('active');
+      var onclick = pill.getAttribute('onclick') || '';
+      if (onclick.indexOf("'" + currentSelectedCategory + "'") !== -1) {
+        pill.classList.add('active');
+      }
+    });
+  }
+
+  window.svcSelectCategory = function(catKey) {
+    currentSelectedCategory = catKey;
+    var label = CATEGORY_LABELS[catKey] || (catKey === 'all' ? 'All Services' : catKey.replace(/-/g, ' '));
+    document.getElementById('svc-catalog-heading').textContent = label;
+    restoreActiveCategoryPill();
+    resetCatalogPaginationAndLoad();
   };
 
-  window.submitCustomRequest = function () {
-    var title = document.getElementById('cs-title').value.trim();
-    var category = document.getElementById('cs-category').value;
-    var urgency = document.getElementById('cs-urgency').value;
-    var budgetMin = parseFloat(document.getElementById('cs-budget-min').value);
-    var budgetMax = parseFloat(document.getElementById('cs-budget-max').value);
-    var date = document.getElementById('cs-date').value;
-    var time = document.getElementById('cs-time').value;
-    var desc = document.getElementById('cs-desc').value.trim();
+  window.svcOnSearchInput = function() {
+    var input = document.getElementById('svc-search-input');
+    document.getElementById('svc-search-clear').style.display = input.value ? 'inline-flex' : 'none';
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(delayedSearchReload, 250);
+  };
 
-    if (!title) {
-      if (typeof showToast === 'function') { showToast('Please enter a service title', 'warning'); } else { alert('Please enter a service title'); }
+  window.svcClearSearch = function() {
+    document.getElementById('svc-search-input').value = '';
+    document.getElementById('svc-search-clear').style.display = 'none';
+    resetCatalogPaginationAndLoad();
+  };
+
+  function delayedSearchReload() {
+    resetCatalogPaginationAndLoad();
+  }
+
+  // === CATALOG PAGINATION STATE ===
+  var PAGE_SIZE = 24;
+  var catalogPage = 1;
+  var catalogTotalPages = 1;
+
+  function resetCatalogPaginationAndLoad() {
+    catalogPage = 1;
+    loadCatalogServices();
+  }
+
+  function renderServiceCard(s) {
+    var dotClass = s.availability === 'available' ? 'available' : s.availability === 'busy' ? 'busy' : 'limited';
+    var catLabel = CATEGORY_LABELS[s.category] || (s.category || 'Service').replace(/-/g, ' ');
+    var sid = s.service_id || s.id;
+    return '<div class="svc-card">' +
+      '<div class="svc-card-top">' +
+        '<div class="svc-card-icon" style="background:' + (s.color || '#1B5E3F') + '">' +
+          '<i class="fas ' + (s.icon || 'fa-concierge-bell') + '"></i>' +
+        '</div>' +
+        '<div class="svc-card-header-info">' +
+          '<h4 class="svc-card-name">' + esc(s.name) + '</h4>' +
+          '<span class="svc-cat-tag">' + esc(catLabel) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<p class="svc-card-desc">' + esc(s.description) + '</p>' +
+      '<div class="svc-card-details-row">' +
+        '<span class="svc-status-pill ' + dotClass + '"><i class="fas fa-circle" style="font-size:6px"></i> ' + esc(s.availability) + '</span>' +
+        '<span><i class="far fa-clock"></i> ' + esc(s.response_time || '24 hrs') + '</span>' +
+        '<span><i class="fas fa-tag"></i> ' + esc(s.price_info || 'Free') + '</span>' +
+      '</div>' +
+      '<div class="svc-card-actions">' +
+        '<button class="svc-btn-details" onclick="svcOpenDetailModal(\'' + esc(sid) + '\')"><i class="fas fa-info-circle"></i> Details</button>' +
+        '<button class="svc-btn-request" onclick="svcOpenRequestModal(\'' + esc(sid) + '\')"><i class="fas fa-hand-pointer"></i> Request Service</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function updateLoadMoreButton() {
+    var loadMoreEl = document.getElementById('svc-load-more');
+    if (!loadMoreEl) return;
+    if (catalogPage < catalogTotalPages) {
+      loadMoreEl.style.display = 'flex';
+    } else {
+      loadMoreEl.style.display = 'none';
+    }
+  }
+
+  window.svcLoadMore = function() {
+    catalogPage += 1;
+    loadCatalogServices(true);
+  };
+
+  // === LOAD SERVICE CATALOG ===
+  function loadCatalogServices(appendMode) {
+    var grid = document.getElementById('svc-catalog-grid');
+    var countEl = document.getElementById('svc-catalog-count');
+    var queryVal = document.getElementById('svc-search-input').value.trim();
+
+    var params = { page: catalogPage, limit: PAGE_SIZE };
+    if (currentSelectedCategory !== 'all') params.category = currentSelectedCategory;
+    if (queryVal) params.search = queryVal;
+
+    if (!appendMode) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">' +
+        '<i class="fas fa-spinner svc-spin" style="font-size:24px;margin-bottom:10px"></i>' +
+        '<div>Loading agriculture service catalog...</div>' +
+      '</div>';
+      updateLoadMoreButton();
+    }
+
+    API.Service.listCatalog(params).then(function(res) {
+      var data = res.data || res;
+      var items = data.items || [];
+      catalogServices = appendMode ? catalogServices.concat(items) : items;
+      var total = data.total !== undefined ? data.total : catalogServices.length;
+      catalogTotalPages = data.total_pages !== undefined ? data.total_pages : Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+      countEl.textContent = total + ' agriculture services found';
+
+      if (!catalogServices.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">' +
+          '<i class="fas fa-search" style="font-size:32px;margin-bottom:10px;opacity:0.4"></i>' +
+          '<h4 style="margin:0 0 4px;color:var(--text-primary)">No services found</h4>' +
+          '<p style="font-size:12px;margin:0">No services match your selected category or search term.</p>' +
+        '</div>';
+        return;
+      }
+
+      var html = catalogServices.map(renderServiceCard).join('');
+      if (appendMode) {
+        grid.insertAdjacentHTML('beforeend', html);
+      } else {
+        grid.innerHTML = html;
+      }
+      updateLoadMoreButton();
+    }).catch(function(err) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--danger)">' +
+        '<i class="fas fa-exclamation-triangle" style="font-size:32px;margin-bottom:10px"></i>' +
+        '<div>Unable to load services from backend server.</div>' +
+        '<p style="font-size:11px;margin-top:4px;color:var(--text-muted)">' + esc((err && err.message) || 'Connection error') + '</p>' +
+      '</div>';
+      updateLoadMoreButton();
+    });
+  }
+
+  function findServiceById(serviceId) {
+    return catalogServices.find(function(item) {
+      return (item.service_id === serviceId || item.id === serviceId);
+    });
+  }
+
+  // === SERVICE DETAILS MODAL ===
+  window.svcOpenDetailModal = function(serviceId) {
+    var s = findServiceById(serviceId);
+    if (!s) {
+      API.Service.getCatalogItem(serviceId).then(function(res) {
+        var svc = res.data || res;
+        showDetailModal(svc, serviceId);
+      }).catch(function() {
+        showToast('Service details not available.', 'error');
+      });
       return;
     }
-    if (desc.length < 10) {
-      if (typeof showToast === 'function') { showToast('Please describe your requirement (at least 10 characters)', 'warning'); } else { alert('Please describe your requirement (at least 10 characters)'); }
+    showDetailModal(s, serviceId);
+  };
+
+  function showDetailModal(s, serviceId) {
+    selectedServiceForRequest = s;
+    var catLabel = CATEGORY_LABELS[s.category] || (s.category || '').replace(/-/g, ' ');
+
+    document.getElementById('dtl-title').textContent = s.name;
+    document.getElementById('dtl-content').innerHTML = '' +
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">' +
+        '<div style="width:48px;height:48px;border-radius:12px;background:' + (s.color || '#1B5E3F') + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px">' +
+          '<i class="fas ' + (s.icon || 'fa-concierge-bell') + '"></i>' +
+        '</div>' +
+        '<div>' +
+          '<div style="font-size:16px;font-weight:700;color:var(--text-primary)">' + esc(s.name) + '</div>' +
+          '<div style="font-size:12px;color:var(--text-muted)">Category: ' + esc(catLabel) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px">' + esc(s.description) + '</p>' +
+      (s.full_description && s.full_description !== s.description ?
+        '<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text-primary)">Full Description</div>' +
+        '<p style="font-size:12px;color:var(--text-secondary);line-height:1.6;margin:0">' + esc(s.full_description) + '</p></div>' : '') +
+      (s.deliverables ?
+        '<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text-primary)">Deliverables</div>' +
+        '<pre style="font-size:11px;color:var(--text-secondary);white-space:pre-wrap;margin:0;background:var(--bg-card-soft);padding:10px;border-radius:var(--radius-sm)">' + esc(s.deliverables) + '</pre></div>' : '') +
+      (s.eligibility ?
+        '<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text-primary)">Eligibility</div>' +
+        '<p style="font-size:12px;color:var(--text-secondary);margin:0">' + esc(s.eligibility) + '</p></div>' : '') +
+      (s.required_documents ?
+        '<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text-primary)">Documents Required</div>' +
+        '<p style="font-size:12px;color:var(--text-secondary);margin:0">' + esc(s.required_documents) + '</p></div>' : '') +
+      '<div style="background:var(--bg-card-soft);padding:14px;border-radius:var(--radius-sm);font-size:12px;display:flex;flex-direction:column;gap:8px">' +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Provider</span><span style="font-weight:600">' + esc(s.provider_name || 'Farm Assist Partner') + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Estimated Response</span><span style="font-weight:600">' + esc(s.response_time || '24 hrs') + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Price Info</span><span style="font-weight:600">' + esc(s.price_info || 'Free Advisory') + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Service Coverage</span><span style="font-weight:600">' + esc(s.location_coverage || 'All Districts') + '</span></div>' +
+        (s.service_duration ? '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Duration</span><span style="font-weight:600">' + esc(s.service_duration) + '</span></div>' : '') +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">User Rating</span><span style="font-weight:600"><i class="fas fa-star" style="color:#F9A825"></i> ' + (s.rating || 4.8) + ' / 5.0</span></div>' +
+      '</div>';
+
+    var sid = s.service_id || s.id;
+    document.getElementById('dtl-request-btn').onclick = function() {
+      svcCloseModals();
+      svcOpenRequestModal(sid);
+    };
+
+    svcOpenModal('detail-modal');
+  }
+
+  // === REQUEST SERVICE MODAL ===
+  window.svcOpenRequestModal = function(serviceId) {
+    if (!hasApi()) {
+      showToast('Please log in to request services.', 'error');
+      window.location.href = 'login.html';
       return;
     }
-    if (!isNaN(budgetMin) && !isNaN(budgetMax) && budgetMin > budgetMax) {
-      if (typeof showToast === 'function') { showToast('Minimum budget cannot exceed maximum', 'warning'); } else { alert('Minimum budget cannot exceed maximum'); }
+
+    var s = findServiceById(serviceId);
+    if (s) selectedServiceForRequest = s;
+
+    document.getElementById('req-service-name').value = s ? s.name : 'Agriculture Service';
+    document.getElementById('req-date').min = new Date().toISOString().split('T')[0];
+
+    var u = {};
+    try { u = JSON.parse(localStorage.getItem('fa-current-user-data') || '{}'); } catch(e) {}
+    document.getElementById('req-farmer-name').value = u.full_name || 'Authenticated Farmer';
+    document.getElementById('req-farmer-id').value = u.farmer_id || 'FA-AS-00000001';
+    document.getElementById('req-phone').value = u.phone_number || '';
+
+    loadFarmerFarmsDropdown();
+    svcOpenModal('request-modal');
+  };
+
+  function loadFarmerFarmsDropdown() {
+    var sel = document.getElementById('req-farm-select');
+    sel.innerHTML = '<option value="">Loading farms...</option>';
+
+    API.Farm.list().then(function(res) {
+      var farms = res.data || res;
+      userFarms = Array.isArray(farms) ? farms : [];
+
+      if (!userFarms.length) {
+        sel.innerHTML = '<option value="">No registered farms (General Location)</option>';
+        return;
+      }
+
+      sel.innerHTML = userFarms.map(function(f, idx) {
+        var name = f.farm_name || f.name || ('Farm ' + (idx + 1));
+        var area = f.total_area ? (f.total_area + ' ' + (f.area_unit || 'Acres')) : '';
+        return '<option value="' + esc(f.id) + '" ' + (idx === 0 ? 'selected' : '') + '>' + esc(name) + (area ? ' (' + area + ')' : '') + '</option>';
+      }).join('');
+    }).catch(function() {
+      sel.innerHTML = '<option value="">General Farm Location</option>';
+    });
+  }
+
+  window.svcSubmitServiceRequest = function(e) {
+    e.preventDefault();
+    var s = selectedServiceForRequest;
+    var phone = document.getElementById('req-phone').value.trim();
+
+    if (!phone || !/^\d{10}$/.test(phone)) {
+      showToast('Please enter a valid 10-digit contact phone number.', 'error');
       return;
     }
-    var name = localStorage.getItem('user-name') || 'Farm User';
-    var phone = localStorage.getItem('user-phone') || '';
+
+    var dateVal = document.getElementById('req-date').value;
+    if (!dateVal) {
+      showToast('Please select a preferred date.', 'error');
+      return;
+    }
+
+    var submitBtn = document.getElementById('req-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner svc-spin"></i> Submitting...';
 
     var payload = {
-      service_name: title,
-      service_category: category || null,
-      contact_name: name,
-      contact_phone: phone || null,
-      description: desc,
-      preferred_date: date || null,
-      preferred_time: time || null,
-      budget_min: isNaN(budgetMin) ? null : budgetMin,
-      budget_max: isNaN(budgetMax) ? null : budgetMax,
-      urgency: urgency || 'normal',
-      is_custom: true
+      service_id: s ? (s.id || null) : null,
+      service_name: s ? s.name : 'Agriculture Service',
+      service_category: s ? s.category : null,
+      contact_name: document.getElementById('req-farmer-name').value,
+      contact_phone: phone,
+      farm_id: document.getElementById('req-farm-select').value || null,
+      preferred_date: dateVal,
+      preferred_time: document.getElementById('req-time').value || null,
+      description: document.getElementById('req-description').value.trim() || null,
+      is_custom: false
     };
 
-    var btn = event && event.currentTarget ? event.currentTarget : null;
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-    }
+    API.Service.create(payload).then(function(res) {
+      var created = res.data || res;
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
+      svcCloseModals();
 
-    var saveLocally = function (resp) {
-      resp = resp || {};
-      var id = resp.service_request_id || resp.request_id || 'FA-SRQ-' + Date.now().toString().slice(-8);
-      var eta = resp.estimated_response_time || '48 hours';
-      var now = new Date();
-      var dateStr = now.toISOString().split('T')[0];
-      var newRequest = {
-        id: id,
-        serviceName: title,
-        date: dateStr,
-        status: 'pending',
-        icon: 'fa-magic',
-        color: '#1B5E3F',
-        assignedExpert: 'Pending',
-        resolutionNotes: '',
-        timeline: [
-          { title: 'Request Submitted', time: now.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), done: true },
-          { title: 'Under Review', time: 'Pending', done: false },
-          { title: 'Completed', time: 'Pending', done: false }
-        ]
-      };
-      serviceRequests.unshift(newRequest);
-      saveRequests();
-      renderServiceRequests();
-      try { localStorage.removeItem(CUSTOM_DRAFT_KEY); } catch (e) {}
-      document.getElementById('cc-id').textContent = id;
-      document.getElementById('cc-eta').textContent = eta;
-      document.getElementById('custom-confirm-modal').classList.add('active');
-      if (typeof showToast === 'function') showToast('Custom request submitted! ID: ' + id, 'success');
-    };
+      var reqId = created.service_request_id || 'Unknown';
+      var status = created.status || 'Pending';
+      showToast('Service request submitted! ID: ' + reqId + ' | Status: ' + status.charAt(0).toUpperCase() + status.slice(1), 'success');
 
-    var finish = function () {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
-      }
-    };
-
-    if (window.ServiceService && window.navigator && navigator.onLine) {
-      ServiceService.createCustom(payload).then(function (res) {
-        saveLocally(res || {});
-        finish();
-      }).catch(function () {
-        saveLocally({});
-        finish();
-      });
-    } else {
-      saveLocally({});
-      finish();
-    }
-  };
-
-  window.closeCustomConfirm = function () {
-    document.getElementById('custom-confirm-modal').classList.remove('active');
-  };
-
-  document.querySelectorAll('.modal-backdrop').forEach(function (m) {
-    m.addEventListener('click', function (e) {
-      if (e.target === m) m.classList.remove('active');
+      loadServiceRequests();
+      loadActiveRequestBanner();
+      loadCompletedServices();
+    }).catch(function(err) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
+      showToast((err && err.message) || 'Failed to submit service request.', 'error');
     });
-  });
+  };
 
+  // === ACTIVE REQUEST BANNER ===
+  function loadActiveRequestBanner() {
+    var banner = document.getElementById('svc-active-banner');
+    if (!hasApi()) { banner.innerHTML = ''; return; }
+
+    API.Service.list({ status: 'active', limit: 1 }).then(function(res) {
+      var data = res.data || res;
+      var items = data.items || (Array.isArray(data) ? data : []);
+
+      if (!items.length) {
+        banner.innerHTML = '';
+        return;
+      }
+
+      var r = items[0];
+      var statusLabel = (r.status || 'pending').replace(/-/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+      var catLabel = CATEGORY_LABELS[r.service_category] || (r.service_category || '').replace(/-/g, ' ');
+
+      banner.innerHTML = '<div class="svc-active-banner">' +
+        '<div class="svc-active-banner-left">' +
+          '<div class="svc-active-banner-icon"><i class="fas fa-concierge-bell"></i></div>' +
+          '<div class="svc-active-banner-info">' +
+            '<div class="svc-active-label">Your Active Request</div>' +
+            '<div class="svc-active-name">' + esc(r.service_name) + '</div>' +
+            '<div class="svc-active-meta">ID: ' + esc(r.service_request_id) + ' | Status: ' + esc(statusLabel) +
+              (catLabel ? ' | ' + esc(catLabel) : '') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<button class="svc-active-banner-btn" onclick="svcOpenReqItemModal(\'' + esc(r.service_request_id) + '\')"><i class="fas fa-eye"></i> View Request</button>' +
+      '</div>';
+    }).catch(function() {
+      banner.innerHTML = '';
+    });
+  }
+
+  // === REQUESTED SERVICES ===
+  function loadServiceRequests() {
+    if (!hasApi()) return;
+
+    API.Service.list({ limit: 50 }).then(function(res) {
+      var data = res.data || res;
+      userRequests = data.items || (Array.isArray(data) ? data : []);
+
+      document.getElementById('svc-tracking-badge').textContent = userRequests.length;
+      renderRequestsList(activeRequestTab);
+    }).catch(function() {});
+  }
+
+  window.svcFilterRequests = function(tabKey) {
+    activeRequestTab = tabKey;
+    ['active', 'completed', 'cancelled', 'all'].forEach(function(k) {
+      var btn = document.getElementById('tab-req-' + k);
+      if (btn) {
+        if (k === tabKey) btn.classList.add('active');
+        else btn.classList.remove('active');
+      }
+    });
+    renderRequestsList(tabKey);
+  };
+
+  function renderRequestsList(tabKey) {
+    var container = document.getElementById('svc-requests-list');
+    var filtered = userRequests;
+
+    if (tabKey === 'active') {
+      filtered = userRequests.filter(function(r) {
+        return ['pending', 'received', 'accepted', 'in-progress', 'submitted'].indexOf(r.status) >= 0;
+      });
+    } else if (tabKey === 'completed') {
+      filtered = userRequests.filter(function(r) { return r.status === 'completed'; });
+    } else if (tabKey === 'cancelled') {
+      filtered = userRequests.filter(function(r) { return r.status === 'cancelled'; });
+    }
+
+    if (!filtered.length) {
+      var emptyMsg = tabKey === 'all' ? 'No service requests found.' :
+                     tabKey === 'active' ? 'No active service requests.' :
+                     tabKey === 'completed' ? 'No completed service requests.' :
+                     'No cancelled service requests.';
+      container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px">' +
+        '<i class="fas fa-inbox" style="font-size:28px;margin-bottom:8px;opacity:0.4"></i>' +
+        '<div>' + emptyMsg + '</div>' +
+        (tabKey === 'all' ? '<button class="svc-btn svc-btn-primary" style="margin-top:12px;padding:8px 16px;font-size:12px" onclick="svcCloseModals()"><i class="fas fa-search"></i> Browse Services</button>' : '') +
+      '</div>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(function(r) {
+      var badgeClass = (r.status || 'pending').replace(/ /g, '-');
+      var dt = r.preferred_date || formatDateLabel(r.created_at) || 'Today';
+      var catLabel = CATEGORY_LABELS[r.service_category] || (r.service_category || '').replace(/-/g, ' ');
+      return '<div class="svc-req-card" onclick="svcOpenReqItemModal(\'' + esc(r.service_request_id) + '\')">' +
+        '<div class="svc-req-card-top">' +
+          '<span class="svc-req-title">' + esc(r.service_name) + '</span>' +
+          '<span class="svc-req-badge ' + badgeClass + '">' + esc(r.status) + '</span>' +
+        '</div>' +
+        '<div class="svc-req-meta">' +
+          '<span><i class="fas fa-barcode"></i> ' + esc(r.service_request_id) + '</span>' +
+          '<span><i class="far fa-calendar-alt"></i> ' + esc(dt) + '</span>' +
+          (catLabel ? '<span><i class="fas fa-tag"></i> ' + esc(catLabel) + '</span>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // === SINGLE REQUEST DETAIL ===
+  window.svcOpenReqItemModal = function(requestId) {
+    var r = userRequests.find(function(item) { return item.service_request_id === requestId; });
+    if (!r) {
+      if (hasApi()) {
+        API.Service.get(requestId).then(function(res) {
+          var req = res.data || res;
+          showRequestDetailModal(req);
+        }).catch(function() {
+          showToast('Could not load request details.', 'error');
+        });
+      }
+      return;
+    }
+    showRequestDetailModal(r);
+  };
+
+  function showRequestDetailModal(r) {
+    selectedRequestDetailId = r.service_request_id;
+
+    document.getElementById('rqitem-title').textContent = r.service_name;
+    var cancelBtn = document.getElementById('rqitem-cancel-btn');
+    if (['pending', 'received', 'submitted'].indexOf(r.status) >= 0) {
+      cancelBtn.style.display = 'inline-flex';
+    } else {
+      cancelBtn.style.display = 'none';
+    }
+
+    var timelineHtml = (r.timeline || []).map(function(t) {
+      return '<div style="display:flex;gap:10px;font-size:12px;margin-bottom:8px">' +
+        '<i class="fas ' + (t.done ? 'fa-check-circle' : 'fa-circle-notch') + '" style="color:' + (t.done ? '#2E7D32' : 'var(--text-muted)') + '"></i>' +
+        '<div><strong style="color:var(--text-primary)">' + esc(t.title) + '</strong> <span style="font-size:10px;color:var(--text-muted)">(' + esc(t.time) + ')</span></div>' +
+      '</div>';
+    }).join('');
+
+    var catLabel = CATEGORY_LABELS[r.service_category] || (r.service_category || '').replace(/-/g, ' ');
+    var ratingHtml = '';
+    if (r.status === 'completed' && r.rating) {
+      ratingHtml = '<div style="margin-top:10px;padding:10px;background:#FFF8E1;border-radius:var(--radius-sm)"><div style="font-size:12px;font-weight:700;margin-bottom:4px"><i class="fas fa-star" style="color:#F9A825"></i> Your Rating: ' + r.rating + ' / 5</div>' +
+        (r.rating_feedback ? '<div style="font-size:11px;color:var(--text-secondary)">' + esc(r.rating_feedback) + '</div>' : '') +
+        '</div>';
+    } else if (r.status === 'completed' && !r.rating) {
+      ratingHtml = '<div style="margin-top:10px"><button class="svc-btn svc-btn-primary" style="width:100%;padding:8px;font-size:12px" onclick="svcCloseModals();svcOpenRatingModal(\'' + esc(r.service_request_id) + '\')"><i class="fas fa-star" style="color:#F9A825"></i> Rate This Service</button></div>';
+    }
+
+    document.getElementById('rqitem-content').innerHTML = '' +
+      '<div style="background:var(--bg-card-soft);padding:14px;border-radius:var(--radius-sm);margin-bottom:14px;font-size:12px;display:flex;flex-direction:column;gap:6px">' +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Tracking ID</span><span style="font-weight:700;font-family:monospace">' + esc(r.service_request_id) + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Current Status</span><span class="svc-req-badge ' + (r.status||'pending').replace(/ /g,'-') + '">' + esc((r.status||'pending').replace(/-/g,' ')) + '</span></div>' +
+        (catLabel ? '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Category</span><span style="font-weight:600">' + esc(catLabel) + '</span></div>' : '') +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Contact Phone</span><span style="font-weight:600">' + esc(r.contact_phone || 'N/A') + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Preferred Date</span><span style="font-weight:600">' + esc(r.preferred_date || 'Flexible') + '</span></div>' +
+        (r.preferred_time ? '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Preferred Time</span><span style="font-weight:600">' + esc(r.preferred_time) + '</span></div>' : '') +
+        (r.farm_id ? '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Farm</span><span style="font-weight:600">' + esc(r.farm_id) + '</span></div>' : '') +
+        (r.location ? '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Location</span><span style="font-weight:600">' + esc(r.location) + '</span></div>' : '') +
+        (r.assigned_expert ? '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Assigned Specialist</span><span style="font-weight:600">' + esc(r.assigned_expert) + '</span></div>' : '') +
+        (r.description ? '<div style="border-top:1px dashed var(--border-light);padding-top:8px;margin-top:4px"><span style="color:var(--text-muted);font-weight:700">Requirements:</span><div style="margin-top:4px;color:var(--text-secondary);line-height:1.5">' + esc(r.description) + '</div></div>' : '') +
+        (r.resolution_notes ? '<div style="border-top:1px dashed var(--border-light);padding-top:8px;margin-top:4px"><span style="color:var(--text-muted);font-weight:700">Resolution Notes:</span><div style="margin-top:4px;color:var(--text-secondary);line-height:1.5">' + esc(r.resolution_notes) + '</div></div>' : '') +
+        (r.estimated_response_time ? '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Est. Response</span><span style="font-weight:600">' + esc(r.estimated_response_time) + '</span></div>' : '') +
+        '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Created</span><span style="font-weight:600">' + esc(r.created_at ? r.created_at.split(' ')[0] : 'N/A') + '</span></div>' +
+      '</div>' +
+      (timelineHtml ? '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">Status Timeline</div>' + timelineHtml + '</div>' : '') +
+      ratingHtml;
+
+    svcOpenModal('req-item-modal');
+  }
+
+  window.svcCancelRequestTrigger = function() {
+    if (!selectedRequestDetailId) return;
+    if (!confirm('Are you sure you want to cancel this service request?')) return;
+
+    API.Service.updateStatus(selectedRequestDetailId, { status: 'cancelled' }).then(function() {
+      svcCloseModals();
+      showToast('Service request cancelled.', 'info');
+      loadServiceRequests();
+      loadActiveRequestBanner();
+      loadCompletedServices();
+    }).catch(function(err) {
+      showToast((err && err.message) || 'Failed to cancel request.', 'error');
+    });
+  };
+
+  // === COMPLETED SERVICES ===
+  function loadCompletedServices() {
+    if (!hasApi()) return;
+
+    API.Service.getCompleted().then(function(res) {
+      completedServices = res.data || res;
+      if (!Array.isArray(completedServices)) completedServices = [];
+      var container = document.getElementById('svc-completed-container');
+      document.getElementById('svc-completed-count').textContent = completedServices.length + ' Completed';
+
+      if (!completedServices.length) {
+        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-size:12px">No completed service requests yet.</div>';
+        return;
+      }
+
+      container.innerHTML = completedServices.map(function(r) {
+        var catLabel = CATEGORY_LABELS[r.service_category] || (r.service_category || '').replace(/-/g, ' ');
+        var compDate = r.updated_at ? r.updated_at.split(' ')[0] : '';
+        return '<div class="svc-comp-card">' +
+          '<div class="svc-comp-title">' + esc(r.service_name) + '</div>' +
+          '<div class="svc-comp-meta"><i class="fas fa-barcode"></i> ' + esc(r.service_request_id) +
+            (compDate ? ' | <i class="fas fa-check-circle" style="color:#2E7D32"></i> Completed: ' + esc(compDate) : ' | <i class="fas fa-check-circle" style="color:#2E7D32"></i> Completed') +
+            (catLabel ? ' | ' + esc(catLabel) : '') +
+            (r.assigned_expert ? ' | Provider: ' + esc(r.assigned_expert) : '') +
+          '</div>' +
+          '<div style="display:flex;gap:8px;margin-top:10px">' +
+            (r.rating ?
+              '<button class="svc-btn svc-btn-secondary" style="flex:1;padding:6px;font-size:11px" disabled><i class="fas fa-star" style="color:#F9A825"></i> Rated ' + r.rating + '/5</button>' :
+              '<button class="svc-btn svc-btn-secondary" style="flex:1;padding:6px;font-size:11px" onclick="svcOpenRatingModal(\'' + esc(r.service_request_id) + '\')"><i class="fas fa-star" style="color:#F9A825"></i> Rate Service</button>') +
+            '<button class="svc-btn svc-btn-primary" style="flex:1;padding:6px;font-size:11px" onclick="svcReRequest(\'' + esc(r.service_id || r.service_request_id) + '\')"><i class="fas fa-rotate-right"></i> Request Again</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }).catch(function() {});
+  }
+
+  window.svcReRequest = function(serviceId) {
+    var s = findServiceById(serviceId);
+    if (s) {
+      svcOpenRequestModal(serviceId);
+    } else {
+      showToast('Opening request form...', 'info');
+      svcOpenRequestModal(serviceId);
+    }
+  };
+
+  // === RATING ===
+  var ratingTargetRequestId = null;
+  window.svcOpenRatingModal = function(requestId) {
+    ratingTargetRequestId = requestId;
+    svcSetRating(5);
+    document.getElementById('rating-feedback-text').value = '';
+    svcOpenModal('rating-modal');
+  };
+
+  window.svcSetRating = function(score) {
+    currentSelectedRating = score;
+    var stars = document.getElementById('rating-stars-box').children;
+    for (var i = 0; i < 5; i++) {
+      stars[i].className = i < score ? 'fas fa-star' : 'far fa-star';
+    }
+    document.getElementById('rating-score-lbl').textContent = score + ' / 5 Stars';
+  };
+
+  window.svcSubmitRating = function(e) {
+    e.preventDefault();
+    if (!ratingTargetRequestId) return;
+
+    var feedback = document.getElementById('rating-feedback-text').value.trim();
+    var btn = document.getElementById('rating-submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner svc-spin"></i> Submitting...';
+
+    API.Service.rate(ratingTargetRequestId, { rating: currentSelectedRating, rating_feedback: feedback }).then(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check"></i> Submit Rating';
+      svcCloseModals();
+      showToast('Thank you for rating your completed service!', 'success');
+      loadCompletedServices();
+    }).catch(function(err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check"></i> Submit Rating';
+      showToast((err && err.message) || 'Failed to submit rating.', 'error');
+    });
+  };
+
+  // === INITIALIZE ===
+  loadCategories();
+  loadCatalogServices();
+  if (hasApi()) {
+    loadServiceRequests();
+    loadCompletedServices();
+    loadActiveRequestBanner();
+  }
 })();
 </script>
 </body>

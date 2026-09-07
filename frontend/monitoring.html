@@ -19,9 +19,6 @@
       </div>
       <select class="form-select" id="farm-selector" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-light); font-size:13px; background:white; min-width:150px;" onchange="updateFarmData()">
         <option value="all">All Farms</option>
-        <option value="Green Acre">Green Acre</option>
-        <option value="Saraswati">Saraswati</option>
-        <option value="Deccan">Deccan</option>
       </select>
     </section>
 
@@ -31,35 +28,35 @@
 
       <div class="gauge-row">
         <!-- Soil Moisture -->
-        <div class="gauge-box">
+        <div class="gauge-box" data-gauge="soil">
           <div class="ring-gauge">
             <svg>
               <circle class="bg" cx="38" cy="38" r="32"></circle>
-              <circle class="progress" cx="38" cy="38" r="32" style="stroke: #3498db; stroke-dasharray: 201.06; stroke-dashoffset: 76.4;"></circle>
+              <circle class="progress" id="gauge-soil-progress" cx="38" cy="38" r="32" style="stroke: #3498db; stroke-dasharray: 201.06; stroke-dashoffset: 201.06;"></circle>
             </svg>
-            <div class="ring-label" style="color: #3498db;">62%</div>
+            <div class="ring-label" id="gauge-soil-label" style="color: #3498db;">--</div>
           </div>
           <span class="gauge-title">Soil Moisture</span>
         </div>
         <!-- NDVI Index -->
-        <div class="gauge-box">
+        <div class="gauge-box" data-gauge="ndvi">
           <div class="ring-gauge">
             <svg>
               <circle class="bg" cx="38" cy="38" r="32"></circle>
-              <circle class="progress" cx="38" cy="38" r="32" style="stroke: var(--light-green); stroke-dasharray: 201.06; stroke-dashoffset: 22.1;"></circle>
+              <circle class="progress" id="gauge-ndvi-progress" cx="38" cy="38" r="32" style="stroke: var(--light-green); stroke-dasharray: 201.06; stroke-dashoffset: 201.06;"></circle>
             </svg>
-            <div class="ring-label" style="color: var(--light-green);">89%</div>
+            <div class="ring-label" id="gauge-ndvi-label" style="color: var(--light-green);">--</div>
           </div>
-          <span class="gauge-title">NDVI Index</span>
+          <span class="gauge-title">Crop Health</span>
         </div>
         <!-- Crop Stress -->
-        <div class="gauge-box">
+        <div class="gauge-box" data-gauge="stress">
           <div class="ring-gauge">
             <svg>
               <circle class="bg" cx="38" cy="38" r="32"></circle>
-              <circle class="progress" cx="38" cy="38" r="32" style="stroke: var(--danger); stroke-dasharray: 201.06; stroke-dashoffset: 170.9;"></circle>
+              <circle class="progress" id="gauge-stress-progress" cx="38" cy="38" r="32" style="stroke: var(--danger); stroke-dasharray: 201.06; stroke-dashoffset: 201.06;"></circle>
             </svg>
-            <div class="ring-label" style="color: var(--danger);">15%</div>
+            <div class="ring-label" id="gauge-stress-label" style="color: var(--danger);">--</div>
           </div>
           <span class="gauge-title">Crop Stress</span>
         </div>
@@ -72,94 +69,38 @@
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
         <div>
-          <h3 style="font-size:15px;" id="drone-status-txt">Status: Docked (Charging - 98%)</h3>
-          <p style="font-size:12px; color:var(--text-secondary);">Last Flight Scan: Today, 8:30 AM</p>
+          <h3 style="font-size:15px;" id="drone-status-txt">Status: Not connected</h3>
+          <p style="font-size:12px; color:var(--text-secondary);">Drone hardware telemetry is not yet linked to your account.</p>
         </div>
-        <button class="btn-primary" id="drone-toggle-btn">
+        <button class="btn-primary" id="drone-toggle-btn" disabled>
           <i class="fas fa-plane-departure"></i> Launch Drone
         </button>
       </div>
 
       <div class="telemetry-card">
         <div class="telemetry-icon-pulse">
-          <i class="fas fa-wifi"></i>
+          <i class="fas fa-plug"></i>
         </div>
         <div class="telemetry-info">
-          <h4>GPS Connection</h4>
-          <p>Sentinel Quadcopter Link Status</p>
+          <h4>Hardware Connection</h4>
+          <p>Link the Sentinel Quadcopter to view live telemetry</p>
         </div>
-        <div class="telemetry-val" style="color:var(--success);">Strong</div>
-      </div>
-
-      <div class="telemetry-card">
-        <div class="telemetry-icon-pulse">
-          <i class="fas fa-battery-three-quarters"></i>
-        </div>
-        <div class="telemetry-info">
-          <h4>Battery Level</h4>
-          <p>Ready for 45 mins imaging scan</p>
-        </div>
-        <div class="telemetry-val">98%</div>
+        <div class="telemetry-val" style="color:var(--text-muted);">Offline</div>
       </div>
     </section>
 
     <!-- Ground Sensor Nodes -->
     <section class="card-premium">
-      <h2 style="font-size:18px; margin-bottom:15px;"><i class="fas fa-microchip" style="color:var(--premium-green); margin-right:8px;"></i> Live Ground Sensors</h2>
+      <h2 style="font-size:18px; margin-bottom:4px;"><i class="fas fa-microchip" style="color:var(--premium-green); margin-right:8px;"></i> Live Ground Sensors</h2>
+      <p style="font-size:12px; color:var(--text-secondary); margin-bottom:15px;"><span id="monitor-farm-count">0 farms</span> &bull; <span id="monitor-crop-count">0 active crops</span></p>
 
-      <div class="price-card">
-        <div class="price-info">
-          <div class="price-icon" style="background:rgba(31,122,76,0.1); color:var(--premium-green);"><i class="fas fa-tint"></i></div>
+      <div class="alert-strip info" style="border-left-color: var(--premium-green);">
+        <div class="alert-content">
+          <i class="fas fa-circle-info" style="color:var(--premium-green); margin-right:8px;"></i>
           <div>
-            <div class="price-crop">Soil Moisture - Plot A</div>
-            <div style="font-size:9px; color:var(--text-muted);">Depth: 15cm &bull; Active</div>
+            <strong>No live sensor nodes registered</strong>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Connect on-field soil, temperature, humidity and rainfall sensors to view live readings. Aggregate data is shown in the gauges above.</div>
           </div>
-        </div>
-        <div style="text-align:right;">
-          <div class="price-crop">65%</div>
-          <div style="font-size:11px; color:var(--success);">Stable Growth</div>
-        </div>
-      </div>
-
-      <div class="price-card">
-        <div class="price-info">
-          <div class="price-icon" style="background:rgba(31,122,76,0.1); color:var(--premium-green);"><i class="fas fa-thermometer-half"></i></div>
-          <div>
-            <div class="price-crop">Temperature - Plot B</div>
-            <div style="font-size:9px; color:var(--text-muted);">Canopy Temp &bull; Active</div>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div class="price-crop">28°C</div>
-          <div style="font-size:11px; color:var(--success);">Within Normal Range</div>
-        </div>
-      </div>
-
-      <div class="price-card">
-        <div class="price-info">
-          <div class="price-icon" style="background:rgba(31,122,76,0.1); color:var(--premium-green);"><i class="fas fa-droplet"></i></div>
-          <div>
-            <div class="price-crop">Humidity - Plot C</div>
-            <div style="font-size:9px; color:var(--text-muted);">Ambient Sensor &bull; Active</div>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div class="price-crop">74%</div>
-          <div style="font-size:11px; color:var(--warning);">Alert: Fungal Risk</div>
-        </div>
-      </div>
-
-      <div class="price-card">
-        <div class="price-info">
-          <div class="price-icon" style="background:rgba(31,122,76,0.1); color:var(--premium-green);"><i class="fas fa-cloud-rain"></i></div>
-          <div>
-            <div class="price-crop">Rainfall - Plot D</div>
-            <div style="font-size:9px; color:var(--text-muted);">Rain Gauge &bull; Active</div>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div class="price-crop">12mm / 24h</div>
-          <div style="font-size:11px; color:var(--success);">Moderate</div>
         </div>
       </div>
     </section>
@@ -169,73 +110,29 @@
       <h2 style="font-size:18px; margin-bottom:15px;"><i class="fas fa-chart-column" style="color:var(--premium-green); margin-right:8px;"></i> NDVI Trend (Last 7 Days)</h2>
       <p style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">Vegetation index derived from Sentinel-2 multispectral data.</p>
 
-      <div class="chart-bar-container">
-        <div class="chart-bar-col">
-          <div class="chart-bar-fill" data-height="82%" style="height:0%; background: var(--premium-green);"></div>
-          <div class="chart-bar-lbl">Mon</div>
-        </div>
-        <div class="chart-bar-col">
-          <div class="chart-bar-fill" data-height="78%" style="height:0%; background: var(--premium-green);"></div>
-          <div class="chart-bar-lbl">Tue</div>
-        </div>
-        <div class="chart-bar-col">
-          <div class="chart-bar-fill" data-height="91%" style="height:0%; background: var(--light-green);"></div>
-          <div class="chart-bar-lbl">Wed</div>
-        </div>
-        <div class="chart-bar-col">
-          <div class="chart-bar-fill" data-height="85%" style="height:0%; background: var(--premium-green);"></div>
-          <div class="chart-bar-lbl">Thu</div>
-        </div>
-        <div class="chart-bar-col">
-          <div class="chart-bar-fill" data-height="70%" style="height:0%; background: var(--warning);"></div>
-          <div class="chart-bar-lbl">Fri</div>
-        </div>
-        <div class="chart-bar-col">
-          <div class="chart-bar-fill" data-height="88%" style="height:0%; background: var(--light-green);"></div>
-          <div class="chart-bar-lbl">Sat</div>
-        </div>
-        <div class="chart-bar-col">
-          <div class="chart-bar-fill" data-height="85%" style="height:0%; background: var(--premium-green);"></div>
-          <div class="chart-bar-lbl">Sun</div>
+      <div class="alert-strip info" style="border-left-color: var(--premium-green);">
+        <div class="alert-content">
+          <i class="fas fa-map" style="color:var(--premium-green); margin-right:8px;"></i>
+          <div>
+            <strong>NDVI time-series not yet available</strong>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Satellite vegetation-index history will appear here once Sentinel-2 imagery is enabled for your farms.</div>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Alert Strips for Critical Readings -->
-    <section class="card-premium">
+    <section class="card-premium" id="monitor-critical-alerts">
       <h2 style="font-size:18px; margin-bottom:15px;"><i class="fas fa-triangle-exclamation" style="color:var(--danger); margin-right:8px;"></i> Critical Alerts</h2>
-
-      <div class="alert-strip danger" style="border-left-color: var(--danger);">
-        <div class="alert-content">
-          <i class="fas fa-exclamation-circle" style="color:var(--danger); margin-right:8px;"></i>
-          <div>
-            <strong>Low Soil Moisture - Plot B (Cotton)</strong>
-            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Moisture at 48% - below 55% threshold. Irrigation recommended within 6 hours.</div>
-          </div>
-        </div>
-        <span class="alert-time">Just now</span>
-      </div>
-
-      <div class="alert-strip warning" style="border-left-color: var(--warning);">
-        <div class="alert-content">
-          <i class="fas fa-exclamation-triangle" style="color:var(--warning); margin-right:8px;"></i>
-          <div>
-            <strong>High Humidity - Plot C (Maize)</strong>
-            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Ambient humidity at 74% for 12+ hours. Fungal infection risk elevated.</div>
-          </div>
-        </div>
-        <span class="alert-time">2h ago</span>
-      </div>
 
       <div class="alert-strip info" style="border-left-color: var(--premium-green);">
         <div class="alert-content">
-          <i class="fas fa-info-circle" style="color:var(--premium-green); margin-right:8px;"></i>
+          <i class="fas fa-circle-check" style="color:var(--premium-green); margin-right:8px;"></i>
           <div>
-            <strong>Drone Battery Fully Charged</strong>
-            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Sentinel Quadcopter ready for 45-min imaging flight. Launch via control panel.</div>
+            <strong>No critical alerts right now</strong>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Actionable alerts based on your farm health will appear here when needed.</div>
           </div>
         </div>
-        <span class="alert-time">1h ago</span>
       </div>
     </section>
 
@@ -248,18 +145,70 @@
   <script src="assets/js/app.js"></script>
   <script src="js/script.js"></script>
   <script>
-    // Farm selection functionality for Smart Monitoring
-    function updateFarmData() {
-      var selectedFarm = document.getElementById('farm-selector').value;
-      showToast('Loading data for: ' + (selectedFarm === 'all' ? 'All Farms' : selectedFarm), 'info');
-      
-      // In a real implementation, this would fetch farm-specific sensor data
-      // For now, we'll show a toast to indicate the selection changed
-      if (window.API && localStorage.getItem('fa-auth-token')) {
-        // API call to get farm-specific monitoring data would go here
-        console.log('Fetching monitoring data for farm:', selectedFarm);
+    // Smart Monitoring - driven by real farm & analytics data from the backend
+    var GAUGE_CIRC = 201.06; // 2 * PI * 32
+
+    function setGauge(id, labelId, pct, color) {
+      pct = Math.max(0, Math.min(100, Math.round(pct)));
+      var p = document.getElementById(id);
+      var l = document.getElementById(labelId);
+      if (p) p.style.strokeDashoffset = (GAUGE_CIRC * (1 - pct / 100)).toFixed(1);
+      if (l) l.textContent = pct + '%';
+      if (color && l) l.style.color = color;
+    }
+
+    function updateFarmData(data) {
+      if (!data) return;
+      var health = data.health;
+      var actCrops = data.active_crops || 0;
+      var totCrops = data.total_crops || 0;
+      var cropPct = totCrops ? Math.round((actCrops / totCrops) * 100) : 0;
+      var stress = Math.max(0, Math.min(100, Math.round(100 - (health || 0))));
+      setGauge('gauge-soil-progress', 'gauge-soil-label', health, '#3498db');
+      setGauge('gauge-ndvi-progress', 'gauge-ndvi-label', cropPct, 'var(--light-green)');
+      setGauge('gauge-stress-progress', 'gauge-stress-label', stress, 'var(--danger)');
+
+      // Reflect real counts in the live ground sensor summary
+      var farmCount = document.getElementById('monitor-farm-count');
+      if (farmCount) farmCount.textContent = (data.farms || 0) + ' farms';
+      var cropCount = document.getElementById('monitor-crop-count');
+      if (cropCount) cropCount.textContent = actCrops + ' active crops';
+
+      // Critical alert: flag when farm health is low
+      var alertWrap = document.getElementById('monitor-critical-alerts');
+      if (alertWrap && (health || 0) < 55) {
+        alertWrap.innerHTML = '<div class="alert-strip danger" style="border-left-color: var(--danger);">' +
+          '<div class="alert-content"><i class="fas fa-exclamation-circle" style="color:var(--danger); margin-right:8px;"></i>' +
+          '<div><strong>Farm health is low (' + health + '%)</strong>' +
+          '<div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Irrigation, nutrition or pest action recommended to improve crop condition.</div></div></div>' +
+          '<span class="alert-time">Live</span></div>';
       }
     }
+
+    function loadMonitoring() {
+      if (!window.API || !localStorage.getItem('fa-auth-token')) return;
+      // Populate farm selector with the user's real farms
+      API.Profile.getFarms().then(function (farms) {
+        var sel = document.getElementById('farm-selector');
+        if (!sel) return;
+        sel.innerHTML = '<option value="all">All Farms</option>';
+        (farms || []).forEach(function (f) {
+          var o = document.createElement('option');
+          o.value = (f.id || f.farm_id || f.farm_name || '');
+          o.textContent = f.farm_name || 'Farm';
+          sel.appendChild(o);
+        });
+      }).catch(function () {});
+
+      // Load real farm health analytics and drive the gauges
+      API.Analytics.farmHealth().then(function (d) {
+        updateFarmData(d && d.data ? d.data : d);
+      }).catch(function () {
+        console.warn('Monitoring: could not load farm health');
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadMonitoring);
   </script>
 </body>
 </html>

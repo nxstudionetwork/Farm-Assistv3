@@ -114,6 +114,11 @@ ID_COLUMN_MAP: Dict[str, str] = {
     "CommunityPost": "post_id",
     "CommunityComment": "id",
     "CommunityLike": "id",
+    "CommunitySave": "id",
+    "CommunityAnswer": "answer_id",
+    "CommunityGroup": "community_id",
+    "CommunityGroupMember": "id",
+    "CommunityReport": "report_id",
     "Expert": "expert_id",
     "Consultation": "consultation_id",
     "FarmBuzzPost": "post_id",
@@ -124,6 +129,11 @@ ID_COLUMN_MAP: Dict[str, str] = {
     "FarmBuzzFollow": "id",
     "FarmBuzzHashtag": "id",
     "FarmBuzzTrend": "trend_id",
+    "FarmBuzzStory": "story_id",
+    "FarmBuzzStoryViewer": "id",
+    "FarmBuzzView": "id",
+    "FarmBuzzReport": "id",
+    "FarmBuzzInteraction": "id",
     "Notification": "notification_id",
     "AIConversation": "id",
     "AIRecommendation": "id",
@@ -136,6 +146,18 @@ ID_COLUMN_MAP: Dict[str, str] = {
     "MessageAttachment": "attachment_id",
     "SupportTicket": "ticket_id",
     "Feedback": "feedback_id",
+    "Wallet": "wallet_id",
+    "WalletTransaction": "transaction_id",
+    "WalletBeneficiary": "id",
+    "BankAccount": "account_id",
+    "MoneyRequest": "request_id",
+    "UserDocument": "document_id",
+    "CourseEnrollment": "enrollment_id",
+    "NewsArticle": "news_id",
+    "SavedNews": "saved_id",
+    "MarketPrice": "price_id",
+    "MarketWatchlist": "watch_id",
+    "MarketPriceAlert": "alert_id",
 }
 
 
@@ -148,16 +170,20 @@ def generate_id(prefix: str, db: Session, model_class) -> str:
     if col is None:
         return f"{prefix}-{str(1).zfill(6)}"
     try:
-        last = db.query(func.max(col)).filter(col.like(f'{prefix}-%')).scalar()
+        rows = db.query(col).filter(col.like(f'{prefix}-%')).all()
     except Exception:
-        last = None
-    if last:
-        try:
-            num = int(last.split('-')[-1]) + 1
-        except (ValueError, IndexError):
-            num = 1
-    else:
-        num = 1
+        rows = []
+    nums = []
+    for row in rows:
+        value = row[0] if not isinstance(row, (str,)) else row
+        if value:
+            try:
+                part = str(value).split('-')[-1]
+                if part.isdigit():
+                    nums.append(int(part))
+            except (ValueError, IndexError):
+                continue
+    num = (max(nums) + 1) if nums else 1
     return f"{prefix}-{str(num).zfill(6)}"
 
 

@@ -7,6 +7,32 @@ from app.database.base import Base
 from app.models.farm import gen_uuid
 
 
+class AIConversationRecord(Base):
+    """Persistent conversation metadata (title, timestamps, share token)."""
+    __tablename__ = "ai_conversation_records"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    conversation_id = Column(String(64), unique=True, index=True, nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(200), default="New Chat")
+    is_shared = Column(Boolean, default=False)
+    share_token = Column(String(64), index=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AISettingsRecord(Base):
+    """Persisted AI chat settings per user."""
+    __tablename__ = "ai_settings_records"
+
+    user_id = Column(String(36), ForeignKey("users.id"), primary_key=True)
+    language = Column(String(20), default="en")
+    response_style = Column(String(20), default="friendly")
+    appearance = Column(String(20), default="system")
+    chat_history_enabled = Column(Boolean, default=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class WeatherCache(Base):
     __tablename__ = "weather_cache"
 
@@ -19,7 +45,8 @@ class WeatherCache(Base):
 
 
 class AIConversation(Base):
-    __tablename__ = "ai_conversations"
+    __tablename__ = "legacy_ai_conversations"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(String(36), primary_key=True, default=gen_uuid)
     conversation_id = Column(String(20), index=True)

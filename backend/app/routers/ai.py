@@ -203,6 +203,16 @@ def ai_chat(
     model = payload.model or "local"
     if not conversation_id:
         conversation_id = f"FA-CON-{uuid.uuid4().hex[:8].upper()}"
+    else:
+        # Enforce ownership: if the supplied conversation already exists, it must
+        # belong to this user. Prevents reading/poisoning another user's history.
+        existing = (
+            db.query(AIConversation)
+            .filter(AIConversation.conversation_id == conversation_id)
+            .first()
+        )
+        if existing and existing.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Conversation not found")
 
     user_msg = AIConversation(
         conversation_id=conversation_id,
@@ -222,7 +232,10 @@ def ai_chat(
             import httpx
             history = (
                 db.query(AIConversation)
-                .filter(AIConversation.conversation_id == conversation_id)
+                .filter(
+                    AIConversation.conversation_id == conversation_id,
+                    AIConversation.user_id == current_user.id,
+                )
                 .order_by(AIConversation.created_at.asc())
                 .all()
             )

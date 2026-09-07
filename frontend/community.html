@@ -2,74 +2,341 @@
 <html lang="en" data-theme="light" data-page="community">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Farm Assist - Community</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    .community-icon-row{display:flex;gap:6px;overflow-x:auto;padding:6px 0 10px 0;scrollbar-width:none;}
-    .community-icon-row::-webkit-scrollbar{display:none;}
-    .icon-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border-radius:12px;background:var(--light-gray,#f0f4f0);border:none;cursor:pointer;font-size:11px;color:var(--text-secondary,#555);white-space:nowrap;min-width:56px;transition:all .2s;}
-    .icon-btn i{font-size:14px;color:var(--primary-green,#2e7d32);transition:color .2s;}
-    .icon-btn:hover,.icon-btn.active{background:var(--primary-green,#2e7d32);color:#fff;}
-    .icon-btn:hover i,.icon-btn.active i{color:#fff;}
-    .filter-tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;}
-    .filter-tabs::-webkit-scrollbar{display:none;}
-    .filter-tab{padding:5px 14px;border-radius:20px;border:1px solid var(--border-color,#d0dcd0);background:var(--white,#fff);font-size:11px;cursor:pointer;white-space:nowrap;transition:all .2s;color:var(--text-secondary,#555);flex-shrink:0;}
-    .filter-tab.active{background:var(--primary-green,#2e7d32);color:#fff;border-color:var(--primary-green,#2e7d32);}
-    .create-post-area{background:var(--light-gray,#f5f8f5);border-radius:16px;padding:10px 12px;margin-bottom:16px;display:flex;gap:8px;align-items:center;}
-    .post-image-placeholder{background:var(--light-gray,#f0f4f0);border-radius:12px;height:130px;margin:10px 0;display:flex;align-items:center;justify-content:center;color:var(--text-muted,#999);font-size:11px;}
-    .post-action{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;cursor:pointer;font-size:11px;color:var(--text-secondary,#555);transition:background .2s;}
-    .post-action:hover{background:var(--light-gray,#f0f4f0);}
-    .post-action i{font-size:14px;}
-    .page-header h1{font-size:20px;margin:0 0 4px 0;}
+    :root{--cm-green:#2e7d32;--cm-dark:#1b5e20;--cm-bg:#f4f7f4;--cm-border:#e0ebe0;--cm-muted:#7a8a7a;}
+    *{box-sizing:border-box;}
+    body{background:var(--cm-bg);}
+    .page-container{background:var(--cm-bg);}
+    .cm-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+    .cm-header h1{font-size:20px;margin:0;display:flex;align-items:center;gap:8px;}
+    .cm-header h1 i{color:var(--cm-green);}
+    .cm-header .sub{font-size:12px;color:var(--cm-muted);margin-top:3px;}
+    .cm-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .cm-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+    .cm-btn.primary{background:var(--cm-green);color:#fff;}
+    .cm-btn.primary:hover{background:var(--cm-dark);}
+    .cm-btn.outline{background:#fff;color:var(--cm-green);border:1px solid var(--cm-border);}
+    .cm-btn.outline:hover{background:var(--cm-bg);}
+    .cm-btn i{font-size:13px;}
+    .cm-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--cm-border);border-radius:10px;padding:8px 12px;flex:1;min-width:200px;}
+    .cm-search i{color:var(--cm-muted);font-size:13px;}
+    .cm-search input{border:none;outline:none;flex:1;font-size:12px;background:transparent;}
+    .cat-scroll{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+    .cat-scroll::-webkit-scrollbar{display:none;}
+    .cat-chip{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1px solid var(--cm-border);background:#fff;font-size:11px;cursor:pointer;transition:all .2s;color:var(--cm-muted);}
+    .cat-chip.active{background:var(--cm-green);color:#fff;border-color:var(--cm-green);}
+    .cm-section-title{font-size:13px;font-weight:700;color:var(--cm-dark);margin:16px 0 10px;display:flex;align-items:center;gap:8px;}
+    .cm-section-title i{color:var(--cm-green);}
+    .cm-section-title .count{margin-left:auto;font-size:11px;color:var(--cm-muted);font-weight:400;}
+    .groups-row{display:flex;gap:10px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none;}
+    .groups-row::-webkit-scrollbar{display:none;}
+    .group-card{flex-shrink:0;width:200px;background:#fff;border:1px solid var(--cm-border);border-radius:12px;padding:12px;cursor:pointer;transition:all .2s;}
+    .group-card:hover{border-color:var(--cm-green);box-shadow:0 4px 12px rgba(27,67,50,.1);}
+    .group-card .g-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;margin-bottom:8px;}
+    .group-card .g-name{font-size:13px;font-weight:700;color:var(--cm-dark);line-height:1.2;}
+    .group-card .g-meta{font-size:10px;color:var(--cm-muted);margin-top:4px;}
+    .group-card .g-actions{margin-top:8px;}
+    .feed{display:flex;flex-direction:column;gap:12px;}
+    .post-card{background:#fff;border:1px solid var(--cm-border);border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(27,67,50,.05);animation:fadeUp .3s ease;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .post-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;}
+    .avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#2D8659,#1B5E3F);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;overflow:hidden;}
+    .avatar img{width:100%;height:100%;object-fit:cover;}
+    .post-author-info{flex:1;min-width:0;}
+    .post-author-info .name{font-size:13px;font-weight:700;color:var(--cm-dark);display:flex;align-items:center;gap:5px;}
+    .post-author-info .name .badge{font-size:9px;background:#fff3cd;color:#856404;border-radius:8px;padding:1px 6px;font-weight:600;}
+    .post-author-info .meta{font-size:10px;color:var(--cm-muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .post-more{position:relative;}
+    .post-more-btn{background:none;border:none;color:var(--cm-muted);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:6px;}
+    .post-more-btn:hover{background:var(--cm-bg);}
+    .more-menu{position:absolute;right:0;top:26px;background:#fff;border:1px solid var(--cm-border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);min-width:170px;z-index:20;overflow:hidden;display:none;}
+    .more-menu.show{display:block;}
+    .more-menu .mm-item{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:12px;color:var(--cm-dark);cursor:pointer;width:100%;background:none;border:none;text-align:left;}
+    .more-menu .mm-item:hover{background:var(--cm-bg);}
+    .more-menu .mm-item.danger{color:#c62828;}
+    .post-type-badge{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:10px;margin-bottom:8px;}
+    .pt-question{background:#e3f2fd;color:#1565c0;}
+    .pt-discussion{background:#e8f5e9;color:#2e7d32;}
+    .pt-experience{background:#fff3e0;color:#e65100;}
+    .pt-advice{background:#e0f2f1;color:#00695c;}
+    .pt-poll{background:#f3e5f5;color:#6a1b9a;}
+    .post-title{font-size:14px;font-weight:700;color:var(--cm-dark);margin-bottom:4px;}
+    .post-content{font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+    .post-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+    .ptag{font-size:10px;background:var(--cm-bg);color:var(--cm-green);border-radius:8px;padding:2px 8px;}
+    .post-media{margin-top:10px;border-radius:12px;overflow:hidden;background:var(--cm-bg);}
+    .post-media img{width:100%;max-height:340px;object-fit:cover;display:block;}
+    .post-actions{display:flex;gap:4px;margin-top:12px;padding-top:10px;border-top:1px solid var(--cm-border);}
+    .p-act{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;font-size:11px;color:var(--cm-muted);cursor:pointer;border:none;background:none;transition:all .2s;flex:1;justify-content:center;}
+    .p-act:hover{background:var(--cm-bg);}
+    .p-act.liked{color:#c62828;}
+    .p-act.saved{color:var(--cm-green);}
+    .p-act i{font-size:14px;}
+    .post-comments{margin-top:10px;display:none;}
+    .post-comments.show{display:block;}
+    .comments-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+    .comment-item{display:flex;gap:8px;align-items:flex-start;}
+    .comment-item .c-avatar{width:28px;height:28px;border-radius:50%;background:var(--cm-bg);color:var(--cm-green);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+    .comment-item .c-body{flex:1;background:var(--cm-bg);border-radius:10px;padding:8px 10px;}
+    .comment-item .c-name{font-size:11px;font-weight:700;color:var(--cm-dark);}
+    .comment-item .c-text{font-size:12px;color:#444;margin-top:2px;line-height:1.5;word-break:break-word;}
+    .c-input-row{display:flex;gap:6px;align-items:center;}
+    .c-input-row input{flex:1;border:1px solid var(--cm-border);border-radius:10px;padding:8px 12px;font-size:12px;outline:none;}
+    .c-meta{display:flex;align-items:center;gap:2px;flex-wrap:wrap;font-size:10px;color:var(--cm-muted);margin-top:4px;}
+    .c-meta .c-time{margin-right:4px;}
+    .c-meta button{background:none;border:none;color:var(--cm-muted);cursor:pointer;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;}
+    .c-meta button:hover{background:#fff;color:var(--cm-green);}
+    .c-meta button.danger:hover{color:#c62828;}
+    .c-replies{margin-top:6px;display:flex;flex-direction:column;gap:6px;padding-left:10px;border-left:2px solid var(--cm-border);}
+    .c-reply-to{color:var(--cm-green);font-weight:700;}
+    .c-del{background:none;border:none;color:var(--cm-muted);cursor:pointer;font-size:11px;padding:6px;flex-shrink:0;border-radius:6px;}
+    .c-del:hover{color:#c62828;background:#fff;}
+    .activity-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-bottom:14px;}
+    .stat-card{background:#fff;border:1px solid var(--cm-border);border-radius:12px;padding:12px 8px;text-align:center;}
+    .stat-card .v{font-size:17px;font-weight:700;color:var(--cm-green);}
+    .stat-card .l{font-size:10px;color:var(--cm-muted);margin-top:2px;}
+    .btn-follow{display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--cm-green);border:1px solid var(--cm-green);padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;}
+    .btn-follow:hover{background:var(--cm-bg);}
+    .btn-follow.following{background:var(--cm-bg);color:var(--cm-muted);border-color:var(--cm-border);}
+    .answers-section{margin-top:10px;display:none;}
+    .answers-section.show{display:block;}
+    .answer-item{display:flex;gap:8px;align-items:flex-start;background:#f0fbf0;border:1px solid #c8e6c9;border-radius:10px;padding:10px;margin-bottom:8px;}
+    .answer-item .a-avatar{width:30px;height:30px;border-radius:50%;background:var(--cm-green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+    .answer-item .a-body{flex:1;font-size:12px;color:#333;line-height:1.5;}
+    .answer-item .a-head{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--cm-dark);}
+    .best-badge{font-size:9px;background:#2e7d32;color:#fff;border-radius:8px;padding:1px 6px;font-weight:700;}
+    .best-actions{margin-top:6px;}
+    .best-actions button{font-size:10px;background:none;border:none;color:var(--cm-green);cursor:pointer;text-decoration:underline;padding:0;}
+    .empty-state{text-align:center;padding:50px 20px;background:#fff;border:1px dashed var(--cm-border);border-radius:14px;}
+    .empty-state i{font-size:36px;color:#c8d6c8;display:block;margin-bottom:10px;}
+    .empty-state h3{font-size:15px;color:var(--cm-dark);margin:0 0 4px;}
+    .empty-state p{font-size:12px;color:var(--cm-muted);margin:0 0 16px;}
+    .error-state{text-align:center;padding:50px 20px;background:#fff;border:1px solid #ffcdd2;border-radius:14px;}
+    .error-state i{font-size:36px;color:#ef9a9a;display:block;margin-bottom:10px;}
+    .error-state p{font-size:13px;color:#c62828;margin:0 0 16px;}
+    .load-more-wrap{text-align:center;margin:20px 0;}
+    .load-more-btn{background:var(--cm-green);color:#fff;border:none;padding:10px 28px;border-radius:24px;font-size:12px;font-weight:600;cursor:pointer;}
+    .load-more-btn:hover{background:var(--cm-dark);}
+    .my-groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+    .my-group-item{background:#fff;border:1px solid var(--cm-border);border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;}
+    .my-group-item:hover{border-color:var(--cm-green);}
+    .my-group-item .m-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;flex-shrink:0;}
+    .my-group-item .m-name{font-size:12px;font-weight:700;color:var(--cm-dark);}
+    .my-group-item .m-meta{font-size:10px;color:var(--cm-muted);}
+    .skeleton-post{background:#fff;border:1px solid var(--cm-border);border-radius:14px;padding:14px;margin-bottom:12px;}
+    .sk{background:linear-gradient(90deg,#eef3ee 25%,#f7faf7 50%,#eef3ee 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px;}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .sk-avatar{width:40px;height:40px;border-radius:50%;}
+    .sk-line{height:12px;margin-top:8px;}
+    .tab-bar{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;}
+    .tab-bar::-webkit-scrollbar{display:none;}
+    .tab{flex-shrink:0;padding:8px 16px;border-radius:10px;background:#fff;border:1px solid var(--cm-border);font-size:12px;font-weight:600;color:var(--cm-muted);cursor:pointer;display:flex;align-items:center;gap:6px;}
+    .tab.active{background:var(--cm-green);color:#fff;border-color:var(--cm-green);}
+    .tab i{font-size:13px;}
+    .dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:flex-end;justify-content:center;}
+    .dialog-overlay.active{display:flex;}
+    .dialog{background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:20px;animation:slideUp .3s ease;}
+    @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+    .dialog-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+    .dialog-head h3{font-size:16px;color:var(--cm-dark);margin:0;}
+    .dialog-close{background:none;border:none;font-size:20px;color:var(--cm-muted);cursor:pointer;}
+    .form-group{margin-bottom:14px;}
+    .form-group label{font-size:11px;font-weight:600;color:var(--cm-dark);display:block;margin-bottom:6px;}
+    .form-group input,.form-group textarea,.form-group select{width:100%;border:1px solid var(--cm-border);border-radius:10px;padding:10px 12px;font-size:12px;outline:none;font-family:inherit;background:#fff;}
+    .form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--cm-green);}
+    .form-group textarea{min-height:80px;resize:vertical;}
+    .form-hint{font-size:10px;color:var(--cm-muted);margin-top:4px;}
+    .btn-block{width:100%;}
+    .report-reason{margin-bottom:8px;}
+    .report-reason label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--cm-dark);padding:8px;border:1px solid var(--cm-border);border-radius:8px;cursor:pointer;}
+    .report-reason input{margin:0;}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--cm-dark);color:#fff;padding:11px 20px;border-radius:12px;font-size:12px;z-index:2000;opacity:0;transition:all .3s;box-shadow:0 8px 24px rgba(0,0,0,.2);}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    .toast.success{background:#2e7d32;}
+    .toast.error{background:#c62828;}
+    .toast.warning{background:#e65100;}
+    .profile-avatar-lg{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;overflow:hidden;}
+    .profile-avatar-lg img{width:100%;height:100%;object-fit:cover;}
+    .btn-message{display:inline-flex;align-items:center;gap:6px;background:var(--cm-green);color:#fff;border:none;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;}
+    .btn-message:hover{background:var(--cm-dark);}
+    .group-detail{background:#fff;border:1px solid var(--cm-border);border-radius:14px;padding:16px;margin-bottom:16px;display:none;}
+    .group-detail.show{display:block;}
+    .group-detail .gd-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+    .gd-back{background:none;border:none;color:var(--cm-muted);font-size:16px;cursor:pointer;padding:4px;}
+    .gd-back:hover{color:var(--cm-dark);}
+    .gd-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0;}
+    .gd-name{font-size:16px;font-weight:700;color:var(--cm-dark);}
+    .gd-meta{font-size:11px;color:var(--cm-muted);}
+    .gd-desc{font-size:12px;color:#444;line-height:1.5;margin-bottom:12px;}
+    .gd-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    @media (min-width:600px){.dialog-overlay{align-items:center;}.dialog{border-radius:18px;}}
+    @media (max-width:480px){.cm-header h1{font-size:17px;}.post-actions{gap:2px;}.p-act{padding:6px 6px;font-size:10px;}}
   </style>
 </head>
 <body>
 
 <main class="page-container">
 
-
-  <div class="page-header">
-    <h1><i class="fas fa-comments" style="color:var(--primary-green,#2e7d32);margin-right:8px;"></i> Community</h1>
+  <!-- Header -->
+  <div class="cm-header">
+    <div>
+      <h1><i class="fas fa-users"></i> Community</h1>
+      <div class="sub">Connect with farmers, share knowledge and grow together.</div>
+    </div>
+    <div class="cm-actions">
+      <div class="cm-search">
+        <i class="fas fa-search"></i>
+        <input type="text" id="globalSearch" placeholder="Search discussions, farmers, topics..." autocomplete="off">
+      </div>
+      <button class="cm-btn primary" onclick="openCreatePost()"><i class="fas fa-plus"></i> Create Post</button>
+    </div>
   </div>
 
-  <!-- Compact icon row -->
-  <div class="community-icon-row" id="iconRow">
-    <button class="icon-btn" data-type="reposted" title="Reposted posts"><i class="fas fa-retweet"></i><span>Reposted</span></button>
-    <button class="icon-btn" data-type="trending" title="Trending posts"><i class="fas fa-fire"></i><span>Trending</span></button>
-    <button class="icon-btn" data-type="nearby" title="Nearby posts"><i class="fas fa-location-dot"></i><span>Nearby</span></button>
-    <button class="icon-btn" data-type="following" title="People you follow"><i class="fas fa-user-plus"></i><span>Following</span></button>
-    <button class="icon-btn" data-type="groups" title="Farmer groups"><i class="fas fa-users"></i><span>Groups</span></button>
-    <button class="icon-btn" data-type="saved" title="Saved posts"><i class="fas fa-bookmark"></i><span>Saved</span></button>
-    <button class="icon-btn" data-type="questions" title="Questions & advice"><i class="fas fa-circle-question"></i><span>Questions</span></button>
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <div class="tab active" data-tab="feed" onclick="switchTab('feed')"><i class="fas fa-newspaper"></i> Feed</div>
+    <div class="tab" data-tab="communities" onclick="switchTab('communities')"><i class="fas fa-users"></i> Communities</div>
+    <div class="tab" data-tab="saved" onclick="switchTab('saved')"><i class="fas fa-bookmark"></i> Saved</div>
+    <div class="tab" data-tab="my" onclick="switchTab('my')"><i class="fas fa-user"></i> My Activity</div>
   </div>
 
-  <!-- Filter pills -->
-  <div class="filter-tabs" id="filterTabs">
-    <span class="filter-tab active" data-tag="all">Global Feed</span>
-    <span class="filter-tab" data-tag="paddy">Paddy Growers</span>
-    <span class="filter-tab" data-tag="dairy">Dairy Circles</span>
-    <span class="filter-tab" data-tag="organic">Organic Hub</span>
-    <span class="filter-tab" data-tag="tech">Tech Talk</span>
+  <!-- Category chips -->
+  <div class="cat-scroll" id="catChips"></div>
+
+  <!-- My Communities -->
+  <div id="myCommunitiesSection" style="display:none;">
+    <div class="cm-section-title"><i class="fas fa-users"></i> My Communities <span class="count" id="myGroupsCount"></span></div>
+    <div id="myGroupsList" class="my-groups-grid"></div>
+    <div id="myGroupsEmpty" class="empty-state" style="display:none;">
+      <i class="far fa-users"></i>
+      <h3>No communities joined yet</h3>
+      <p>Join communities to connect with other farmers.</p>
+      <button class="cm-btn primary" onclick="switchTab('communities')">Explore Communities</button>
+    </div>
   </div>
 
-  <!-- Create Post -->
-  <div class="create-post-area">
-    <input type="text" id="postInput" class="form-input" placeholder="Share farm updates, ask questions..." style="flex:1;padding:9px 14px;font-size:12px;border-radius:12px;">
-    <button class="btn-primary btn-sm" id="uploadImageBtn" onclick="document.getElementById('imageUpload').click();" style="padding:7px 10px;border-radius:10px;" title="Upload image">
-      <i class="fas fa-image"></i>
-    </button>
-    <input type="file" id="imageUpload" accept="image/*" style="display:none;" onchange="handleImageUpload(this)">
-    <button class="btn-primary btn-sm" id="createPostBtn" style="padding:7px 14px;border-radius:10px;">
-      <i class="fas fa-paper-plane"></i> Post
-    </button>
+  <!-- All Communities -->
+  <div id="allCommunitiesSection" style="display:none;">
+    <div class="cm-section-title"><i class="fas fa-compass"></i> All Communities <span class="count" id="allGroupsCount"></span></div>
+    <div id="allGroupsList" class="groups-row"></div>
   </div>
 
-  <!-- Post feed -->
-  <div id="postFeed"></div>
+  <!-- Community detail -->
+  <div id="groupDetail" class="group-detail"></div>
+
+  <!-- My Activity stats -->
+  <div class="activity-stats" id="activityStats" style="display:none;"></div>
+
+  <!-- Feed skeleton -->
+  <div id="feedSkeleton" style="display:none;">
+    <div class="skeleton-post"><div class="sk sk-avatar"></div><div class="sk sk-line" style="width:60%;"></div><div class="sk sk-line"></div><div class="sk sk-line" style="width:80%;"></div></div>
+    <div class="skeleton-post"><div class="sk sk-avatar"></div><div class="sk sk-line" style="width:50%;"></div><div class="sk sk-line"></div><div class="sk sk-line" style="width:70%;"></div></div>
+    <div class="skeleton-post"><div class="sk sk-avatar"></div><div class="sk sk-line" style="width:65%;"></div><div class="sk sk-line"></div><div class="sk sk-line" style="width:75%;"></div></div>
+  </div>
+
+  <!-- Feed -->
+  <div id="feed"></div>
+
+  <!-- Load more -->
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()">Load More</button>
+  </div>
+
+  <div class="toast" id="cmToast"></div>
 
 </main>
+
+<!-- Create Post Dialog -->
+<div class="dialog-overlay" id="createPostOverlay">
+  <div class="dialog">
+    <div class="dialog-head">
+      <h3 id="createPostTitle">Create Post</h3>
+      <button class="dialog-close" onclick="closeCreatePost()">&times;</button>
+    </div>
+    <input type="hidden" id="editPostId">
+    <div class="form-group">
+      <label>Type</label>
+      <select id="postType">
+        <option value="discussion">Discussion</option>
+        <option value="question">Question</option>
+        <option value="advice">Advice</option>
+        <option value="experience">Experience</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Title / Question</label>
+      <input type="text" id="postTitle" placeholder="Give your post a title or ask a question" maxlength="200">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="postContent" placeholder="Share details, ask for advice, or describe your experience..."></textarea>
+    </div>
+    <div class="form-group" id="postCommunityGroup">
+      <label>Community (optional)</label>
+      <select id="postCommunity"></select>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="postCategory"></select>
+    </div>
+    <div class="form-group">
+      <label>Crop (optional)</label>
+      <input type="text" id="postCrop" placeholder="e.g. Rice, Tomato, Wheat" maxlength="100">
+    </div>
+    <div class="form-group">
+      <label>Location (optional)</label>
+      <input type="text" id="postLocation" placeholder="e.g. Krishna District, Andhra Pradesh" maxlength="150">
+    </div>
+    <div class="form-group">
+      <label>Image (optional)</label>
+      <input type="file" id="postImage" accept="image/*" onchange="handleImagePick(this)">
+      <div class="form-hint" id="imageHint"></div>
+    </div>
+    <button class="cm-btn primary btn-block" id="postSubmitBtn" onclick="submitPost()"><i class="fas fa-paper-plane"></i> <span id="postSubmitText">Post</span></button>
+  </div>
+</div>
+
+<!-- Report Dialog -->
+<div class="dialog-overlay" id="reportOverlay">
+  <div class="dialog">
+    <div class="dialog-head">
+      <h3>Report Content</h3>
+      <button class="dialog-close" onclick="closeReport()">&times;</button>
+    </div>
+    <input type="hidden" id="reportTargetId">
+    <input type="hidden" id="reportType">
+    <div class="form-group">
+      <label>Reason</label>
+      <div id="reportReasons">
+        <div class="report-reason"><label><input type="radio" name="reportReason" value="Spam"> Spam or misleading content</label></div>
+        <div class="report-reason"><label><input type="radio" name="reportReason" value="Harassment"> Harassment or abuse</label></div>
+        <div class="report-reason"><label><input type="radio" name="reportReason" value="Scam"> Scam or fraud</label></div>
+        <div class="report-reason"><label><input type="radio" name="reportReason" value="Inappropriate"> Inappropriate content</label></div>
+        <div class="report-reason"><label><input type="radio" name="reportReason" value="Other"> Other</label></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Description (optional)</label>
+      <textarea id="reportDescription" placeholder="Add more details..."></textarea>
+    </div>
+    <button class="cm-btn primary btn-block" onclick="submitReport()">Submit Report</button>
+  </div>
+</div>
+
+<!-- Farmer Profile Dialog -->
+<div class="dialog-overlay" id="profileOverlay">
+  <div class="dialog">
+    <div class="dialog-head">
+      <h3>Farmer Profile</h3>
+      <button class="dialog-close" onclick="closeProfile()">&times;</button>
+    </div>
+    <div id="profileContent"></div>
+  </div>
+</div>
 
 <script src="js/services.js"></script>
 <script src="js/userStore.js"></script>
@@ -77,306 +344,1237 @@
 <script src="assets/js/app.js"></script>
 <script>
 (function() {
-  var feed = document.getElementById('postFeed');
-  var currentTag = 'all';
-  var allPosts = [];
+  'use strict';
+  window.__cm = window.__cm || {};
+})();
 
-  var mockPosts = [
-    { post_id: 'm1', author_name: 'Rajesh Kumar', author_role: 'Paddy Farmer', content: 'My paddy crop is showing yellow spots on leaves. Any organic remedy suggestions? Applied neem oil but no improvement.', created_at: new Date(Date.now() - 3600000).toISOString(), likes_count: 12, comments_count: 5, liked: false, tags: ['paddy'], saved: false, image: null },
-    { post_id: 'm2', author_name: 'Sunita Devi', author_role: 'Organic Farmer', content: 'Just harvested 12 quintals of organic wheat from 2 acres! Used vermicompost and Jeevamrut. Very happy with the results. Ask me anything.', created_at: new Date(Date.now() - 7200000).toISOString(), likes_count: 45, comments_count: 18, liked: true, tags: ['organic'], saved: false, image: null },
-    { post_id: 'm3', author_name: 'Amit Patel', author_role: 'Dairy Farmer', content: 'Digital milk fat tester is a game changer! Got mine for &#8377;3,500. Testing fat content in minutes. Anyone using one?', created_at: new Date(Date.now() - 14400000).toISOString(), likes_count: 23, comments_count: 8, liked: false, tags: ['dairy'], saved: false, image: null },
-    { post_id: 'm4', author_name: 'Priya Sharma', author_role: 'Agri-Tech Specialist', content: 'Using drones for NDVI mapping in our cooperative. Reduced fertilizer use by 20%! AMA about precision farming tools and techniques.', created_at: new Date(Date.now() - 28800000).toISOString(), likes_count: 67, comments_count: 24, liked: false, tags: ['tech'], saved: false, image: null },
-    { post_id: 'm5', author_name: 'Ganesh More', author_role: 'Cotton Farmer', content: 'Pink bollworm is back in our region. Started pheromone traps and need recommendations for biological control agents. Anyone tried Trichogramma?', created_at: new Date(Date.now() - 43200000).toISOString(), likes_count: 31, comments_count: 14, liked: false, tags: ['paddy','tech'], saved: false, image: null },
-    { post_id: 'm6', author_name: 'Lakshmi Naidu', author_role: 'Dairy Farmer', content: 'Buffalo milk price increased to &#8377;62/L in our village! Finally some good news for dairy farmers. Is this trend across the state?', created_at: new Date(Date.now() - 86400000).toISOString(), likes_count: 89, comments_count: 31, liked: true, tags: ['dairy'], saved: true, image: null },
-    { post_id: 'm7', author_name: 'Farhan Ali', author_role: 'Vegetable Grower', content: 'Trying hydroponic tomatoes for the first time. Setting up NFT system in a 100 sq meter polyhouse. Investment &#8377;1.2L. Any experienced growers here?', created_at: new Date(Date.now() - 172800000).toISOString(), likes_count: 55, comments_count: 22, liked: false, tags: ['tech','organic'], saved: false, image: 'hydroponic' },
-    { post_id: 'm8', author_name: 'Meena Kaur', author_role: 'Seed Supplier', content: 'New high-yielding wheat variety PBW-825 released! Resistant to rust and gives 22% more yield. Available at our outlet in Ludhiana.', created_at: new Date(Date.now() - 57600000).toISOString(), likes_count: 38, comments_count: 11, liked: false, tags: ['organic'], saved: false, image: null },
-    { post_id: 'm9', author_name: 'Suresh Verma', author_role: 'Sugarcane Farmer', content: 'Sugarcane crushing rates dropped this week at our mill. Was hoping for better prices after the good harvest. How is it in other regions?', created_at: new Date(Date.now() - 259200000).toISOString(), likes_count: 18, comments_count: 9, liked: false, tags: ['sugarcane'], saved: false, image: null },
-    { post_id: 'm10', author_name: 'Kavita Joshi', author_role: 'Vegetable Grower', content: 'Sharing my weekly mandi price sheet for Nashik: tomato 42, onion 28, brinjal 35 per kg. Updated yesterday. Bookmark this post for updates!', created_at: new Date(Date.now() - 345600000).toISOString(), likes_count: 72, comments_count: 27, liked: true, tags: ['market','organic'], saved: false, image: null },
-    { post_id: 'm11', author_name: 'Rahul Singh', author_role: 'Agronomist', content: 'Why soil testing matters: 70% of farms in our survey applied excess nitrogen. Get a soil health card before buying fertilizer. Saves money and soil.', created_at: new Date(Date.now() - 432000000).toISOString(), likes_count: 94, comments_count: 35, liked: false, tags: ['soil','tech'], saved: true, image: null },
-    { post_id: 'm12', author_name: 'Anita Bhosale', author_role: 'Floriculture Farmer', content: 'Gerbera cultivation update: 4th harvest done, grossed &#8377;1.8L from 0.5 acre this season. Net profit after inputs is looking great. Happy to share costs.', created_at: new Date(Date.now() - 518400000).toISOString(), likes_count: 61, comments_count: 29, liked: false, tags: ['horticulture'], saved: false, image: null },
-    { post_id: 'm13', author_name: 'Vijay Kumar', author_role: 'Poultry Farmer', content: 'Feed prices up 12% in the last month. Egg prices are stable though. Any tips on reducing feed costs without affecting bird health?', created_at: new Date(Date.now() - 604800000).toISOString(), likes_count: 33, comments_count: 16, liked: false, tags: ['poultry','dairy'], saved: false, image: null },
-    { post_id: 'm14', author_name: 'Neha Gupta', author_role: 'Agri-Entrepreneur', content: 'Built a small cold storage unit with 5 farmer friends under PM-KUSUM. Cost split 40% subsidy, 30% loan, 30% pooled. Now storing 20 tons of produce.', created_at: new Date(Date.now() - 691200000).toISOString(), likes_count: 128, comments_count: 41, liked: true, tags: ['tech','finance'], saved: false, image: null },
-    { post_id: 'm15', author_name: 'Mohan Das', author_role: 'Spice Farmer', content: 'Turmeric sowing done for the season. Used treated rhizomes this time. Fingers crossed for a disease-free crop. Any organic disease management tips?', created_at: new Date(Date.now() - 777600000).toISOString(), likes_count: 27, comments_count: 13, liked: false, tags: ['spices','organic'], saved: false, image: null },
-    { post_id: 'm16', author_name: 'Rekha Sharma', author_role: 'Women Farmers Group', content: 'Our self-help group started a small vermicompost unit. 1,000 kg produced in 3 months, sold to 40 farmers. Planning to double capacity next quarter!', created_at: new Date(Date.now() - 864000000).toISOString(), likes_count: 85, comments_count: 33, liked: true, tags: ['organic','community'], saved: false, image: null }
-  ];
+var state = {
+  posts: [],
+  savedPosts: [],
+  groups: [],
+  myGroups: [],
+  categories: [],
+  currentCategory: 'all',
+  currentTab: 'feed',
+  currentGroupId: null,
+  page: 1,
+  hasMore: false,
+  loading: false,
+  searchTerm: '',
+  activityStats: null,
+  activityPage: 1,
+  activityHasMore: false,
+  replyTo: {}
+};
 
-  function timeAgo(dateStr) {
-    if (!dateStr) return '';
-    var diff = Date.now() - new Date(dateStr).getTime();
-    var mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return mins + 'm ago';
-    var hrs = Math.floor(mins / 60);
-    if (hrs < 24) return hrs + 'h ago';
-    var days = Math.floor(hrs / 24);
-    if (days < 7) return days + 'd ago';
-    var weeks = Math.floor(days / 7);
-    return weeks + 'w ago';
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function initials(name) {
+  var n = (name || 'F').trim();
+  var parts = n.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'F';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length-1].charAt(0)).toUpperCase();
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  var diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 0) return 'Just now';
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  var days = Math.floor(hrs / 24);
+  if (days < 7) return days + 'd ago';
+  var weeks = Math.floor(days / 7);
+  if (weeks < 5) return weeks + 'w ago';
+  var months = Math.floor(days / 30);
+  if (months < 12) return months + 'mo ago';
+  return Math.floor(days / 365) + 'y ago';
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('cmToast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(window.__cmToastTimer);
+  window.__cmToastTimer = setTimeout(function() { t.className = 'toast'; }, 2600);
+}
+
+function avatarHtml(author, cls) {
+  cls = cls || 'avatar';
+  var image = author && author.profile_image;
+  if (image && (/^data:|^https?:\/\//.test(image) || image.charAt(0) === '/')) {
+    return '<div class="' + cls + '"><img src="' + esc(image) + '" alt=""></div>';
+  }
+  var name = (author && author.full_name) || 'Farmer';
+  return '<div class="' + cls + '">' + esc(initials(name)) + '</div>';
+}
+
+// ----------------------------- Loading / empty -----------------------------
+function showSkeleton(show) {
+  document.getElementById('feedSkeleton').style.display = show ? 'block' : 'none';
+}
+
+function showEmpty(title, msg, showCreate) {
+  var html = '<div class="empty-state"><i class="far fa-comments"></i><h3>' + esc(title) + '</h3><p>' + esc(msg) + '</p>';
+  if (showCreate) html += '<button class="cm-btn primary" onclick="openCreatePost()"><i class="fas fa-plus"></i> Create Post</button>';
+  html += '</div>';
+  document.getElementById('feed').innerHTML = html;
+}
+
+function showError(msg) {
+  document.getElementById('feed').innerHTML = '<div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>' + esc(msg) + '</p><button class="cm-btn outline" onclick="initPage()"><i class="fas fa-redo"></i> Retry</button></div>';
+}
+
+// ----------------------------- Avatar image helper -----------------------------
+// ----------------------------- Category chips -----------------------------
+function renderCategories() {
+  var chips = state.categories.length ? state.categories : ['All'];
+  var html = '';
+  chips.forEach(function(c) {
+    var val = c;
+    var active = state.currentCategory === val || (val === 'All' && state.currentCategory === 'all');
+    html += '<div class="cat-chip' + (active ? ' active' : '') + '" data-cat="' + esc(val) + '" onclick="filterCategory(this)">' + esc(c) + '</div>';
+  });
+  document.getElementById('catChips').innerHTML = html;
+}
+
+window.filterCategory = function(el) {
+  var cat = el ? el.getAttribute('data-cat') : 'All';
+  state.currentCategory = cat === 'All' ? 'all' : cat;
+  state.page = 1; state.hasMore = false; state.posts = [];
+  renderCategories();
+  if (state.currentTab === 'communities' && !state.currentGroupId) loadAllGroups();
+  else if (state.currentTab === 'feed') loadFeed();
+};
+
+// ----------------------------- Tabs -----------------------------
+window.switchTab = function(tab) {
+  state.currentTab = tab;
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.toggle('active', t.getAttribute('data-tab') === tab); });
+  showSkeleton(false);
+  document.getElementById('myCommunitiesSection').style.display = 'none';
+  document.getElementById('allCommunitiesSection').style.display = 'none';
+  document.getElementById('activityStats').style.display = 'none';
+  document.getElementById('groupDetail').className = 'group-detail';
+  state.currentGroupId = null;
+  state.replyTo = {};
+  document.getElementById('loadMoreWrap').style.display = 'none';
+
+  if (tab === 'feed') {
+    state.page = 1; state.hasMore = false; state.posts = [];
+    loadFeed();
+  } else if (tab === 'communities') {
+    document.getElementById('feed').innerHTML = '';
+    loadAllGroups();
+  } else if (tab === 'saved') {
+    loadSaved();
+  } else if (tab === 'my') {
+    loadMyActivity();
+  }
+};
+
+// ----------------------------- Feed -----------------------------
+function loadFeed() {
+  if (state.loading) return;
+  state.loading = true;
+  document.getElementById('activityStats').style.display = 'none';
+  if (state.page === 1) { showSkeleton(true); document.getElementById('feed').innerHTML = ''; }
+  var params = { page: state.page, limit: 10, category: state.currentCategory === 'all' ? 'all' : state.currentCategory };
+  if (state.searchTerm) params.search = state.searchTerm;
+  if (state.currentGroupId) params.community_id = state.currentGroupId;
+
+  window.API.Community.feed(params).then(function(res) {
+    var data = res || {};
+    var items = (data.items) || [];
+    state.loading = false;
+    showSkeleton(false);
+    if (state.page === 1) state.posts = [];
+    state.posts = state.posts.concat(items);
+    state.hasMore = data.total > state.posts.length;
+    state.page++;
+    renderFeed();
+  })['catch'](function(e) {
+    state.loading = false;
+    showSkeleton(false);
+    if (state.page === 1) showError('Unable to connect to Community.');
+    else showToast('Unable to load more posts.', 'error');
+  });
+}
+
+function renderFeed() {
+  var feed = document.getElementById('feed');
+  if (!state.posts.length) {
+    if (state.currentGroupId) {
+      showEmpty('No discussions in this community yet', 'Be the first to start a discussion here.', true);
+    } else if (state.searchTerm) {
+      showEmpty('No results found', 'Try different search terms or reset your filters.', false);
+    } else {
+      showEmpty('No community discussions yet', 'Be the first farmer to start a discussion.', true);
+    }
+    document.getElementById('loadMoreWrap').style.display = 'none';
+    return;
+  }
+  var html = '';
+  state.posts.forEach(function(p) { html += buildPostCard(p); });
+  feed.innerHTML = html;
+  document.getElementById('loadMoreWrap').style.display = state.hasMore ? 'block' : 'none';
+}
+
+var POST_TYPE_META = {
+  question:   { cls: 'pt-question',   label: 'Question' },
+  discussion: { cls: 'pt-discussion', label: 'Discussion' },
+  advice:     { cls: 'pt-advice',     label: 'Advice' },
+  experience: { cls: 'pt-experience', label: 'Experience' }
+};
+
+function buildPostCard(p) {
+  var type = p.post_type || 'discussion';
+  var typeMeta = POST_TYPE_META[type] || POST_TYPE_META.discussion;
+  var typeClass = typeMeta.cls;
+  var typeLabel = typeMeta.label;
+  var titleHtml = p.title ? '<div class="post-title">' + esc(p.title) + '</div>' : '';
+  var mediaHtml = '';
+  if (p.image_url || p.image) {
+    mediaHtml = '<div class="post-media"><img src="' + esc(p.image_url || p.image) + '" alt="Post image" loading="lazy"></div>';
+  }
+  var tagsHtml = '';
+  var tags = [];
+  if (p.category) tags.push(p.category);
+  if (p.crop) tags.push(p.crop);
+  tags.forEach(function(t) { tagsHtml += '<span class="ptag">#' + esc(t) + '</span>'; });
+
+  var answerCount = p.answer_count || 0;
+  var answersAction = (type === 'question') ? '<button class="p-act" onclick="openPost(this,\'' + esc(p.id) + '\')"><i class="fas fa-reply"></i> <span id="ans-' + esc(p.id) + '">' + answerCount + '</span> Answers</button>' : '';
+
+  return '<div class="post-card" id="post-' + esc(p.id) + '">' +
+    '<div class="post-head" onclick="openFarmerProfile(this,\'' + esc(p.user_id) + '\')">' +
+      avatarHtml(p.author, 'avatar') +
+      '<div class="post-author-info">' +
+        '<div class="name">' + esc(p.author_name || 'Farmer') + (p.author && p.author.is_verified ? '<span class="badge"><i class="fas fa-check-circle"></i> Verified</span>' : '') + '</div>' +
+        '<div class="meta"><span>' + esc(p.category || 'General') + '</span>' +
+          (p.community_name ? '<span><i class="fas fa-users"></i> ' + esc(p.community_name) + '</span>' : '') +
+          '<span>&middot; ' + timeAgo(p.created_at) + '</span></div>' +
+      '</div>' +
+      '<div class="post-more"><button class="post-more-btn" onclick="event.stopPropagation();toggleMoreMenu(this)"><i class="fas fa-ellipsis-h"></i></button>' +
+        '<div class="more-menu">' +
+          (p.is_owner ? '<button class="mm-item" onclick="event.stopPropagation();editPost(\'' + esc(p.id) + '\')"><i class="fas fa-edit"></i> Edit</button>' : '') +
+          (p.is_owner ? '<button class="mm-item danger" onclick="event.stopPropagation();deletePost(\'' + esc(p.id) + '\')"><i class="fas fa-trash"></i> Delete</button>' : '') +
+          '<button class="mm-item" onclick="event.stopPropagation();openReport(\'' + esc(p.id) + '\',\'post\')"><i class="fas fa-flag"></i> Report</button>' +
+          '<button class="mm-item" data-crop="' + esc(p.crop || '') + '" onclick="event.stopPropagation();viewRelatedTechniques(this)"><i class="fas fa-book"></i> Related Techniques</button>' +
+          (type === 'question' ? '<button class="mm-item" onclick="event.stopPropagation();askAnExpert()"><i class="fas fa-user-doctor"></i> Ask an Expert</button>' : '') +
+          (p.user_id && !p.is_owner ? '<button class="mm-item" onclick="event.stopPropagation();messageFarmer(\'' + esc(p.user_id) + '\')"><i class="fas fa-envelope"></i> Message Farmer</button>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<span class="post-type-badge ' + typeClass + '">' + typeLabel + '</span>' +
+    titleHtml +
+    '<div class="post-content">' + esc(p.content) + '</div>' +
+    (tagsHtml ? '<div class="post-tags">' + tagsHtml + '</div>' : '') +
+    mediaHtml +
+    '<div class="post-actions">' +
+      '<button class="p-act' + (p.is_liked ? ' liked' : '') + '" onclick="toggleLike(this,\'' + esc(p.id) + '\')"><i class="' + (p.is_liked ? 'fas' : 'far') + ' fa-heart"></i> <span>' + (p.likes_count || 0) + '</span></button>' +
+      '<button class="p-act" onclick="openComments(this,\'' + esc(p.id) + '\')"><i class="far fa-comment"></i> <span id="cmt-' + esc(p.id) + '">' + (p.comments_count || 0) + '</span></button>' +
+      answersAction +
+      '<button class="p-act" onclick="sharePost(\'' + esc(p.id) + '\')"><i class="fas fa-share-alt"></i></button>' +
+      '<button class="p-act' + (p.is_saved ? ' saved' : '') + '" onclick="toggleSave(this,\'' + esc(p.id) + '\')"><i class="' + (p.is_saved ? 'fas' : 'far') + ' fa-bookmark"></i></button>' +
+    '</div>' +
+    '<div class="post-comments" id="comments-' + esc(p.id) + '"></div>' +
+    '<div class="answers-section" id="answers-' + esc(p.id) + '"></div>' +
+  '</div>';
+}
+
+function setCounter(postId, prefix, value) {
+  var el = document.getElementById(prefix + '-' + postId);
+  if (el) el.textContent = value;
+}
+
+function toggleMoreMenu(btn) {
+  var menu = btn.nextElementSibling;
+  var wasShown = menu.classList.contains('show');
+  document.querySelectorAll('.more-menu.show').forEach(function(m) { m.classList.remove('show'); });
+  if (!wasShown) menu.classList.add('show');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.post-more')) {
+    document.querySelectorAll('.more-menu.show').forEach(function(m) { m.classList.remove('show'); });
+  }
+});
+
+// ----------------------------- Post interactions -----------------------------
+window.toggleLike = function(btn, postId) {
+  window.API.Community.toggleLike(postId).then(function(res) {
+    var d = res || {};
+    var liked = d.is_liked;
+    var count = d.likes_count || 0;
+    btn.classList.toggle('liked', liked);
+    btn.innerHTML = '<i class="' + (liked ? 'fas' : 'far') + ' fa-heart"></i> <span>' + count + '</span>';
+    showToast(liked ? 'Liked this post' : 'Unliked post', liked ? 'success' : 'info');
+  })['catch'](function(e) { showToast(errMsg(e, 'Unable to update like. Please try again.'), 'error'); });
+};
+
+window.toggleSave = function(btn, postId) {
+  window.API.Community.savePost(postId).then(function(res) {
+    var d = res || {};
+    var saved = d.is_saved;
+    btn.classList.toggle('saved', saved);
+    var icon = btn.querySelector('i');
+    icon.className = (saved ? 'fas' : 'far') + ' fa-bookmark';
+    showToast(saved ? 'Discussion saved' : 'Removed from saved', saved ? 'success' : 'info');
+    if (!saved && state.currentTab === 'saved') loadSaved();
+  })['catch'](function(e) { showToast(errMsg(e, 'Unable to update save. Please try again.'), 'error'); });
+};
+
+window.sharePost = function(postId) {
+  var url = window.location.href.split('?')[0] + '?post=' + postId;
+  if (navigator.share) {
+    navigator.share({ title: 'Farm Assist Community', url: url }).then(function() {
+      window.API.Community.sharePost(postId)['catch'](function(){});
+    })['catch'](function(){});
+  } else {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function() {
+        showToast('Share link copied!', 'success');
+        window.API.Community.sharePost(postId)['catch'](function(){});
+      }, function() { showToast('Unable to copy link.', 'error'); });
+    } else {
+      showToast(url, 'info');
+      window.API.Community.sharePost(postId)['catch'](function(){});
+    }
+  }
+};
+
+// ----------------------------- Comments -----------------------------
+function readComments(postId) {
+  var box = document.getElementById('comments-' + postId);
+  if (!box) return [];
+  try { return JSON.parse(box.getAttribute('data-comments') || '[]'); } catch (e) { return []; }
+}
+
+function writeComments(postId, comments) {
+  var box = document.getElementById('comments-' + postId);
+  if (box) box.setAttribute('data-comments', JSON.stringify(comments));
+}
+
+window.openComments = function(btn, postId) {
+  var box = document.getElementById('comments-' + postId);
+  if (!box) return;
+  if (box.classList.contains('loaded')) {
+    box.classList.toggle('show');
+    attachComments(postId);
+    return;
+  }
+  box.classList.add('show');
+  box.innerHTML = '<div style="text-align:center;padding:12px;color:var(--cm-muted);"><i class="fas fa-spinner fa-spin"></i></div>';
+  window.API.Community.listComments(postId).then(function(comments) {
+    comments = comments || [];
+    box.classList.add('loaded');
+    writeComments(postId, comments);
+    renderComments(postId, comments);
+    attachComments(postId);
+    setCounter(postId, 'cmt', comments.length);
+  })['catch'](function() {
+    box.classList.add('loaded');
+    writeComments(postId, []);
+    box.innerHTML = '<div class="error-state" style="padding:18px;"><p>Unable to load comments.</p><button class="cm-btn outline" onclick="retryComments(\'' + esc(postId) + '\')"><i class="fas fa-redo"></i> Retry</button></div>';
+  });
+};
+
+window.retryComments = function(postId) {
+  var box = document.getElementById('comments-' + postId);
+  if (!box) return;
+  box.classList.remove('loaded');
+  window.openComments(null, postId);
+};
+
+function commentItemHtml(c, postId) {
+  return '<div class="comment-item">' +
+      avatarHtml({ full_name: c.author_name, profile_image: c.author_image }, 'c-avatar') +
+      '<div class="c-body">' +
+        '<div class="c-name">' + esc(c.author_name || 'Farmer') +
+          (c.reply_to_name ? ' <span class="c-reply-to"><i class="fas fa-reply"></i> ' + esc(c.reply_to_name) + '</span>' : '') +
+        '</div>' +
+        '<div class="c-text">' + esc(c.content) + '</div>' +
+        '<div class="c-meta">' +
+          '<span class="c-time">' + esc(timeAgo(c.created_at)) + '</span>' +
+          '<button type="button" onclick="startReply(\'' + esc(postId) + '\',\'' + esc(c.id) + '\')">Reply</button>' +
+          (c.is_owner
+            ? '<button type="button" class="danger" onclick="deleteComment(\'' + esc(c.id) + '\',\'' + esc(postId) + '\')">Delete</button>'
+            : '<button type="button" class="danger" onclick="openReport(\'' + esc(c.id) + '\',\'comment\')">Report</button>') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderComments(postId, comments) {
+  var box = document.getElementById('comments-' + postId);
+  if (!box) return;
+
+  var byId = {};
+  comments.forEach(function(c) { byId[c.id] = c; });
+  // A reply whose parent is missing (deleted) is shown at top level rather than dropped.
+  var tops = comments.filter(function(c) { return !c.parent_comment_id || !byId[c.parent_comment_id]; });
+
+  var html = '<div class="comments-list">';
+  if (!comments.length) html += '<div style="font-size:11px;color:var(--cm-muted);padding:6px 0;">No comments yet.</div>';
+  tops.forEach(function(c) {
+    html += commentItemHtml(c, postId);
+    var replies = comments.filter(function(r) { return r.parent_comment_id === c.id; });
+    if (replies.length) {
+      html += '<div class="c-replies">';
+      replies.forEach(function(r) { html += commentItemHtml(r, postId); });
+      html += '</div>';
+    }
+  });
+  html += '</div>';
+
+  var replying = state.replyTo[postId];
+  html += '<div class="c-input-row">' +
+    '<input type="text" id="cInput-' + postId + '" placeholder="' + (replying ? 'Reply to ' + esc(replying.name) + '...' : 'Add a comment...') + '" maxlength="2000">' +
+    '<button class="cm-btn primary" onclick="submitComment(\'' + esc(postId) + '\')" style="padding:8px 14px;">Post</button>' +
+  '</div>';
+  if (replying) {
+    html += '<div class="form-hint">Replying to ' + esc(replying.name) +
+      ' &middot; <button type="button" style="background:none;border:none;color:var(--cm-green);cursor:pointer;font-size:10px;text-decoration:underline;padding:0;" onclick="cancelReply(\'' + esc(postId) + '\')">Cancel</button></div>';
+  }
+  box.innerHTML = html;
+}
+
+function attachComments(postId) {
+  var input = document.getElementById('cInput-' + postId);
+  if (!input) return;
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitComment(postId); }
+  });
+}
+
+window.startReply = function(postId, commentId) {
+  var comments = readComments(postId);
+  var target = null;
+  for (var i = 0; i < comments.length; i++) {
+    if (comments[i].id === commentId) { target = comments[i]; break; }
+  }
+  if (!target) return;
+  // Threads are one level deep, so a reply to a reply anchors to the top-level comment.
+  var anchor = target;
+  if (target.parent_comment_id) {
+    for (var j = 0; j < comments.length; j++) {
+      if (comments[j].id === target.parent_comment_id) { anchor = comments[j]; break; }
+    }
+  }
+  state.replyTo[postId] = { id: anchor.id, name: anchor.author_name || 'Farmer' };
+  renderComments(postId, comments);
+  attachComments(postId);
+  var input = document.getElementById('cInput-' + postId);
+  if (input) input.focus();
+};
+
+window.cancelReply = function(postId) {
+  state.replyTo[postId] = null;
+  renderComments(postId, readComments(postId));
+  attachComments(postId);
+};
+
+window.submitComment = function(postId) {
+  var input = document.getElementById('cInput-' + postId);
+  if (!input) return;
+  var text = input.value.trim();
+  if (!text) { showToast('Please write a comment.', 'info'); return; }
+  var reply = state.replyTo[postId];
+  var payload = reply ? { content: text, parent_comment_id: reply.id } : { content: text };
+  input.disabled = true;
+
+  window.API.Community.addComment(postId, payload).then(function(c) {
+    input.disabled = false;
+    input.value = '';
+    state.replyTo[postId] = null;
+    var comments = readComments(postId);
+    // Trust the server's serialized comment: it carries the real id, author and timestamp.
+    if (c && c.id) comments.push(c);
+    writeComments(postId, comments);
+    renderComments(postId, comments);
+    attachComments(postId);
+    setCounter(postId, 'cmt', comments.length);
+    showToast(reply ? 'Reply posted!' : 'Comment posted!', 'success');
+  })['catch'](function() {
+    input.disabled = false;
+    showToast('Unable to post comment. Please try again.', 'error');
+  });
+};
+
+window.deleteComment = function(commentId, postId) {
+  if (!confirm('Delete this comment? This cannot be undone.')) return;
+  window.API.Community.deleteComment(commentId).then(function() {
+    // The backend cascades to replies, so remove them here too to keep counts honest.
+    var comments = readComments(postId).filter(function(c) {
+      return c.id !== commentId && c.parent_comment_id !== commentId;
+    });
+    state.replyTo[postId] = null;
+    writeComments(postId, comments);
+    renderComments(postId, comments);
+    attachComments(postId);
+    setCounter(postId, 'cmt', comments.length);
+    showToast('Comment deleted', 'info');
+  })['catch'](function() { showToast('Unable to delete comment.', 'error'); });
+};
+
+// ----------------------------- Answers -----------------------------
+window.openPost = function(btn, postId) {
+  var box = document.getElementById('answers-' + postId);
+  if (!box) return;
+  if (box.classList.contains('loaded')) { box.classList.toggle('show'); return; }
+  box.classList.add('show');
+  box.innerHTML = '<div style="text-align:center;padding:12px;color:var(--cm-muted);"><i class="fas fa-spinner fa-spin"></i></div>';
+  window.API.Community.getPost(postId).then(function(post) {
+    box.classList.add('loaded');
+    box.setAttribute('data-post', JSON.stringify(post || {}));
+    renderAnswers(postId, post || {});
+    setCounter(postId, 'ans', ((post && post.answers) || []).length);
+  })['catch'](function() {
+    box.classList.add('loaded');
+    box.setAttribute('data-post', '{}');
+    box.innerHTML = '<div class="error-state" style="padding:18px;"><p>Unable to load answers.</p><button class="cm-btn outline" onclick="retryAnswers(\'' + esc(postId) + '\')"><i class="fas fa-redo"></i> Retry</button></div>';
+  });
+};
+
+window.retryAnswers = function(postId) {
+  var box = document.getElementById('answers-' + postId);
+  if (!box) return;
+  box.classList.remove('loaded');
+  window.openPost(null, postId);
+};
+
+function renderAnswers(postId, post) {
+  var box = document.getElementById('answers-' + postId);
+  if (!box) return;
+  var answers = post.answers || [];
+  var html = '<div style="margin-top:4px;">';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--cm-dark);margin-bottom:8px;">Answers (' + answers.length + ')</div>';
+  if (!answers.length) html += '<div style="font-size:11px;color:var(--cm-muted);padding:6px 0;">No answers yet. Be the first to help.</div>';
+  answers.forEach(function(a) {
+    html += '<div class="answer-item">' +
+        avatarHtml({ full_name: a.author_name, profile_image: a.author_image }, 'a-avatar') +
+        '<div class="a-body">' +
+          '<div class="a-head">' + esc(a.author_name || 'Farmer') +
+            (a.is_best_answer ? ' <span class="best-badge"><i class="fas fa-check"></i> Best Answer</span>' : '') +
+            '<span style="font-weight:400;color:var(--cm-muted);margin-left:auto;">' + esc(timeAgo(a.created_at)) + '</span>' +
+          '</div>' +
+          '<div>' + esc(a.content) + '</div>';
+    if (a.can_mark_best && !a.is_best_answer) {
+      html += '<div class="best-actions"><button onclick="markBest(\'' + esc(postId) + '\',\'' + esc(a.id) + '\')">Mark as Best Answer</button></div>';
+    }
+    html += '</div></div>';
+  });
+  html += '<div class="c-input-row" style="margin-top:10px;">' +
+      '<input type="text" id="aInput-' + postId + '" placeholder="Write an answer..." maxlength="5000">' +
+      '<button class="cm-btn primary" onclick="submitAnswer(\'' + esc(postId) + '\')" style="padding:8px 14px;">Answer</button>' +
+    '</div>' +
+    '<div class="form-hint">Need a specialist? <button type="button" onclick="askAnExpert()" style="background:none;border:none;color:var(--cm-green);cursor:pointer;font-size:10px;font-weight:600;text-decoration:underline;padding:0;">Ask an Expert</button></div>';
+  html += '</div>';
+  box.innerHTML = html;
+
+  var input = document.getElementById('aInput-' + postId);
+  if (input) {
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); submitAnswer(postId); }
+    });
+  }
+}
+
+window.submitAnswer = function(postId) {
+  var input = document.getElementById('aInput-' + postId);
+  if (!input) return;
+  var text = input.value.trim();
+  if (!text) { showToast('Please write an answer.', 'info'); return; }
+  input.disabled = true;
+
+  window.API.Community.addAnswer(postId, text).then(function(a) {
+    input.disabled = false;
+    input.value = '';
+    var box = document.getElementById('answers-' + postId);
+    var post = {};
+    try { post = JSON.parse(box.getAttribute('data-post') || '{}'); } catch (e) {}
+    var answers = post.answers || [];
+    // Use the server's serialized answer so the id, author and can_mark_best flag are real.
+    if (a && a.id) answers.push(a);
+    post.answers = answers;
+    box.setAttribute('data-post', JSON.stringify(post));
+    renderAnswers(postId, post);
+    setCounter(postId, 'ans', answers.length);
+    showToast('Answer posted!', 'success');
+  })['catch'](function() {
+    input.disabled = false;
+    showToast('Unable to post answer. Please try again.', 'error');
+  });
+};
+
+window.markBest = function(postId, answerId) {
+  window.API.Community.markBestAnswer(postId, answerId).then(function(res) {
+    var box = document.getElementById('answers-' + postId);
+    var post = {};
+    try { post = JSON.parse(box.getAttribute('data-post') || '{}'); } catch (e) {}
+    // The backend returns the authoritative answers list after toggling the flag.
+    if (res && res.answers) post.answers = res.answers;
+    box.setAttribute('data-post', JSON.stringify(post));
+    renderAnswers(postId, post);
+    showToast((res && res.is_best_answer) ? 'Marked as best answer' : 'Best answer removed', 'success');
+  })['catch'](function() { showToast('Unable to mark best answer.', 'error'); });
+};
+
+// Routes to the existing Experts Hub rather than duplicating an expert system here.
+window.askAnExpert = function() {
+  window.location.href = 'expert.html';
+};
+
+// ----------------------------- Load more -----------------------------
+window.loadMore = function() {
+  if (state.currentTab === 'my') loadMyActivity(true);
+  else loadFeed();
+};
+
+document.getElementById('globalSearch').addEventListener('input', function(e) {
+  var term = e.target.value.trim();
+  clearTimeout(window.__cmSearchTimer);
+  window.__cmSearchTimer = setTimeout(function() {
+    state.searchTerm = term;
+    if (state.currentTab === 'communities' && !state.currentGroupId) {
+      loadAllGroups();
+    } else if (state.currentTab === 'feed') {
+      state.page = 1; state.hasMore = false; state.posts = [];
+      loadFeed();
+    }
+  }, 400);
+});
+
+// ----------------------------- Create / Edit Post -----------------------------
+function populateCategorySelect() {
+  var sel = document.getElementById('postCategory');
+  var html = '';
+  state.categories.forEach(function(c) {
+    if (c === 'All') return;
+    html += '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+  });
+  sel.innerHTML = html;
+}
+
+function populateCommunitySelect() {
+  var sel = document.getElementById('postCommunity');
+  var html = '<option value="">General (no community)</option>';
+  (state.groups || []).forEach(function(g) {
+    html += '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>';
+  });
+  sel.innerHTML = html;
+}
+
+window.openCreatePost = function() {
+  populateCategorySelect();
+  populateCommunitySelect();
+  document.getElementById('createPostTitle').textContent = 'Create Post';
+  document.getElementById('postSubmitText').textContent = 'Post';
+  document.getElementById('editPostId').value = '';
+  document.getElementById('postType').value = 'discussion';
+  document.getElementById('postTitle').value = '';
+  document.getElementById('postContent').value = '';
+  document.getElementById('postCrop').value = '';
+  document.getElementById('postLocation').value = '';
+  document.getElementById('postImage').value = '';
+  document.getElementById('imageHint').textContent = '';
+  document.getElementById('createPostOverlay').classList.add('active');
+};
+
+window.closeCreatePost = function() {
+  document.getElementById('createPostOverlay').classList.remove('active');
+};
+
+window.editPost = function(postId) {
+  var post = null;
+  for (var i = 0; i < state.posts.length; i++) {
+    if (state.posts[i].id === postId) { post = state.posts[i]; break; }
+  }
+  if (!post) return;
+  populateCategorySelect();
+  populateCommunitySelect();
+  document.getElementById('createPostTitle').textContent = 'Edit Post';
+  document.getElementById('postSubmitText').textContent = 'Update';
+  document.getElementById('editPostId').value = postId;
+  document.getElementById('postType').value = POST_TYPE_META[post.post_type] ? post.post_type : 'discussion';
+  document.getElementById('postTitle').value = post.title || '';
+  document.getElementById('postContent').value = post.content || '';
+  document.getElementById('postCrop').value = post.crop || '';
+  document.getElementById('postLocation').value = post.location || '';
+  if (post.category) { document.getElementById('postCategory').value = post.category; }
+  if (post.community_id) { document.getElementById('postCommunity').value = post.community_id; }
+  document.getElementById('postImage').value = '';
+  document.getElementById('imageHint').textContent = post.image_url ? 'Existing image will be kept.' : '';
+  document.getElementById('createPostOverlay').classList.add('active');
+};
+
+function refreshCurrentView() {
+  if (state.currentTab === 'my') { loadMyActivity(); return; }
+  if (state.currentTab === 'saved') { loadSaved(); return; }
+  state.page = 1; state.hasMore = false; state.posts = [];
+  loadFeed();
+}
+
+window.deletePost = function(postId) {
+  if (!confirm('Delete this post? This cannot be undone.')) return;
+  window.API.Community.deletePost(postId).then(function() {
+    state.posts = state.posts.filter(function(p) { return p.id !== postId; });
+    showToast('Post deleted', 'info');
+    if (state.currentTab === 'my') loadMyActivity();
+    else renderFeed();
+  })['catch'](function(e) { showToast(errMsg(e, 'Unable to delete post.'), 'error'); });
+};
+
+var selectedImageData = null;
+window.handleImagePick = function(input) {
+  var hint = document.getElementById('imageHint');
+  if (!input.files || !input.files[0]) { selectedImageData = null; hint.textContent = ''; return; }
+  var file = input.files[0];
+  if (!/^image\//.test(file.type)) { showToast('Please select an image file.', 'error'); input.value = ''; return; }
+  if (file.size > 5 * 1024 * 1024) { showToast('Image too large. Max 5MB.', 'error'); input.value = ''; return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    selectedImageData = e.target.result;
+    hint.textContent = 'Image selected (' + file.name + ')';
+  };
+  reader.readAsDataURL(file);
+};
+
+window.submitPost = function() {
+  var editId = document.getElementById('editPostId').value;
+  var title = document.getElementById('postTitle').value.trim();
+  var content = document.getElementById('postContent').value.trim();
+  var type = document.getElementById('postType').value;
+  var category = document.getElementById('postCategory').value;
+  var crop = document.getElementById('postCrop').value.trim();
+  var location = document.getElementById('postLocation').value.trim();
+  var communityId = document.getElementById('postCommunity').value;
+
+  // Mirror the backend rules so the farmer is told here rather than by a failed request.
+  var body = content || title;
+  if (!body) { showToast('Please write a description for your post.', 'error'); return; }
+  if (body.length < 2) { showToast('Please write a little more detail.', 'error'); return; }
+  if (type === 'question' && !title) { showToast('Please enter your question as the title.', 'error'); return; }
+
+  var btn = document.getElementById('postSubmitBtn');
+  btn.disabled = true;
+  btn.querySelector('span').textContent = 'Posting...';
+
+  var payload = {
+    title: title || null,
+    content: body,
+    post_type: type,
+    category: category || 'General',
+    crop: crop || null,
+    location: location || null,
+    community_id: communityId || null
+  };
+
+  function doSubmit(p) {
+    var promise = editId
+      ? window.API.Community.updatePost(editId, {
+          title: p.title, content: p.content, category: p.category,
+          crop: p.crop, location: p.location, post_type: p.post_type,
+          image_url: p.image_url
+        })
+      : window.API.Community.createPost(p);
+
+    return promise.then(function() {
+      closeCreatePost();
+      showToast(editId ? 'Post updated!' : 'Post published!', 'success');
+      selectedImageData = null;
+      resetSubmitBtn(editId, btn);
+      refreshCurrentView();
+    }, function(e) {
+      resetSubmitBtn(editId, btn);
+      showToast(errMsg(e, editId ? 'Unable to update post.' : 'Unable to publish post.'), 'error');
+      throw e;
+    });
   }
 
-  function renderPosts(posts) {
-    if (!posts || posts.length === 0) {
-      feed.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fas fa-comments" style="font-size:32px;margin-bottom:8px;display:block;"></i>No posts found.</div>';
+  if (selectedImageData) {
+    window.API.FileStorage.uploadBase64(selectedImageData, 'community').then(function(res) {
+      payload.image_url = (res && (res.url || res.file_url || res.file_path)) || selectedImageData;
+      return doSubmit(payload);
+    }, function() {
+      resetSubmitBtn(editId, btn);
+      showToast('Image upload failed. Please try again.', 'error');
+      throw new Error('Image upload failed');
+    })['catch'](function() {});
+  } else {
+    doSubmit(payload)['catch'](function() {});
+  }
+};
+
+function resetSubmitBtn(editId, btn) {
+  btn.disabled = false;
+  btn.querySelector('span').textContent = editId ? 'Update' : 'Post';
+}
+
+// ----------------------------- Saved -----------------------------
+function loadSaved() {
+  showSkeleton(true);
+  document.getElementById('activityStats').style.display = 'none';
+  document.getElementById('feed').innerHTML = '';
+  document.getElementById('loadMoreWrap').style.display = 'none';
+  window.API.Community.listSaved({ page: 1, limit: 50 }).then(function(res) {
+    showSkeleton(false);
+    var items = (res && res.items) ? res.items : [];
+    state.savedPosts = items;
+    if (!items.length) {
+      showEmpty('No saved discussions', 'Save useful discussions to find them here later.', false);
       return;
     }
     var html = '';
-    for (var i = 0; i < posts.length; i++) {
-      var p = posts[i];
-      var authorName = p.author_name || 'Farmer';
-      var initial = authorName.charAt(0).toUpperCase();
-      var content = p.content || '';
-      var likes = p.likes_count || 0;
-      var comments = p.comments_count || 0;
-      var liked = p.liked || false;
-      var saved = p.saved || false;
-      var tags = (p.tags || []).join(' ');
-      var imageHtml = '';
-      if (p.image) {
-        imageHtml = '<div class="post-image-placeholder"><i class="fas fa-image" style="margin-right:6px;"></i> ' + p.author_name + '\'s photo</div>';
-      }
-      html += '<div class="post-card card-premium" data-post-id="' + p.post_id + '" data-tags="' + tags + '">' +
-        '<div class="post-header">' +
-          '<div class="post-author">' +
-            '<div style="width:38px;height:38px;border-radius:50%;background:var(--primary-green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">' + initial + '</div>' +
-            '<div style="flex:1;min-width:0;margin-left:10px;">' +
-              '<div style="font-weight:600;font-size:13px;">' + authorName + '</div>' +
-              '<div style="font-size:10px;color:var(--text-muted);">' + (p.author_role || 'Farmer') + ' &middot; ' + timeAgo(p.created_at) + '</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="post-text">' + content + '</div>' +
-        imageHtml +
-        '<div class="post-actions-bar">' +
-          '<div class="post-action like-btn" data-post-id="' + p.post_id + '"><i class="' + (liked ? 'fas' : 'far') + ' fa-heart" style="color:' + (liked ? 'var(--danger)' : '') + ';"></i> <span>' + likes + '</span></div>' +
-          '<div class="post-action comment-toggle" data-post-id="' + p.post_id + '"><i class="far fa-comment"></i> <span>' + comments + '</span></div>' +
-          '<div class="post-action repost-btn" data-post-id="' + p.post_id + '"><i class="fas fa-retweet"></i></div>' +
-          '<div class="post-action share-btn" data-post-id="' + p.post_id + '"><i class="fas fa-share-alt"></i></div>' +
-          '<div class="post-action save-btn" data-post-id="' + p.post_id + '"><i class="' + (saved ? 'fas' : 'far') + ' fa-bookmark" style="color:' + (saved ? 'var(--primary-green)' : '') + ';"></i></div>' +
-        '</div>' +
-        '<div class="post-comments" style="display:none;">' +
-          '<div class="comments-list"></div>' +
-          '<div style="display:flex;gap:6px;margin-top:8px;">' +
-            '<input type="text" placeholder="Add comment..." class="form-input comment-input" style="padding:6px 10px;font-size:11px;border-radius:10px;flex:1;">' +
-            '<button class="btn-primary btn-sm post-comment-btn" style="padding:4px 10px;font-size:10px;">Post</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    }
-    feed.innerHTML = html;
-    attachPostEvents();
+    items.forEach(function(p) { html += buildPostCard(p); });
+    document.getElementById('feed').innerHTML = html;
+  })['catch'](function() {
+    showSkeleton(false);
+    showError('Unable to connect to Community.');
+  });
+}
+
+// ----------------------------- Communities -----------------------------
+function loadAllGroups() {
+  showSkeleton(true);
+  document.getElementById('activityStats').style.display = 'none';
+  document.getElementById('feed').innerHTML = '';
+  document.getElementById('loadMoreWrap').style.display = 'none';
+  document.getElementById('allCommunitiesSection').style.display = 'block';
+  var params = { page: 1, limit: 100 };
+  if (state.searchTerm) params.search = state.searchTerm;
+  if (state.currentCategory !== 'all') params.category = state.currentCategory;
+
+  window.API.Community.listGroups(params).then(function(res) {
+    showSkeleton(false);
+    state.groups = (res && res.items) ? res.items : [];
+    document.getElementById('allGroupsCount').textContent = '(' + state.groups.length + ')';
+    renderAllGroups();
+  })['catch'](function() {
+    showSkeleton(false);
+    showError('Unable to connect to Community.');
+  });
+}
+
+function renderAllGroups() {
+  var list = document.getElementById('allGroupsList');
+  if (!state.groups.length) {
+    list.innerHTML = state.searchTerm
+      ? '<div class="empty-state"><i class="fas fa-search"></i><h3>No communities found</h3><p>No community matches &ldquo;' + esc(state.searchTerm) + '&rdquo;. Try a different search.</p></div>'
+      : '<div class="empty-state"><i class="fas fa-users"></i><h3>No communities available</h3><p>Check back later.</p></div>';
+    return;
   }
+  var html = '';
+  var colors = ['#2e7d32','#558b2f','#f57c00','#d81b60','#6a1b9a','#00695c','#1565c0','#8b6f47','#c62828','#4a148c','#7c3aed','#e65100'];
+  state.groups.forEach(function(g, idx) {
+    var color = g.color || colors[idx % colors.length];
+    var icon = g.icon || 'fa-users';
+    html += '<div class="group-card" onclick="openGroup(\'' + esc(g.id) + '\')">' +
+      '<div class="g-icon" style="background:' + esc(color) + '"><i class="fas ' + esc(icon) + '"></i></div>' +
+      '<div class="g-name">' + esc(g.name) + '</div>' +
+      '<div class="g-meta">' + (g.member_count || 0) + ' members</div>' +
+      '<div class="g-actions">' + (g.is_joined ?
+        '<button class="cm-btn outline" style="width:100%;justify-content:center;" onclick="event.stopPropagation();leaveGroup(\'' + esc(g.id) + '\')">Joined</button>' :
+        '<button class="cm-btn primary" style="width:100%;justify-content:center;" onclick="event.stopPropagation();joinGroup(\'' + esc(g.id) + '\')">Join</button>') +
+      '</div></div>';
+  });
+  list.innerHTML = html;
+}
 
-  function attachPostEvents() {
-    var cards = feed.querySelectorAll('.post-card');
-    for (var i = 0; i < cards.length; i++) {
-      (function(card) {
-        var likeBtn = card.querySelector('.like-btn');
-        if (likeBtn) {
-          likeBtn.addEventListener('click', function() {
-            var icon = this.querySelector('i');
-            var span = this.querySelector('span');
-            var isLiked = icon.classList.contains('fas');
-            var count = parseInt(span.textContent) || 0;
-            if (isLiked) {
-              icon.className = 'far fa-heart';
-              icon.style.color = '';
-              span.textContent = count - 1;
-            } else {
-              icon.className = 'fas fa-heart';
-              icon.style.color = 'var(--danger)';
-              span.textContent = count + 1;
-            }
-            var postId = this.getAttribute('data-post-id');
-            if (postId && window.API && API.Community) {
-              API.Community.toggleLike(postId)['catch'](function() {});
-            }
-          });
-        }
-        var commentToggle = card.querySelector('.comment-toggle');
-        if (commentToggle) {
-          commentToggle.addEventListener('click', function() {
-            var box = card.querySelector('.post-comments');
-            if (box) {
-              box.style.display = box.style.display === 'none' ? 'block' : 'none';
-            }
-          });
-        }
-        var commentBtn = card.querySelector('.post-comment-btn');
-        if (commentBtn) {
-          commentBtn.addEventListener('click', function() {
-            var input = card.querySelector('.comment-input');
-            var text = input.value.trim();
-            if (!text) return;
-            var postId = card.getAttribute('data-post-id');
-            var commentsList = card.querySelector('.comments-list');
-            var newItem = document.createElement('div');
-            newItem.style.cssText = 'padding:4px 0;font-size:11px;border-bottom:1px solid var(--border-color,#e8f0e8);';
-            newItem.innerHTML = '<strong>You:</strong> ' + text;
-            if (commentsList) commentsList.appendChild(newItem);
-            input.value = '';
-            if (postId && window.API && API.Community) {
-              API.Community.addComment(postId, { text: text })['catch'](function() {});
-            }
-            if (typeof showToast === 'function') showToast('Comment posted!', 'success');
-          });
-        }
-        var repostBtn = card.querySelector('.repost-btn');
-        if (repostBtn) {
-          repostBtn.addEventListener('click', function() {
-            if (typeof showToast === 'function') showToast('Post reposted!', 'success');
-          });
-        }
-        var shareBtn = card.querySelector('.share-btn');
-        if (shareBtn) {
-          shareBtn.addEventListener('click', function() {
-            if (typeof showToast === 'function') showToast('Share link copied!', 'info');
-          });
-        }
-        var saveBtn = card.querySelector('.save-btn');
-        if (saveBtn) {
-          saveBtn.addEventListener('click', function() {
-            var icon = this.querySelector('i');
-            if (icon.classList.contains('fas')) {
-              icon.className = 'far fa-bookmark';
-              icon.style.color = '';
-              if (typeof showToast === 'function') showToast('Post unsaved', 'info');
-            } else {
-              icon.className = 'fas fa-bookmark';
-              icon.style.color = 'var(--primary-green)';
-              if (typeof showToast === 'function') showToast('Post saved!', 'success');
-            }
-          });
-        }
-      })(cards[i]);
-    }
+function loadMyGroups(opts) {
+  var silent = !!(opts && opts.silent);
+  if (!silent) {
+    showSkeleton(true);
+    document.getElementById('feed').innerHTML = '';
+    document.getElementById('loadMoreWrap').style.display = 'none';
   }
-
-  function applyFilters() {
-    var filtered = allPosts;
-    if (currentTag !== 'all') {
-      filtered = filtered.filter(function(p) {
-        var tags = (p.tags || []).join(' ').toLowerCase();
-        return tags.indexOf(currentTag) !== -1;
-      });
-    }
-    if (currentIconFilter === 'questions') {
-      filtered = filtered.filter(function(p) {
-        return p.content.indexOf('?') !== -1;
-      });
-    } else if (currentIconFilter === 'trending') {
-      filtered = filtered.slice().sort(function(a, b) {
-        return (b.likes_count || 0) - (a.likes_count || 0);
-      });
-    } else if (currentIconFilter === 'saved') {
-      filtered = filtered.filter(function(p) {
-        return p.saved;
-      });
-    } else if (currentIconFilter === 'reposted') {
-      filtered = filtered.slice().sort(function(a, b) {
-        return (b.comments_count || 0) - (a.comments_count || 0);
-      });
-    } else if (currentIconFilter === 'nearby') {
-      filtered = filtered.slice(0, 4);
-    } else if (currentIconFilter === 'following') {
-      filtered = filtered.filter(function(p) {
-        return p.author_role === 'Agri-Tech Specialist' || p.author_role === 'Seed Supplier';
-      });
-    } else if (currentIconFilter === 'groups') {
-      if (typeof showToast === 'function') {
-        showToast('View groups in your area', 'info');
-      }
-    }
-    renderPosts(filtered);
-  }
-
-  function loadPosts() {
-    feed.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:24px;color:var(--primary-green);"></i></div>';
-    if (window.API && API.Community) {
-      API.Community.listPosts().then(function(res) {
-        allPosts = Array.isArray(res) ? res : (res && res.items ? res.items : []);
-        if (allPosts.length === 0) allPosts = mockPosts;
-        applyFilters();
-      })['catch'](function() {
-        allPosts = mockPosts;
-        applyFilters();
-      });
-    } else {
-      allPosts = mockPosts;
-      applyFilters();
-    }
-  }
-
-  var currentIconFilter = null;
-
-  // Icon row click handlers
-  var iconBtns = document.querySelectorAll('.icon-btn');
-  for (var i = 0; i < iconBtns.length; i++) {
-    (function(btn) {
-      btn.addEventListener('click', function() {
-        for (var j = 0; j < iconBtns.length; j++) {
-          iconBtns[j].classList.remove('active');
-        }
-        btn.classList.add('active');
-        currentIconFilter = btn.getAttribute('data-type');
-        var names = { reposted: 'Reposted', trending: 'Trending', nearby: 'Nearby', following: 'Following', groups: 'Groups', saved: 'Saved', questions: 'Questions' };
-        if (typeof showToast === 'function') {
-          showToast('Showing ' + (names[currentIconFilter] || currentIconFilter) + ' posts', 'info');
-        }
-        applyFilters();
-      });
-    })(iconBtns[i]);
-  }
-
-  // Create post
-  document.getElementById('createPostBtn').addEventListener('click', function() {
-    var input = document.getElementById('postInput');
-    var text = input.value.trim();
-    if (!text) {
-      if (typeof showToast === 'function') showToast('Please write something first', 'info');
+  document.getElementById('myCommunitiesSection').style.display = 'block';
+  window.API.Community.myGroups().then(function(res) {
+    if (!silent) showSkeleton(false);
+    state.myGroups = (res && res.items) ? res.items : [];
+    renderMyGroups();
+  })['catch'](function() {
+    if (silent) {
+      document.getElementById('myGroupsList').innerHTML = '';
+      document.getElementById('myGroupsEmpty').style.display = 'none';
       return;
     }
-    if (window.API && API.Community) {
-      API.Community.createPost({ content: text, title: text.substring(0, 50) }).then(function() {
-        input.value = '';
-        if (typeof showToast === 'function') showToast('Post shared!', 'success');
-        loadPosts();
-      })['catch'](function() {
-        input.value = '';
-        if (typeof showToast === 'function') showToast('Post shared locally', 'info');
-      });
-    } else {
-      input.value = '';
-      if (typeof showToast === 'function') showToast('Post shared locally', 'info');
-    }
+    showSkeleton(false);
+    showError('Unable to connect to Community.');
   });
+}
 
-  // Filter tabs
-  var filterTabs = document.getElementById('filterTabs');
-  filterTabs.addEventListener('click', function(e) {
-    var tab = e.target.closest('.filter-tab');
-    if (!tab) return;
-    var tabs = filterTabs.querySelectorAll('.filter-tab');
-    for (var i = 0; i < tabs.length; i++) {
-      tabs[i].classList.remove('active');
-    }
-    tab.classList.add('active');
-    currentTag = tab.getAttribute('data-tag');
-    if (currentIconFilter) {
-      for (var j = 0; j < iconBtns.length; j++) {
-        iconBtns[j].classList.remove('active');
-      }
-      currentIconFilter = null;
-    }
-    applyFilters();
-  });
-
-  loadPosts();
-})();
-
-function handleImageUpload(input) {
-  if (input.files && input.files[0]) {
-    if (typeof showToast === 'function') showToast('Image selected: ' + input.files[0].name, 'info');
+function renderMyGroups() {
+  document.getElementById('myGroupsCount').textContent = '(' + state.myGroups.length + ')';
+  var list = document.getElementById('myGroupsList');
+  var empty = document.getElementById('myGroupsEmpty');
+  if (!state.myGroups.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
   }
+  empty.style.display = 'none';
+  var html = '';
+  var colors = ['#2e7d32','#558b2f','#f57c00','#d81b60','#6a1b9a','#00695c','#1565c0','#8b6f47','#c62828','#4a148c'];
+  state.myGroups.forEach(function(g, idx) {
+    var color = g.color || colors[idx % colors.length];
+    var icon = g.icon || 'fa-users';
+    html += '<div class="my-group-item" onclick="openGroup(\'' + esc(g.id) + '\')">' +
+      '<div class="m-icon" style="background:' + esc(color) + '"><i class="fas ' + esc(icon) + '"></i></div>' +
+      '<div><div class="m-name">' + esc(g.name) + '</div><div class="m-meta">' + (g.member_count || 0) + ' members</div></div>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+}
+
+// ----------------------------- My Activity -----------------------------
+function renderActivityStats(s) {
+  var box = document.getElementById('activityStats');
+  if (!s) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  var cards = [
+    ['Posts', s.posts],
+    ['Questions', s.questions],
+    ['Answers', s.answers_given],
+    ['Comments', s.comments_given],
+    ['Likes received', s.likes_received],
+    ['Best answers', s.best_answers_received],
+    ['Saved', s.saved_posts],
+    ['Communities', s.communities_joined]
+  ];
+  box.innerHTML = cards.map(function(c) {
+    return '<div class="stat-card"><div class="v">' + (c[1] || 0) + '</div><div class="l">' + esc(c[0]) + '</div></div>';
+  }).join('');
+  box.style.display = 'grid';
+}
+
+function loadMyActivity(append) {
+  if (state.loading) return;
+  state.loading = true;
+  if (!append) {
+    state.activityPage = 1;
+    state.activityHasMore = false;
+    state.posts = [];
+    showSkeleton(true);
+    document.getElementById('feed').innerHTML = '';
+  }
+  document.getElementById('loadMoreWrap').style.display = 'none';
+  loadMyGroups({ silent: true });
+
+  window.API.Community.myActivity({ page: state.activityPage, limit: 10 }).then(function(res) {
+    state.loading = false;
+    showSkeleton(false);
+    var data = res || {};
+    var items = data.items || [];
+    renderActivityStats(data.stats || null);
+    state.posts = append ? state.posts.concat(items) : items;
+    state.activityHasMore = (data.total || 0) > state.posts.length;
+    state.activityPage++;
+    renderMyActivity();
+  })['catch'](function() {
+    state.loading = false;
+    showSkeleton(false);
+    renderActivityStats(null);
+    if (append) showToast('Unable to load more activity.', 'error');
+    else showError('Unable to connect to Community.');
+  });
+}
+
+function renderMyActivity() {
+  if (!state.posts.length) {
+    showEmpty('No activity yet', 'Your posts, questions and answers will appear here.', true);
+    document.getElementById('loadMoreWrap').style.display = 'none';
+    return;
+  }
+  var html = '<div class="cm-section-title"><i class="fas fa-user"></i> My Posts <span class="count">' + state.posts.length + '</span></div>';
+  state.posts.forEach(function(p) { html += buildPostCard(p); });
+  document.getElementById('feed').innerHTML = html;
+  document.getElementById('loadMoreWrap').style.display = state.activityHasMore ? 'block' : 'none';
+}
+
+// Prefer the backend's own message (e.g. duplicate membership) but never leak a
+// raw HTTP status or server error at the farmer.
+function errMsg(e, fallback) {
+  var m = (e && e.message) ? String(e.message) : '';
+  if (!m || /^HTTP \d/i.test(m) || /internal server error/i.test(m)) return fallback;
+  return m;
+}
+
+function refreshGroupViews() {
+  if (state.currentGroupId) { openGroup(state.currentGroupId); return; }
+  var allVisible = document.getElementById('allCommunitiesSection').style.display !== 'none';
+  if (allVisible) loadAllGroups();
+  else loadMyGroups({ silent: true });
+}
+
+window.joinGroup = function(groupId) {
+  window.API.Community.joinGroup(groupId).then(function() {
+    showToast('Joined community!', 'success');
+    refreshGroupViews();
+  })['catch'](function(e) { showToast(errMsg(e, 'Unable to join community.'), 'error'); });
+};
+
+window.leaveGroup = function(groupId) {
+  window.API.Community.leaveGroup(groupId).then(function() {
+    showToast('Left community', 'info');
+    refreshGroupViews();
+  })['catch'](function(e) { showToast(errMsg(e, 'Unable to leave community.'), 'error'); });
+};
+
+window.openGroup = function(groupId) {
+  state.currentGroupId = groupId;
+  document.getElementById('allCommunitiesSection').style.display = 'none';
+  document.getElementById('myCommunitiesSection').style.display = 'none';
+  var detail = document.getElementById('groupDetail');
+  detail.className = 'group-detail show';
+  detail.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="color:var(--cm-green);"></i></div>';
+  // Load group info + feed
+  window.API.Community.getGroup(groupId).then(function(g) {
+    var colors = ['#2e7d32','#558b2f','#f57c00','#d81b60','#6a1b9a','#00695c','#1565c0','#8b6f47','#c62828','#4a148c'];
+    var color = g.color || '#2e7d32';
+    var icon = g.icon || 'fa-users';
+    detail.innerHTML = '<div class="gd-head">' +
+      '<button class="gd-back" onclick="closeGroup()"><i class="fas fa-arrow-left"></i></button>' +
+      '<div class="gd-icon" style="background:' + esc(color) + '"><i class="fas ' + esc(icon) + '"></i></div>' +
+      '<div><div class="gd-name">' + esc(g.name) + '</div><div class="gd-meta"><i class="fas fa-users"></i> ' + (g.member_count || 0) + ' members</div></div>' +
+      '</div>' +
+      '<div class="gd-desc">' + esc(g.description || '') + '</div>' +
+      '<div class="gd-actions">' +
+        (g.is_joined ?
+          '<button class="cm-btn outline" onclick="leaveGroupFromDetail(\'' + esc(g.id) + '\')">Joined</button>' :
+          '<button class="cm-btn primary" onclick="joinGroupFromDetail(\'' + esc(g.id) + '\')"><i class="fas fa-plus"></i> Join</button>') +
+        '<button class="cm-btn primary" onclick="openCreatePost()"><i class="fas fa-plus"></i> Create Post</button>' +
+      '</div>';
+    // Load feed with this community
+    state.page = 1; state.hasMore = false; state.posts = [];
+    loadFeed();
+  })['catch'](function() {
+    detail.innerHTML = '<div class="gd-head"><button class="gd-back" onclick="closeGroup()"><i class="fas fa-arrow-left"></i></button><div class="gd-name">Community</div></div><div class="error-state"><p>Unable to load community.</p></div>';
+  });
+};
+
+window.joinGroupFromDetail = function(groupId) {
+  window.API.Community.joinGroup(groupId).then(function() { openGroup(groupId); showToast('Joined community!', 'success'); })['catch'](function(){ showToast('Unable to join.', 'error'); });
+};
+window.leaveGroupFromDetail = function(groupId) {
+  window.API.Community.leaveGroup(groupId).then(function() { openGroup(groupId); showToast('Left community', 'info'); })['catch'](function(){ showToast('Unable to leave.', 'error'); });
+};
+window.closeGroup = function() {
+  state.currentGroupId = null;
+  switchTab('communities');
+};
+
+// ----------------------------- Report -----------------------------
+window.openReport = function(targetId, type) {
+  document.getElementById('reportTargetId').value = targetId;
+  document.getElementById('reportType').value = (type === 'comment') ? 'comment' : 'post';
+  document.getElementById('reportDescription').value = '';
+  document.querySelectorAll('input[name="reportReason"]').forEach(function(r) { r.checked = false; });
+  document.getElementById('reportOverlay').classList.add('active');
+};
+window.closeReport = function() {
+  document.getElementById('reportOverlay').classList.remove('active');
+};
+window.submitReport = function() {
+  var reason = null;
+  document.querySelectorAll('input[name="reportReason"]:checked').forEach(function(r) { reason = r.value; });
+  if (!reason) { showToast('Please select a reason.', 'info'); return; }
+  var targetId = document.getElementById('reportTargetId').value;
+  var isComment = document.getElementById('reportType').value === 'comment';
+  if (!targetId) { closeReport(); return; }
+  var desc = document.getElementById('reportDescription').value.trim();
+  var payload = isComment
+    ? { comment_id: targetId, reason: reason, description: desc }
+    : { post_id: targetId, reason: reason, description: desc };
+
+  window.API.Community.report(payload).then(function() {
+    closeReport();
+    showToast('Report submitted. Thank you!', 'success');
+  })['catch'](function(e) { showToast(errMsg(e, 'Unable to submit report.'), 'error'); });
+};
+
+// ----------------------------- Farmer profile -----------------------------
+window.openFarmerProfile = function(el, farmerId) {
+  if (!farmerId) return;
+  el = el || this;
+  showProfileLoading();
+  document.getElementById('profileOverlay').classList.add('active');
+  window.API.Community.getFarmerProfile(farmerId).then(function(p) {
+    renderProfile(p, farmerId);
+  })['catch'](function() {
+    renderProfileError(farmerId);
+  });
+};
+
+window.openFarmerProfileBtn = function(farmerId) {
+  window.openFarmerProfile(null, farmerId);
+};
+
+function showProfileLoading() {
+  document.getElementById('profileContent').innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="color:var(--cm-green);"></i></div>';
+}
+function renderProfileError(farmerId) {
+  document.getElementById('profileContent').innerHTML = '<div class="error-state"><p>Unable to load profile.</p><button class="cm-btn outline" onclick="openFarmerProfile(null,\'' + esc(farmerId) + '\')">Retry</button></div>';
+}
+function renderProfile(p, farmerId) {
+  p = p || {};
+  var profileImage = p.profile_image;
+  var html = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">' +
+    '<div class="profile-avatar-lg" style="background:linear-gradient(135deg,#2D8659,#1B5E3F);">' +
+      (profileImage && (/^data:|^https?:\/\//.test(profileImage) || profileImage.charAt(0) === '/') ? '<img src="' + esc(profileImage) + '">' : esc(initials(p.full_name))) +
+    '</div>' +
+    '<div><div style="font-size:16px;font-weight:700;color:var(--cm-dark);display:flex;align-items:center;gap:6px;">' + esc(p.full_name || 'Farmer') + (p.is_verified ? ' <span class="badge"><i class="fas fa-check-circle"></i></span>' : '') + '</div>' +
+    '<div style="font-size:11px;color:var(--cm-muted);">' + esc(p.farming_type || 'Farmer') + '</div></div></div>';
+  if (p.bio) html += '<div style="font-size:12px;color:#444;margin-bottom:12px;font-style:italic;">"' + esc(p.bio) + '"</div>';
+  html += '<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
+    '<div style="background:var(--cm-bg);border-radius:10px;padding:10px 16px;text-align:center;"><div style="font-size:16px;font-weight:700;color:var(--cm-green);">' + (p.posts_count || 0) + '</div><div style="font-size:10px;color:var(--cm-muted);">Posts</div></div>' +
+    '<div style="background:var(--cm-bg);border-radius:10px;padding:10px 16px;text-align:center;"><div style="font-size:16px;font-weight:700;color:var(--cm-green);">' + (p.communities_joined || 0) + '</div><div style="font-size:10px;color:var(--cm-muted);">Communities</div></div>' +
+    '<div style="background:var(--cm-bg);border-radius:10px;padding:10px 16px;text-align:center;"><div id="followerCount" style="font-size:16px;font-weight:700;color:var(--cm-green);">' + (p.followers_count || 0) + '</div><div style="font-size:10px;color:var(--cm-muted);">Followers</div></div>' +
+  '</div>';
+  if (!p.is_self) {
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<button class="btn-message" onclick="messageFarmer(\'' + esc(farmerId) + '\')"><i class="fas fa-envelope"></i> Message Farmer</button>' +
+      '<button class="btn-follow' + (p.is_following ? ' following' : '') + '" id="followBtn" onclick="toggleFollow(\'' + esc(farmerId) + '\')">' + followBtnInner(!!p.is_following) + '</button>' +
+    '</div>';
+  }
+  if (p.posts && p.posts.length) {
+    html += '<div style="font-size:12px;font-weight:700;color:var(--cm-dark);margin:14px 0 8px;">Recent Posts</div>';
+    p.posts.slice(0, 5).forEach(function(post) {
+      html += '<div style="background:var(--cm-bg);border-radius:10px;padding:10px;margin-bottom:8px;font-size:12px;color:#333;">' + esc(post.content || '') + '</div>';
+    });
+  }
+  document.getElementById('profileContent').innerHTML = html;
+}
+
+function followBtnInner(following) {
+  return '<i class="fas ' + (following ? 'fa-user-check' : 'fa-user-plus') + '"></i> <span>' + (following ? 'Following' : 'Follow') + '</span>';
+}
+
+// Reuses the existing Farm Buzz follow relationship; Community does not keep its own.
+window.toggleFollow = function(farmerId) {
+  if (!(window.API && window.API.FarmBuzz && window.API.FarmBuzz.follow)) {
+    showToast('Follow is unavailable right now.', 'error');
+    return;
+  }
+  window.API.FarmBuzz.follow(farmerId).then(function(res) {
+    var following = !!(res && res.following);
+    var btn = document.getElementById('followBtn');
+    if (btn) {
+      btn.classList.toggle('following', following);
+      btn.innerHTML = followBtnInner(following);
+    }
+    var count = document.getElementById('followerCount');
+    if (count) count.textContent = Math.max(0, (parseInt(count.textContent, 10) || 0) + (following ? 1 : -1));
+    showToast(following ? 'Now following this farmer' : 'Unfollowed', following ? 'success' : 'info');
+  })['catch'](function(e) { showToast(errMsg(e, 'Unable to update follow.'), 'error'); });
+};
+
+window.closeProfile = function() {
+  document.getElementById('profileOverlay').classList.remove('active');
+};
+
+// ----------------------------- Message farmer -----------------------------
+window.messageFarmer = function(farmerId) {
+  if (!farmerId) return;
+  // Messages already resolves ?farmer=<id> to an existing conversation or creates
+  // one, so hand off to it instead of duplicating that logic here.
+  window.location.href = 'messages.html?farmer=' + encodeURIComponent(farmerId);
+};
+
+// ----------------------------- Related techniques -----------------------------
+window.viewRelatedTechniques = function(el) {
+  var crop = el ? (el.getAttribute('data-crop') || '') : '';
+  window.location.href = 'techniques.html' + (crop ? '?search=' + encodeURIComponent(crop) : '');
+};
+
+// ----------------------------- Init -----------------------------
+function openDeepLinkedPost(postId) {
+  showSkeleton(true);
+  window.API.Community.getPost(postId).then(function(post) {
+    showSkeleton(false);
+    if (!post || !post.id) { loadFeed(); return; }
+    state.posts = [post];
+    state.hasMore = false;
+    document.getElementById('loadMoreWrap').style.display = 'none';
+
+    var feed = document.getElementById('feed');
+    feed.innerHTML = '<div class="cm-section-title"><i class="fas fa-link"></i> Shared Discussion' +
+        '<button class="cm-btn outline" style="margin-left:auto;padding:6px 12px;" onclick="showFullFeed()"><i class="fas fa-newspaper"></i> View Full Feed</button>' +
+      '</div>' + buildPostCard(post);
+
+    // getPost already returns the comments and answers, so expand them in place.
+    var cbox = document.getElementById('comments-' + post.id);
+    if (cbox && post.comments) {
+      cbox.classList.add('show', 'loaded');
+      writeComments(post.id, post.comments);
+      renderComments(post.id, post.comments);
+      attachComments(post.id);
+      setCounter(post.id, 'cmt', post.comments.length);
+    }
+    var abox = document.getElementById('answers-' + post.id);
+    if (abox && post.answers) {
+      abox.classList.add('show', 'loaded');
+      abox.setAttribute('data-post', JSON.stringify(post));
+      renderAnswers(post.id, post);
+      setCounter(post.id, 'ans', post.answers.length);
+    }
+
+    var el = document.getElementById('post-' + post.id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  })['catch'](function() {
+    showSkeleton(false);
+    showError('Unable to open this discussion.');
+  });
+}
+
+window.showFullFeed = function() {
+  history.replaceState(null, '', window.location.pathname);
+  state.page = 1; state.hasMore = false; state.posts = [];
+  loadFeed();
+};
+
+window.initPage = function() {
+  // Load categories + groups, then load feed
+  window.API.Community.categories().then(function(cats) {
+    state.categories = (cats && cats.length) ? cats : ['All'];
+    renderCategories();
+    populateCategorySelect();
+  })['catch'](function() { state.categories = ['All']; renderCategories(); });
+
+  window.API.Community.listGroups({ page: 1, limit: 100 }).then(function(res) {
+    state.groups = (res && res.items) ? res.items : [];
+  })['catch'](function() {});
+
+  // check URL for ?post=
+  var params = new URLSearchParams(window.location.search);
+  var postId = params.get('post');
+  if (postId) openDeepLinkedPost(postId);
+  else loadFeed();
+};
+
+// Retry + ensure feed tab is default
+function start() {
+  if (!(window.API && window.API.Community)) {
+    document.getElementById('feed').innerHTML = '<div class="error-state"><i class="fas fa-plug"></i><p>Community service is unavailable. Please check your connection.</p><button class="cm-btn outline" onclick="location.reload()">Retry</button></div>';
+    return;
+  }
+  if (!window.UserStore.isLoggedIn()) {
+    document.getElementById('feed').innerHTML = '<div class="error-state"><i class="fas fa-lock"></i><p>Please log in to access the community.</p><button class="cm-btn primary" onclick="location.href=\'login.html\'">Log In</button></div>';
+    return;
+  }
+  window.initPage();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', start);
+} else {
+  start();
 }
 </script>
 

@@ -468,31 +468,6 @@ const FarmDB = (function() {
     ]
   };
 
-  // ========== EMERGENCY DATA ==========
-  db.emergencyData = {
-    contacts: [
-      {name:"National Disaster Response Force",phone:"011-24363260",type:"General Emergency",icon:"fa-shield-halved"},
-      {name:"Agriculture Helpline",phone:"1800-180-1551",type:"Crop/Farming",icon:"fa-phone"},
-      {name:"Veterinary Emergency",phone:"1800-425-9555",type:"Animal Health",icon:"fa-cow"},
-      {name:"Fire Services",phone:"101",type:"Fire Emergency",icon:"fa-fire-extinguisher"},
-      {name:"Ambulance Services",phone:"108",type:"Medical Emergency",icon:"fa-ambulance"},
-      {name:"Police",phone:"100",type:"Law & Order",icon:"fa-shield"},
-      {name:"Pest Outbreak Helpline",phone:"1800-180-1551",type:"Pest Emergency",icon:"fa-bug"},
-      {name:"Flood Control Room",phone:"1070",type:"Flood",icon:"fa-water"}
-    ],
-    alerts: [
-      {type:"Heatwave",severity:"Red",area:"Central Maharashtra",validUntil:dateOff(3),description:"Severe heatwave expected. Temperatures up to 44°C. Protect crops and livestock.",advice:"Irrigate early morning, provide shade, keep animals hydrated."},
-      {type:"Pest Outbreak",severity:"Orange",area:"Pune District",validUntil:dateOff(15),description:"Fall Armyworm reported in maize fields. Scout immediately and apply recommended control measures.",advice:"Apply Spinosad or Emamectin benzoate. Use pheromone traps."},
-      {type:"Cyclone",severity:"Red",area:"Coastal Regions",validUntil:dateOff(5),description:"Cyclone alert for coastal areas. Secure farm infrastructure and move livestock to safe shelter.",advice:"Harvest mature crops, reinforce shelters, stock emergency supplies."}
-    ],
-    hospitalContacts: [
-      {name:"District Rural Hospital",distance:"5 km",phone:"020-24561234",type:"General"},
-      {name:"Veterinary Dispensary",distance:"3 km",phone:"020-24567890",type:"Veterinary"},
-      {name:"Primary Health Centre",distance:"2 km",phone:"020-24560011",type:"General"},
-      {name:"Animal Care Centre",distance:"8 km",phone:"020-24565544",type:"Veterinary"}
-    ]
-  };
-
   return db;
 })();
 

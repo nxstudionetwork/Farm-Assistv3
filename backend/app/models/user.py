@@ -25,6 +25,8 @@ class User(Base):
     role = Column(String(20), default="farmer")
     is_verified = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
+    is_online = Column(Boolean, default=False)
+    last_seen_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -42,6 +44,9 @@ class User(Base):
     insurance_claims = relationship("InsuranceClaim", back_populates="user")
     worker_bookings_made = relationship("WorkerBooking", foreign_keys="WorkerBooking.farmer_id", back_populates="farmer")
     service_requests = relationship("ServiceRequest", back_populates="user")
+    course_enrollments = relationship("CourseEnrollment", back_populates="user")
+    saved_news = relationship("SavedNews", back_populates="user")
+    saved_schemes = relationship("SavedScheme", back_populates="farmer")
 
 
 class FarmerProfile(Base):
@@ -126,3 +131,40 @@ class UserSession(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
     revoked_at = Column(DateTime, nullable=True)
+
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), unique=True, nullable=False)
+    # Notifications
+    notif_weather = Column(Boolean, default=True)
+    notif_tasks = Column(Boolean, default=True)
+    notif_market = Column(Boolean, default=True)
+    notif_messages = Column(Boolean, default=True)
+    notif_govt = Column(Boolean, default=True)
+    notif_emergency = Column(Boolean, default=True)
+    # Privacy
+    privacy_location = Column(Boolean, default=True)
+    privacy_profile = Column(Boolean, default=True)
+    perm_analytics = Column(Boolean, default=True)
+    perm_crop_data = Column(Boolean, default=True)
+    perm_market = Column(Boolean, default=False)
+    # App Preferences
+    units = Column(String(20), default="metric")
+    voice_enabled = Column(Boolean, default=False)
+    weekly_summary = Column(Boolean, default=False)
+    # AI
+    ai_recommendations = Column(Boolean, default=True)
+    ai_voice_replies = Column(Boolean, default=True)
+    ai_detail = Column(String(20), default="simple")
+    ai_training = Column(Boolean, default=True)
+    # Farm
+    farm_default_crop = Column(String(100), nullable=True)
+    farm_land_size = Column(Float, nullable=True)
+    farm_soil_type = Column(String(50), nullable=True)
+    farm_irrigation = Column(String(50), nullable=True)
+    # Meta
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

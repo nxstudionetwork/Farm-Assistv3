@@ -1,141 +1,413 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" data-page="command-center">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Farm Assist - Mission Command Center</title>
+  <title>Farm Assist - Command Center</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* ============================================================
+       COMMAND CENTER - YOUR FARM ASSIST HUB
+       Scoped styles that reuse the Farm Assist theme variables.
+       ============================================================ */
+    .hub-main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px 20px 40px;
+    }
+    .hub-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+    .hub-header-title { display: flex; align-items: center; gap: 14px; }
+    .hub-header-icon {
+      width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
+      background: var(--gradient-light-green, linear-gradient(135deg,#1B5E3F,#52B788));
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-size: 20px; box-shadow: var(--shadow-md, 0 4px 16px rgba(27,67,50,.08));
+    }
+    .hub-header h1 { font-size: 22px; font-weight: 800; margin: 0; color: var(--text-primary); }
+    .hub-header .hub-kicker { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--medium-green, #2D8659); }
+    .hub-header p.hub-sub { font-size: 13px; color: var(--text-secondary); margin: 3px 0 0; }
+    .hub-refresh {
+      border: 1px solid var(--border-medium); background: var(--bg-card, #fff); color: var(--text-secondary);
+      border-radius: var(--radius-md, 14px); padding: 9px 16px; font-size: 12px; font-weight: 600;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: all .2s;
+    }
+    .hub-refresh:hover { border-color: var(--medium-green); color: var(--medium-green); }
+    .hub-refresh.loading i { animation: hub-spin .8s linear infinite; }
+
+    .hub-greeting {
+      background: var(--gradient-primary, linear-gradient(135deg,#0F2E1E,#1B5E3F));
+      color: #fff; border-radius: var(--radius-lg, 20px); padding: 26px 26px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      position: relative; overflow: hidden; margin-bottom: 22px; box-shadow: var(--shadow-md);
+    }
+    .hub-greeting::after {
+      content: ''; position: absolute; top: -60px; right: -40px; width: 220px; height: 220px;
+      background: rgba(255,255,255,.06); border-radius: 50%;
+    }
+    .hub-greeting::before {
+      content: ''; position: absolute; bottom: -70px; left: 36%; width: 170px; height: 170px;
+      background: rgba(255,255,255,.05); border-radius: 50%;
+    }
+    .hub-greeting h2 { font-size: 20px; font-weight: 800; margin: 0 0 6px; position: relative; z-index: 1; }
+    .hub-greeting p { font-size: 13px; opacity: .9; margin: 0; position: relative; z-index: 1; }
+    .hub-greeting-icon { font-size: 40px; opacity: .35; position: relative; z-index: 1; flex-shrink: 0; }
+
+    .hub-section { margin-bottom: 26px; }
+    .hub-section-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .hub-section-head h3 {
+      font-size: 15px; font-weight: 800; color: var(--text-primary); margin: 0;
+      display: flex; align-items: center; gap: 9px;
+    }
+    .hub-section-head h3 i { color: var(--medium-green, #2D8659); font-size: 15px; }
+    .hub-view {
+      font-size: 12px; font-weight: 700; color: var(--medium-green, #2D8659);
+      text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border: 1px solid var(--border-light); border-radius: 20px;
+      background: var(--bg-card, #fff); transition: all .2s;
+    }
+    .hub-view:hover { border-color: var(--medium-green); background: var(--soft-green, #E4F2E8); }
+
+    /* ---- skull / loading ---- */
+    .hub-skel { border-radius: var(--radius-md,14px); overflow: hidden; }
+    .skeleton {
+      background: linear-gradient(90deg, #eef2ee 25%, #f7f9f6 50%, #eef2ee 75%);
+      background-size: 200% 100%; animation: hub-shimmer 1.3s infinite; border-radius: 10px;
+    }
+    @keyframes hub-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    @keyframes hub-spin { to { transform: rotate(360deg); } }
+    @keyframes hub-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .hub-anim { animation: hub-fade-in .35s ease both; }
+
+    .hub-empty, .hub-error {
+      text-align: center; padding: 26px 16px; color: var(--text-muted);
+      border: 1px dashed var(--border-medium); border-radius: var(--radius-md,14px);
+      background: var(--bg-card, #fff); font-size: 13px;
+    }
+    .hub-empty i, .hub-error i { display: block; font-size: 26px; margin-bottom: 8px; opacity: .4; }
+    .hub-error { color: #b45; border-color: rgba(214,48,49,.3); }
+    .hub-empty .hub-cta, .hub-error .hub-cta {
+      display: inline-block; margin-top: 10px; font-weight: 700; color: var(--medium-green); text-decoration: none;
+    }
+
+    /* ---- Farm health ---- */
+    .health-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    .health-card {
+      background: var(--bg-card, #fff); border: 1px solid var(--border-light);
+      border-radius: var(--radius-md,14px); padding: 16px 14px; text-align: center;
+      box-shadow: var(--shadow-sm, 0 2px 8px rgba(27,67,50,.06)); transition: transform .2s, box-shadow .2s;
+    }
+    .health-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .health-icon { width: 38px; height: 38px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 9px; }
+    .health-value { font-size: 22px; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
+    .health-value .unit { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+    .health-label { font-size: 11px; color: var(--text-secondary); margin-top: 4px; font-weight: 600; }
+    .health-bar { height: 7px; border-radius: 6px; background: var(--soft-green, #E4F2E8); margin-top: 9px; overflow: hidden; }
+    .health-bar-fill { height: 100%; border-radius: 6px; transition: width .8s ease; }
+    .health-healthy { color: var(--medium-green, #2D8659); font-size: 11px; font-weight: 700; margin-top: 5px; }
+
+    /* ---- Quick access ---- */
+    .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .quick-card {
+      background: var(--bg-card, #fff); border: 1px solid var(--border-light);
+      border-radius: var(--radius-md,14px); padding: 18px 12px; text-align: center;
+      text-decoration: none; color: var(--text-primary); display: flex; flex-direction: column;
+      align-items: center; gap: 9px; box-shadow: var(--shadow-sm); transition: all .2s;
+    }
+    .quick-card:hover { border-color: var(--medium-green); transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .quick-card .qc-icon { width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 19px; }
+    .quick-card .qc-label { font-size: 12px; font-weight: 700; line-height: 1.2; }
+    .quick-card .qc-sub { font-size: 10px; color: var(--text-muted); }
+
+    /* ---- two column info panels ---- */
+    .hub-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .hub-panel {
+      background: var(--bg-card, #fff); border: 1px solid var(--border-light);
+      border-radius: var(--radius-md,14px); padding: 16px; box-shadow: var(--shadow-sm);
+    }
+    .hub-panel h4 { font-size: 13px; font-weight: 800; margin: 0 0 12px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .hub-panel h4 i { color: var(--medium-green, #2D8659); }
+
+    .task-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; }
+    .task-item:last-child { border-bottom: none; }
+    .task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .task-item .t-title { flex: 1; color: var(--text-primary); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-item .t-due { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+    .task-count-big { text-align: center; padding: 8px 0 4px; }
+    .task-count-big .num { font-size: 34px; font-weight: 800; color: var(--primary-green, #1B5E3F); line-height: 1; }
+    .task-count-big .lbl { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+    .weather-mini { display: flex; align-items: center; gap: 16px; }
+    .weather-mini .temp { font-size: 34px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+    .weather-mini .cond { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .weather-mini .meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+    .weather-insight { display: flex; gap: 9px; align-items: flex-start; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border-light); font-size: 12px; color: var(--text-secondary); }
+    .weather-insight i { color: var(--medium-green, #2D8659); margin-top: 1px; }
+
+    .market-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border-light); font-size: 13px; }
+    .market-row:last-child { border-bottom: none; }
+    .market-row .m-crop { font-weight: 700; color: var(--text-primary); }
+    .market-row .m-price { font-weight: 800; color: var(--primary-green, #1B5E3F); }
+    .market-row .m-change.up { color: var(--success); } .market-row .m-change.down { color: var(--danger); }
+    .market-updated { font-size: 11px; color: var(--text-muted); margin-top: 10px; display: flex; align-items: center; gap: 6px; }
+
+    /* ---- Expert / Services ---- */
+    .expert-card { display: flex; flex-direction: column; gap: 12px; }
+    .expert-avail { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+    .expert-avail i { color: var(--success, #2D6A4F); }
+    .expert-appt { background: var(--soft-green, #E4F2E8); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text-primary); }
+    .expert-appt b { color: var(--primary-green, #1B5E3F); }
+
+    .svc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .svc-chip {
+      display: inline-flex; align-items: center; gap: 7px; background: var(--bg-card-soft);
+      border: 1px solid var(--border-light); border-radius: 20px; padding: 7px 12px;
+      font-size: 11px; font-weight: 700; color: var(--text-secondary); text-decoration: none; transition: all .2s;
+    }
+    .svc-chip:hover { border-color: var(--medium-green); color: var(--medium-green); background: var(--soft-green); }
+    .svc-chip i { color: var(--medium-green, #2D8659); }
+
+    .technique-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+    .technique-item:last-child { border-bottom: none; }
+    .technique-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+    .technique-item .t-body { flex: 1; min-width: 0; }
+    .technique-item .t-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+    .technique-item .t-desc { font-size: 11px; color: var(--text-secondary); margin-top: 2px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+    /* ---- Alerts ---- */
+    .alerts-list { }
+    .alert-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-light); align-items: flex-start; }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+    .alert-item .a-body { flex: 1; min-width: 0; }
+    .alert-item .a-title { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+    .alert-item .a-on { font-size: 11px; color: var(--text-muted); }
+    .all-caught { text-align: center; padding: 22px; color: var(--text-muted); }
+    .all-caught i { display: block; font-size: 28px; margin-bottom: 6px; opacity: .45; }
+
+    /* ---- Activity ---- */
+    .activity-item { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border-light); align-items: flex-start; }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
+    .activity-item .act-body { flex: 1; min-width: 0; }
+    .activity-item .act-text { font-size: 12px; color: var(--text-primary); line-height: 1.4; }
+    .activity-item .act-time { font-size: 10px; color: var(--text-muted); }
+
+    /* ---- Emergency ---- */
+    .emergency-strip {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      background: linear-gradient(135deg, #7f1d1d, #b91c1c); color: #fff;
+      border-radius: var(--radius-md,14px); padding: 16px 18px; text-decoration: none;
+      box-shadow: var(--shadow-md); transition: transform .2s, box-shadow .2s;
+    }
+    .emergency-strip:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .emergency-strip .e-left { display: flex; align-items: center; gap: 13px; }
+    .emergency-strip i { font-size: 24px; }
+    .emergency-strip .e-title { font-size: 14px; font-weight: 800; }
+    .emergency-strip .e-sub { font-size: 12px; opacity: .9; margin-top: 2px; }
+    .emergency-strip .e-go { font-size: 12px; font-weight: 700; background: rgba(255,255,255,.18); padding: 8px 14px; border-radius: 20px; white-space: nowrap; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 1024px) {
+      .health-grid { grid-template-columns: repeat(3, 1fr); }
+      .quick-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 820px) {
+      .hub-panels { grid-template-columns: 1fr; }
+      .health-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .hub-main { padding: 14px 14px 32px; }
+      .hub-greeting { padding: 20px 18px; }
+      .quick-grid { grid-template-columns: repeat(2, 1fr); }
+      .health-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .health-card { padding: 13px 10px; }
+      .health-value { font-size: 19px; }
+      .hub-header-icon { width: 40px; height: 40px; font-size: 18px; }
+      .emergency-strip { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 360px) {
+      .quick-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .quick-card { padding: 14px 8px; }
+      .hub-refresh { font-size: 11px; padding: 8px 12px; }
+    }
+  </style>
 </head>
 <body>
-
   <main class="page-container">
+    <div class="hub-main" id="hub-main">
 
-    <section class="hero-dashboard" style="background:linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); margin-bottom:20px; border:1px solid var(--border-light);">
-      <h2 style="color:var(--text-primary);"><i class="fas fa-circle-nodes" style="color:var(--primary-green);"></i> Mission Command Center</h2>
-      <p style="font-size:13px; color:var(--text-secondary); margin-top:5px;">
-        Mission Control Board. Drag-and-drop to rearrange your active live telemetry widgets.
-      </p>
-      <button class="btn-farm-view" style="margin-top:15px; background:var(--primary-green); color:white; border:none;" onclick="resetWidgets()">
-        <i class="fas fa-rotate-left"></i> Reset Layout Default
-      </button>
-    </section>
-
-    <div id="cmd-widgets-grid" class="widget-grid">
-      <div class="card-premium widget-card" id="widget-weather" draggable="true">
-        <div class="widget-card-actions">
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-weather', 'minimize')"><i class="fas fa-minus"></i></button>
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-weather', 'hide')"><i class="fas fa-times"></i></button>
-        </div>
-        <h4 style="font-size:14px; margin-bottom:10px;"><i class="fas fa-cloud-sun" style="color:var(--premium-green);"></i> Real-Time Weather</h4>
-        <div class="widget-content">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div><div style="font-size:24px; font-weight:800;">28°C</div><div style="font-size:11px; color:var(--text-secondary);">Pune Division • Scattered Showers</div></div>
-            <i class="fas fa-cloud-rain" style="font-size:32px; color:var(--premium-green);"></i>
+      <!-- HEADER -->
+      <header class="hub-header">
+        <div class="hub-header-title">
+          <div class="hub-header-icon"><i class="fas fa-tower-broadcast"></i></div>
+          <div>
+            <div class="hub-kicker">Command Center</div>
+            <h1>Your Farm Assist Hub</h1>
+            <p class="hub-sub">Everything important about your farm, in one place.</p>
           </div>
         </div>
+        <button class="hub-refresh" id="hub-refresh" aria-label="Refresh command center">
+          <i class="fas fa-rotate"></i> Refresh
+        </button>
+      </header>
+
+      <!-- GREETING -->
+      <section class="hub-section" id="hub-greeting-section">
+        <div class="hub-greeting" id="hub-greeting">
+          <div>
+            <h2 id="hub-greet-text">Welcome</h2>
+            <p id="hub-greet-sub">Loading your farm overview&hellip;</p>
+          </div>
+          <i class="fas fa-seedling hub-greeting-icon"></i>
+        </div>
+      </section>
+
+      <!-- FARM HEALTH -->
+      <section class="hub-section" id="hub-health-section">
+        <div class="hub-section-head">
+          <h3><i class="fas fa-heart-pulse"></i> Your Farm Health</h3>
+          <a class="hub-view" href="farm.html">Manage Farm</a>
+        </div>
+        <div class="hub-skel" id="hub-health"><div class="health-grid">
+          <div class="health-card skull"><div style="height:86px"></div></div>
+          <div class="health-card skull"><div style="height:86px"></div></div>
+          <div class="health-card skull"><div style="height:86px"></div></div>
+          <div class="health-card skull"><div style="height:86px"></div></div>
+          <div class="health-card skull"><div style="height:86px"></div></div>
+        </div></div>
+      </section>
+
+      <!-- QUICK ACCESS -->
+      <section class="hub-section" id="hub-quick-section">
+        <div class="hub-section-head"><h3><i class="fas fa-bolt"></i> Quick Access</h3></div>
+        <div class="quick-grid">
+          <a class="quick-card" href="farm.html" aria-label="My Farm">
+            <span class="qc-icon" style="background:var(--soft-green,#E4F2E8);color:var(--medium-green,#2D8659)"><i class="fas fa-tractor"></i></span>
+            <span><span class="qc-label">My Farm</span><br><span class="qc-sub">Manage your land</span></span>
+          </a>
+          <a class="quick-card" href="tasks.html" aria-label="Tasks">
+            <span class="qc-icon" style="background:#FFF3E0;color:#E65100"><i class="fas fa-list-check"></i></span>
+            <span><span class="qc-label">Tasks</span><br><span class="qc-sub">To-do &amp; reminders</span></span>
+          </a>
+          <a class="quick-card" href="market-prices.html" aria-label="Market">
+            <span class="qc-icon" style="background:#E3F2FD;color:#1565C0"><i class="fas fa-chart-line"></i></span>
+            <span><span class="qc-label">Market</span><br><span class="qc-sub">Prices &amp; rates</span></span>
+          </a>
+          <a class="quick-card" href="weather.html" aria-label="Weather">
+            <span class="qc-icon" style="background:#E0F7FA;color:#00838F"><i class="fas fa-cloud-sun"></i></span>
+            <span><span class="qc-label">Weather</span><br><span class="qc-sub">Forecast &amp; alerts</span></span>
+          </a>
+          <a class="quick-card" href="expert.html" aria-label="Experts">
+            <span class="qc-icon" style="background:#EDE7F6;color:#6A1B9A"><i class="fas fa-user-doctor"></i></span>
+            <span><span class="qc-label">Experts</span><br><span class="qc-sub">Talk to an expert</span></span>
+          </a>
+          <a class="quick-card" href="livestock.html" aria-label="Livestock">
+            <span class="qc-icon" style="background:#FBE9E7;color:#BF360C"><i class="fas fa-cow"></i></span>
+            <span><span class="qc-label">Livestock</span><br><span class="qc-sub">Animals &amp; care</span></span>
+          </a>
+          <a class="quick-card" href="services.html" aria-label="Services">
+            <span class="qc-icon" style="background:#FFF8E1;color:#F57F17"><i class="fas fa-concierge-bell"></i></span>
+            <span><span class="qc-label">Services</span><br><span class="qc-sub">Schemes &amp; help</span></span>
+          </a>
+          <a class="quick-card" href="techniques.html" aria-label="Farm Techniques">
+            <span class="qc-icon" style="background:#F1F8E9;color:#33691E"><i class="fas fa-book-open"></i></span>
+            <span><span class="qc-label">Techniques</span><br><span class="qc-sub">Farming methods</span></span>
+          </a>
+        </div>
+      </section>
+
+      <!-- MARKET + TASKS -->
+      <div class="hub-panels" id="hub-market-tasks">
+        <section class="hub-panel" id="hub-market-section">
+          <h4><i class="fas fa-chart-line"></i> Market Prices</h4>
+          <div id="hub-market" class="hub-skel"><div class="skeleton" style="height:120px"></div></div>
+          <div class="market-foot" id="hub-market-foot" style="display:none"></div>
+        </section>
+        <section class="hub-panel" id="hub-tasks-section">
+          <h4><i class="fas fa-list-check"></i> Today's Tasks</h4>
+          <div id="hub-tasks" class="hub-skel"><div class="skeleton" style="height:120px"></div></div>
+          <div style="margin-top:10px"><a class="hub-view" href="tasks.html" style="width:100%;justify-content:center">View All Tasks</a></div>
+        </section>
       </div>
 
-      <div class="card-premium widget-card" id="widget-ai" draggable="true">
-        <div class="widget-card-actions">
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-ai', 'minimize')"><i class="fas fa-minus"></i></button>
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-ai', 'hide')"><i class="fas fa-times"></i></button>
-        </div>
-        <h4 style="font-size:14px; margin-bottom:10px;"><i class="fas fa-brain" style="color:var(--premium-green);"></i> AI Advisory Briefing</h4>
-        <div class="widget-content">
-          <div style="font-size:12px; color:var(--text-secondary); line-height:1.5;">
-            <i class="fas fa-check-circle" style="color:var(--success);"></i> Apply irrigation to Plot B: Soil hydration fell below threshold limit (48%).
-          </div>
-        </div>
+      <!-- WEATHER + EXPERT -->
+      <div class="hub-panels" id="hub-weather-expert">
+        <section class="hub-panel" id="hub-weather-section">
+          <h4><i class="fas fa-cloud-sun"></i> Weather</h4>
+          <div id="hub-weather" class="hub-skel"><div class="skeleton" style="height:140px"></div></div>
+          <div style="margin-top:10px"><a class="hub-view" href="weather.html" style="width:100%;justify-content:center">View Weather</a></div>
+        </section>
+        <section class="hub-panel" id="hub-expert-section">
+          <h4><i class="fas fa-hand-holding-heart"></i> Talk to an Expert</h4>
+          <div id="hub-expert" class="hub-skel"><div class="skeleton" style="height:140px"></div></div>
+          <div style="margin-top:10px"><a class="hub-view" href="expert.html" style="width:100%;justify-content:center">Consult an Expert</a></div>
+        </section>
       </div>
 
-      <div class="card-premium widget-card" id="widget-market" draggable="true">
-        <div class="widget-card-actions">
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-market', 'minimize')"><i class="fas fa-minus"></i></button>
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-market', 'hide')"><i class="fas fa-times"></i></button>
-        </div>
-        <h4 style="font-size:14px; margin-bottom:10px;"><i class="fas fa-chart-line" style="color:var(--premium-green);"></i> Market Mandi Ticker</h4>
-        <div class="widget-content">
-          <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
-            <span>Basmati Rice (Plot A)</span>
-            <strong>₹2,500/qtl <span style="color:var(--success);"><i class="fas fa-arrow-up"></i> 1.8%</span></strong>
+      <!-- SERVICES + LIVESTOCK -->
+      <div class="hub-panels" id="hub-services-livestock">
+        <section class="hub-panel" id="hub-services-section">
+          <h4><i class="fas fa-shield-halved"></i> Services</h4>
+          <div class="svc-chips">
+            <a class="svc-chip" href="schemes.html"><i class="fas fa-landmark"></i> Government Schemes</a>
+            <a class="svc-chip" href="loans.html"><i class="fas fa-hand-holding-dollar"></i> Loans</a>
+            <a class="svc-chip" href="insurance.html"><i class="fas fa-shield-heart"></i> Insurance</a>
+            <a class="svc-chip" href="services.html"><i class="fas fa-concierge-bell"></i> Agri Services</a>
           </div>
-          <div style="display:flex; justify-content:space-between; font-size:12px;">
-            <span>Bt Cotton (Plot B)</span>
-            <strong>₹6,700/qtl <span style="color:var(--success);"><i class="fas fa-arrow-up"></i> 2.5%</span></strong>
-          </div>
-        </div>
+          <div style="margin-top:14px"><a class="hub-view" href="services.html" style="width:100%;justify-content:center">View All Services</a></div>
+        </section>
+        <section class="hub-panel" id="hub-livestock-section">
+          <h4><i class="fas fa-cow"></i> Livestock</h4>
+          <div id="hub-livestock" class="hub-skel"><div class="skeleton" style="height:100px"></div></div>
+          <div style="margin-top:10px"><a class="hub-view" href="livestock.html" style="width:100%;justify-content:center">Manage Livestock</a></div>
+        </section>
       </div>
 
-      <div class="card-premium widget-card" id="widget-finance" draggable="true">
-        <div class="widget-card-actions">
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-finance', 'minimize')"><i class="fas fa-minus"></i></button>
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-finance', 'hide')"><i class="fas fa-times"></i></button>
+      <!-- TECHNIQUES -->
+      <section class="hub-section" id="hub-techniques-section">
+        <div class="hub-section-head">
+          <h3><i class="fas fa-book-open"></i> Recommended Farm Techniques</h3>
+          <a class="hub-view" href="techniques.html">Explore Techniques <i class="fas fa-arrow-right"></i></a>
         </div>
-        <h4 style="font-size:14px; margin-bottom:10px;"><i class="fas fa-wallet" style="color:var(--premium-green);"></i> Wallet Cash Balance</h4>
-        <div class="widget-content">
-          <div style="font-size:24px; font-weight:800; color:var(--premium-green);">₹38,450</div>
-          <div style="font-size:10px; color:var(--text-muted);">Income: ₹1.2L • Overhead: ₹48K</div>
-        </div>
-      </div>
+        <div id="hub-techniques" class="hub-skel"><div class="skeleton" style="height:120px"></div></div>
+      </section>
 
-      <div class="card-premium widget-card" id="widget-monitor" draggable="true">
-        <div class="widget-card-actions">
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-monitor', 'minimize')"><i class="fas fa-minus"></i></button>
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-monitor', 'hide')"><i class="fas fa-times"></i></button>
-        </div>
-        <h4 style="font-size:14px; margin-bottom:10px;"><i class="fas fa-satellite-dish" style="color:var(--premium-green);"></i> Satellite NDVI Health</h4>
-        <div class="widget-content">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span>Mean Farm Index: <strong>89%</strong></span>
-            <span class="badge-status success">Healthy</span>
-          </div>
-        </div>
-      </div>
+      <!-- ALERTS -->
+      <section class="hub-section" id="hub-alerts-section">
+        <div class="hub-section-head"><h3><i class="fas fa-bell"></i> Farm Alerts</h3></div>
+        <div id="hub-alerts" class="hub-skel"><div class="skeleton" style="height:110px"></div></div>
+      </section>
 
-      <div class="card-premium widget-card" id="widget-tasks" draggable="true">
-        <div class="widget-card-actions">
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-tasks', 'minimize')"><i class="fas fa-minus"></i></button>
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-tasks', 'hide')"><i class="fas fa-times"></i></button>
+      <!-- RECENT ACTIVITY -->
+      <section class="hub-section" id="hub-activity-section">
+        <div class="hub-section-head">
+          <h3><i class="fas fa-clock-rotate-left"></i> Recent Activity</h3>
         </div>
-        <h4 style="font-size:14px; margin-bottom:10px;"><i class="fas fa-calendar-check" style="color:var(--premium-green);"></i> Priority Tasks</h4>
-        <div class="widget-content">
-          <div style="font-size:12px; line-height:1.8;">
-            <i class="far fa-circle" style="color:var(--premium-green);"></i> Irrigation in Plot B<br>
-            <i class="far fa-circle" style="color:var(--premium-green);"></i> Pest diagnostics in Plot E
-          </div>
-        </div>
-      </div>
+        <div id="hub-activity" class="hub-skel"><div class="skeleton" style="height:120px"></div></div>
+      </section>
 
-      <div class="card-premium widget-card" id="widget-livestock" draggable="true">
-        <div class="widget-card-actions">
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-livestock', 'minimize')"><i class="fas fa-minus"></i></button>
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-livestock', 'hide')"><i class="fas fa-times"></i></button>
-        </div>
-        <h4 style="font-size:14px; margin-bottom:10px;"><i class="fas fa-cow" style="color:var(--premium-green);"></i> Livestock Status</h4>
-        <div class="widget-content">
-          <div style="font-size:12px;">
-            Cow Ganga yield: <strong>12L/Day</strong><br>
-            Vaccination drives: <span class="badge-status info">Completed</span>
+      <!-- EMERGENCY -->
+      <section class="hub-section" id="hub-emergency-section">
+        <a class="emergency-strip" href="emergency.html" aria-label="Farm Emergency">
+          <div class="e-left"><i class="fas fa-phone-volume"></i>
+            <div><div class="e-title">Farm Emergency</div><div class="e-sub">Quick access to emergency help &amp; helplines</div></div>
           </div>
-        </div>
-      </div>
+          <span class="e-go">Emergency Assistance <i class="fas fa-arrow-right"></i></span>
+        </a>
+      </section>
 
-      <div class="card-premium widget-card" id="widget-calendar" draggable="true">
-        <div class="widget-card-actions">
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-calendar', 'minimize')"><i class="fas fa-minus"></i></button>
-          <button class="widget-action-btn" onclick="toggleWidgetState('widget-calendar', 'hide')"><i class="fas fa-times"></i></button>
-        </div>
-        <h4 style="font-size:14px; margin-bottom:10px;"><i class="fas fa-calendar-days" style="color:var(--premium-green);"></i> Today's Schedule</h4>
-        <div class="widget-content">
-          <div style="font-size:11px; line-height:1.6; color:var(--text-secondary);">
-            • 14:00 - Harvest Session (Plot A Rice)<br>
-            • 16:30 - Expert call (Dr. Arvind S.)
-          </div>
-        </div>
-      </div>
     </div>
-
   </main>
 
   <script src="js/database.js"></script>
@@ -145,53 +417,512 @@
   <script src="assets/js/app.js"></script>
   <script src="js/script.js"></script>
   <script>
-    let dragSrcElement = null;
-    function handleDragStart(e) { this.style.opacity = '0.4'; dragSrcElement = this; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/html', this.innerHTML); e.dataTransfer.setData('text/plain', this.id); }
-    function handleDragOver(e) { if (e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; this.classList.add('dragged-over'); return false; }
-    function handleDragLeave() { this.classList.remove('dragged-over'); }
-    function handleDrop(e) {
-      e.stopPropagation(); e.preventDefault(); this.classList.remove('dragged-over');
-      if (dragSrcElement !== this) {
-        const srcInner = dragSrcElement.innerHTML; const targetInner = this.innerHTML;
-        const srcId = e.dataTransfer.getData('text/plain'); const targetId = this.id;
-        dragSrcElement.innerHTML = targetInner; this.innerHTML = srcInner;
-        dragSrcElement.id = targetId; this.id = srcId;
-        saveWidgetLayout(); showToast("Dashboard widgets layout updated!", "success");
-      }
-      return false;
+  (function () {
+    'use strict';
+
+    var _state = {
+      profile: null,
+      stats: null,
+      farmHealth: null,
+      farms: [],
+      cycles: [],
+      tasks: [],
+      consultations: { items: [] },
+      experts: { items: [] },
+      techniques: [],
+      bookmarks: [],
+      notifications: { items: [] },
+      activity: [],
+      weather: null,
+      forecast: null,
+      market: null
+    };
+    var _loadInFlight = false;
+
+    function $(id) { return document.getElementById(id); }
+    function esc(s) {
+      if (s === null || s === undefined) return '';
+      var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
     }
-    function handleDragEnd() { this.style.opacity = '1'; document.querySelectorAll('.widget-card').forEach(item => item.classList.remove('dragged-over')); }
-    function initDragAndDrop() {
-      document.querySelectorAll('.widget-card').forEach(item => {
-        item.addEventListener('dragstart', handleDragStart, false);
-        item.addEventListener('dragover', handleDragOver, false);
-        item.addEventListener('dragleave', handleDragLeave, false);
-        item.addEventListener('drop', handleDrop, false);
-        item.addEventListener('dragend', handleDragEnd, false);
+    function toArr(x) { return Array.isArray(x) ? x : []; }
+    function first(arr) { return arr && arr.length ? arr[0] : null; }
+    function todayISO() {
+      var d = new Date();
+      var y = d.getFullYear(), m = ('0' + (d.getMonth() + 1)).slice(-2), dd = ('0' + d.getDate()).slice(-2);
+      return y + '-' + m + '-' + dd;
+    }
+    function timeGreeting() {
+      var h = new Date().getHours();
+      if (h < 12) return 'Good morning';
+      if (h < 17) return 'Good afternoon';
+      return 'Good evening';
+    }
+    function firstName(name) {
+      if (!name) return '';
+      var p = String(name).trim().split(/\s+/);
+      return p[0] || '';
+    }
+    function safePromise(fn) {
+      return new Promise(function (resolve) {
+        try { Promise.resolve(fn()).then(resolve).catch(function () { resolve(null); }); }
+        catch (e) { resolve(null); }
       });
     }
-    function toggleWidgetState(id, action) {
-      const el = document.getElementById(id); if (!el) return;
-      if (action === 'minimize') { el.classList.toggle("minimized"); showToast("Widget minimized", "warning"); }
-      else if (action === 'hide') { el.style.display = "none"; showToast("Widget hidden. Tap reset layout to restore.", "warning"); }
-      saveWidgetLayout();
+    function num(n, fallback) {
+      if (n === null || n === undefined || isNaN(parseFloat(n))) return fallback;
+      return parseFloat(n);
     }
-    function saveWidgetLayout() {
-      const states = []; document.querySelectorAll('.widget-card').forEach(item => {
-        states.push({ id: item.id, minimized: item.classList.contains("minimized"), hidden: item.style.display === "none", html: item.innerHTML });
-      }); localStorage.setItem("cmd-widget-layouts", JSON.stringify(states));
+    function fmtTimestamp(ts) {
+      if (!ts) return '';
+      try {
+        var s = String(ts).replace(' ', 'T');
+        return new Date(s).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+      } catch (e) { return String(ts); }
     }
-    function loadSavedLayout() {
-      const saved = JSON.parse(localStorage.getItem("cmd-widget-layouts")); if (!saved) return;
-      const grid = document.getElementById("cmd-widgets-grid"); grid.innerHTML = "";
-      saved.forEach(w => {
-        const div = document.createElement("div"); div.className = "card-premium widget-card"; div.id = w.id; div.draggable = true; div.innerHTML = w.html;
-        if (w.minimized) div.classList.add("minimized"); if (w.hidden) div.style.display = "none";
-        grid.appendChild(div);
-      }); initDragAndDrop();
+    function fmtDate(d) {
+      if (!d) return '';
+      try { return new Date(String(d).replace(' ', 'T')).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); }
+      catch (e) { return String(d); }
     }
-    function resetWidgets() { localStorage.removeItem("cmd-widget-layouts"); location.reload(); }
-    window.addEventListener("load", () => { loadSavedLayout(); initDragAndDrop(); });
+
+    /* ---- location: from farmer address, else first farm, else default ---- */
+    function getLocation() {
+      var a = _state.profile && _state.profile.address;
+      if (a && num(a.latitude, null) !== null) return { lat: num(a.latitude), lon: num(a.longitude) };
+      var f = first(_state.farms);
+      if (f && num(f.latitude, null) !== null) return { lat: num(f.latitude), lon: num(f.longitude) };
+      return { lat: 17.05, lon: 79.28 };
+    }
+    function locationLabel() {
+      var a = _state.profile && _state.profile.address;
+      if (a && (a.village || a.district)) return a.village || a.district;
+      var f = first(_state.farms);
+      if (f && (f.village || f.district)) return f.village || f.district;
+      var p = _state.profile;
+      if (p && a && a.state) return a.state;
+      return 'Regional forecast';
+    }
+
+    /* ======================= RENDERERS ======================= */
+
+    function renderGreeting() {
+      var name = _state.profile ? _state.profile.full_name : null;
+      if (!name) {
+        var u = (typeof UserStore !== 'undefined') ? UserStore.getCurrentUser() : null;
+        name = (u && u.full_name) || null;
+      }
+      var greet = timeGreeting() + (name ? ', ' + firstName(name) : '');
+      $('hub-greet-text').textContent = greet + '!';
+      $('hub-greet-sub').textContent = "Here's what's happening with your farm today.";
+    }
+
+    function renderHealth() {
+      var el = $('hub-health');
+      var stats = _state.stats || {};
+      var health = _state.farmHealth;
+      var farmCount = num(stats.farm_count, null);
+      var acres = num(stats.total_acres, 0);
+      var activeCrops = 0, totalCrops = 0, totalTasks = 0, completedTasks = 0;
+      if (health) {
+        activeCrops = num(health.active_crops, 0);
+        totalCrops = num(health.total_crops, 0);
+        totalTasks = num(health.total_tasks, 0);
+        completedTasks = num(health.completed_tasks, 0);
+      } else {
+        activeCrops = _state.cycles.filter(function (c) { return (c.status || '').toLowerCase() === 'active'; }).length;
+        totalCrops = _state.cycles.length;
+        totalTasks = _state.tasks.length;
+        completedTasks = _state.tasks.filter(function (t) { return (t.status || '').toLowerCase() === 'completed'; }).length;
+      }
+      var pending = totalTasks - completedTasks;
+
+      var hasFarms = (farmCount !== null && farmCount > 0) || _state.farms.length > 0;
+      var score = (hasFarms && health) ? Math.round(num(health.health, 0)) : null;
+      var scoreColor = '#2D8659';
+      if (score !== null) { if (score < 40) scoreColor = '#D63031'; else if (score < 70) scoreColor = '#E9B640'; }
+
+      var html = '<div class="health-grid">';
+      // Health
+      if (score === null) {
+        html += '<div class="health-card hub-anim">'
+          + '<div class="health-icon" style="background:var(--soft-green,#E4F2E8);color:var(--medium-green,#2D8659)"><i class="fas fa-heart-pulse"></i></div>'
+          + '<div class="health-value" style="font-size:13px;padding:8px 0">Farm health data is not available yet.</div>'
+          + '<div class="health-label">Add a farm to get started</div>'
+          + '<a class="hub-cta" href="farm.html" style="font-size:12px;font-weight:700;color:var(--medium-green);text-decoration:none;display:inline-block;margin-top:8px">Add Farm</a>'
+          + '</div>';
+      } else {
+        html += '<div class="health-card hub-anim">'
+          + '<div class="health-icon" style="background:var(--soft-green,#E4F2E8);color:var(--medium-green,#2D8659)"><i class="fas fa-heart-pulse"></i></div>'
+          + '<div class="health-value">' + score + '<span class="unit"> / 100</span></div>'
+          + '<div class="health-bar"><div class="health-bar-fill" style="width:0%;background:' + scoreColor + '"></div></div>'
+          + '<div class="health-healthy">' + labelForScore(score) + '</div>'
+          + '<div class="health-label">Farm Health</div>'
+          + '</div>';
+      }
+      // Farms
+      html += '<div class="health-card hub-anim">'
+        + '<div class="health-icon" style="background:#E8F5E9;color:#2E7D32"><i class="fas fa-tractor"></i></div>'
+        + '<div class="health-value">' + (farmCount !== null ? farmCount : _state.farms.length) + '</div>'
+        + '<div class="health-label">Farms</div></div>';
+      // Acres
+      html += '<div class="health-card hub-anim">'
+        + '<div class="health-icon" style="background:#FFF3E0;color:#E65100"><i class="fas fa-ruler-combined"></i></div>'
+        + '<div class="health-value">' + (typeof acres === 'number' ? acres.toFixed(1) : '0') + '<span class="unit"> ac</span></div>'
+        + '<div class="health-label">Total Acres</div></div>';
+      // Active crops
+      html += '<div class="health-card hub-anim">'
+        + '<div class="health-icon" style="background:#E3F2FD;color:#1565C0"><i class="fas fa-seedling"></i></div>'
+        + '<div class="health-value">' + activeCrops + '</div>'
+        + '<div class="health-label">Active Crops</div></div>';
+      // Pending tasks
+      html += '<div class="health-card hub-anim">'
+        + '<div class="health-icon" style="background:#FFEBEE;color:#C62828"><i class="fas fa-list-check"></i></div>'
+        + '<div class="health-value">' + pending + '</div>'
+        + '<div class="health-label">Pending Tasks</div></div>';
+      html += '</div>';
+      el.innerHTML = html;
+      // animate health bar
+      requestAnimationFrame(function () {
+        var bar = el.querySelector('.health-bar-fill');
+        if (bar) bar.style.width = score + '%';
+      });
+    }
+    function labelForScore(s) {
+      if (s >= 80) return 'Excellent';
+      if (s >= 60) return 'Good';
+      if (s >= 40) return 'Fair';
+      return 'Needs attention';
+    }
+
+    function renderMarket() {
+      var el = $('hub-market');
+      var prices = _state.market;
+      var items = prices ? (toArr(prices.prices && prices.prices.length ? prices.prices : (Array.isArray(prices) ? prices : []))) : [];
+      if (!items || !items.length) {
+        el.innerHTML = '<div class="hub-error"><i class="fas fa-chart-line"></i>Market prices are currently unavailable.<br><span style="font-size:11px">Live mandi rates could not be loaded.</span></div>';
+        $('hub-market-foot').style.display = 'block';
+        $('hub-market-foot').innerHTML = '<a class="hub-view" href="market-prices.html" style="width:100%;justify-content:center">View Market <i class="fas fa-arrow-right"></i></a>';
+        return;
+      }
+      var html = '';
+      items.slice(0, 4).forEach(function (p) {
+        var crop = p.crop || p.crop_name || p.commodity || '';
+        var price = p.avg_price || p.price || p.min_price || '--';
+        var unit = p.unit || '/qtl';
+        html += '<div class="market-row hub-anim"><span class="m-crop">' + esc(crop) + '</span><span class="m-price">\u20B9' + esc(price) + '<span style="font-size:11px;color:var(--text-muted)">' + esc(unit) + '</span></span></div>';
+      });
+      el.innerHTML = html || '<div class="hub-empty"><i class="fas fa-chart-line"></i>Market prices unavailable</div>';
+      var foot = $('hub-market-foot');
+      foot.style.display = 'block';
+      foot.innerHTML = '<a class="hub-view" href="market-prices.html" style="width:100%;justify-content:center">View Market <i class="fas fa-arrow-right"></i></a>';
+    }
+
+    function renderTasks() {
+      var el = $('hub-tasks');
+      var tasks = toArr(_state.tasks).filter(function (t) { return (t.status || '').toLowerCase() !== 'completed'; });
+      var pending = tasks.length;
+      var today = todayISO();
+      var upcoming = tasks.slice().sort(function (a, b) {
+        var da = a.due_date || '', db = b.due_date || '';
+        return da < db ? -1 : da > db ? 1 : 0;
+      }).slice(0, 3);
+
+      if (!tasks.length) {
+        el.innerHTML = '<div class="hub-empty"><i class="fas fa-list-check"></i>No tasks for today.</div>';
+        return;
+      }
+      var html = '<div class="task-count-big hub-anim"><div class="num">' + pending + '</div><div class="lbl">task' + (pending === 1 ? '' : 's') + ' pending</div></div>';
+      if (upcoming.length) {
+        html += '<div style="margin-top:10px;border-top:1px solid var(--border-light);padding-top:6px">';
+        upcoming.forEach(function (t) {
+          var overdue = t.due_date && t.due_date < today;
+          var pri = t.priority === 'high' ? '#D63031' : t.priority === 'medium' ? '#E9B640' : '#2D8659';
+          var dueLabel = t.due_date ? (overdue ? 'Overdue' : fmtDate(t.due_date)) : '';
+          html += '<div class="task-item hub-anim"><div class="task-dot" style="background:' + pri + '"></div>'
+            + '<span class="t-title">' + esc(t.title || t.name || 'Task') + '</span>'
+            + (dueLabel ? '<span class="t-due">' + esc(dueLabel) + '</span>' : '') + '</div>';
+        });
+        html += '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    function renderWeather() {
+      var el = $('hub-weather');
+      var w = _state.weather;
+      var fc = _state.forecast;
+      if (!w) {
+        el.innerHTML = '<div class="hub-error"><i class="fas fa-cloud-sun"></i>Weather unavailable.<br><button class="hub-cta" style="border:none;background:none;cursor:pointer;color:var(--medium-green);font-weight:700;margin-top:6px" onclick="(window.hubRetry && window.hubRetry.weather ? window.hubRetry.weather() : null)">Retry</button></div>';
+        return;
+      }
+      var temp = Math.round(num(w.temperature, 0));
+      var cond = w.weather_condition || w.description || 'Partly Cloudy';
+      var hum = (w.humidity !== null && w.humidity !== undefined) ? w.humidity + '%' : '--';
+      var wind = (w.wind_speed !== null && w.wind_speed !== undefined) ? Math.round(w.wind_speed) + ' km/h' : '--';
+      var loc = locationLabel();
+      var html = '<div class="weather-mini hub-anim">'
+        + '<div><div class="temp">' + temp + '&deg;C</div></div>'
+        + '<div><div class="cond">' + esc(cond) + '</div>'
+        + '<div class="meta"><i class="fas fa-location-dot"></i> ' + esc(loc) + '<br>Humidity ' + esc(hum) + ' &middot; Wind ' + esc(wind) + '</div></div>'
+        + '</div>';
+      var insight = weatherInsight(w, fc);
+      if (insight) {
+        html += '<div class="weather-insight hub-anim"><i class="fas fa-lightbulb"></i><span>' + esc(insight) + '</span></div>';
+      }
+      el.innerHTML = html;
+    }
+    function weatherInsight(w, fc) {
+      var today = null;
+      if (fc && fc.forecast && fc.forecast.length) today = fc.forecast[0];
+      if (today && num(today.precipitation, 0) > 5) {
+        return 'Rain expected today (' + today.precipitation + ' mm) \u2014 you may not need to irrigate.';
+      }
+      if (today && /thunder|storm|rain/i.test(today.weather_condition || '')) {
+        return 'Possible ' + (today.weather_condition || 'rain') + ' today \u2014 consider sheltering sensitive crops.';
+      }
+      var wc = (w && (w.weather_condition || '')) || '';
+      if (/thunder|storm/i.test(wc)) {
+        return 'Thunderstorm conditions \u2014 stay safe and secure loose farm equipment.';
+      }
+      if (num(w && w.rain, 0) > 0.5) {
+        return 'Some rain reported \u2014 good time to skip watering.';
+      }
+      return null;
+    }
+
+    function renderExpert() {
+      var el = $('hub-expert');
+      var experts = toArr(_state.experts && _state.experts.items);
+      var consults = toArr(_state.consultations && _state.consultations.items);
+      var available = experts.filter(function (e) { return e.is_available !== false; }).length;
+      var upcoming = consults.filter(function (c) { return (c.status || '').toLowerCase() === 'scheduled'; }).sort(function (a, b) {
+        var da = a.scheduled_date || '', db = b.scheduled_date || '';
+        return da < db ? -1 : da > db ? 1 : 0;
+      })[0];
+
+      var html = '<div class="expert-card hub-anim">';
+      if (available > 0) {
+        html += '<div class="expert-avail"><i class="fas fa-circle-check"></i><span>' + available + ' expert' + (available === 1 ? ' is' : 's are') + ' available for consultation</span></div>';
+      } else {
+        html += '<div class="expert-avail"><i class="fas fa-people-group"></i><span>Expert consultations available</span></div>';
+      }
+      if (upcoming) {
+        html += '<div class="expert-appt"><i class="fas fa-calendar-check" style="margin-right:6px"></i><b>' + esc(upcoming.expert_name || 'Expert') + '</b> \u2014 ' + esc(fmtDate(upcoming.scheduled_date) + (upcoming.scheduled_time ? ' ' + upcoming.scheduled_time : '')) + '</div>';
+      } else if (available === 0) {
+        html += '<div class="hub-empty" style="padding:12px;font-size:12px"><i class="fas fa-user-doctor"></i>No upcoming consultations.<br><a class="hub-cta" href="expert.html">Find an Expert</a></div>';
+      } else {
+        html += '<div class="expert-appt"><i class="fas fa-circle-info" style="margin-right:6px"></i>Consult an expert for personalised farm advice.</div>';
+      }
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function renderLivestock() {
+      var el = $('hub-livestock');
+      /* Livestock has no backend endpoint in this application yet.
+         We always show the honest empty state rather than inventing data. */
+      el.innerHTML = '<div class="hub-empty"><i class="fas fa-cow"></i>No livestock added yet.<br><a class="hub-cta" href="livestock.html">Add an animal</a></div>';
+    }
+
+    function renderTechniques() {
+      var el = $('hub-techniques');
+      var all = toArr(_state.techniques);
+      var bookmarked = _state.bookmarks || [];
+      var bookmarkIds = {};
+      bookmarked.forEach(function (b) { if (b && b.id) bookmarkIds[b.id] = true; });
+
+      var pick = all.filter(function (t) { return bookmarkIds[t.id]; });
+      if (!pick.length) pick = all.filter(function (t) { return t.is_published !== false; });
+      pick = pick.slice(0, 2);
+
+      if (!pick.length) {
+        el.innerHTML = '<div class="hub-empty"><i class="fas fa-book-open"></i>No farm techniques available yet.</div>';
+        return;
+      }
+      var html = '<div>';
+      pick.forEach(function (t) {
+        var icon = t.icon || 'fas fa-leaf';
+        var color = t.color || '#2D8659';
+        html += '<div class="technique-item hub-anim">'
+          + '<div class="technique-icon" style="background:' + color + '1f;color:' + color + '"><i class="' + esc(icon) + '"></i></div>'
+          + '<div class="t-body"><div class="t-title">' + esc(t.title) + (bookmarkIds[t.id] ? ' <i class="fas fa-bookmark" style="color:var(--medium-green,#2D8659);font-size:10px" title="Bookmarked"></i>' : '') + '</div>'
+          + '<div class="t-desc">' + esc(t.description || '') + '</div></div></div>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function renderAlerts() {
+      var el = $('hub-alerts');
+      var alerts = [];
+
+      // 1. Tasks due today or overdue
+      var today = todayISO();
+      toArr(_state.tasks).forEach(function (t) {
+        if ((t.status || '').toLowerCase() === 'completed') return;
+        if (t.due_date && t.due_date <= today) {
+          alerts.push({ icon: 'fa-list-check', color: '#E65100', title: 'Task ' + (t.due_date === today ? 'due today' : 'overdue') + ': ' + (t.title || 'Task') });
+        }
+      });
+      // 2. Upcoming consultation reminder
+      toArr(_state.consultations && _state.consultations.items).forEach(function (c) {
+        if ((c.status || '').toLowerCase() === 'scheduled') {
+          alerts.push({ icon: 'fa-calendar-check', color: '#1565C0', title: 'Consultation: ' + (c.expert_name || 'Expert') + ' on ' + fmtDate(c.scheduled_date) });
+        }
+      });
+      // 3. Weather warning
+      var w = _state.weather, fc = _state.forecast;
+      if (w && /thunder|storm/i.test(w.weather_condition || '')) {
+        alerts.push({ icon: 'fa-cloud-bolt', color: '#D63031', title: 'Weather: ' + (w.weather_condition || 'Thunderstorm') + ' in your area' });
+      } else if (fc && fc.forecast && fc.forecast.length && num(fc.forecast[0].precipitation, 0) > 8) {
+        alerts.push({ icon: 'fa-cloud-rain', color: '#00838F', title: 'Weather: Rain expected today (' + fc.forecast[0].precipitation + ' mm)' });
+      }
+      // 4. Unread notifications
+      toArr(_state.notifications && _state.notifications.items).forEach(function (n) {
+        if (n.is_read) return;
+        if (alerts.length >= 5) return;
+        alerts.push({ icon: n.icon || 'fa-bell', color: '#6A1B9A', title: (n.title || 'Notification') + (n.message && n.title ? ' \u2014 ' : '') + (n.message || '') });
+      });
+
+      if (!alerts.length) {
+        el.innerHTML = '<div class="all-caught"><i class="fas fa-circle-check"></i>You\'re all caught up.</div>';
+        return;
+      }
+      var shown = alerts.slice(0, 5);
+      var html = '<div class="alerts-list">';
+      shown.forEach(function (a) {
+        html += '<div class="alert-item hub-anim"><div class="alert-icon" style="background:' + a.color + '1c;color:' + a.color + '"><i class="fas ' + esc(a.icon) + '"></i></div><div class="a-body"><div class="a-title">' + esc(a.title) + '</div></div></div>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function renderActivity() {
+      var el = $('hub-activity');
+      var acts = toArr(_state.activity);
+      if (!acts.length) {
+        el.innerHTML = '<div class="hub-empty"><i class="fas fa-clock-rotate-left"></i>No recent activity.</div>';
+        return;
+      }
+      var icons = { login: 'fa-right-to-bracket', document: 'fa-file-circle-plus', wallet: 'fa-wallet', transaction: 'fa-indian-rupee-sign', farm: 'fa-tractor', crop: 'fa-seedling', task: 'fa-list-check', consultation: 'fa-user-doctor' };
+      var colors = { login: '#1565C0', document: '#2D6A4F', wallet: '#E65100', transaction: '#E65100', farm: '#2D6A4F', crop: '#2D6A4F', task: '#F57F17', consultation: '#6A1B9A' };
+      var html = '';
+      acts.slice(0, 5).forEach(function (a) {
+        var type = (a.type || 'login').toLowerCase();
+        var icon = icons[type] || 'fa-circle-info';
+        var color = colors[type] || '#4A5D4E';
+        var text = a.description || '';
+        html += '<div class="activity-item hub-anim"><div class="activity-icon" style="background:' + color + '1c;color:' + color + '"><i class="fas ' + icon + '"></i></div>'
+          + '<div class="act-body"><div class="act-text">' + esc(text) + '</div>'
+          + (a.timestamp ? '<div class="act-time"><i class="fas fa-clock"></i> ' + esc(fmtTimestamp(a.timestamp)) + '</div>' : '') + '</div></div>';
+      });
+      el.innerHTML = html || '<div class="hub-empty"><i class="fas fa-clock-rotate-left"></i>No recent activity.</div>';
+    }
+
+    /* ======================= DATA LOADING ======================= */
+    function retryable(which) {
+      if (_loadInFlight) return;
+      window.hubRetry = window.hubRetry || {};
+      window.hubRetry[which] = function () { refresh(); };
+    }
+
+    function loadAll() {
+      if (_loadInFlight) return;
+      _loadInFlight = true;
+      var refreshBtn = $('hub-refresh');
+      if (refreshBtn) refreshBtn.classList.add('loading');
+
+      // fetch all independent datasets in parallel; each failure resolves null
+      var loc = null;
+      var profileP = safePromise(function () { return API.Profile.get(); });
+      var statsP = safePromise(function () { return API.Profile.getStats(); });
+      var healthP = safePromise(function () { return API.Analytics.farmHealth(); });
+      var farmsP = safePromise(function () { return API.Farm.list(); });
+      var cyclesP = safePromise(function () { return API.Crop.listCycles(); });
+      var tasksP = safePromise(function () { return API.Crop.listTasks(); });
+      var consultationsP = safePromise(function () { return API.Community.listConsultations({}); });
+      var expertsP = safePromise(function () { return API.Community.listExperts({}); });
+      var techniquesP = safePromise(function () { return API.Technique.list({}); });
+      var bookmarksP = safePromise(function () { return API.Technique.getBookmarks(); });
+      var notificationsP = safePromise(function () { return API.Notification.list({ limit: 8 }); });
+      var activityP = safePromise(function () { return API.Profile.getActivity(6); });
+      var marketP = safePromise(function () { return API.MarketPrice.getPrices(); });
+
+      // weather depends on location from profile/farms
+      Promise.all([profileP, farmsP, statsP, healthP, cyclesP, tasksP, consultationsP, expertsP,
+        techniquesP, bookmarksP, notificationsP, activityP, marketP]).then(function (r) {
+        _state.profile = r[0] && (r[0].data || r[0]);
+        _state.farms = toArr((r[1] && (r[1].data || r[1])) || []);
+        _state.stats = (r[2] && (r[2].data || r[2])) || {};
+        _state.farmHealth = (r[3] && (r[3].data || r[3])) || null;
+        _state.cycles = toArr((r[4] && (r[4].data || r[4])) || []);
+        _state.tasks = toArr((r[5] && (r[5].data || r[5])) || []);
+        _state.consultations = (r[6] && (r[6].data || r[6])) || { items: [] };
+        _state.experts = (r[7] && (r[7].data || r[7])) || { items: [] };
+        _state.techniques = toArr((r[8] && (r[8].data || r[8])) || []);
+        _state.bookmarks = toArr((r[9] && (r[9].data || r[9])) || []);
+        _state.notifications = (r[10] && (r[10].data || r[10])) || { items: [] };
+        _state.activity = toArr((r[11] && (r[11].data || r[11])) || []);
+        _state.market = (r[12] && (r[12].data || r[12])) || null;
+
+        var target = getLocation();
+        return Promise.all([
+          safePromise(function () { return API.Weather.getCurrent(target.lat, target.lon); }),
+          safePromise(function () { return API.Weather.getForecast(target.lat, target.lon); })
+        ]);
+      }).then(function (wr) {
+        if (wr) {
+          var wc = wr[0];
+          _state.weather = (wc && wc.data) ? wc.data : wc;
+          var wf = wr[1];
+          _state.forecast = (wf && wf.data) ? wf.data : wf;
+        }
+      }).catch(function () {
+        /* individual failures already handled; nothing global breaks */
+      }).then(function () {
+        renderAll();
+      }).finally(function () {
+        _loadInFlight = false;
+        if (refreshBtn) refreshBtn.classList.remove('loading');
+      });
+    }
+
+    function renderAll() {
+      renderGreeting();
+      renderHealth();
+      renderMarket();
+      renderTasks();
+      renderWeather();
+      renderExpert();
+      renderLivestock();
+      renderTechniques();
+      renderAlerts();
+      renderActivity();
+      retryable('weather');
+    }
+
+    function refresh() {
+      loadAll();
+    }
+
+    function bind() {
+      var btn = $('hub-refresh');
+      if (btn) btn.addEventListener('click', refresh);
+    }
+
+    function init() {
+      retryable('weather');
+      bind();
+      renderGreeting();
+      loadAll();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
   </script>
 </body>
 </html>

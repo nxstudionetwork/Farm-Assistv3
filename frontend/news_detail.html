@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="news-detail">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Article</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .detail-page{max-width:700px;margin:0 auto;padding:16px;min-height:80vh}
+    .detail-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .detail-back{padding:7px 14px;border-radius:8px;border:1px solid var(--border-light,#e5e7eb);background:white;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-secondary,#6b7280);display:flex;align-items:center;gap:5px}
+    .detail-back:hover{background:var(--bg-secondary,#f5f5f5)}
+    .detail-actions{margin-left:auto;display:flex;gap:8px}
+    .detail-action-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border-light,#e5e7eb);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-secondary,#6b7280);transition:all 0.2s}
+    .detail-action-btn:hover{background:var(--bg-secondary,#f5f5f5)}
+    .detail-action-btn.saved{color:#E9B640}
+    .detail-img{width:100%;border-radius:12px;max-height:260px;object-fit:cover;margin-bottom:16px}
+    .detail-img-placeholder{width:100%;height:160px;background:linear-gradient(135deg,#0F2E1E,#40916C);border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:40px;margin-bottom:16px}
+    .detail-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+    .detail-source{font-size:12px;font-weight:700;color:var(--primary-green,#1B5E3F);background:rgba(27,94,63,0.08);padding:4px 10px;border-radius:6px}
+    .detail-cat{font-size:11px;font-weight:600;color:var(--text-secondary,#6b7280);background:var(--bg-secondary,#f5f5f5);padding:4px 10px;border-radius:6px}
+    .detail-time{font-size:11px;color:var(--text-muted,#9ca3af);margin-left:auto}
+    .detail-breaking{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;background:#FDECEC;color:#C62828}
+    .detail-title{font-size:22px;font-weight:800;line-height:1.3;margin-bottom:8px;color:var(--text-primary,#1a1a2e)}
+    .detail-author{font-size:12px;color:var(--text-muted,#9ca3af);margin-bottom:16px}
+    .detail-body{font-size:14px;line-height:1.7;color:var(--text-primary,#1a1a2e);margin-bottom:20px;white-space:pre-line}
+    .detail-body p{margin-bottom:12px}
+    .detail-source-link{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:8px;border:1px solid var(--border-light,#e5e7eb);background:white;color:var(--primary-green,#1B5E3F);font-size:13px;font-weight:600;text-decoration:none;transition:all 0.2s}
+    .detail-source-link:hover{background:var(--bg-secondary,#f5f5f5);border-color:var(--primary-green,#1B5E3F)}
+    .detail-related{margin-top:24px;padding-top:16px;border-top:1px solid var(--border-light,#e5e7eb)}
+    .detail-related h3{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--text-secondary,#6b7280)}
+    .related-card{padding:10px 12px;border-radius:8px;border:1px solid var(--border-light,#e5e7eb);background:white;margin-bottom:6px;cursor:pointer;transition:all 0.2s}
+    .related-card:hover{background:var(--bg-secondary,#f5f5f5)}
+    .related-card .rc-title{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:2px;color:var(--text-primary,#1a1a2e)}
+    .related-card .rc-breaking{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:#FDECEC;color:#C62828;margin-right:4px}
+    .related-card .rc-meta{font-size:10px;color:var(--text-muted,#9ca3af)}
+    .detail-skeleton{padding:0}
+    .skel-line{height:12px;border-radius:6px;background:linear-gradient(90deg,#e5e7eb 25%,#f0f0f0 50%,#e5e7eb 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;margin-bottom:12px}
+    .skel-line:nth-child(1){width:50%}
+    .skel-line:nth-child(2){width:100%}
+    .skel-line:nth-child(3){width:85%}
+    .skel-line:nth-child(4){width:95%}
+    .skel-line:nth-child(5){width:40%}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .detail-error{text-align:center;padding:60px 20px}
+    .detail-error i{font-size:48px;color:#C62828;opacity:0.4;margin-bottom:16px;display:block}
+    .detail-error p{font-size:14px;color:var(--text-secondary,#6b7280)}
+    @media(max-width:600px){.detail-title{font-size:19px}.detail-body{font-size:13px}}
+  </style>
+</head>
+<body>
+  <main class="page-container">
+    <div class="detail-page">
+
+      <div class="detail-header">
+        <button class="detail-back" id="btn-back"><i class="fas fa-arrow-left"></i> Back</button>
+        <div class="detail-actions">
+          <button class="detail-action-btn" id="btn-share" title="Share"><i class="fas fa-share-alt"></i></button>
+          <button class="detail-action-btn" id="btn-bookmark" title="Save"><i class="far fa-bookmark"></i></button>
+        </div>
+      </div>
+
+      <div id="detail-content">
+        <div class="detail-skeleton">
+          <div class="skel-line"></div><div class="skel-line"></div><div class="skel-line"></div>
+          <div class="skel-line"></div><div class="skel-line"></div><div class="skel-line"></div>
+          <div class="skel-line"></div><div class="skel-line"></div><div class="skel-line"></div>
+          <div class="skel-line"></div><div class="skel-line"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+  (function(){
+    'use strict';
+
+    var params = new URLSearchParams(window.location.search);
+    var articleId = params.get('id');
+    var API_OK = !!(window.API && window.API.News);
+    var token = localStorage.getItem('fa-auth-token');
+    var article = null;
+
+    var content = document.getElementById('detail-content');
+    var btnBack = document.getElementById('btn-back');
+    var btnBookmark = document.getElementById('btn-bookmark');
+    var btnShare = document.getElementById('btn-share');
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return '';
+      var d = new Date(dateStr.replace(' ', 'T') + (dateStr.indexOf('Z') === -1 ? 'Z' : ''));
+      var diff = Date.now() - d.getTime();
+      var mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return mins + 'm ago';
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      var days = Math.floor(hrs / 24);
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return days + 'd ago';
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function esc(s) {
+      if (!s) return '';
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function renderArticle(n) {
+      article = n;
+      document.title = n.title + ' - Farm Assist';
+      var cat = (n.category || 'general');
+      var CAT_LABELS = {
+        crops: 'Crops & Harvest', market: 'Markets & Prices', weather: 'Weather & Climate',
+        government: 'Govt & Schemes', technology: 'Agri Tech', livestock: 'Livestock & Dairy',
+        sustainability: 'Sustainable Farming', general: 'Farming',
+        irrigation: 'Irrigation & Water', soil: 'Soil & Fertilizer', seeds: 'Seeds',
+        machinery: 'Machinery'
+      };
+      var catLabel = CAT_LABELS[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
+      var savedCls = n.is_saved ? ' saved' : '';
+      var savedIcon = n.is_saved ? 'fas fa-bookmark' : 'far fa-bookmark';
+      var brk = n.is_breaking ? '<span class="detail-breaking"><i class="fas fa-bolt" style="margin-right:4px;"></i> BREAKING NEWS</span>' : '';
+
+      var imgHtml = '';
+      if (n.image_url) {
+        imgHtml = '<img class="detail-img" src="' + esc(n.image_url) + '" alt="' + esc(n.title) + '" loading="lazy" onerror="this.style.display=\'none\';var p=this.parentNode;var ph=document.createElement(\'div\');ph.className=\'detail-img-placeholder\';ph.innerHTML=\'<i class=&quot;fas fa-seedling&quot;></i>\';p.insertBefore(ph,this);">';
+      } else {
+        imgHtml = '<div class="detail-img-placeholder"><i class="fas fa-seedling"></i></div>';
+      }
+
+      var body = n.content || n.summary || 'No content available for this article.';
+      var paragraphs = body.split('\n').filter(function(p){return p.trim();}).map(function(p){return '<p>' + esc(p) + '</p>';}).join('');
+
+      var sourceLink = '';
+      if (n.article_url && n.article_url !== '#') {
+        sourceLink = '<a href="' + esc(n.article_url) + '" target="_blank" rel="noopener noreferrer" class="detail-source-link"><i class="fas fa-external-link-alt"></i> Read original at ' + esc(n.source_name) + '</a>';
+      }
+
+      var relatedHtml = '<div class="detail-related" id="detail-related"><h3><i class="fas fa-th-large" style="margin-right:6px;color:var(--primary-green,#1B5E3F)"></i>Related News</h3><div id="related-container"></div></div>';
+
+      content.innerHTML =
+        imgHtml +
+        '<div class="detail-meta">' +
+          '<span class="detail-source">' + esc(n.source_name) + '</span>' +
+          '<span class="detail-cat">' + catLabel + '</span>' +
+          brk +
+          '<span class="detail-time"><i class="far fa-clock" style="margin-right:4px;"></i>' + timeAgo(n.published_at) + '</span>' +
+        '</div>' +
+        '<h1 class="detail-title">' + esc(n.title) + '</h1>' +
+        '<div class="detail-author"><i class="fas fa-user-edit" style="margin-right:4px;"></i>' + esc(n.author || n.source_name) + '</div>' +
+        '<div class="detail-body">' + paragraphs + '</div>' +
+        sourceLink +
+        relatedHtml;
+
+      btnBookmark.classList.toggle('saved', n.is_saved);
+      btnBookmark.querySelector('i').className = savedIcon;
+      loadRelated(cat, n.id);
+    }
+
+    function renderError() {
+      content.innerHTML = '<div class="detail-error"><i class="fas fa-exclamation-triangle"></i><p>Article not found or failed to load.</p></div>';
+    }
+
+    function loadRelated(category, currentId) {
+      if (!API_OK || !token) return;
+      var rc = document.getElementById('related-container');
+      if (!rc) return;
+      window.API.News.list({ category: category, limit: 6 }).then(function(res) {
+        var items = (res && res.items) ? res.items : [];
+        items = items.filter(function(x) { return x.id !== currentId; });
+        if (items.length === 0) {
+          document.getElementById('detail-related').style.display = 'none';
+          return;
+        }
+        var h = '';
+        items.slice(0, 5).forEach(function(n) {
+          var brk = n.is_breaking ? ' <span class="rc-breaking">BREAKING</span>' : '';
+          h += '<div class="related-card" data-id="' + n.id + '">' +
+            '<div class="rc-title">' + brk + esc(n.title) + '</div>' +
+            '<div class="rc-meta">' + esc(n.source_name) + ' &bull; ' + timeAgo(n.published_at) + '</div>' +
+          '</div>';
+        });
+        rc.innerHTML = h;
+        rc.querySelectorAll('.related-card').forEach(function(card) {
+          card.addEventListener('click', function() {
+            window.location.href = 'news_detail.html?id=' + this.getAttribute('data-id');
+          });
+        });
+      }).catch(function() {
+        document.getElementById('detail-related').style.display = 'none';
+      });
+    }
+
+    if (!articleId) {
+      renderError();
+    } else if (!API_OK || !token) {
+      renderError();
+    } else {
+      window.API.News.get(articleId).then(function(data) {
+        if (!data) { renderError(); return; }
+        renderArticle(data);
+      }).catch(function() {
+        renderError();
+      });
+    }
+
+    btnBack.addEventListener('click', function() {
+      if (window.history.length > 1) { window.history.back(); }
+      else { window.location.href = 'news.html'; }
+    });
+
+    btnBookmark.addEventListener('click', function() {
+      if (!article || !API_OK || !token) return;
+      var self = this;
+      window.API.News.toggleBookmark(article.id).then(function(res) {
+        var saved = res && res.is_saved;
+        article.is_saved = saved;
+        self.classList.toggle('saved', saved);
+        self.querySelector('i').className = 'fa' + (saved ? 's' : 'r') + ' fa-bookmark';
+        if (typeof showToast === 'function') showToast(saved ? 'Article saved' : 'Removed from saved', 'info');
+      });
+    });
+
+    btnShare.addEventListener('click', function() {
+      if (navigator.share) {
+        navigator.share({ title: document.title, url: window.location.href });
+      } else {
+        navigator.clipboard.writeText(window.location.href).then(function() {
+          if (typeof showToast === 'function') showToast('Link copied to clipboard', 'info');
+        });
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

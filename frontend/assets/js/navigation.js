@@ -47,7 +47,6 @@
     { type: 'header', label: 'MARKET' },
     { type: 'item', label: 'Marketplace', icon: 'fa-shopping-bag', href: 'marketplace.html' },
     { type: 'item', label: 'Market Prices', icon: 'fa-chart-line', href: 'market-prices.html' },
-    { type: 'item', label: 'Finance', icon: 'fa-indian-rupee-sign', href: 'finance.html' },
     { type: 'item', label: 'Insurance', icon: 'fa-shield-halved', href: 'insurance.html' },
     { type: 'item', label: 'Loans', icon: 'fa-hand-holding-dollar', href: 'loans.html' },
     { type: 'item', label: 'Government Schemes', icon: 'fa-landmark', href: 'schemes.html' },
@@ -55,7 +54,7 @@
     { type: 'header', label: 'COMMUNITY' },
     { type: 'item', label: 'Community', icon: 'fa-people-group', href: 'community.html' },
     { type: 'item', label: 'FarmBuzz', icon: 'fa-film', href: 'farmbuzz.html' },
-    { type: 'item', label: 'Expert Hub', icon: 'fa-user-doctor', href: 'expert.html' },
+    { type: 'item', label: 'Experts', icon: 'fa-user-doctor', href: 'expert.html' },
     { type: 'item', label: 'Messages', icon: 'fa-comment-dots', href: 'messages.html' },
     { type: 'item', label: 'News Center', icon: 'fa-newspaper', href: 'news.html' },
     { type: 'item', label: 'Notifications', icon: 'fa-bell', href: 'notifications.html' },
@@ -67,7 +66,6 @@
     { type: 'header', label: 'SERVICES' },
     { type: 'item', label: 'Services', icon: 'fa-concierge-bell', href: 'services.html' },
     { type: 'item', label: 'Command Center', icon: 'fa-terminal', href: 'command-center.html' },
-    { type: 'item', label: 'Consultations', icon: 'fa-hand-holding-medical', href: 'consultations.html' },
     { type: 'item', label: 'Emergency', icon: 'fa-triangle-exclamation', href: 'emergency.html' },
     { type: 'separator' },
     { type: 'header', label: 'AI' },
@@ -75,7 +73,7 @@
     { type: 'separator' },
     { type: 'header', label: 'ACCOUNT' },
     { type: 'item', label: 'Profile', icon: 'fa-user-circle', href: 'profile.html' },
-    { type: 'item', label: 'Wallet', icon: 'fa-wallet', href: 'wallet.html' },
+    { type: 'item', label: 'Digital Wallet', icon: 'fa-wallet', href: 'wallet.html' },
     { type: 'item', label: 'Settings', icon: 'fa-gear', href: 'settings.html' },
     { type: 'item', label: 'Feedback', icon: 'fa-pen-to-square', href: 'feedback.html' },
     { type: 'item', label: 'Help & Support', icon: 'fa-circle-question', href: 'help.html' }
@@ -90,17 +88,9 @@
   ];
 
   /* ------------------------------------------------------------------
-     MOCK INBOX DATA
+     NOTIFICATION DATA (fetched from backend, no mock data)
      ------------------------------------------------------------------ */
-  var INBOX_MESSAGES = [
-    { id: 1, sender: 'Rajesh Kumar', msg: 'Replied to your pest management question', time: '2m ago', unread: true, type: 'community', avatar: 'RK' },
-    { id: 2, sender: 'Dr. Arvind S.', msg: 'Your soil test results are ready. NPK levels need adjustment.', time: '15m ago', unread: true, type: 'expert', avatar: 'DA' },
-    { id: 3, sender: 'PM-KISAN Update', msg: '15th installment deposited to your account', time: '1h ago', unread: true, type: 'alert', avatar: 'PK' },
-    { id: 4, sender: 'Marketplace', msg: 'Your order #ORD-9801 has been shipped', time: '2h ago', unread: false, type: 'update', avatar: 'MP' },
-    { id: 5, sender: 'Farm Assist', msg: 'Heavy rain advisory: Secure your crops before tomorrow', time: '3h ago', unread: false, type: 'alert', avatar: 'FA' },
-    { id: 6, sender: 'Mahesh Patil', msg: 'Confirmed booking for tomorrow', time: '5h ago', unread: false, type: 'community', avatar: 'MP' },
-    { id: 7, sender: 'Expert Hub', msg: 'New course available: Advanced Organic Farming', time: '1d ago', unread: false, type: 'expert', avatar: 'EH' }
-  ];
+  var NOTIF_DATA = [];
 
   /* ------------------------------------------------------------------
      HELPERS
@@ -162,7 +152,7 @@
     try {
       var token = localStorage.getItem('fa-auth-token');
       if (!token) return;
-      fetch('/api/v1/messages/unread-count', { headers: { 'Authorization': 'Bearer ' + token } })
+      fetch('/api/v1/notifications/unread', { headers: { 'Authorization': 'Bearer ' + token } })
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (d && d.status === 'success' && d.data) {
@@ -219,7 +209,6 @@
      ------------------------------------------------------------------ */
   function injectTopBar() {
     if (document.querySelector('header.top-bar')) return;
-    var unreadCount = getUnreadCount();
     var farmSelectHtml = '';
     var farmOptions = getFarmOptions();
     if (farmOptions.length > 1) {
@@ -252,10 +241,10 @@
         '<a href="wallet.html" class="top-btn" aria-label="Digital Wallet" title="Digital Wallet">' +
           '<i class="fas fa-wallet"></i>' +
         '</a>' +
-        '<button class="top-btn" id="inbox-btn" aria-label="Inbox" title="Inbox">' +
-          '<i class="fas fa-inbox"></i>' +
-          (unreadCount > 0 ? '<span class="badge" id="inbox-badge">' + unreadCount + '</span>' : '') +
-        '</button>' +
+        '<a href="messages.html" class="top-btn" id="inbox-btn" aria-label="Messages" title="Messages" ' +
+          'data-nav-swap="messages">' +
+          '<i class="fas fa-comment-dots"></i>' +
+        '</a>' +
         '<button class="profile-avatar top-bar-avatar" id="nav-profile-avatar" aria-label="Profile Menu">' +
           '<img data-user-avatar src="' + AVATAR_URL + '" alt="Profile">' +
         '</button>' +
@@ -305,6 +294,7 @@
           '</div>' +
         '</div>' +
         '<div class="sidebar-header-actions">' +
+          '<button class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" title="Collapse sidebar" aria-label="Collapse sidebar"><i class="fas fa-angles-left"></i></button>' +
           '<button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar"><i class="fas fa-times"></i></button>' +
         '</div>' +
       '</div>' +
@@ -337,7 +327,7 @@
   function buildSidebarItem(item, page) {
     var active = isItemActive(item.href, page) ? ' active' : '';
     var safeLabel = escapeHtml(item.label);
-    return '<a href="' + item.href + '" class="sidebar-item' + active + '">' +
+    return '<a href="' + item.href + '" class="sidebar-item' + active + '" data-tooltip="' + safeLabel + '">' +
       '<i class="fas ' + item.icon + '"></i><span class="sb-label">' + safeLabel + '</span></a>';
   }
 
@@ -376,7 +366,7 @@
   }
 
   function buildInboxHTML(filter) {
-    var messages = INBOX_MESSAGES;
+    var messages = [];
     if (filter && filter !== 'all') {
       if (filter === 'unread') {
         messages = messages.filter(function (m) { return m.unread; });
@@ -507,7 +497,14 @@
 
     if (menuBtn) {
       menuBtn.addEventListener('click', function () {
-        if (window.innerWidth >= 1024) return;
+        if (window.innerWidth >= 1024) {
+          var isCollapsed = document.body.classList.contains('sidebar-collapsed');
+          document.body.classList.toggle('sidebar-collapsed', !isCollapsed);
+          try { localStorage.setItem(COLLAPSE_KEY, isCollapsed ? '0' : '1'); } catch (e) {}
+          var icon = menuBtn.querySelector('i');
+          if (icon) icon.className = isCollapsed ? 'fas fa-bars' : 'fas fa-bars';
+          return;
+        }
         var isOpen = sidebar.classList.contains('open');
         sidebar.classList.toggle('open', !isOpen);
         backdrop.classList.toggle('active', !isOpen);
@@ -523,6 +520,17 @@
 
     if (closeBtn) closeBtn.addEventListener('click', closeSidebarFn);
     if (backdrop) backdrop.addEventListener('click', closeSidebarFn);
+
+    /* -- Sidebar collapse toggle (desktop) ---------------------------- */
+    var collapseToggle = document.getElementById('sidebar-collapse-toggle');
+    if (collapseToggle) {
+      collapseToggle.addEventListener('click', function () {
+        if (window.innerWidth < 1024) return;
+        var nowCollapsed = !isCollapsed();
+        setCollapsed(nowCollapsed);
+        applyCollapse();
+      });
+    }
 
     /* -- Sidebar item click auto-close on mobile ---------------------- */
     var sidebarMenu = document.getElementById('sidebar-menu');
@@ -596,6 +604,16 @@
       });
     }
 
+    /* -- Window resize: manage sidebar collapse state ----------------- */
+    window.addEventListener('resize', function () {
+      if (window.innerWidth < 1024) {
+        document.body.classList.remove('sidebar-collapsed');
+        closeSidebarFn();
+      } else {
+        applyCollapse();
+      }
+    });
+
     /* -- Init command palette search --------------------------------- */
     initCommandPaletteSearch();
   }
@@ -606,34 +624,18 @@
   function bindInboxDropdown() {
     var inboxBtn = document.getElementById('inbox-btn');
     var dd = document.getElementById('inbox-dropdown');
-    if (!inboxBtn || !dd) return;
-
-    function positionDD() {
-      var r = inboxBtn.getBoundingClientRect();
-      dd.style.top = (r.bottom + 8) + 'px';
-      dd.style.right = Math.max(8, window.innerWidth - r.right - 10) + 'px';
-      dd.style.left = 'auto';
-      if (window.innerWidth < 600) {
-        dd.style.left = '8px';
-        dd.style.right = '8px';
-      }
-    }
+    if (!inboxBtn) return;
 
     inboxBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
       closeProfileDropdown();
-      window.location.href = 'messages.html';
     });
+
+    if (!dd) return;
 
     document.addEventListener('click', function (e) {
       if (!dd.contains(e.target) && e.target !== inboxBtn && !inboxBtn.contains(e.target)) {
         closeInboxDropdown();
       }
-    });
-
-    window.addEventListener('resize', function () {
-      if (dd.classList.contains('open')) positionDD();
     });
   }
 
@@ -656,7 +658,7 @@
     var markAll = document.getElementById('inbox-mark-all');
     if (markAll) {
       markAll.addEventListener('click', function () {
-        INBOX_MESSAGES.forEach(function (m) { m.unread = false; });
+        NOTIF_DATA.forEach(function (m) { m.unread = false; });
         dd.innerHTML = buildInboxHTML('all');
         bindInboxFilters();
         bindInboxItems();
@@ -672,7 +674,7 @@
     dd.querySelectorAll('.inbox-item').forEach(function (item) {
       function handleClick() {
         var id = parseInt(item.getAttribute('data-id'));
-        var msg = INBOX_MESSAGES.find(function (m) { return m.id === id; });
+        var msg = NOTIF_DATA.find(function (m) { return m.id === id; });
         if (msg) msg.unread = false;
         item.classList.remove('unread');
         var dot = item.querySelector('.inbox-unread-dot');
@@ -689,22 +691,8 @@
   }
 
   function updateInboxBadge() {
-    var count = getUnreadCount();
     var badge = document.getElementById('inbox-badge');
-    var btn = document.getElementById('inbox-btn');
-    if (count > 0) {
-      if (badge) {
-        badge.textContent = count;
-      } else if (btn) {
-        var newBadge = document.createElement('span');
-        newBadge.className = 'badge';
-        newBadge.id = 'inbox-badge';
-        newBadge.textContent = count;
-        btn.appendChild(newBadge);
-      }
-    } else if (badge) {
-      badge.remove();
-    }
+    if (badge) badge.remove();
   }
 
   /* ------------------------------------------------------------------
@@ -867,7 +855,12 @@
     var backdrop = document.getElementById('sidebar-backdrop');
     var menuBtn = document.getElementById('menu-btn');
     if (!sidebar) return;
-    if (window.innerWidth >= 1024) return;
+    if (window.innerWidth >= 1024) {
+      var isCollapsed = document.body.classList.contains('sidebar-collapsed');
+      document.body.classList.toggle('sidebar-collapsed', !isCollapsed);
+      try { localStorage.setItem(COLLAPSE_KEY, isCollapsed ? '0' : '1'); } catch (e) {}
+      return;
+    }
     var isOpen = sidebar.classList.contains('open');
     sidebar.classList.toggle('open', !isOpen);
     if (backdrop) backdrop.classList.toggle('active', !isOpen);
@@ -974,18 +967,32 @@
   }
 
   function applyCollapse() {
-    /* Desktop sidebar always shows full labels (icon + name). */
-    try { localStorage.removeItem(COLLAPSE_KEY); } catch (e) {}
-    document.body.classList.remove('sidebar-collapsed');
+    if (window.innerWidth < 1024) {
+      document.body.classList.remove('sidebar-collapsed');
+      return;
+    }
+    var collapsed = isCollapsed();
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
     var icon = document.querySelector('#sidebar-collapse-toggle i');
     if (icon) {
-      icon.className = 'fas fa-angles-left';
+      icon.className = collapsed ? 'fas fa-angles-right' : 'fas fa-angles-left';
+    }
+    var toggle = document.getElementById('sidebar-collapse-toggle');
+    if (toggle) {
+      toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
     }
   }
 
   function initDefaultCollapseByViewport() {
-    /* No-op: the desktop sidebar is fixed and always expanded. */
-    try { localStorage.removeItem(COLLAPSE_KEY); } catch (e) {}
+    if (window.innerWidth < 1024) {
+      document.body.classList.remove('sidebar-collapsed');
+      return;
+    }
+    var stored = localStorage.getItem(COLLAPSE_KEY);
+    if (stored === null) {
+      setCollapsed(window.innerWidth < 1280);
+    }
+    applyCollapse();
   }
 
   /* ------------------------------------------------------------------
@@ -1103,5 +1110,7 @@
   };
 
   global.showToast = showToast;
+  global.updateBadge = updateBadge;
+  global.updateInboxBadge = updateInboxBadge;
 
 })(window);

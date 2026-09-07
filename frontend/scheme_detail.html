@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Scheme Details | Farm Assist</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/schemes.css">
+</head>
+<body class="app-page">
+
+  <main class="page-content" id="page-content" role="main">
+    <div class="schemes-wrap">
+      <button type="button" class="scheme-detail-back" id="backBtn"><i class="fas fa-arrow-left"></i> Back to Schemes</button>
+      <div id="detailContainer" aria-live="polite"></div>
+    </div>
+  </main>
+
+  <!-- Apply confirm modal -->
+  <div class="scheme-modal" id="applyModal" role="dialog" aria-modal="true" hidden>
+    <div class="scheme-modal-backdrop" data-close-apply></div>
+    <div class="scheme-modal-panel scheme-apply-confirm" role="document">
+      <div id="applyModalBody"></div>
+    </div>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      function esc(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+      function txt(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/[<>]/g, '');
+      }
+      function fmtDate(v) {
+        if (!v) return null;
+        var d;
+        var s = String(v).replace(' ', 'T');
+        if (s.indexOf('T') >= 0 || /^\d{4}-\d{2}-\d{2}/.test(s)) {
+          d = new Date(s);
+        } else {
+          d = new Date(v);
+        }
+        if (isNaN(d.getTime())) return null;
+        return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+      function money(v) {
+        if (v === null || v === undefined || v === '' || v === 0) return null;
+        var n = Number(v);
+        if (isNaN(n)) return String(v);
+        if (n >= 10000000) return '₹' + (n / 10000000).toFixed(2).replace(/\.?0+$/, '') + ' Cr';
+        if (n >= 100000) return '₹' + (n / 100000).toFixed(2).replace(/\.?0+$/, '') + ' Lakh';
+        if (n >= 1000) return '₹' + n.toLocaleString('en-IN');
+        return '₹' + n;
+      }
+      function benefitText(s) {
+        if (s && s.benefits) {
+          if (Array.isArray(s.benefits) && s.benefits.length) return txt(s.benefits[0]);
+          if (typeof s.benefits === 'string' && s.benefits.trim()) return txt(s.benefits);
+        }
+        if (s && s.benefit) return String(s.benefit);
+        if (s && s.benefit_type) return prettyBenefit(s.benefit_type) || txt(s.benefit_type);
+        return null;
+      }
+
+      function prettyEligType(v) {
+        var s = String(v || '').toLowerCase();
+        if (s.indexOf('small') >= 0) return 'Small Farmers';
+        if (s.indexOf('marginal') >= 0) return 'Marginal Farmers';
+        if (s.indexOf('tenant') >= 0) return 'Tenant Farmers';
+        if (s.indexOf('women') >= 0) return 'Women Farmers';
+        if (s.indexOf('landless') >= 0) return 'Landless Farmers';
+        if (s.indexOf('landhold') >= 0) return 'Landholding Farmers';
+        if (s.indexOf('farmer') >= 0) return 'All Farmers';
+        if (s.trim()) return txt(String(v));
+        return null;
+      }
+      function prettyBenefit(v) {
+        var s = String(v || '').toLowerCase();
+        if (s.indexOf('income') >= 0) return 'Direct Income Support';
+        if (s.indexOf('pension') >= 0) return 'Monthly Pension';
+        if (s.indexOf('insurance') >= 0) return 'Insurance Cover';
+        if (s.indexOf('loan') >= 0 || s.indexOf('credit') >= 0) return 'Subsidised Credit';
+        if (s.indexOf('subsid') >= 0) return 'Subsidy Support';
+        if (s.indexOf('grant') >= 0) return 'Grant Support';
+        if (s.indexOf('market') >= 0) return 'Market Access Support';
+        if (s.indexOf('equip') >= 0 || s.indexOf('mechani') >= 0) return 'Equipment Subsidy';
+        if (s.trim()) return txt(String(v));
+        return null;
+      }
+      function showToast(msg, type) { if (window.showToast) window.showToast(msg, type || 'success'); }
+
+      var appliedIds = {};
+
+      function deadlineInfo(s) {
+        if (!s || !s.application_deadline) return { label: 'Ongoing', cls: 'ongoing' };
+        var d = new Date(s.application_deadline);
+        if (isNaN(d.getTime())) return { label: 'Ongoing', cls: 'ongoing' };
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        d.setHours(0, 0, 0, 0);
+        var days = Math.round((d - today) / 86400000);
+        if (days < 0) return { label: 'Closed ' + fmtDate(s.application_deadline), cls: 'closed' };
+        if (days === 0) return { label: 'Closes today', cls: 'soon' };
+        if (days <= 14) return { label: 'Closes in ' + days + ' day' + (days > 1 ? 's' : ''), cls: 'soon' };
+        return { label: 'Closes ' + fmtDate(s.application_deadline), cls: 'open' };
+      }
+      function categoryLabel(s) { return txt(s.category || s.benefit_type || s.level || 'Scheme').toUpperCase(); }
+      function prettyUrl(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; } }
+
+      function detailIcon(s) {
+        var c = String((s && s.category) || '').toLowerCase();
+        if (c.indexOf('insurance') >= 0) return 'fa-umbrella';
+        if (c.indexOf('loan') >= 0 || c.indexOf('credit') >= 0) return 'fa-hand-holding-usd';
+        if (c.indexOf('irrigation') >= 0) return 'fa-tint';
+        if (c.indexOf('equipment') >= 0 || c.indexOf('drone') >= 0 || c.indexOf('mechani') >= 0) return 'fa-tractor';
+        if (c.indexOf('organic') >= 0 || c.indexOf('seed') >= 0) return 'fa-seedling';
+        if (c.indexOf('income') >= 0 || c.indexOf('support') >= 0) return 'fa-rupee-sign';
+        if (c.indexOf('subsid') >= 0) return 'fa-percentage';
+        return 'fa-landmark';
+      }
+
+      function benefitList(s) {
+        var out = [];
+        if (s && s.benefits) {
+          if (Array.isArray(s.benefits)) out = out.concat(s.benefits.map(String));
+          else if (typeof s.benefits === 'string') out.push(String(s.benefits));
+        }
+        if (s && s.benefit) out.push(String(s.benefit));
+        if (s && s.benefit_amount) out.push('Financial benefit: ' + money(s.benefit_amount));
+        if (s && s.benefit_type && String(s.benefit_type) !== String(s.benefits)) {
+          out.push(prettyBenefit(s.benefit_type) || String(s.benefit_type));
+        }
+        return unique(out).slice(0, 8);
+      }
+      function eligibilityList(s) {
+        var out = [];
+        if (s && s.eligible_farmer_types && Array.isArray(s.eligible_farmer_types)) {
+          out = out.concat(s.eligible_farmer_types.map(prettyEligType).filter(Boolean));
+        }
+        var e = txt(s.eligibility || '');
+        if (e) out.push(e);
+        if (s && s.land_category) out.push('Land: ' + txt(s.land_category));
+        if (s && s.income_category) out.push('Income: ' + txt(s.income_category));
+        return unique(out).slice(0, 10);
+      }
+      function docList(s) {
+        var d = s.documents_required || s.documents || s.required_documents;
+        if (Array.isArray(d)) return d.map(String).filter(function (x) { return x && x.trim(); });
+        if (typeof d === 'string') return d.split(/\n|,|;/).map(function (x) { return x.trim(); }).filter(function (x) { return x; });
+        return [];
+      }
+      function processList(s) {
+        if (Array.isArray(s && s.application_process)) return s.application_process.map(String);
+        if (typeof (s && s.application_process) === 'string' && s.application_process.trim()) {
+          return s.application_process.split(/\n+/).map(function (x) { return x.trim(); }).filter(function (x) { return x; });
+        }
+        if (s && s.how_to_apply) return String(s.how_to_apply).split(/\n+/).filter(function (x) { return x.trim(); });
+        return [];
+      }
+      function faqArr(s) { return (s && s.faqs && Array.isArray(s.faqs)) ? s.faqs.filter(function (f) { return f && f.q && f.a; }) : []; }
+      function unique(a) { return a.filter(function (x, i) { return x && a.indexOf(x) === i; }); }
+
+      function render(s) {
+        var dl = deadlineInfo(s);
+        var bf = benefitText(s);
+        return '' +
+          '<div class="scheme-detail">' +
+            '<div class="scheme-detail-head">' +
+              '<div class="scheme-detail-icon"><i class="fas ' + detailIcon(s) + '"></i></div>' +
+              '<div class="scheme-detail-headtext">' +
+                '<span class="schemes-badge">' + categoryLabel(s) + '</span>' +
+                '<h2>' + esc(s.name) + '</h2>' +
+                '<p class="scheme-detail-dept"><i class="fas fa-building"></i> ' + esc(s.department || s.authority || 'Government of India') + '</p>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="scheme-detail-stats">' +
+              (bf !== null ? '<div class="scheme-detail-stat"><small>Benefit</small><strong>' + esc(bf) + '</strong></div>' : '') +
+              '<div class="scheme-detail-stat"><small>Deadline</small><strong class="dl-' + dl.cls + '">' + esc(dl.label) + '</strong></div>' +
+              '<div class="scheme-detail-stat"><small>Level</small><strong>' + esc((s.level || 'central').replace(/^\w/, function (c) { return c.toUpperCase(); })) + '</strong></div>' +
+            '</div>' +
+
+            (s.overview ? '<section class="scheme-detail-sec"><h3><i class="fas fa-info-circle"></i> Overview</h3><p>' + esc(s.overview) + '</p></section>' : '') +
+            (s.description ? '<section class="scheme-detail-sec"><h3><i class="fas fa-align-left"></i> Description</h3><p>' + esc(s.description) + '</p></section>' : '') +
+            (s.objectives ? '<section class="scheme-detail-sec"><h3><i class="fas fa-bullseye"></i> Objectives</h3><p>' + esc(s.objectives) + '</p></section>' : '') +
+
+            (benefitList(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-wallet"></i> Benefits</h3><ul class="scheme-detail-list">' + benefitList(s).map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul></section>' : '') +
+
+            (eligibilityList(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-user-check"></i> Eligibility</h3><ul class="scheme-detail-list">' + eligibilityList(s).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></section>' : '') +
+
+            (docList(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-file-alt"></i> Required Documents</h3><ul class="scheme-detail-list">' + docList(s).map(function (d) { return '<li><i class="fas fa-check-circle doc-ok"></i> ' + esc(d) + '</li>'; }).join('') + '</ul></section>' : '') +
+
+            (processList(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-clipboard-list"></i> Application Process</h3><ol class="scheme-detail-steps">' + processList(s).map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol></section>' : '') +
+
+            (faqArr(s).length ? '<section class="scheme-detail-sec"><h3><i class="fas fa-question-circle"></i> FAQs</h3><div class="scheme-faq">' + faqArr(s).map(function (f, i) {
+              return '<div class="scheme-faq-item"><button type="button" class="scheme-faq-q" data-faq="' + i + '" aria-expanded="false"><span>' + esc(f.q) + '</span><i class="fas fa-chevron-down"></i></button>' +
+                '<div class="scheme-faq-a"><p>' + esc(f.a) + '</p></div></div>';
+            }).join('') + '</div></section>' : '') +
+
+            '<section class="scheme-detail-important">' +
+              '<h3><i class="fas fa-exclamation-circle"></i> Important Information</h3>' +
+              '<div class="scheme-imp-grid">' +
+                '<div class="scheme-imp-item"><small>Application Deadline</small><strong>' + esc(dl.label) + '</strong></div>' +
+                '<div class="scheme-imp-item"><small>Authority</small><strong>' + esc(s.department || s.authority || 'Government of India') + '</strong></div>' +
+                (s.contact_information ? '<div class="scheme-imp-item"><small>Contact</small><strong>' + esc(s.contact_information) + '</strong></div>' : '') +
+                (s.source_url ? '<div class="scheme-imp-item"><small>Official Website</small><strong><a href="' + esc(s.source_url) + '" target="_blank" rel="noopener noreferrer">' + esc(prettyUrl(s.source_url)) + ' <i class="fas fa-external-link-alt"></i></a></strong></div>' : '') +
+              '</div>' +
+              (s.source ? '<p class="scheme-source-note"><i class="fas fa-shield-alt"></i> Information verified from ' + esc(s.source) + (s.last_verified_at ? ' · last verified ' + esc(fmtDate(s.last_verified_at)) : '') + '.</p>' : '') +
+            '</section>' +
+
+            '<div class="scheme-detail-actions">' +
+              '<button type="button" class="scheme-card-btn primary" data-apply="' + esc(s.id) + '"><i class="fas fa-paper-plane"></i> ' + (appliedIds[s.id] ? 'Applied' : 'Apply Now') + '</button>' +
+              '<button type="button" class="scheme-card-btn ghost wide" data-share="' + esc(s.id) + '"><i class="fas fa-share-alt"></i> Share</button>' +
+            '</div>' +
+          '</div>';
+      }
+
+      function loadApplied() {
+        if (!API.GovernmentService.listApplications) return;
+        API.GovernmentService.listApplications().then(function (data) {
+          var items = (data && data.items) || [];
+          appliedIds = {};
+          for (var i = 0; i < items.length; i++) {
+            if (items[i] && items[i].scheme_id) appliedIds[items[i].scheme_id] = true;
+          }
+          var btn = document.querySelector('[data-apply]');
+          if (btn && appliedIds[btn.getAttribute('data-apply')]) {
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Applied';
+          }
+        }).catch(function () {});
+      }
+
+      function init(id) {
+        var container = document.getElementById('detailContainer');
+        container.innerHTML =
+          '<div class="scheme-detail-loading"><div class="skeleton-loader" style="height:22px;width:60%;border-radius:6px;"></div>' +
+          '<div class="skeleton-loader" style="height:14px;width:80%;margin-top:12px;border-radius:6px;"></div>' +
+          '<div class="skeleton-loader" style="height:140px;width:100%;margin-top:18px;border-radius:10px;"></div></div>';
+        if (window.initSkeletonLoaders) window.initSkeletonLoaders();
+
+        API.GovernmentService.getScheme(id).then(function (s) {
+          container.innerHTML = render(s);
+          document.title = s.name + ' | Farm Assist';
+          bindActions(s);
+        }).catch(function (err) {
+          if (err && (err.isAuthError || err.status === 401 || err.status === 403)) {
+            container.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-lock"></i></div>' +
+              '<h4>Sign in required</h4><p>You need to sign in to view scheme details.</p>' +
+              '<button type="button" class="schemes-state-btn" id="loginBtn">Sign In</button></div>';
+            document.getElementById('loginBtn').addEventListener('click', function () { window.location.href = 'login.html'; });
+          } else {
+            container.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
+              '<h4>Unable to load scheme</h4><p>' + esc((err && err.message) || 'Something went wrong.') + '</p>' +
+              '<button type="button" class="schemes-state-btn" id="retryBtn">Retry</button></div>';
+            document.getElementById('retryBtn').addEventListener('click', function () { init(id); });
+          }
+        });
+        loadApplied();
+      }
+
+      function bindActions(s) {
+        var applyBtn = document.querySelector('[data-apply]');
+        if (applyBtn) applyBtn.addEventListener('click', function () { openApply(s); });
+        var shareBtn = document.querySelector('[data-share]');
+        if (shareBtn) shareBtn.addEventListener('click', function () {
+          var data = {
+            title: s.name + ' — Government Scheme',
+            text: s.name + ': ' + (s.overview || s.description || 'Government scheme available on Farm Assist.'),
+            url: window.location.href
+          };
+          if (navigator.share) { navigator.share(data).catch(function () {}); }
+          else if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(data.url).then(function () { showToast('Link copied to clipboard', 'success'); }).catch(function () { fallbackCopy(data.url); });
+          } else { fallbackCopy(data.url); }
+        });
+        var faqs = document.querySelectorAll('.scheme-faq-q');
+        for (var i = 0; i < faqs.length; i++) {
+          faqs[i].addEventListener('click', function () {
+            var expanded = this.getAttribute('aria-expanded') === 'true';
+            this.setAttribute('aria-expanded', String(!expanded));
+            this.classList.toggle('open', !expanded);
+            var ans = this.nextElementSibling;
+            if (ans) ans.classList.toggle('open', !expanded);
+          });
+        }
+      }
+
+      function fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); showToast('Link copied to clipboard', 'success'); }
+        catch (e) { showToast('Copy not supported', 'error'); }
+        document.body.removeChild(ta);
+      }
+
+      function openApply(s) {
+        if (appliedIds[s.id]) { showToast('You have already applied to this scheme', 'info'); return; }
+        var modal = document.getElementById('applyModal');
+        var body = document.getElementById('applyModalBody');
+        modal.hidden = false;
+        document.body.classList.add('modal-open');
+        body.innerHTML =
+          '<div class="scheme-apply">' +
+            '<h3><i class="fas fa-paper-plane"></i> Apply for Scheme</h3>' +
+            '<p class="scheme-apply-scheme"><strong>' + esc(s.name) + '</strong></p>' +
+            '<p class="scheme-apply-note">Your application will be submitted to the official scheme authority. A real application reference ID will be generated on confirmation.</p>' +
+            '<button type="button" class="scheme-card-btn primary wide" id="applyConfirm"><i class="fas fa-check"></i> Confirm Application</button>' +
+            '<button type="button" class="scheme-card-btn ghost wide" data-close-apply>Cancel</button>' +
+          '</div>';
+        document.getElementById('applyConfirm').addEventListener('click', function () {
+          var btn = this;
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+          API.GovernmentService.applyScheme(s.id).then(function () {
+            appliedIds[s.id] = true;
+            modal.hidden = true;
+            document.body.classList.remove('modal-open');
+            var ab = document.querySelector('[data-apply]');
+            if (ab) ab.innerHTML = '<i class="fas fa-check-circle"></i> Applied';
+            showToast('Application submitted successfully', 'success');
+          }).catch(function (err) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Confirm Application';
+            var msg = (err && err.message) || 'Could not submit application';
+            if (msg.toLowerCase().indexOf('already') >= 0) {
+              appliedIds[s.id] = true;
+              modal.hidden = true;
+              document.body.classList.remove('modal-open');
+              var ab2 = document.querySelector('[data-apply]');
+              if (ab2) ab2.innerHTML = '<i class="fas fa-check-circle"></i> Applied';
+              showToast('You have already applied to this scheme', 'info');
+            } else {
+              showToast(msg, 'error');
+            }
+          });
+        });
+      }
+
+      function closeModals() {
+        document.getElementById('applyModal').hidden = true;
+        document.body.classList.remove('modal-open');
+      }
+
+      function wire() {
+        document.getElementById('backBtn').addEventListener('click', function () {
+          var params = new URLSearchParams(window.location.search);
+          var from = params.get('from');
+          if (from) { window.location.href = from; return; }
+          window.location.href = 'schemes.html';
+        });
+        document.querySelectorAll('[data-close-apply]').forEach(function (el) {
+          el.addEventListener('click', closeModals);
+        });
+        document.getElementById('applyModal').addEventListener('click', function (e) {
+          if (e.target.classList.contains('scheme-modal-backdrop')) closeModals();
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') closeModals();
+        });
+      }
+
+      function start() {
+        if (!window.API || !API.GovernmentService) return;
+        wire();
+        var params = new URLSearchParams(window.location.search);
+        var id = params.get('id');
+        if (id) { init(id); }
+        else {
+          document.getElementById('detailContainer').innerHTML =
+            '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-question-circle"></i></div>' +
+            '<h4>No scheme selected</h4><p>Please choose a scheme from the Government Schemes page.</p></div>';
+        }
+      }
+
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+      else start();
+    })();
+  </script>
+</body>
+</html>

@@ -19,8 +19,11 @@ class Notification(Base):
     reference_id = Column(String(100), nullable=True)
     reference_type = Column(String(50), nullable=True)
     is_read = Column(Boolean, default=False)
+    is_archived = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, default=False)
     icon = Column(String(50), nullable=True)
     action_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="notifications")

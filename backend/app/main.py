@@ -3,23 +3,35 @@ import sys
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.exceptions import RequestValidationError
 
-from app.config import settings
-from app.database.connection import engine, Base
-from app.utils.exceptions import AppException
+# Ensure log/stream handlers never crash on currency symbols (₹) under a
+# non-UTF-8 Windows console (charmap codec). Alternative encodings degrade to '?'.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        if hasattr(_stream, "reconfigure"):
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+from .config import settings
+from .database.connection import engine, Base
+from .utils.exceptions import AppException
+
+
 
 import app.models
 
-from app.routers import (
+from .routers import (
     auth, users, farms, crops, finance, workers,
     marketplace, government, community, notifications,
-    weather, maps, ai,
+    weather, maps, ai, ai_chat,
     loans, sensors, storage, news, translation, qrcode, analytics,
-    services, farmbuzz, messages, support, feedback,
+    services, farmbuzz, messages, support, feedback, wallet, documents,
+    learning, techniques, emergency, market_prices,
 )
+
 
 from app.middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware
 
@@ -61,6 +73,7 @@ app.include_router(notifications.router)
 app.include_router(weather.router)
 app.include_router(maps.router)
 app.include_router(ai.router)
+app.include_router(ai_chat.router)
 app.include_router(loans.router)
 app.include_router(sensors.router)
 app.include_router(storage.router)
@@ -73,6 +86,12 @@ app.include_router(farmbuzz.router)
 app.include_router(messages.router)
 app.include_router(support.router)
 app.include_router(feedback.router)
+app.include_router(wallet.router)
+app.include_router(documents.router)
+app.include_router(learning.router)
+app.include_router(techniques.router)
+app.include_router(emergency.router)
+app.include_router(market_prices.router)
 
 
 @app.exception_handler(AppException)
@@ -110,7 +129,37 @@ async def startup():
     Base.metadata.create_all(bind=engine)
     os.makedirs(settings.STORAGE_LOCAL_PATH, exist_ok=True)
     os.makedirs("logs", exist_ok=True)
+
+    from app.database.connection import SessionLocal
+    from app.database.seed_communities import seed_communities
+    db = SessionLocal()
+    try:
+        created = seed_communities(db)
+
+        from sqlalchemy import func
+        from app.models.market_price import MarketPrice
+        has_market_data = db.query(
+            func.count(MarketPrice.id)
+        ).scalar() or 0
+        if not has_market_data:
+            try:
+                from seed_market_prices import import_msp_prices
+            except ImportError:
+                _backend_dir = Path(__file__).resolve().parent.parent
+                if str(_backend_dir) not in sys.path:
+                    sys.path.insert(0, str(_backend_dir))
+                from seed_market_prices import import_msp_prices
+            market_seeded = import_msp_prices(db)
+        else:
+            market_seeded = 0
+    finally:
+        db.close()
+
     print(f"{settings.APP_NAME} v{settings.APP_VERSION} started. DB tables created.")
+    if created:
+        print(f"Seeded {created} community groups.")
+    if market_seeded:
+        print(f"Seeded {market_seeded} verified market price records (official MSP/FRP).")
 
 
 @app.get("/api/health")
@@ -223,13 +272,21 @@ def get_villages(state: str, district: str, mandal: str):
     return {"status": "success", "data": villages}
 
 
-uploads_dir = Path(__file__).parent.parent.parent / "uploads"
-if not uploads_dir.exists():
-    os.makedirs(uploads_dir, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+# Uploads are served only through the authenticated, ownership-checked
+# /api/v1/storage/* endpoints. No public static mount is registered to avoid
+# bypassing authorization or exposing private files (documents, message
+# attachments, etc.).
 
 frontend_dir = Path(__file__).parent.parent.parent / "frontend"
 if frontend_dir.exists():
+
+    @app.get("/consultations")
+    @app.get("/consultations/")
+    @app.get("/consultations.html")
+    async def old_consultations_redirect():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/expert.html", status_code=301)
+
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         file_path = frontend_dir / full_path

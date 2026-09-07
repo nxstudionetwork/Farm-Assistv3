@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from typing import List
@@ -50,7 +50,13 @@ class Settings(BaseSettings):
     NEWS_API_BASE_URL: str = "https://newsapi.org/v2"
 
     MARKET_PRICE_API_KEY: str = ""
-    MARKET_PRICE_API_BASE_URL: str = ""
+    MARKET_PRICE_API_BASE_URL: str = "https://api.data.gov.in/resource"
+    MARKET_PRICE_RESOURCE_ID: str = "9ef84268-d588-465a-a308-a864a43d0070"
+    MARKET_PRICE_SOURCE_NAME: str = "AGMARKNET (Ministry of Agriculture & Farmers Welfare)"
+    MARKET_PRICE_SOURCE_URL: str = "https://agmarknet.gov.in"
+    MARKET_PRICE_REFRESH_MINUTES: int = 30
+    MARKET_PRICE_STALE_HOURS: int = 72
+    MARKET_PRICE_FETCH_LIMIT: int = 500
 
     TRANSLATION_API_KEY: str = ""
     SPEECH_API_KEY: str = ""
@@ -59,8 +65,8 @@ class Settings(BaseSettings):
 
     STORAGE_BACKEND: str = "local"
     STORAGE_LOCAL_PATH: str = "uploads"
-    STORAGE_MAX_FILE_SIZE_MB: int = 10
-    STORAGE_ALLOWED_EXTENSIONS: str = "jpg,jpeg,png,gif,pdf,doc,docx,xlsx,csv"
+    STORAGE_MAX_FILE_SIZE_MB: int = 25
+    STORAGE_ALLOWED_EXTENSIONS: str = "jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,csv,txt"
 
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
@@ -68,6 +74,10 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str = "noreply@farmassist.app"
     SUPPORT_EMAIL_TO: str = "farm.assist@outlook.com"
+
+    # Wallet security caps (used to limit self-minted deposits without a live gateway)
+    WALLET_MAX_SINGLE_DEPOSIT: float = 50000
+    WALLET_MAX_DAILY_DEPOSITS: float = 100000
 
     BACKEND_HOST: str = "0.0.0.0"
     BACKEND_PORT: int = 8000
@@ -81,3 +91,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# reload_touch
+

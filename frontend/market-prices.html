@@ -3,336 +3,988 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Farm Assist - Market Prices</title>
+  <title>Farm Assist - Live Market Prices</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    .market-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
-    .market-filters .form-select {
-      appearance: none; -webkit-appearance: none; -moz-appearance: none;
-      background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 12px center;
-      padding: 10px 36px 10px 14px; border: 1px solid var(--border-light);
-      border-radius: var(--radius-md); font-size: 13px; font-family: inherit;
-      color: var(--text-primary); cursor: pointer; min-width: 140px; flex: 1 1 140px;
-      transition: border-color 0.2s;
-    }
-    .market-filters .form-select:focus { outline: none; border-color: var(--medium-green); box-shadow: 0 0 0 3px rgba(45,134,89,0.1); }
-    @media (max-width: 640px) { .market-filters .form-select { flex: 1 1 100%; } }
+    .mp-page{max-width:860px;margin:0 auto;padding:16px;min-height:80vh;overflow-x:hidden}
+    .mp-hero{background:linear-gradient(135deg,#0F2E1E 0%,#1B5E3F 60%,#40916C 100%);border-radius:var(--radius-xl);padding:18px 20px;color:white;margin-bottom:14px}
+    .mp-hero h1{font-size:22px;font-weight:700;margin:0 0 4px 0}
+    .mp-hero p{font-size:12px;opacity:0.85;margin:0 0 12px}
+    .mp-hero-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .mp-top-btn{padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:white;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+    .mp-top-btn:hover{background:rgba(255,255,255,0.3)}
+    .mp-top-btn.active{background:white;color:#1B5E3F;border-color:white}
+    .mp-badge{background:rgba(255,255,255,0.3);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700}
+    .mp-top-btn.active .mp-badge{background:#1B5E3F;color:white}
+    .mp-freshness{display:flex;align-items:center;gap:8px;margin-top:12px;background:rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;font-size:12px;flex-wrap:wrap;border:1px solid rgba(255,255,255,0.2)}
+    .mp-freshness .mp-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+    .mp-freshness .mp-dot.live,.mp-freshness .mp-dot.latest{background:#52e88a;box-shadow:0 0 8px #52e88a}
+    .mp-freshness .mp-dot.stale{background:#E9B640}
+    .mp-freshness .mp-dot.unavailable{background:#e05252}
+    .mp-freshness .mp-f-label{font-weight:600}
+    .mp-freshness .mp-f-sub{opacity:0.85}
+    .mp-banner{display:flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:600;margin-bottom:12px}
+    .mp-banner-warn{background:#FDF3DC;color:#8a6d1a;border:1px solid #f3e0ad}
+    .mp-banner-err{background:#FDECEC;color:#C62828;border:1px solid #f5c6c6}
+    .mp-search{position:relative;margin-bottom:12px}
+    .mp-search input{width:100%;padding:11px 36px 11px 38px;border-radius:10px;border:1px solid var(--border-light,#e5e7eb);font-size:13px;background:white;outline:none;transition:border 0.2s;box-sizing:border-box}
+    .mp-search input:focus{border-color:var(--primary-green,#1B5E3F)}
+    .mp-search>i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted,#9ca3af);font-size:13px}
+    .mp-search .clear-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted,#9ca3af);cursor:pointer;font-size:13px;display:none}
+    .mp-suggest{position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1px solid var(--border-light,#e5e7eb);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:30;max-height:230px;overflow-y:auto;display:none}
+    .mp-suggest .mp-sg-label{font-size:10px;font-weight:700;color:var(--text-muted,#9ca3af);text-transform:uppercase;padding:8px 12px 2px;letter-spacing:0.5px}
+    .mp-suggest .mp-sg-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 12px;border:none;background:none;font-size:13px;color:var(--text-primary,#1a1a2e);cursor:pointer}
+    .mp-suggest .mp-sg-item:hover{background:#f0f5f1}
+    .mp-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+    .mp-toolbar .mp-search{flex:1;min-width:0;margin-bottom:0}
+    .mp-tool-icon{flex-shrink:0;width:42px;height:42px;border-radius:10px;border:1px solid var(--border-light,#e5e7eb);background:white;color:var(--text-secondary,#6b7280);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:all 0.2s}
+    .mp-tool-icon:hover{color:var(--primary-green,#1B5E3F);border-color:var(--medium-green,#2D8659)}
+    .mp-tool-icon.active{background:var(--primary-green,#1B5E3F);color:white;border-color:var(--primary-green,#1B5E3F)}
+    .mp-tool-icon .mp-badge{position:absolute;top:-6px;right:-6px;background:var(--danger,#D63031);color:white;border:2px solid #fff;padding:1px 5px;font-size:9px}
+    .mp-tool-dot{position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--danger,#D63031);border:1.5px solid #fff}
+    .mp-filter-panel{display:none;background:var(--bg-card-soft,#F8FAF5);border:1px solid #e5eee5;border-radius:12px;padding:12px;margin-bottom:12px}
+    .mp-filter-panel.open{display:block}
+    .mp-filter-panel .mp-frow{display:flex;gap:8px;flex-wrap:wrap}
+    .mp-filter-panel select{flex:1 1 140px;min-width:0;padding:9px 30px 9px 10px;border-radius:9px;border:1px solid var(--border-light,#e5e7eb);font-size:12px;font-family:inherit;color:var(--text-primary,#1a1a2e);background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L1 2h8z'/%3E%3C/svg%3E") no-repeat right 10px center;appearance:none;-webkit-appearance:none;cursor:pointer}
+    .mp-filter-panel select:focus{border-color:var(--medium-green,#2D8659)}
+    .mp-filter-panel select:disabled{opacity:0.55;cursor:not-allowed}
+    .mp-filter-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+    .mp-loc-btn{padding:9px 12px;border-radius:9px;border:1px solid var(--border-light,#e5e7eb);background:white;font-size:12px;font-weight:600;color:var(--primary-green,#1B5E3F);cursor:pointer;display:flex;align-items:center;gap:6px}
+    .mp-loc-btn:hover{background:var(--bg-secondary,#f5f5f5)}
+    .mp-clear-btn{padding:9px 12px;border-radius:9px;border:1px solid var(--border-light,#e5e7eb);background:white;font-size:12px;font-weight:600;color:var(--text-secondary,#6b7280);cursor:pointer;display:flex;align-items:center;gap:6px}
+    .mp-clear-btn:hover{background:var(--bg-secondary,#f5f5f5)}
+    .mp-cats{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:2px 2px 6px;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+    .mp-cats::-webkit-scrollbar{display:none}
+    .mp-cat{padding:5px 12px;border-radius:16px;border:1px solid var(--border-light,#e5e7eb);background:white;color:var(--text-secondary,#6b7280);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:5px}
+    .mp-cat.active{background:var(--primary-green,#1B5E3F);color:white;border-color:var(--primary-green,#1B5E3F)}
+    .mp-cat .mp-cat-count{font-size:9px;opacity:0.75}
+    .mp-section-title{font-size:13px;font-weight:700;color:var(--text-secondary,#6b7280);margin:18px 0 10px;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px}
+    .mp-section-title::after{content:'';flex:1;height:1px;background:var(--border-light,#e5e7eb)}
+    .mp-section-title i{color:var(--primary-green,#1B5E3F)}
+    /* snapshot */
+    .mp-snapshot{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .mp-stat{background:white;border:1px solid var(--border-light,#e5e7eb);border-radius:12px;padding:12px 14px}
+    .mp-stat .mp-stat-label{font-size:10px;color:var(--text-muted,#9ca3af);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px}
+    .mp-stat .mp-stat-val{font-size:16px;font-weight:700;color:var(--text-primary,#1a1a2e)}
+    .mp-stat .mp-stat-sub{font-size:11px;color:var(--text-muted,#9ca3af);margin-top:2px}
+    .mp-stat.up .mp-stat-val{color:var(--success,#2D6A4F)}
+    .mp-stat.down .mp-stat-val{color:var(--danger,#D63031)}
+    @media(min-width:640px){.mp-snapshot{grid-template-columns:repeat(3,1fr)}.mp-stat{min-height:74px}}
+    /* cards */
+    #mp-list{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:640px){#mp-list{grid-template-columns:repeat(2,1fr)}}
+    .mp-card{background:white;border:1px solid var(--border-light,#e5e7eb);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px;transition:all 0.2s;border-left:3px solid var(--primary-green,#1B5E3F);box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+    .mp-card:hover{box-shadow:0 3px 10px rgba(0,0,0,0.08);transform:translateY(-1px);border-color:#d1d5db;border-left-color:var(--success,#2D6A4F)}
+    .mp-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .mp-cat{display:inline-block;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;background:var(--bg-card-soft,#F8FAF5);color:var(--medium-green,#2D8659);white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+    .mp-card-title{font-size:15px;font-weight:700;margin:0;color:var(--text-primary,#1a1a2e)}
+    .mp-card-title small{font-size:11px;color:var(--text-muted,#9ca3af);font-weight:600}
+    .mp-card-market{font-size:12px;color:var(--text-secondary,#6b7280);display:flex;align-items:center;gap:6px}
+    .mp-card-market i{color:var(--primary-green,#1B5E3F)}
+    .mp-price{font-size:20px;font-weight:800;color:var(--text-primary,#1a1a2e);text-align:right;white-space:nowrap}
+    .mp-price .mp-unit{font-size:10px;font-weight:600;color:var(--text-muted,#9ca3af);margin-left:2px}
+    .mp-card .mp-grade{font-size:11px;color:var(--text-muted,#9ca3af)}
+    .mp-change-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .mp-change{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
+    .mp-change.up{background:#E8F5E9;color:var(--success,#2D6A4F)}
+    .mp-change.down{background:#FDECEC;color:var(--danger,#D63031)}
+    .mp-change.stable{background:#f3f4f6;color:#6b7280}
+    .mp-change.na{background:#f8f9fa;color:var(--text-muted,#9ca3af);font-weight:600}
+    .mp-change-na-note{font-size:10px;color:var(--text-muted,#9ca3af)}
+    .mp-card-meta{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text-muted,#9ca3af);margin-top:2px}
+    .mp-card-meta .mp-updated{display:flex;align-items:center;gap:5px}
+    .mp-src{color:var(--primary-green,#1B5E3F);font-weight:600;text-decoration:none}
+    .mp-card-btns{display:flex;gap:8px;margin-top:2px}
+    .mp-btn{padding:8px 12px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:5px}
+    .mp-btn-primary{background:var(--primary-green,#1B5E3F);color:white;flex:1;justify-content:center}
+    .mp-btn-primary:hover{background:#144a2f}
+    .mp-btn-save{background:white;border:1px solid var(--border-light,#e5e7eb);color:var(--text-secondary,#6b7280)}
+    .mp-btn-save:hover{background:var(--bg-secondary,#f5f5f5)}
+    .mp-btn-save.saved{background:#FDF3DC;border-color:#f3e0ad;color:#8a6d1a}
+    /* recommended */
+    #mp-recommended{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:640px){#mp-recommended{grid-template-columns:repeat(2,1fr)}}
+    .mp-rec{background:linear-gradient(135deg,#F8FAF5 0%,#EFF6EF 100%);border:1px solid #dce9dc;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:5px}
+    .mp-rec .mp-rec-reason{font-size:10px;color:var(--medium-green,#2D8659);font-weight:700;display:flex;align-items:center;gap:5px}
+    .mp-rec .mp-rec-price{font-size:18px;font-weight:800;color:var(--text-primary,#1a1a2e)}
+    .mp-rec .mp-rec-meta{font-size:11px;color:var(--text-muted,#9ca3af)}
+    .mp-empty{text-align:center;padding:48px 20px;color:var(--text-muted,#9ca3af)}
+    .mp-empty i{font-size:50px;opacity:0.25;margin-bottom:14px;display:block}
+    .mp-empty h3{font-size:15px;font-weight:600;color:var(--text-secondary,#6b7280);margin-bottom:6px}
+    .mp-empty p{font-size:12px;line-height:1.5;margin-bottom:4px}
+    .mp-empty button{margin-top:10px;padding:8px 20px;border-radius:8px;border:none;background:var(--primary-green,#1B5E3F);color:white;font-size:12px;font-weight:600;cursor:pointer}
+    /* skeletons */
+    .mp-skeleton{background:white;border:1px solid var(--border-light,#e5e7eb);border-radius:12px;padding:14px}
+    .mp-skel-line{height:12px;border-radius:6px;background:linear-gradient(90deg,#e5e7eb 25%,#f0f0f0 50%,#e5e7eb 75%);background-size:200% 100%;animation:mpShimmer 1.4s infinite;margin-bottom:10px}
+    .mp-skel-line:nth-child(1){width:35%}
+    .mp-skel-line:nth-child(2){width:85%}
+    .mp-skel-line:nth-child(3){width:60%}
+    .mp-skel-line:nth-child(4){width:40%}
+    @keyframes mpShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .mp-error{text-align:center;padding:40px 20px}
+    .mp-error i{font-size:38px;color:#C62828;opacity:0.5;margin-bottom:12px;display:block}
+    .mp-error p{font-size:13px;color:var(--text-secondary,#6b7280);margin-bottom:12px}
+    .mp-retry{padding:8px 20px;border-radius:8px;border:none;background:var(--primary-green,#1B5E3F);color:white;font-size:12px;font-weight:600;cursor:pointer}
+    .mp-load-more{text-align:center;padding:16px}
+    .mp-load-more button{padding:8px 24px;border-radius:8px;border:1px solid var(--border-light,#e5e7eb);background:white;cursor:pointer;font-size:12px;font-weight:600;color:var(--primary-green,#1B5E3F)}
+    /* views */
+    .mp-view{display:none}
+    .mp-view.active{display:block}
+    .mp-back-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--border-light,#e5e7eb);background:white;cursor:pointer;font-size:12px;font-weight:600;color:var(--text-secondary,#6b7280);display:flex;align-items:center;gap:5px;margin-bottom:12px}
+    .mp-back-btn:hover{background:var(--bg-secondary,#f5f5f5)}
+    /* overlay */
+    .mp-overlay{position:fixed;inset:0;background:rgba(10,25,16,0.55);backdrop-filter:blur(2px);z-index:100;display:none;align-items:flex-end;justify-content:center}
+    .mp-overlay.active{display:flex}
+    @media(min-width:680px){.mp-overlay{align-items:center}.mp-overlay-card{max-height:86vh}}
+    .mp-overlay-card{background:#fff;width:100%;max-width:680px;border-radius:20px 20px 0 0;padding:18px;box-sizing:border-box;max-height:94vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    @media(min-width:680px){.mp-overlay-card{border-radius:20px}}
+    .mp-detail-tab-row{display:flex;gap:6px;margin:14px 0 10px;flex-wrap:wrap}
+    .mp-detail-tab{padding:5px 12px;border-radius:14px;border:1px solid var(--border-light,#e5e7eb);background:white;font-size:11px;font-weight:600;color:var(--text-secondary,#6b7280);cursor:pointer}
+    .mp-detail-tab.active{background:var(--primary-green,#1B5E3F);color:white;border-color:var(--primary-green,#1B5E3F)}
+    /* details body blocks */
+    .mp-dblock{background:var(--bg-card-soft,#F8FAF5);border:1px solid #e5eee5;border-radius:12px;padding:12px 14px;margin-bottom:10px}
+    .mp-dblock .mp-db-title{font-size:11px;font-weight:700;color:var(--text-secondary,#6b7280);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .mp-dblock .mp-db-title i{color:var(--primary-green,#1B5E3F)}
+    .mp-dfacts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .mp-fact .mp-fact-label{font-size:9px;color:var(--text-muted,#9ca3af);text-transform:uppercase;letter-spacing:0.3px}
+    .mp-fact .mp-fact-val{font-size:13px;font-weight:700;color:var(--text-primary,#1a1a2e);margin-top:2px}
+    .mp-mini-legend{font-size:11px;color:var(--text-muted,#9ca3af);display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
+    .mp-mini-legend span{display:flex;align-items:center;gap:4px}
+    .mp-lg-dot{width:8px;height:8px;border-radius:2px;display:inline-block}
+    .mp-compare-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch}
+    .mp-compare-scroll::-webkit-scrollbar{height:6px}
+    .mp-compare-scroll::-webkit-scrollbar-thumb{background:#d8e3d9;border-radius:3px}
+    .mp-ccard{flex-shrink:0;min-width:180px;background:white;border:1px solid var(--border-light,#e5e7eb);border-radius:10px;padding:10px 12px}
+    .mp-ccard .mp-cc-market{font-size:12px;font-weight:700;color:var(--text-primary,#1a1a2e)}
+    .mp-ccard .mp-cc-price{font-size:17px;font-weight:800;color:var(--medium-green,#2D8659);margin:3px 0}
+    .mp-ccard.best{border-color:#d8b247;background:#FFFDF5}
+    .mp-ccard.low{border-color:#9fd0a8;background:#F6FBF6}
+    .mp-disclaimer{font-size:11px;color:var(--text-muted,#9ca3af);line-height:1.45;margin-top:8px;display:flex;gap:6px}
+    .mp-best-price{background:linear-gradient(135deg,#1B5E3F 0%,#2D8659 100%);border-radius:12px;padding:14px;color:white;margin-bottom:10px}
+    .mp-best-price .mp-bp-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;opacity:0.85}
+    .mp-best-price .mp-bp-val{font-size:22px;font-weight:800;margin:2px 0}
+    .mp-best-price .mp-bp-market{font-size:12px;opacity:0.9}
+    .mp-chart-empty{margin-top:12px}
+    .mp-signal{font-size:11px;font-weight:600;margin-left:auto}
+    .mp-footer-note{font-size:11px;color:var(--text-muted,#9ca3af);line-height:1.6;border-top:1px solid var(--border-light,#e5e7eb);margin-top:22px;padding:12px 2px 4px;display:flex;gap:8px}
+    @media(max-width:520px){.mp-page{padding:12px}.mp-hero h1{font-size:19px}.mp-filter-panel select{flex:1 1 100%}.mp-dfacts{grid-template-columns:repeat(2,1fr)}}
   </style>
 </head>
 <body>
-
   <main class="page-container">
-    <div class="page-header">
-      <div><h1>Live Market Prices</h1><p>Mandi prices, MSP, trends & demand forecasts</p></div>
-      <button class="btn-primary btn-sm" onclick="showToast('Setting price alerts for your crops!','success')"><i class="fas fa-bell"></i> Set Alert</button>
-    </div>
-    <div class="market-filters">
-      <select class="form-select" id="filter-crop" onchange="applyFilters()">
-        <option value="all">All Crops</option>
-        <option value="Rice">Rice</option>
-        <option value="Wheat">Wheat</option>
-        <option value="Maize">Maize</option>
-        <option value="Cotton">Cotton</option>
-        <option value="Sugarcane">Sugarcane</option>
-        <option value="Groundnut">Groundnut</option>
-        <option value="Mustard">Mustard</option>
-        <option value="Tomato">Tomato</option>
-        <option value="Onion">Onion</option>
-        <option value="Potato">Potato</option>
-      </select>
-      <select class="form-select" id="filter-location" onchange="applyFilters()">
-        <option value="all">All Locations</option>
-        <option value="Pune">Pune</option>
-        <option value="Nashik">Nashik</option>
-        <option value="Nagpur">Nagpur</option>
-        <option value="Kolhapur">Kolhapur</option>
-        <option value="Solapur">Solapur</option>
-        <option value="Aurangabad">Aurangabad</option>
-      </select>
-      <select class="form-select" id="filter-market" onchange="applyFilters()">
-        <option value="all">All Markets</option>
-        <option value="Haveli Mandi">Haveli Mandi</option>
-        <option value="Pune Market">Pune Market</option>
-        <option value="Shirur APMC">Shirur APMC</option>
-        <option value="Baramati">Baramati</option>
-        <option value="Daund">Daund</option>
-        <option value="Loni">Loni</option>
-      </select>
-    </div>
-    <div class="filter-tabs">
-      <button class="filter-tab active" onclick="showMarketTab('prices',this)">All Prices</button>
-      <button class="filter-tab" onclick="showMarketTab('msp',this)">MSP 2026</button>
-      <button class="filter-tab" onclick="showMarketTab('trends',this)">Trends</button>
-    </div>
-    <div id="prices-content">
-      <div id="prices-table-area"></div>
-      <div class="grid-3" id="price-comparison" style="margin-top:12px;">
-        <div class="card-premium stat-box">
-          <i class="fas fa-arrow-up" style="color:var(--success);"></i>
-          <div class="stat-box-num" id="highest-price-value">--</div>
-          <div class="stat-box-label" id="highest-price-label">Highest Price</div>
-        </div>
-        <div class="card-premium stat-box">
-          <i class="fas fa-arrow-down" style="color:var(--danger);"></i>
-          <div class="stat-box-num" id="lowest-price-value">--</div>
-          <div class="stat-box-label" id="lowest-price-label">Lowest Price</div>
-        </div>
-        <div class="card-premium stat-box">
-          <i class="fas fa-chart-bar" style="color:var(--info);"></i>
-          <div class="stat-box-num" id="avg-price-value">--</div>
-          <div class="stat-box-label" id="avg-price-label">Average Price</div>
-        </div>
-      </div>
-      <div class="card-premium" style="margin-top:12px;">
-        <h3 style="font-size:15px;margin-bottom:12px;"><i class="fas fa-chart-line"></i> Historical Trend</h3>
-        <div id="trend-chart-placeholder" style="height:120px;background:var(--bg-card-soft);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;">
-          <i class="fas fa-chart-line" style="margin-right:8px;"></i> Trend chart loading...
-        </div>
-      </div>
-    </div>
-    <div id="market-msp-content" style="display:none;">
-      <div class="card-premium">
-        <h3 style="font-size:15px;margin-bottom:12px;"><i class="fas fa-landmark"></i> Minimum Support Price (MSP) 2026</h3>
-        <div class="responsive-table"><table><thead><tr><th>Crop</th><th>MSP (₹/qtl)</th><th>Increase</th></tr></thead><tbody>
-          <tr><td>Paddy (Common)</td><td>₹2,300</td><td style="color:var(--success);">+5.2%</td></tr>
-          <tr><td>Paddy (Grade A)</td><td>₹2,350</td><td style="color:var(--success);">+5.3%</td></tr>
-          <tr><td>Cotton (Medium)</td><td>₹7,100</td><td style="color:var(--success);">+6.5%</td></tr>
-          <tr><td>Cotton (Long)</td><td>₹7,520</td><td style="color:var(--success);">+6.5%</td></tr>
-          <tr><td>Maize</td><td>₹2,100</td><td style="color:var(--success);">+4.3%</td></tr>
-          <tr><td>Wheat</td><td>₹2,275</td><td style="color:var(--success);">+3.5%</td></tr>
-          <tr><td>Sugarcane</td><td>₹340/ton</td><td style="color:var(--success);">+4.0%</td></tr>
-          <tr><td>Groundnut</td><td>₹5,700</td><td style="color:var(--success);">+7.1%</td></tr>
-          <tr><td>Mustard</td><td>₹5,650</td><td style="color:var(--success);">+6.8%</td></tr>
-          <tr><td>Pulses (Toor)</td><td>₹7,300</td><td style="color:var(--success);">+8.2%</td></tr>
-        </tbody></table></div>
-      </div>
-    </div>
-    <div id="market-trends-content" style="display:none;">
-      <div class="card-premium">
-        <h3 style="font-size:15px;margin-bottom:12px;"><i class="fas fa-chart-line"></i> Market Trends & Forecast</h3>
-        <div class="alert-strip info"><div class="alert-content"><i class="fas fa-arrow-up" style="color:var(--success);"></i><div><strong>Rice prices trending up</strong><div style="font-size:10px;color:var(--text-muted);">Export demand driving 5% increase expected next month</div></div></div></div>
-        <div class="alert-strip info"><div class="alert-content"><i class="fas fa-arrow-down" style="color:var(--danger);"></i><div><strong>Onion prices may soften</strong><div style="font-size:10px;color:var(--text-muted);">Kharif arrivals expected to increase supply by 20%</div></div></div></div>
-        <div class="alert-strip info"><div class="alert-content"><i class="fas fa-minus" style="color:var(--text-muted);"></i><div><strong>Cotton stable</strong><div style="font-size:10px;color:var(--text-muted);">Mill demand steady, prices expected in current range</div></div></div></div>
-        <div style="margin-top:12px;"><div data-chart="line" data-values="[60,70,55,75,80,72,85,78,82,88,85,92]" data-labels='["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]' style="height:160px;"></div></div>
-      </div>
-    </div>
+    <div class="mp-page">
 
-    <div class="card-premium" style="margin-top:16px;">
-      <h3 style="font-size:15px;margin-bottom:12px;"><i class="fas fa-store"></i> Nearby Markets</h3>
-      <div id="nearby-markets-content">
-        <div class="skeleton-loader" style="height:60px;border-radius:8px;margin-bottom:8px;"></div>
-        <div class="skeleton-loader" style="height:60px;border-radius:8px;"></div>
+      <div id="mp-offline" class="mp-banner mp-banner-warn" style="display:none">
+        <i class="fas fa-wifi"></i> You're offline. Showing the latest available market data.
+      </div>
+
+      <div id="mp-main-view">
+        <div class="mp-hero">
+          <h1><i class="fas fa-chart-line" style="margin-right:8px;"></i> LIVE MARKET PRICES</h1>
+          <p>Track current agricultural commodity prices and market trends.</p>
+          <h1><i class="fas fa-chart-line" style="margin-right:8px;"></i> LIVE MARKET PRICES</h1>
+          <p>Track current agricultural commodity prices and market trends.</p>
+          <div class="mp-freshness" id="mp-freshness"></div>
+        </div>
+
+        <div class="mp-toolbar">
+          <div class="mp-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="mp-search-input" placeholder="Search commodity, market..." autocomplete="off">
+            <button class="clear-btn" id="mp-search-clear"><i class="fas fa-times"></i></button>
+            <div class="mp-suggest" id="mp-suggest"></div>
+          </div>
+          <button class="mp-tool-icon" id="btn-filter" title="Filters"><i class="fas fa-sliders-h"></i><span class="mp-tool-dot" id="mp-filter-badge" style="display:none"></span></button>
+          <button class="mp-tool-icon" id="btn-watchlist" title="Watchlist"><i class="fas fa-bookmark"></i><span class="mp-badge" id="wl-count">0</span></button>
+          <button class="mp-tool-icon" id="btn-refresh" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+        </div>
+
+        <div class="mp-filter-panel" id="mp-filter-panel">
+          <div class="mp-frow">
+            <select id="mp-state"><option value="">All States</option></select>
+            <select id="mp-district" disabled><option value="">All Districts</option></select>
+            <select id="mp-market" disabled><option value="">All Markets</option></select>
+            <select id="mp-sort">
+              <option value="recent">Recently updated</option>
+              <option value="highest">Highest price</option>
+              <option value="lowest">Lowest price</option>
+            </select>
+          </div>
+          <div class="mp-filter-actions">
+            <button class="mp-loc-btn" id="btn-use-location"><i class="fas fa-map-marker-alt"></i> Use my saved location</button>
+            <button class="mp-clear-btn" id="mp-clear-filters"><i class="fas fa-eraser"></i> Clear Filters</button>
+          </div>
+        </div>
+
+        <div class="mp-cats" id="mp-cats"></div>
+
+        <div class="mp-section-title"><i class="fas fa-tachometer-alt"></i> Market Snapshot</div>
+        <div class="mp-snapshot" id="mp-snapshot"></div>
+
+        <div class="mp-section-title"><i class="fas fa-seedling"></i> Relevant to Your Farm</div>
+        <div id="mp-recommended"></div>
+
+        <div class="mp-section-title"><i class="fas fa-landmark"></i> Latest Official Prices</div>
+        <div id="mp-list"></div>
+        <div class="mp-load-more" id="mp-load-more" style="display:none"><button id="mp-btn-load-more">Load More Prices</button></div>
+      </div>
+
+      <div id="mp-watchlist-view" class="mp-view">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <button class="mp-back-btn" data-back="main"><i class="fas fa-arrow-left"></i> Back</button>
+          <h2 style="font-size:18px;font-weight:700;margin:0">My Watchlist</h2>
+        </div>
+        <div class="mp-section-title"><i class="fas fa-bookmark"></i> Saved Commodities &amp; Markets</div>
+        <div id="mp-watchlist-container"></div>
+      </div>
+
+      
+
+      <div class="mp-footer-note"><i class="fas fa-circle-info" style="margin-top:2px"></i>
+        <span>Prices are official Minimum Support Prices / Fair &amp; Remunerative Prices announced by the
+        Ministry of Agriculture &amp; Farmers Welfare (Press Information Bureau). Each figure carries its source
+        and announcement date. When the live AGMARKNET mandi feed is configured on the server, daily state-market
+        prices and a true "Live" status appear here automatically.</span>
       </div>
     </div>
   </main>
 
+  <div class="mp-overlay" id="mp-details">
+    <div class="mp-overlay-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <button class="mp-back-btn" id="mp-details-close"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2 style="font-size:17px;font-weight:700;margin:0">Price Details</h2>
+      </div>
+      <div id="mp-details-body"></div>
+    </div>
+  </div>
+
   <script src="js/database.js"></script>
   <script src="js/services.js"></script>
   <script src="js/userStore.js"></script>
-  <script src="js/mockData.js"></script>
   <script src="assets/js/navigation.js"></script>
   <script src="assets/js/app.js"></script>
   <script src="js/script.js"></script>
   <script>
-    var mandiLocationMap = {
-      'Haveli Mandi': 'Pune',
-      'Pune Market': 'Pune',
-      'Shirur APMC': 'Pune',
-      'Baramati': 'Pune',
-      'Daund': 'Pune',
-      'Loni': 'Nashik'
+  (function(){
+    'use strict';
+
+    var token = localStorage.getItem('fa-auth-token');
+    if (!token) {
+      window.location.href = 'login.html?redirect=market-prices.html';
+      return;
+    }
+    var API_OK = !!(window.MarketPriceService);
+    if (!API_OK) {
+      document.body.innerHTML = '<div class="mp-error"><i class="fas fa-exclamation-triangle"></i><p>Market service unavailable. Please refresh.</p></div>';
+      return;
+    }
+    var S = {
+      view: 'main', page: 1, limit: 24, total: 0, hasMore: false, loading: false,
+      q: '', category: 'all', state: '', district: '', market: '', commodity: '', sort: 'recent',
+      savedIds: {}, detailId: null, historyDays: 90
     };
 
-    var liveMarketPrices = null;
+    var $ = function (id) { return document.getElementById(id); };
+    var mainView = $('mp-main-view'), wlView = $('mp-watchlist-view');
+    var listEl = $('mp-list'), catsEl = $('mp-cats'), snapEl = $('mp-snapshot');
+    var recEl = $('mp-recommended'), freshEl = $('mp-freshness');
+    var searchInput = $('mp-search-input'), searchClear = $('mp-search-clear'), suggestEl = $('mp-suggest');
+    var stateSel = $('mp-state'), distSel = $('mp-district'), marketSel = $('mp-market'), sortSel = $('mp-sort');
+    var filterPanel = $('mp-filter-panel'), filterBtn = $('btn-filter'), filterBadge = $('mp-filter-badge');
+    var loadMoreWrap = $('mp-load-more');
+    var searchTimer = null;
 
-    function mapBackendPrices(backendList) {
-      return (backendList || []).map(function (p) {
-        var price = p.avg_price || p.price || 0;
-        return {
-          commodity: p.crop || p.commodity || '',
-          price: price,
-          unit: p.unit || 'quintal',
-          mandi: p.mandi || '',
-          msp: p.msp || 0,
-          change: p.change || '0%',
-          trend: (p.change && p.change.indexOf('-') === 0) ? 'down' : 'up',
-          demand: p.demand || 'Medium'
-        };
+    /* ---------------- helpers ---------------- */
+    function esc(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    function fmtINR(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return '₹' + Number(n).toLocaleString('en-IN',{maximumFractionDigits:0}); }
+    function fmtNum(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return Number(n).toLocaleString('en-IN',{maximumFractionDigits:0}); }
+    function fmtUnit(u){ return (u || 'Rs/Quintal').replace(/Rs\//g,'₹ ').replace(/\/Quintal/g,'/Quintal'); }
+    function isoTodate(iso){
+      if(!iso) return '';
+      var p = String(iso).split('T')[0].split('-');
+      if(p.length !== 3) return String(iso);
+      var d = new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
+      return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    }
+    function timeAgo(dateStr){
+      if(!dateStr) return '';
+      var d = new Date(dateStr);
+      if(isNaN(d.getTime())) return '';
+      var diff = Date.now() - d.getTime();
+      var mins = Math.floor(diff / 60000);
+      if(mins < 1) return 'Just now';
+      if(mins < 60) return mins + 'm ago';
+      var hrs = Math.floor(mins / 60);
+      if(hrs < 24) return hrs + 'h ago';
+      var days = Math.floor(hrs / 24);
+      if(days === 1) return 'Yesterday';
+      if(days < 7) return days + 'd ago';
+      return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    }
+    function changeChip(c){
+      if(!c || !c.available || c.percent === null){
+        return '<span class="mp-change na"><i class="fas fa-minus"></i> Change unavailable</span>';
+      }
+      var sym = c.direction === 'up' ? '<i class="fas fa-arrow-trend-up"></i>' : (c.direction === 'down' ? '<i class="fas fa-arrow-trend-down"></i>' : '<i class="fas fa-arrow-right"></i>');
+      var cls = c.direction === 'up' ? 'up' : (c.direction === 'down' ? 'down' : 'stable');
+      var sign = c.direction === 'down' ? '' : '+';
+      return '<span class="mp-change ' + cls + '">' + sym + ' ' + sign + fmtNum(c.absolute) + ' (' + (c.direction === 'down' ? '' : '+') + fmtNum(c.percent) + '%)</span>';
+    }
+    function handleApiError(err, containerEl, retryFn, retryLabel){
+      if(err && err.isAuthError){
+        showToast('Your session has expired. Please login again.', 'error');
+        setTimeout(function(){ window.location.href = 'login.html?redirect=market-prices.html'; }, 1200);
+        return;
+      }
+      updateOfflineFlag();
+      var msg = (err && err.message) || 'Market data is temporarily unavailable.';
+      if(containerEl && retryFn){
+        containerEl.innerHTML = '<div class="mp-error"><i class="fas fa-exclamation-triangle"></i><p>Market data is temporarily unavailable.</p><p style="font-size:11px;color:var(--text-muted,#9ca3af);margin-top:-8px">' + esc(msg) + '</p><button class="mp-retry" data-retry="1"><i class="fas fa-redo" style="margin-right:6px;"></i>' + (retryLabel || 'Retry') + '</button></div>';
+        var b = containerEl.querySelector('[data-retry="1"]');
+        if(b) b.addEventListener('click', function(){ retryFn(); });
+      }
+    }
+    function updateOfflineFlag(){
+      var banner = $('mp-offline');
+      if(!banner) return;
+      if(!navigator.onLine){ banner.style.display = 'flex'; }
+      else { banner.style.display = 'none'; }
+    }
+
+    /* ---------------- freshness + snapshot ---------------- */
+    function renderFreshness(f){
+      if(!f) { freshEl.innerHTML = ''; return; }
+      var label, cls, sub = '';
+      if(!f.data_available){
+        cls = 'unavailable'; label = 'Market data is temporarily unavailable.';
+        sub = '<button class="mp-top-btn" id="mp-fresh-retry" style="padding:2px 10px;font-size:10px;margin-left:6px"><i class="fas fa-redo"></i> Retry</button>';
+      } else if(f.label === 'live'){
+        cls = 'live'; label = 'Live Market Data';
+        sub = 'Streaming from ' + esc(f.source);
+      } else if(f.label === 'stale'){
+        cls = 'stale'; label = 'Data may be outdated.';
+        sub = 'Last updated ' + (f.last_fetch_timestamp ? timeAgo(f.last_fetch_timestamp) : (f.latest_price_date ? isoTodate(f.latest_price_date) : ''));
+      } else {
+        cls = 'latest'; label = 'Latest available official market data';
+        var stamp = f.last_fetch_timestamp ? timeAgo(f.last_fetch_timestamp) : (f.latest_price_date ? isoTodate(f.latest_price_date) : '');
+        sub = 'Last updated: ' + stamp;
+      }
+      freshEl.innerHTML = '<span class="mp-dot ' + cls + '"></span><span class="mp-f-label">' + label + '</span><span class="mp-f-sub">' + sub + '</span>';
+      var rb = $('mp-fresh-retry');
+      if(rb) rb.addEventListener('click', function(){ loadInitial(); });
+      if(f.is_live){ freshEl.style.background = 'rgba(18,96,54,0.4)'; } else { freshEl.style.background = 'rgba(255,255,255,0.12)'; }
+    }
+    function renderSnapshot(s){
+      var rows = [];
+      rows.push({ label:'Tracked Commodities', val: fmtNum(s.tracked_commodities), sub:'latest official prices' });
+      rows.push({ label:'Markets Covered', val: fmtNum(s.markets_covered), sub: 'states: ' + fmtNum(s.states_covered) });
+      rows.push({ label:'Last Updated', val: (s.last_updated ? timeAgo(s.last_updated) : (s.latest_price_date ? isoTodate(s.latest_price_date) : '—')), sub: s.latest_price_date ? 'as of ' + isoTodate(s.latest_price_date) : 'no data yet' });
+      rows.push({ label:'Highest Increase', val: s.highest_increase ? (s.highest_increase.commodity + (s.highest_increase.variety ? ' · ' + s.highest_increase.variety : '') + ' ↑' + fmtNum(s.highest_increase.change.percent) + '%') : '—', sub: s.highest_increase ? fmtINR(s.highest_increase.modal_price) + ' /' + (s.highest_increase.unit||'qs').replace(/Rs\/Quintal/,'Quintal') : 'vs previous season', cls:'up' });
+      rows.push({ label:'Highest Decrease', val: s.highest_decrease ? (s.highest_decrease.commodity + (s.highest_decrease.variety ? ' · ' + s.highest_decrease.variety : '') + ' ↓' + fmtNum(Math.abs(s.highest_decrease.change.percent)) + '%') : '—', sub: s.highest_decrease ? fmtINR(s.highest_decrease.modal_price) + ' /' + 'Quintal' : 'no decrease recorded', cls: s.highest_decrease ? 'down' : '' });
+      snapEl.innerHTML = rows.map(function(r){
+        return '<div class="mp-stat ' + (r.cls || '') + '"><div class="mp-stat-label">' + r.label + '</div><div class="mp-stat-val">' + r.val + '</div><div class="mp-stat-sub">' + r.sub + '</div></div>';
+      }).join('');
+    }
+
+    /* ---------------- categories ---------------- */
+    function renderCats(categories){
+      var h = '<button class="mp-cat' + (S.category === 'all' ? ' active' : '') + '" data-cat="all">All</button>';
+      (categories || []).forEach(function(c){
+        if(!c || c.count <= 0) return;
+        h += '<button class="mp-cat' + (S.category === c.name ? ' active' : '') + '" data-cat="' + esc(c.name) + '"><span class="mp-cat-count">' + c.count + '</span> ' + esc(c.name) + '</button>';
+      });
+      catsEl.innerHTML = h;
+      catsEl.querySelectorAll('.mp-cat').forEach(function(b){
+        b.addEventListener('click', function(){
+          catsEl.querySelectorAll('.mp-cat').forEach(function(x){ x.classList.remove('active'); });
+          b.classList.add('active');
+          S.category = b.getAttribute('data-cat');
+          S.commodity = '';
+          S.page = 1;
+          updateFilterBadge();
+          loadList(false);
+        });
       });
     }
 
-    function loadMarketPrices() {
-      if (!window.API || !localStorage.getItem('fa-auth-token')) return;
-      return window.API.MarketPrice.getPrices().then(function (res) {
-        if (res && res.prices && res.prices.length) {
-          liveMarketPrices = mapBackendPrices(res.prices);
+    /* ---------------- locations ---------------- */
+    function renderStates(states){
+      stateSel.innerHTML = '<option value="">All States</option>' + states.map(function(s){ return '<option value="' + esc(s) + '">' + esc(s) + '</option>'; }).join('');
+      if(S.state){ stateSel.value = S.state; loadDistricts(true); }
+      else { clearDistricts(); }
+    }
+    function clearDistricts(){
+      distSel.disabled = true; distSel.innerHTML = '<option value="">All Districts</option>';
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
+    }
+    function loadDistricts(keep){
+      var state = stateSel.value;
+      S.state = state; S.district = ''; S.market = '';
+      distSel.disabled = !state;
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
+      distSel.innerHTML = '<option value="">' + (state ? 'All Districts' : 'Select State') + '</option>';
+      if(!state) return;
+      window.MarketPriceService.markets({ state: state }).then(function(d){
+        distSel.innerHTML = '<option value="">All Districts</option>' + (d.districts || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+      }).catch(function(){ });
+    }
+    function loadMarkets(){
+      var state = stateSel.value, dist = distSel.value;
+      S.district = dist; S.market = '';
+      marketSel.disabled = !state;
+      marketSel.innerHTML = '<option value="">' + (state ? 'All Markets' : 'Select State') + '</option>';
+      if(!state) return;
+      window.MarketPriceService.markets({ state: state, district: dist }).then(function(d){
+        marketSel.innerHTML = '<option value="">All Markets</option>' + (d.markets || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+      }).catch(function(){ });
+    }
+    function useSavedLocation(){
+      fetch('/api/v1/users/profile', { headers: { 'Authorization': 'Bearer ' + token }, credentials: 'same-origin' })
+        .then(function(r){ return r.json(); })
+        .then(function(p){
+          var addr = (p && p.data && p.data.address) || {};
+          if(!addr.state){ showToast('No saved location found. Add your address in Profile.', 'info'); return; }
+          stateSel.value = addr.state;
+          window.MarketPriceService.markets({ state: addr.state }).then(function(d){
+            distSel.disabled = false;
+            distSel.innerHTML = '<option value="">All Districts</option>' + (d.districts || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+            if(addr.district){
+              distSel.value = addr.district;
+              window.MarketPriceService.markets({ state: addr.state, district: addr.district }).then(function(d2){
+                marketSel.disabled = false;
+                marketSel.innerHTML = '<option value="">All Markets</option>' + (d2.markets || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+              }).catch(function(){ });
+            }
+          }).catch(function(err){ handleApiError(err, null); });
+          S.state = addr.state; S.district = addr.district || ''; S.market = '';
+          S.page = 1;
+          updateFilterBadge();
+          loadList(false);
+          showToast('Showing prices for ' + (addr.district || addr.state), 'success');
+        })
+        .catch(function(){ showToast('Could not load your saved location.', 'error'); });
+    }
+
+    /* ---------------- list ---------------- */
+    function cardsHtml(items){
+      return items.map(function(it){
+        var meta = '';
+        var loc = [];
+        if(it.state) loc.push(esc(it.state));
+        if(it.district) loc.push(esc(it.district));
+        var saved = S.savedIds[it.commodity + '|' + (it.market || '')] ? ' saved' : '';
+        return '<div class="mp-card" data-id="' + esc(it.id) + '">' +
+          '<div class="mp-card-top"><span class="mp-cat">' + esc(it.category || 'Other') + '</span>' +
+          '<span class="mp-price">' + fmtINR(it.modal_price) + '<span class="mp-unit">/' + esc((it.unit||'Rs/Quintal').replace(/Rs\/Quintal/,'Quintal')) + '</span></span></div>' +
+          '<h3 class="mp-card-title">' + esc(it.commodity) + (it.variety ? ' <small>&middot; ' + esc(it.variety) + '</small>' : '') + '</h3>' +
+          '<div class="mp-card-market"><i class="fas fa-store"></i> ' + esc(it.market) + (loc.length ? ' <span style="color:var(--text-muted);font-weight:400">(&middot; ' + loc.join(', ') + ')</span>' : '') + '</div>' +
+          (it.grade ? '<div class="mp-grade"><i class="fas fa-tag"></i> Grade: ' + esc(it.grade) + '</div>' : '') +
+          '<div class="mp-change-row">' + changeChip(it.change) + (it.change && it.change.previous_date ? '<span class="mp-change-na-note">vs ' + isoTodate(it.change.previous_date) + '</span>' : '') + '</div>' +
+          '<div class="mp-card-meta"><span class="mp-updated"><i class="far fa-clock"></i> ' + (it.price_date ? isoTodate(it.price_date) : '') + '</span>' +
+          (it.source_url ? '<a class="mp-src" href="' + esc(it.source_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="fa-solid fa-up-right-from-square"></i> Source</a>' : '<span class="mp-src">' + esc(it.source || '') + '</span>') + '</div>' +
+          '<div class="mp-card-btns">' +
+          '<button class="mp-btn mp-btn-primary" data-act="details"><i class="fas fa-chart-line"></i> View Details</button>' +
+          '<button class="mp-btn mp-btn-save' + saved + '" data-act="save"><i class="fas fa-' + (saved ? 'check' : 'bookmark') + '"></i> ' + (saved ? 'Saved' : 'Save') + '</button>' +
+          '</div></div>';
+      }).join('');
+    }
+    function renderListLoading(){
+      listEl.innerHTML = '<div class="mp-skeleton" style="grid-column:1/-1"><div class="mp-skel-line"></div><div class="mp-skel-line"></div><div class="mp-skel-line"></div><div class="mp-skel-line"></div></div>'.repeat(4);
+      loadMoreWrap.style.display = 'none';
+    }
+    function loadList(append){
+      if(S.loading) return;
+      S.loading = true;
+      if(!append){ renderListLoading(); }
+      else {
+        var l = listEl.querySelector('.mp-loading-row');
+        if(!l){ l = document.createElement('div'); l.className = 'mp-loading-row'; l.style.cssText = 'text-align:center;padding:10px;grid-column:1/-1;font-size:12px;color:var(--text-muted)'; listEl.appendChild(l); }
+        l.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+      }
+      var params = { page: S.page, limit: S.limit };
+      if(S.q) params.q = S.q;
+      if(S.commodity) params.commodity = S.commodity;
+      if(S.category && S.category !== 'all') params.category = S.category;
+      if(S.state) params.state = S.state;
+      if(S.district) params.district = S.district;
+      if(S.market) params.market = S.market;
+      if(S.sort) params.sort = S.sort;
+      window.MarketPriceService.list(params).then(function(d){
+        S.loading = false;
+        S.total = d.total; S.hasMore = d.page * d.limit < d.total;
+        renderFreshness(d.freshness);
+        indexItems(d);
+        listEl.querySelectorAll('.mp-skeleton').forEach(function(s){ s.remove(); });
+        var html = cardsHtml(d.items || []);
+        if(!append){ listEl.innerHTML = html || '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-search"></i><h3>No prices found</h3><p>' + (S.q ? 'No results for "' + esc(S.q) + '".' : 'Try a different category or location filter.') + '</p><button id="mp-empty-clear">Clear Filters</button></div>'; }
+        else {
+          var l = listEl.querySelector('.mp-loading-row');
+          if(!l){ listEl.insertAdjacentHTML('beforeend', html); }
+          else { l.remove(); listEl.insertAdjacentHTML('beforeend', html); }
         }
-      }).catch(function () { /* keep FarmDB fallback */ });
+        if(S.hasMore){ loadMoreWrap.style.display = 'block'; } else { loadMoreWrap.style.display = 'none'; }
+        var cf = $('mp-empty-clear');
+        if(cf) cf.addEventListener('click', function(){ resetFilters(); });
+        bindCardEvents();
+      }).catch(function(err){
+        S.loading = false;
+        loadMoreWrap.style.display = 'none';
+        handleApiError(err, listEl, function(){ loadList(false); }, 'Retry');
+      });
+    }
+    function bindCardEvents(){
+      listEl.querySelectorAll('.mp-card').forEach(function(card){
+        var id = card.getAttribute('data-id');
+        var detailBtn = card.querySelector('[data-act="details"]');
+        if(detailBtn) detailBtn.addEventListener('click', function(e){ e.stopPropagation(); openDetails(id); });
+        var saveBtn = card.querySelector('[data-act="save"]');
+        if(saveBtn) saveBtn.addEventListener('click', function(e){ e.stopPropagation(); var it = currentItem(id); toggleSave(it); });
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', function(){ openDetails(id); });
+      });
+    }
+    var _itemsById = {};
+    function currentItem(id){ return _itemsById[id] || null; }
+    function indexItems(d){ if(d && d.items){ d.items.forEach(function(it){ _itemsById[it.id] = it; }); } }
+
+    /* ---------------- recommended ---------------- */
+    function loadRecommended(){
+      recEl.innerHTML = '<div class="mp-skeleton" style="grid-column:1/-1;padding:12px"><div class="mp-skel-line"></div><div class="mp-skel-line"></div></div>';
+      window.MarketPriceService.recommended().then(function(d){
+        if(!d.available || !d.items.length){
+          recEl.innerHTML = '<div class="mp-empty" style="padding:28px 16px;border:1px dashed #cfe0d0;border-radius:12px;background:#FBFDFB"><i class="fas fa-seedling" style="font-size:34px"></i><h3>No recommendations yet</h3><p>' + esc(d.reason || 'Add your farm details or preferred crops to get market recommendations.') + '</p></div>';
+          return;
+        }
+        recEl.innerHTML = d.items.map(function(it){
+          return '<div class="mp-rec"><div class="mp-rec-reason"><i class="fas fa-check-circle"></i> ' + esc(it.reason || 'Based on your farm') + '</div>' +
+            '<div class="mp-rec-price">' + esc(it.commodity) + (it.variety ? ' · ' + esc(it.variety) : '') + ' &mdash; ' + fmtINR(it.modal_price) + '<span style="font-size:11px;color:var(--text-muted)">/' + esc((it.unit||'Rs/Quintal').replace(/Rs\/Quintal/,'Quintal')) + '</span></div>' +
+            '<div class="mp-rec-meta"><i class="fas fa-store"></i> ' + esc(it.market) + ' &middot; ' + (it.price_date ? isoTodate(it.price_date) : '') + '</div>' +
+            '<div class="mp-change-row">' + changeChip(it.change) + '</div></div>';
+        }).join('');
+      }).catch(function(){ recEl.innerHTML = ''; });
     }
 
-    function getFilteredPrices() {
-      var crop = document.getElementById('filter-crop').value;
-      var location = document.getElementById('filter-location').value;
-      var market = document.getElementById('filter-market').value;
-      var all = liveMarketPrices || (window.FarmDB || {}).marketPrices || [];
-      var result = [];
-      for (var i = 0; i < all.length; i++) {
-        var p = all[i];
-        if (crop !== 'all' && p.commodity.indexOf(crop) === -1) continue;
-        if (location !== 'all' && (mandiLocationMap[p.mandi] || '') !== location) continue;
-        if (market !== 'all' && p.mandi !== market) continue;
-        result.push(p);
+    /* ---------------- saved / watchlist ---------------- */
+    function toggleSave(it){
+      if(!it) return;
+      var key = it.commodity + '|' + (it.market || '');
+      if(S.savedIds[key]){
+        var watchId = S.savedIds[key];
+        window.MarketPriceService.removeWatchlist(watchId).then(function(){
+          delete S.savedIds[key];
+          showToast('Removed from watchlist.', 'success');
+          markSavedButtons();
+          loadWatchlist(true);
+        }).catch(function(err){ handleApiError(err, null); });
+      } else {
+        var payload = { commodity: it.commodity };
+        if(it.market) payload.market = it.market;
+        if(it.district) payload.district = it.district;
+        if(it.state) payload.state = it.state;
+        window.MarketPriceService.addWatchlist(payload).then(function(d){
+          S.savedIds[key] = d.watch_id;
+          showToast('Saved ' + it.commodity + ' to your watchlist.', 'success');
+          markSavedButtons();
+          loadWatchlist(true);
+        }).catch(function(err){
+          if(err && err.status === 409){ showToast('Already in your watchlist.', 'info'); }
+          else { handleApiError(err, null); }
+        });
       }
-      return result;
     }
-
-    function updatePriceComparison(prices) {
-      if (!prices || prices.length === 0) {
-        document.getElementById('highest-price-value').textContent = '--';
-        document.getElementById('highest-price-label').textContent = 'No data';
-        document.getElementById('lowest-price-value').textContent = '--';
-        document.getElementById('lowest-price-label').textContent = 'No data';
-        document.getElementById('avg-price-value').textContent = '--';
-        document.getElementById('avg-price-label').textContent = 'No data';
+    function markSavedButtons(){
+      listEl.querySelectorAll('.mp-card').forEach(function(card){
+        var it = currentItem(card.getAttribute('data-id'));
+        var b = card.querySelector('[data-act="save"]');
+        if(b && it){
+          var key = it.commodity + '|' + (it.market || '');
+          var saved = !!S.savedIds[key];
+          b.innerHTML = '<i class="fas fa-' + (saved ? 'check' : 'bookmark') + '"></i> ' + (saved ? 'Saved' : 'Save');
+          b.classList.toggle('saved', saved);
+        }
+      });
+    }
+    function loadWatchlist(silent){
+      var wlCount = $('wl-count');
+      window.MarketPriceService.getWatchlist().then(function(d){
+        if(wlCount) wlCount.textContent = d.total || 0;
+        S.savedIds = {};
+        (d.items || []).forEach(function(w){
+          var key = w.commodity + '|' + (w.market || '');
+          S.savedIds[key] = w.watch_id;
+        });
+        markSavedButtons();
+        if(S.view !== 'watchlist') return;
+        renderWatchlist(d.items || []);
+      }).catch(function(err){ handleApiError(err, null); });
+    }
+    function renderWatchlist(items){
+      var wrap = $('mp-watchlist-container');
+      if(!items.length){
+        wrap.innerHTML = '<div class="mp-empty"><i class="fas fa-bookmark"></i><h3>Your watchlist is empty</h3><p>Save commodities or markets to track their latest official prices here.</p></div>';
         return;
       }
-      var highest = prices[0], lowest = prices[0], sum = 0;
-      for (var i = 0; i < prices.length; i++) {
-        if (prices[i].price > highest.price) highest = prices[i];
-        if (prices[i].price < lowest.price) lowest = prices[i];
-        sum += prices[i].price;
-      }
-      var avg = Math.round(sum / prices.length);
-      document.getElementById('highest-price-value').textContent = '₹' + highest.price.toLocaleString();
-      document.getElementById('highest-price-label').textContent = highest.commodity + ', ' + highest.mandi;
-      document.getElementById('lowest-price-value').textContent = '₹' + lowest.price.toLocaleString();
-      document.getElementById('lowest-price-label').textContent = lowest.commodity + ', ' + lowest.mandi;
-      document.getElementById('avg-price-value').textContent = '₹' + avg.toLocaleString();
-      document.getElementById('avg-price-label').textContent = prices.length + ' commodities';
+      wrap.innerHTML = items.map(function(w){
+        var lp = w.latest_price;
+        var body = lp
+          ? '<div class="mp-rec-price">' + fmtINR(lp.modal_price) + '<span style="font-size:11px;color:var(--text-muted)">/' + esc((lp.unit||'Rs/Quintal').replace(/Rs\/Quintal/,'Quintal')) + '</span></div>' +
+            '<div class="mp-change-row">' + changeChip(lp.change) + '</div>' +
+            '<div class="mp-rec-meta"><i class="far fa-clock"></i> ' + (lp.price_date ? isoTodate(lp.price_date) : '') + (lp.source_url ? ' &middot; <a class="mp-src" href="' + esc(lp.source_url) + '" target="_blank" rel="noopener">Source</a>' : '') + '</div>'
+          : '<div class="mp-rec-meta">No price data available for this item yet.</div>';
+        return '<div class="mp-rec">' +
+          '<div class="mp-rec-reason"><i class="fas fa-star"></i> ' + esc(w.commodity) + (w.market ? ' @ ' + esc(w.market) : '') + '</div>' + body +
+          '<div style="display:flex;gap:8px;margin-top:4px">' +
+          '<button class="mp-btn mp-btn-primary" data-wl="details" data-w="' + esc(w.watch_id) + '"><i class="fas fa-chart-line"></i> Details</button>' +
+          '<button class="mp-btn mp-btn-save" data-wl="remove" data-w="' + esc(w.watch_id) + '"><i class="fas fa-trash"></i> Remove</button>' +
+          '</div></div>';
+      }).join('');
+      wrap.querySelectorAll('[data-wl]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var w = b.getAttribute('data-w');
+          if(b.getAttribute('data-wl') === 'remove'){
+            window.MarketPriceService.removeWatchlist(w).then(function(){
+              showToast('Removed from watchlist.', 'success');
+              loadWatchlist();
+            }).catch(function(err){ handleApiError(err, null); });
+          } else {
+            var item = (S._wlItems||[]).filter(function(x){ return x.watch_id === w; })[0];
+            if(item && item.latest_price){ openDetailsById(item.latest_price.id); }
+            else { showToast('Price record not available for this item.', 'info'); }
+          }
+        });
+      });
+      S._wlItems = items;
     }
 
-    function updateTrendSection(prices) {
-      var el = document.getElementById('trend-chart-placeholder');
-      if (!el) return;
-      if (!prices || prices.length === 0) {
-        el.innerHTML = '<i class="fas fa-chart-line" style="margin-right:8px;"></i> No trend data available';
-        return;
-      }
-      var labels = [];
-      var values = [];
-      var count = prices.length < 8 ? prices.length : 8;
-      for (var i = 0; i < count; i++) {
-        labels.push(prices[i].commodity.length > 6 ? prices[i].commodity.substring(0, 6) : prices[i].commodity);
-        values.push(prices[i].price);
-      }
-      var maxVal = values[0], minVal = values[0];
-      for (var j = 1; j < values.length; j++) {
-        if (values[j] > maxVal) maxVal = values[j];
-        if (values[j] < minVal) minVal = values[j];
-      }
-      var range = maxVal - minVal;
-      if (range === 0) range = 1;
-      var bars = '';
-      for (var k = 0; k < values.length; k++) {
-        var h = ((values[k] - minVal) / range) * 80 + 10;
-        bars += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">';
-        bars += '<div style="width:24px;height:' + h + 'px;background:var(--medium-green);border-radius:4px 4px 0 0;"></div>';
-        bars += '<span style="font-size:8px;color:var(--text-muted);text-align:center;">' + labels[k] + '</span>';
-        bars += '</div>';
-      }
-      el.innerHTML = '<div style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:10px 0;">' + bars + '</div>';
-    }
+    /* ---------------- alerts (removed) ---------------- */
 
-    function renderPricesTable() {
-      var el = document.getElementById('prices-table-area');
-      if (!el) return;
-      var prices = getFilteredPrices();
-      var displayPrices = prices.length > 15 ? prices.slice(0, 15) : prices;
-      var html = '<div class="search-bar"><i class="fas fa-search"></i><input type="text" placeholder="Search commodity..." oninput="filterPrices(this.value)" id="price-search"></div>';
-      html += '<div class="responsive-table"><table><thead><tr><th>Commodity</th><th>Price</th><th>Change</th><th>Mandi</th><th>Demand</th></tr></thead><tbody id="price-tbody">';
-      for (var i = 0; i < displayPrices.length; i++) {
-        var p = displayPrices[i];
-        var up = p.trend === 'up';
-        html += '<tr class="price-row" onclick="showToast(\'' + p.commodity + ': ₹' + p.price + '/' + p.unit + ' at ' + p.mandi + '. MSP: ₹' + p.msp + '\',\'info\')">';
-        html += '<td><strong>' + p.commodity + '</strong></td>';
-        html += '<td style="font-weight:700;">₹' + p.price.toLocaleString() + '</td>';
-        html += '<td style="color:' + (up ? 'var(--success)' : 'var(--danger)') + ';">' + (up ? '▲' : '▼') + ' ' + p.change + '</td>';
-        html += '<td>' + p.mandi + '</td>';
-        html += '<td><span class="badge ' + (p.demand === 'High' ? 'badge-green' : p.demand === 'Medium' ? 'badge-warning' : 'badge-danger') + '">' + p.demand + '</span></td>';
-        html += '</tr>';
-      }
-      html += '</tbody></table></div>';
-      html += '<div style="display:flex;gap:8px;margin-top:12px;">';
-      html += '<button class="btn-primary btn-sm" onclick="showToast(\'Price alerts set for your tracked crops!\',\'success\')"><i class="fas fa-bell"></i> Set Alert</button>';
-      html += '<button class="btn-secondary btn-sm" onclick="showToast(\'MSP Kharif 2026: Rice ₹2,300, Cotton ₹7,100, Maize ₹2,100, Groundnut ₹5,700/qtl\',\'info\')"><i class="fas fa-landmark"></i> MSP Info</button>';
-      html += '</div>';
-      el.innerHTML = html;
-      updatePriceComparison(displayPrices);
-      updateTrendSection(displayPrices);
+    /* ---------------- details ---------------- */
+    function openDetails(id){
+      S.detailId = id;
+      $('mp-details').classList.add('active');
+      var body = $('mp-details-body');
+      body.innerHTML = '<div class="mp-skeleton"><div class="mp-skel-line"></div><div class="mp-skel-line"></div><div class="mp-skel-line"></div><div class="mp-skel-line"></div></div>';
+      window.MarketPriceService.get(id).then(function(it){
+        indexDetailsItem(it);
+        renderDetails(it);
+        loadHistoryTab(S.historyDays);
+        loadCompare(it.commodity);
+      }).catch(function(err){ handleApiError(err, body, function(){ openDetails(id); }); });
     }
-
-    function applyFilters() {
-      renderPricesTable();
-    }
-
-    function showMarketTab(tab, btn) {
-      var ids = ['prices-content','market-msp-content','market-trends-content'];
-      for (var i = 0; i < ids.length; i++) {
-        document.getElementById(ids[i]).style.display = 'none';
-      }
-      var tabs = document.querySelectorAll('.filter-tab');
-      for (var j = 0; j < tabs.length; j++) {
-        tabs[j].classList.remove('active');
-      }
-      if (btn) btn.classList.add('active');
-      if (tab === 'prices') {
-        document.getElementById('prices-content').style.display = 'block';
-        renderPricesTable();
-      }
-      if (tab === 'msp') document.getElementById('market-msp-content').style.display = 'block';
-      if (tab === 'trends') {
-        document.getElementById('market-trends-content').style.display = 'block';
-        setTimeout(function() { if (typeof initAnalyticsCharts !== 'undefined') initAnalyticsCharts(); }, 200);
-      }
-    }
-
-    function initNearbyMarkets() {
-      var el = document.getElementById('nearby-markets-content');
-      if (!el) return;
-      var markets = [
-        { name: 'Haveli Mandi', distance: '3.2 km', commodities: 'Rice, Cotton, Maize', price: '₹2,350/qtl', trend: 'up' },
-        { name: 'Shirur APMC', distance: '5.8 km', commodities: 'Wheat, Sugarcane, Onion', price: '₹2,280/qtl', trend: 'up' },
-        { name: 'Baramati Market', distance: '8.1 km', commodities: 'Tomato, Potato, Soybean', price: '₹1,350/qtl', trend: 'down' },
-        { name: 'Pune Market Yard', distance: '12.5 km', commodities: 'All commodities', price: '₹2,420/qtl', trend: 'up' },
-        { name: 'Loni Mandi', distance: '15.3 km', commodities: 'Groundnut, Mustard, Chilli', price: '₹5,450/qtl', trend: 'stable' }
+    var _detailItem = null;
+    function indexDetailsItem(it){ _detailItem = it; }
+    function renderDetails(it){
+      var body = $('mp-details-body');
+      var loc = [];
+      if(it.state) loc.push(esc(it.state));
+      if(it.district) loc.push(esc(it.district));
+      var facts = [
+        { l: 'Current / Modal', v: it.modal_price !== null ? fmtINR(it.modal_price) : '—' },
+        { l: 'Minimum', v: it.min_price !== null ? fmtINR(it.min_price) : '—' },
+        { l: 'Maximum', v: it.max_price !== null ? fmtINR(it.max_price) : '—' },
+        { l: 'Previous', v: it.change && it.change.previous_price !== null ? fmtINR(it.change.previous_price) : '—' },
+        { l: 'Price Date', v: it.price_date ? isoTodate(it.price_date) : '—' },
+        { l: 'Last Updated', v: it.last_updated ? timeAgo(it.last_updated) : '—' },
+        { l: 'Unit', v: esc((it.unit||'Rs/Quintal').replace(/Rs\/Quintal/,'Quintal')) },
+        { l: 'Variety', v: it.variety ? esc(it.variety) : '—' },
+        { l: 'Grade', v: it.grade ? esc(it.grade) : '—' }
       ];
-      var html = '';
-      for (var i = 0; i < markets.length; i++) {
-        var m = markets[i];
-        var trendIcon = m.trend === 'up' ? '<i class="fas fa-arrow-up" style="color:var(--success);font-size:10px;"></i>' : (m.trend === 'down' ? '<i class="fas fa-arrow-down" style="color:var(--danger);font-size:10px;"></i>' : '<i class="fas fa-minus" style="color:var(--text-muted);font-size:10px;"></i>');
-        html += '<div class="feature-card" style="cursor:default;padding:12px;display:flex;align-items:center;gap:12px;margin-bottom:8px;">' +
-          '<div style="width:36px;height:36px;border-radius:50%;background:var(--primary-green);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-store"></i></div>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-weight:600;font-size:13px;">' + m.name + '</div>' +
-            '<div style="font-size:10px;color:var(--text-muted);">' + m.distance + ' &bull; ' + m.commodities + '</div>' +
-          '</div>' +
-          '<div style="text-align:right;">' +
-            '<div style="font-weight:700;font-size:14px;">' + m.price + '</div>' +
-            '<div>' + trendIcon + ' ' + m.trend + '</div>' +
-          '</div>' +
-        '</div>';
+      body.innerHTML =
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
+          '<div><h3 style="font-size:19px;font-weight:800;margin:0">' + esc(it.commodity) + (it.variety ? ' <span style="font-size:13px;color:var(--text-muted);font-weight:600">· ' + esc(it.variety) + '</span>' : '') + '</h3>' +
+          '<div class="mp-card-market" style="margin-top:4px"><i class="fas fa-store"></i> ' + esc(it.market) + (loc.length ? ' (' + loc.join(', ') + ')' : '') + '</div>' +
+          '<span class="mp-cat" style="margin-top:6px;display:inline-table">' + esc(it.category||'Other') + '</span></div>' +
+          '<div style="text-align:right"><div class="mp-price">' + fmtINR(it.modal_price) + '<span class="mp-unit">/' + esc((it.unit||'Rs/Quintal').replace(/Rs\/Quintal/,'Quintal')) + '</span></div>' +
+          '<div class="mp-change-row" style="justify-content:flex-end">' + changeChip(it.change) + '</div></div>' +
+        '</div>' +
+        '<div class="mp-dblock" style="margin-top:12px"><div class="mp-db-title"><i class="fas fa-circle-info"></i> Price Information</div><div class="mp-dfacts">' +
+          facts.map(function(f){ return '<div class="mp-fact"><div class="mp-fact-label">' + f.l + '</div><div class="mp-fact-val">' + f.v + '</div></div>'; }).join('') +
+        '</div>' +
+        (it.change && it.change.previous_date ? '<div style="font-size:11px;color:var(--text-muted, #9ca3af);margin-top:8px">Compared with the previous season: ' + isoTodate(it.change.previous_date) + '.</div>' : '') +
+        '</div>' +
+        '<div class="mp-dblock"><div class="mp-db-title"><i class="fas fa-chart-line"></i> Price History</div>' +
+        '<div class="mp-detail-tab-row" id="mp-hist-tabs">' +
+          ['7', '30', '90', '180', '730'].map(function(d){ var lbl = ({7:'7D',30:'1M',90:'3M',180:'6M',730:'Full'}[Number(d)]||'') ; return '<button class="mp-detail-tab' + (Number(d) === S.historyDays ? ' active' : '') + '" data-hist="' + d + '" title="' + (d === '730' ? 'Full official record' : '') + '">' + lbl + '</button>'; }).join('') +
+        '</div><div id="mp-history"></div></div>' +
+        '<div class="mp-dblock"><div class="mp-db-title"><i class="fas fa-store"></i> Compare Markets</div><div id="mp-compare"></div></div>' +
+        '<div id="mp-best"></div>' +
+        '<div style="margin-top:12px"><button class="mp-btn mp-btn-primary" style="width:100%;justify-content:center" id="mp-detail-save"><i class="fas fa-bookmark"></i> Save to Watchlist</button></div>';
+      var key = it.commodity + '|' + (it.market || '');
+      var sBtn = $('mp-detail-save');
+      if(S.savedIds[key]){ sBtn.innerHTML = '<i class="fas fa-check"></i> Saved'; sBtn.classList.add('saved'); }
+      sBtn.addEventListener('click', function(){ toggleSave(it); });
+      bindHistTabs();
+    }
+    function openDetailsById(id){ if(id) openDetails(id); }
+    function bindHistTabs(){
+      var row = $('mp-hist-tabs');
+      if(!row) return;
+      row.querySelectorAll('[data-hist]').forEach(function(b){
+        b.addEventListener('click', function(){
+          row.querySelectorAll('.mp-detail-tab').forEach(function(x){ x.classList.remove('active'); });
+          b.classList.add('active');
+          S.historyDays = Number(b.getAttribute('data-hist'));
+          loadHistoryTab(S.historyDays);
+        });
+      });
+    }
+    function loadHistoryTab(days){
+      var hEl = $('mp-history');
+      if(!hEl || !_detailItem) return;
+      hEl.innerHTML = '<div class="mp-skeleton" style="padding:10px"><div class="mp-skel-line"></div><div class="mp-skel-line"></div></div>';
+      var params = { commodity: _detailItem.commodity, days: days };
+      if(_detailItem.market) params.market = _detailItem.market;
+      if(_detailItem.variety) params.variety = _detailItem.variety;
+      if(_detailItem.state) params.state = _detailItem.state;
+      window.MarketPriceService.history(params).then(function(d){
+        var pts = d.points || [];
+        if(!pts.length){
+          hEl.innerHTML = '<div class="mp-empty mp-chart-empty" style="padding:22px 12px"><i class="fas fa-chart-line" style="font-size:30px"></i><h3>Historical data is not available for this commodity.</h3><p>Official price history currently covers the announced seasons in the database.</p></div>';
+          return;
+        }
+        if(pts.length === 1){
+          var p = pts[0];
+          hEl.innerHTML = '<div class="mp-empty mp-chart-empty" style="padding:20px 12px"><i class="fas fa-chart-simple" style="font-size:30px"></i><h3>Only one official price point recorded</h3><p>' + isoTodate(p.date) + ' — ' + fmtINR(p.modal_price) + '/' + esc((d.unit||'Rs/Quintal').replace(/Rs\/Quintal/,'Quintal')) + '. More points appear as new seasons are announced.</p></div>';
+          return;
+        }
+        hEl.innerHTML = '<div style="max-width:100%;overflow-x:hidden">' + drawChart(pts) + '</div>' +
+          '<div class="mp-mini-legend"><span><span class="mp-lg-dot" style="background:#1B5E3F"></span> Modal price</span>' +
+          '<span>Points: ' + pts.length + ' (official announcements)</span>' +
+          '<span>Unit: ' + esc((d.unit||'Rs/Quintal').replace(/Rs\/Quintal/,'Quintal')) + '</span></div>';
+      }).catch(function(err){ handleApiError(err, hEl, function(){ loadHistoryTab(days); }); });
+    }
+    function drawChart(points){
+      var w = 640, h = 210, padL = 12, padR = 12, padT = 16, padB = 28;
+      var vals = points.map(function(p){ return p.modal_price; });
+      var minV = Math.min.apply(null, vals), maxV = Math.max.apply(null, vals);
+      if(minV === maxV){ minV = minV - 1; maxV = maxV + 1; }
+      var span = maxV - minV;
+      var iw = w - padL - padR, ih = h - padT - padB;
+      function X(i){ return padL + (points.length === 1 ? iw/2 : (iw * i / (points.length - 1))); }
+      function Y(v){ return padT + ih - (ih * (v - minV) / span); }
+      var line = points.map(function(p, i){ return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.modal_price).toFixed(1); }).join(' ');
+      var area = line + ' L' + X(points.length-1).toFixed(1) + ' ' + (padT+ih) + ' L' + X(0).toFixed(1) + ' ' + (padT+ih) + ' Z';
+      var grid = '';
+      for(var g=0; g<=2; g++){
+        var gy = padT + (ih * g / 2);
+        grid += '<line x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (w-padR) + '" y2="' + gy.toFixed(1) + '" stroke="#e8efe9" stroke-width="1"/>';
       }
-      el.innerHTML = html;
+      var dots = points.map(function(p, i){
+        return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(p.modal_price).toFixed(1) + '" r="4" fill="#0F2E1E" stroke="#fff" stroke-width="1.5"/>';
+      }).join('');
+      var labels = '';
+      if(points.length === 2){
+        points.forEach(function(p, i){
+          labels += '<text x="' + X(i).toFixed(1) + '" y="' + (h-8) + '" font-size="10" fill="#6b7280" text-anchor="middle">' + isoTodate(p.date) + '</text>';
+        });
+      } else {
+        var l0 = points[0], ln = points[points.length-1];
+        var lmid = points[Math.floor(points.length/2)] || l0;
+        if(points.length >= 3){
+          labels += '<text x="0" y="' + (h-8) + '" font-size="10" fill="#6b7280">' + isoTodate(l0.date) + '</text>';
+          labels += '<text x="' + w + '" y="' + (h-8) + '" font-size="10" fill="#6b7280" text-anchor="end">' + isoTodate(ln.date) + '</text>';
+          labels += '<text x="' + X(points.length-1)/*mid*/ + '" y="' + (h-8) + '" font-size="10" fill="#9ca3af" text-anchor="middle">' + (points.length) + ' points</text>';
+        } else {
+          labels += '<text x="' + X(0).toFixed(1) + '" y="' + (h-8) + '" font-size="10" fill="#6b7280">' + isoTodate(l0.date) + '</text>';
+        }
+      }
+      var ymax = '<text x="' + (padL) + '" y="' + (padT-3) + '" font-size="10" fill="#9ca3af">' + fmtNum(maxV) + '</text>';
+      return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;display:block">' +
+        '<defs><linearGradient id="mpArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B5E3F" stop-opacity="0.28"/><stop offset="1" stop-color="#1B5E3F" stop-opacity="0.02"/></linearGradient></defs>' +
+        grid + '<path d="' + area + '" fill="url(#mpArea)"/>' +
+        '<path d="' + line + '" fill="none" stroke="#1B5E3F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+        dots + labels + ymax + '</svg>';
+    }
+    function loadCompare(commodity){
+      var cEl = $('mp-compare');
+      if(!cEl) return;
+      cEl.innerHTML = '<div class="mp-skeleton" style="padding:10px"><div class="mp-skel-line"></div></div>';
+      var params = { commodity: commodity };
+      if(_detailItem && _detailItem.market) params.market = _detailItem.market;
+      window.MarketPriceService.compare(params).then(function(d){
+        var entries = d.markets || [];
+        if(!d.market_count || !entries.length){
+          cEl.innerHTML = '<div class="mp-empty mp-chart-empty" style="padding:18px 12px"><i class="fas fa-store" style="font-size:28px"></i><h3>No comparable market data</h3><p>Daily mandi-level comparisons become available when the live market feed is enabled.</p></div>';
+          $('mp-best').innerHTML = '';
+          return;
+        }
+        var out;
+        if(entries.length === 1){
+          var e0 = entries[0];
+          out = '<div class="mp-empty mp-chart-empty" style="padding:16px 12px"><i class="fas fa-store" style="font-size:26px"></i><h3 style="margin-bottom:2px">Only one market entry for ' + esc(commodity) + '</h3><p>' + esc(e0.market) + ' — ' + fmtINR(e0.modal_price) + '/Quintal. More mandis appear when the live feed is enabled.</p></div>';
+        } else {
+          out = '<div class="mp-compare-scroll">' + entries.map(function(e){
+            var cls = e.market === d.highest.market ? ' best' : (e.market === d.lowest.market ? ' low' : '');
+            return '<div class="mp-ccard' + cls + '"><div class="mp-cc-market">' + esc(e.market) + '</div>' +
+              (e.variety ? '<div style="font-size:10px;color:var(--text-muted)">' + esc(e.variety) + '</div>' : '') +
+              '<div class="mp-cc-price">' + fmtINR(e.modal_price) + '</div><div style="font-size:10px;color:var(--text-muted)">' + isoTodate(e.price_date) + '</div></div>';
+          }).join('') + '</div>' +
+          '<div class="mp-mini-legend"><span><span class="mp-lg-dot" style="background:#d8b247;border:1px solid #c9a23a"></span> Highest</span>' +
+          '<span><span class="mp-lg-dot" style="background:#9fd0a8"></span> Lowest</span>' +
+          '<span>Average: ' + fmtINR(d.average) + '</span><span>Markets: ' + d.market_count + '</span></div>';
+        }
+        cEl.innerHTML = out;
+        var bestEl = $('mp-best');
+        if(d.highest && d.market_count){
+          bestEl.innerHTML = '<div class="mp-best-price"><div class="mp-bp-label"><i class="fas fa-crown"></i> Highest Listed Market Price</div>' +
+            '<div class="mp-bp-val">' + fmtINR(d.highest.modal_price) + '<span style="font-size:12px;font-weight:600;opacity:0.85">/Quintal</span></div>' +
+            '<div class="mp-bp-market"><i class="fas fa-store"></i> ' + esc(d.highest.market) + (d.highest.variety ? ' · ' + esc(d.highest.variety) : '') + ' &middot; ' + isoTodate(d.highest.price_date) + '</div></div>' +
+            '<div class="mp-disclaimer"><i class="fas fa-circle-info" style="margin-top:2px"></i><span>' + esc(d.disclaimer) + '</span></div>';
+        }
+      }).catch(function(err){ handleApiError(err, cEl, function(){ loadCompare(commodity); }); });
     }
 
-    setTimeout(function() { showMarketTab('prices', document.querySelector('.filter-tab')); }, 200);
-    setTimeout(function() { initNearbyMarkets(); }, 300);
-    loadMarketPrices().then(function() {
-      if (liveMarketPrices) {
-        showMarketTab('prices', document.querySelector('.filter-tab'));
-      }
+    /* ---------------- view switching ---------------- */
+    function showView(v){
+      S.view = v;
+      mainView.style.display = v === 'main' ? '' : 'none';
+      wlView.classList.toggle('active', v === 'watchlist');
+      var bw = $('btn-watchlist');
+      if(bw) bw.classList.toggle('active', v === 'watchlist');
+      if(v === 'watchlist') loadWatchlist();
+    }
+    function closeDetails(){
+      $('mp-details').classList.remove('active');
+    }
+
+    /* ---------------- search ---------------- */
+    function onSearchInput(){
+      clearTimeout(searchTimer);
+      var v = searchInput.value.trim();
+      searchClear.style.display = v ? 'block' : 'none';
+      if(v.length < 2){ suggestEl.style.display = 'none'; S.q = ''; if(!v){ S.page = 1; loadList(false); } return; }
+      searchTimer = setTimeout(function(){
+        window.MarketPriceService.search(v).then(function(d){
+          var n = 0;
+          ['commodities','markets','districts','states','varieties'].forEach(function(k){
+            n += (d[k] || []).length;
+          });
+          if(!n){ suggestEl.style.display = 'none'; S.q = v; S.page = 1; loadList(false); return; }
+          var h = '';
+          ['commodities','markets','districts','states','varieties'].forEach(function(k){
+            var arr = d[k] || [];
+            if(!arr.length) return;
+            h += '<div class="mp-sg-label">' + k + '</div>';
+            arr.forEach(function(x){
+              h += '<button class="mp-sg-item" data-sg="' + k + '" data-v="' + esc(x) + '"><i class="fas fa-search" style="color:var(--text-muted);font-size:11px"></i> ' + esc(x) + '</button>';
+            });
+          });
+          suggestEl.innerHTML = h;
+          suggestEl.style.display = 'block';
+          suggestEl.querySelectorAll('.mp-sg-item').forEach(function(b){
+            b.addEventListener('click', function(){
+              var k = b.getAttribute('data-sg'), v = b.getAttribute('data-v');
+              suggestEl.style.display = 'none';
+              if(k === 'commodities'){
+                S.category = 'all';
+                catsEl.querySelectorAll('.mp-cat').forEach(function(x){ x.classList.remove('active'); });
+                S.q = '';
+                S.commodity = v;
+                loadWithCommodity(v);
+              } else {
+                if(k === 'markets'){ S.market = v; marketSel.value = v; }
+                else if(k === 'states'){ S.state = v; stateSel.value = v; }
+                else if(k === 'districts'){ S.district = v; }
+                S.q = ''; S.page = 1; loadList(false);
+              }
+              searchInput.blur();
+            });
+          });
+        }).catch(function(){ suggestEl.style.display = 'none'; });
+      }, 350);
+    }
+    function loadWithCommodity(v){
+      S.commodity = v;
+      S.page = 1;
+      updateFilterBadge();
+      loadList(false);
+    }
+    function resetFilters(){
+      S.q = ''; S.category = 'all'; S.state=''; S.district=''; S.market=''; S.commodity=''; S.sort='recent'; S.page = 1;
+      searchInput.value = ''; searchClear.style.display = 'none';
+      catsEl.querySelectorAll('.mp-cat').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-cat') === 'all'); });
+      stateSel.value=''; distSel.disabled = true; distSel.innerHTML = '<option value="">All Districts</option>';
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
+      sortSel.value = 'recent';
+      updateFilterBadge();
+      loadList(false);
+    }
+    function updateFilterBadge(){
+      var active = !!(S.state || S.district || S.market || S.category !== 'all' || S.sort !== 'recent' || S.commodity);
+      filterBadge.style.display = active ? 'block' : 'none';
+    }
+
+    /* ---------------- refresh ---------------- */
+    function refresh(){
+      var btn = $('btn-refresh');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+      window.MarketPriceService.refresh().then(function(d){
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+        var r = d.refresh || {};
+        if(r.ok){ showToast('Market data refreshed.', 'success'); }
+        else if(r.reason === 'not_configured'){ showToast('Live market source is not configured on the server. Showing latest available data.', 'info'); }
+        else { showToast(r.message || 'Market data could not be refreshed right now.', 'info'); }
+        loadInitial();
+      }).catch(function(err){
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+        if(err && err.isNetworkError){ showToast('You appear to be offline. Showing latest data.', 'warning'); updateOfflineFlag(); }
+        else { handleApiError(err, null); }
+      });
+    }
+
+    /* ---------------- init ---------------- */
+    function loadInitial(){
+      renderListLoading();
+      window.MarketPriceService.summary().then(function(s){
+        renderSnapshot(s);
+        renderFreshness(s.freshness);
+        loadList(false);
+      }).catch(function(err){ handleApiError(err, listEl, function(){ loadInitial(); }); });
+      window.MarketPriceService.categories().then(function(d){
+        renderCats(d.categories);
+      }).catch(function(){ });
+      window.MarketPriceService.markets().then(function(d){
+        renderStates(d.states || []);
+      }).catch(function(){ });
+      loadRecommended();
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      updateOfflineFlag();
+      window.addEventListener('offline', updateOfflineFlag);
+      window.addEventListener('online', function(){ updateOfflineFlag(); if(S.view === 'main') loadInitial(); });
+
+      $('btn-refresh').addEventListener('click', refresh);
+      $('btn-watchlist').addEventListener('click', function(){ showView('watchlist'); });
+      filterBtn.addEventListener('click', function(){
+        filterPanel.classList.toggle('open');
+        filterBtn.classList.toggle('active', filterPanel.classList.contains('open'));
+        if(filterPanel.classList.contains('open')){ S.district=''; S.market=''; }
+      });
+      $('mp-details-close').addEventListener('click', closeDetails);
+      $('mp-details').addEventListener('click', function(e){ if(e.target === this) closeDetails(); });
+      searchInput.addEventListener('input', onSearchInput);
+      searchClear.addEventListener('click', function(){ searchInput.value=''; searchClear.style.display='none'; suggestEl.style.display='none'; S.q=''; S.commodity=''; S.page=1; updateFilterBadge(); loadList(false); });
+      stateSel.addEventListener('change', function(){ loadDistricts(); S.page = 1; updateFilterBadge(); loadList(false); });
+      distSel.addEventListener('change', function(){ loadMarkets(); S.page = 1; updateFilterBadge(); loadList(false); });
+      marketSel.addEventListener('change', function(){ S.market = marketSel.value; S.page = 1; updateFilterBadge(); loadList(false); });
+      sortSel.addEventListener('change', function(){ S.sort = sortSel.value; S.page = 1; updateFilterBadge(); loadList(false); });
+      $('btn-use-location').addEventListener('click', useSavedLocation);
+      $('mp-clear-filters').addEventListener('click', function(){ resetFilters(); });
+      $('mp-btn-load-more').addEventListener('click', function(){ S.page += 1; loadList(true); });
+      document.querySelectorAll('[data-back]').forEach(function(b){
+        b.addEventListener('click', function(){ showView(b.getAttribute('data-back')); });
+      });
+      document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeDetails(); });
+
+      // fire/init
+      loadInitial();
+      loadWatchlist();
     });
+  })();
   </script>
 </body>
 </html>

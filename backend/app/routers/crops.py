@@ -400,6 +400,26 @@ def create_journal_entry(
         if not farm:
             raise HTTPException(status_code=404, detail="Farm not found")
 
+    if payload.plot_id:
+        # Validate the plot belongs to one of the current user's farms
+        owned_farm_ids = [
+            row[0]
+            for row in db.query(Farm.id).filter(Farm.user_id == current_user.id).all()
+        ]
+        plot = None
+        if owned_farm_ids:
+            plot = (
+                db.query(FarmPlot)
+                .filter(FarmPlot.id == payload.plot_id, FarmPlot.farm_id.in_(owned_farm_ids))
+                .first()
+            )
+        if not plot:
+            raise HTTPException(status_code=404, detail="Plot not found")
+        if payload.farm_id and plot.farm_id != farm.id:
+            raise HTTPException(
+                status_code=400, detail="Plot does not belong to the given farm"
+            )
+
     entry = FarmJournal(
         user_id=current_user.id,
         farm_id=payload.farm_id,

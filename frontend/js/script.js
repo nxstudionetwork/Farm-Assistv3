@@ -45,7 +45,6 @@ function initDynamicPageLogic() {
     else if (page === "ai.html") initAIChatbot();
     else if (page === "monitoring.html") initMonitoringSystem();
     else if (page === "marketplace.html") initMarketplaceShop();
-    else if (page === "finance.html") initFinanceCharts();
     else if (page === "weather.html") initWeatherForecast();
     else if (page === "news.html") initNewsCenter();
     else if (page === "expert.html") initExpertsDirectory();
@@ -59,9 +58,7 @@ function initDynamicPageLogic() {
     else if (page === "crop-protection.html") initCropProtection('protection-content');
     else if (page === "livestock.html") initLivestockHealth('livestock-content');
     else if (page === "schemes.html") initGovSchemes('schemes-content');
-    else if (page === "learning.html") initLearningCenter();
     else if (page === "sustainability.html") initSustainability();
-    else if (page === "emergency.html") initEmergency();
   }, 100);
 }
 
@@ -609,23 +606,6 @@ function initMarketplaceShop() {
 }
 
 /* ===== FINANCE ===== */
-function initFinanceCharts() {
-  const list = document.getElementById("transactions-list");
-  if (!list) return;
-  const txs = (DB().transactions || []).slice(0, 15);
-  list.innerHTML = txs.map(tx => {
-    const income = tx.type === "income";
-    return `
-    <div class="price-card">
-      <div class="price-info">
-        <div class="price-icon" style="background:${income ? 'rgba(40,167,69,0.1)' : 'rgba(220,53,69,0.1)'};color:${income ? 'var(--success)' : 'var(--danger)'};"><i class="fas ${income ? 'fa-arrow-down' : 'fa-arrow-up'}"></i></div>
-        <div><div class="price-crop">${tx.desc}</div><div style="font-size:10px;color:var(--text-muted);">${tx.date || ''}</div></div>
-      </div>
-      <div style="font-weight:700;color:${income ? 'var(--success)' : 'var(--danger)'};">${income ? '+' : '-'}₹${Math.abs(tx.amount)}</div>
-    </div>`;
-  }).join('');
-}
-
 /* ===== WEATHER ===== */
 function initWeatherForecast() {
   const hourly = document.getElementById("weather-hourly-list");
@@ -1544,89 +1524,6 @@ function initSustainability() {
   el.innerHTML = html;
 }
 window.initSustainability = initSustainability;
-
-/* ===== EMERGENCY ===== */
-function initEmergency() {
-  const el = document.getElementById("emergency-content");
-  if (!el) return;
-  const ed = DB().emergencyData || {};
-  const contacts = ed.contacts || [];
-  const alerts = ed.alerts || [];
-  const hospitals = ed.hospitalContacts || [];
-
-  let html = `<div class="page-header"><h1><i class="fas fa-shield-halved" style="color:var(--danger);"></i> Emergency Center</h1><span style="font-size:12px;color:var(--text-muted);">Quick access to emergency services</span></div>`;
-
-  // SOS Button
-  html += `<div style="text-align:center;margin-bottom:16px;">
-    <div style="width:100px;height:100px;border-radius:50%;background:var(--danger);color:white;display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:32px;font-weight:900;cursor:pointer;box-shadow:0 4px 20px rgba(214,48,49,0.4);animation:pulseSoft 2s infinite;" onclick="showToast('🆘 SOS Alert sent to emergency contacts! Help is on the way.','danger')">
-      SOS
-    </div>
-    <p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Tap for immediate emergency alert</p>
-  </div>`;
-
-  // Active Alerts
-  if (alerts.length > 0) {
-    html += `<h4 style="font-size:14px;margin-bottom:8px;"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i> Active Alerts</h4>`;
-    alerts.forEach(a => {
-      const sc = a.severity === 'Red' ? 'danger' : a.severity === 'Orange' ? 'warning' : 'info';
-      html += `<div class="alert-strip ${sc}" style="margin-bottom:8px;">
-        <div class="alert-content">
-          <i class="fas fa-bell"></i>
-          <div><strong>${a.type}</strong> • ${a.area}<div style="font-size:10px;color:var(--text-muted);">${a.description.substring(0,60)}...</div></div>
-        </div>
-        <span class="badge badge-${sc}">${a.severity}</span>
-      </div>`;
-    });
-  }
-
-  // Emergency Contacts
-  html += `<h4 style="font-size:14px;margin:12px 0 8px;"><i class="fas fa-phone-alt" style="color:var(--danger);"></i> Emergency Contacts</h4>`;
-  html += `<div class="grid-2">`;
-  contacts.forEach(c => {
-    html += `<div class="feature-card" style="cursor:pointer;text-align:center;" onclick="showToast('Calling ${c.name} at ${c.phone}...','info')">
-      <i class="fas ${c.icon}" style="font-size:28px;color:var(--danger);"></i>
-      <h4 style="font-size:13px;">${c.phone}</h4>
-      <p style="font-size:10px;color:var(--text-muted);">${c.name}</p>
-      <p style="font-size:9px;color:var(--text-muted);">${c.type}</p>
-      <button class="btn-primary btn-sm" style="width:100%;margin-top:6px;background:var(--danger);" onclick="event.stopPropagation();showToast('Calling ${c.phone}...','info')"><i class="fas fa-phone"></i> Call Now</button>
-    </div>`;
-  });
-  html += `</div>`;
-
-  // Nearby Hospitals
-  if (hospitals.length > 0) {
-    html += `<h4 style="font-size:14px;margin:12px 0 8px;"><i class="fas fa-hospital" style="color:var(--danger);"></i> Nearby Health Centres</h4>`;
-    html += `<div class="card-premium" style="padding:12px;">`;
-    hospitals.forEach(h => {
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:12px;" onclick="showToast('${h.name} - ${h.distance} away - ${h.phone}','info')" style="cursor:pointer;">
-        <i class="fas ${h.type === 'Veterinary' ? 'fa-cow' : 'fa-user-md'}" style="color:var(--danger);"></i>
-        <div style="flex:1;"><strong>${h.name}</strong><div style="font-size:10px;color:var(--text-muted);">${h.distance} • ${h.phone}</div></div>
-        <span class="badge badge-green">${h.type}</span>
-      </div>`;
-    });
-    html += `</div>`;
-  }
-
-  // Disaster Guidelines
-  html += `<div class="card-premium" style="margin-top:12px;">
-    <h4 style="margin-bottom:8px;"><i class="fas fa-book" style="color:var(--primary-green);"></i> Disaster Preparedness</h4>
-    <div style="font-size:11px;color:var(--text-secondary);line-height:1.8;">
-      <p>✅ <strong>Flood:</strong> Move livestock to high ground. Store food & documents in waterproof bags. Keep emergency kit ready.</p>
-      <p>✅ <strong>Cyclone:</strong> Secure farm structures. Harvest mature crops. Stock emergency supplies for 5 days.</p>
-      <p>✅ <strong>Drought:</strong> Implement water conservation. Use mulch. Delay non-essential irrigation.</p>
-      <p>✅ <strong>Pest Outbreak:</strong> Report to agriculture officer. Apply recommended pesticides. Isolate affected fields.</p>
-    </div>
-  </div>`;
-
-  // GPS and History buttons
-  html += `<div style="display:flex;gap:8px;margin-top:12px;">
-    <button class="btn-primary" style="flex:1;" onclick="showToast('GPS Location: 18.5204°N, 73.8567°E • Sharing with emergency services...','info')"><i class="fas fa-location-dot"></i> Share Location</button>
-    <button class="btn-secondary" style="flex:1;" onclick="showToast('Emergency History: No previous emergencies recorded.','info')"><i class="fas fa-clock-rotate"></i> History</button>
-  </div>`;
-
-  el.innerHTML = html;
-}
-window.initEmergency = initEmergency;
 
 /* ===== ENHANCED WORKERS ===== */
 function initWorkersMarket(containerId) {

@@ -7,10 +7,24 @@ from sqlalchemy import func, extract
 
 from app.database.connection import get_db
 from app.utils.auth import get_current_user, generate_id
+from app.utils.notification_helper import create_notification
 from app.models.user import User
 from app.models.finance import Transaction, Expense, Income
+from app.models.farm import Farm
 
 router = APIRouter(prefix="/api/v1", tags=["Finance"])
+
+
+def _assert_farm_owned(db: Session, farm_id: Optional[str], current_user: User) -> None:
+    """Ensure a supplied farm_id belongs to the current user before creating a record."""
+    if farm_id:
+        farm = (
+            db.query(Farm)
+            .filter(Farm.id == farm_id, Farm.user_id == current_user.id)
+            .first()
+        )
+        if not farm:
+            raise HTTPException(status_code=404, detail="Farm not found")
 
 
 class TransactionCreate(BaseModel):
@@ -45,6 +59,62 @@ class IncomeCreate(BaseModel):
     payment_method: Optional[str] = None
     farm_id: Optional[str] = None
     income_date: Optional[str] = None
+
+
+class IncomeUpdate(BaseModel):
+    category: Optional[str] = None
+    amount: Optional[float] = Field(None, gt=0)
+    source: Optional[str] = None
+    description: Optional[str] = None
+    buyer: Optional[str] = None
+    payment_method: Optional[str] = None
+    farm_id: Optional[str] = None
+    income_date: Optional[str] = None
+
+
+class ExpenseUpdate(BaseModel):
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
+    amount: Optional[float] = Field(None, gt=0)
+    description: Optional[str] = None
+    vendor: Optional[str] = None
+    payment_method: Optional[str] = None
+    farm_id: Optional[str] = None
+    receipt_url: Optional[str] = None
+    expense_date: Optional[str] = None
+
+
+def _income_to_dict(i: Income) -> dict:
+    return {
+        "id": i.id,
+        "income_id": i.income_id,
+        "category": i.category,
+        "source": i.source,
+        "amount": i.amount,
+        "description": i.description,
+        "buyer": i.buyer,
+        "payment_method": i.payment_method,
+        "farm_id": i.farm_id,
+        "income_date": str(i.income_date) if i.income_date else None,
+        "created_at": str(i.created_at) if i.created_at else None,
+    }
+
+
+def _expense_to_dict(e: Expense) -> dict:
+    return {
+        "id": e.id,
+        "expense_id": e.expense_id,
+        "category": e.category,
+        "subcategory": e.subcategory,
+        "amount": e.amount,
+        "description": e.description,
+        "vendor": e.vendor,
+        "payment_method": e.payment_method,
+        "receipt_url": e.receipt_url,
+        "farm_id": e.farm_id,
+        "expense_date": str(e.expense_date) if e.expense_date else None,
+        "created_at": str(e.created_at) if e.created_at else None,
+    }
 
 
 @router.get("/finance/summary")
@@ -207,6 +277,7 @@ def create_transaction(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _assert_farm_owned(db, payload.farm_id, current_user)
     txn_id = generate_id("FA-TXN", db, Transaction)
     txn_date = None
     if payload.transaction_date:
@@ -251,17 +322,42 @@ def list_expenses(
     limit: int = Query(20, ge=1, le=100),
     farm_id: Optional[str] = None,
     category: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    q: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    q = db.query(Expense).filter(Expense.user_id == current_user.id)
+    query = db.query(Expense).filter(Expense.user_id == current_user.id)
     if farm_id:
-        q = q.filter(Expense.farm_id == farm_id)
+        query = query.filter(Expense.farm_id == farm_id)
     if category:
-        q = q.filter(Expense.category == category)
+        query = query.filter(Expense.category == category)
+    if start_date:
+        try:
+            sd = datetime.fromisoformat(start_date)
+            query = query.filter(func.coalesce(Expense.expense_date, Expense.created_at) >= sd)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            ed = datetime.fromisoformat(end_date)
+            query = query.filter(func.coalesce(Expense.expense_date, Expense.created_at) <= ed)
+        except ValueError:
+            pass
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Expense.category.ilike(term),
+                Expense.description.ilike(term),
+                Expense.vendor.ilike(term),
+                Expense.expense_id.ilike(term),
+            )
+        )
 
-    total = q.count()
-    items = q.order_by(Expense.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    total = query.count()
+    items = query.order_by(Expense.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
 
     return {
         "status": "success",
@@ -270,22 +366,7 @@ def list_expenses(
             "page": page,
             "limit": limit,
             "total_pages": (total + limit - 1) // limit,
-            "items": [
-                {
-                    "id": e.id,
-                    "expense_id": e.expense_id,
-                    "category": e.category,
-                    "subcategory": e.subcategory,
-                    "amount": e.amount,
-                    "description": e.description,
-                    "vendor": e.vendor,
-                    "payment_method": e.payment_method,
-                    "farm_id": e.farm_id,
-                    "expense_date": str(e.expense_date) if e.expense_date else None,
-                    "created_at": str(e.created_at) if e.created_at else None,
-                }
-                for e in items
-            ],
+            "items": [_expense_to_dict(e) for e in items],
         },
     }
 
@@ -296,6 +377,7 @@ def create_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _assert_farm_owned(db, payload.farm_id, current_user)
     exp_id = generate_id("FA-EXP", db, Expense)
     exp_date = None
     if payload.expense_date:
@@ -321,15 +403,114 @@ def create_expense(
     db.commit()
     db.refresh(expense)
 
+    try:
+        create_notification(
+            db=db,
+            user_id=current_user.id,
+            title="Expense Recorded",
+            message=(
+                f"₹{payload.amount:,.2f} recorded under {payload.category}. "
+                f"Total expenses are kept in your financial summary."
+            ),
+            notification_type="finance",
+            reference_id=expense.expense_id,
+            reference_type="expense",
+            icon="fa-arrow-down",
+            action_url="wallet.html",
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return {
         "status": "success",
-        "data": {
-            "id": expense.id,
-            "expense_id": expense.expense_id,
-            "category": expense.category,
-            "amount": expense.amount,
-            "message": "Expense created successfully",
-        },
+        "message": "Expense created successfully",
+        "data": _expense_to_dict(expense),
+    }
+
+
+@router.get("/expenses/{expense_id}")
+def get_expense(
+    expense_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    expense = (
+        db.query(Expense)
+        .filter(
+            Expense.expense_id == expense_id,
+            Expense.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    return {"status": "success", "data": _expense_to_dict(expense)}
+
+
+@router.put("/expenses/{expense_id}")
+def update_expense(
+    expense_id: str,
+    payload: ExpenseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    expense = (
+        db.query(Expense)
+        .filter(
+            Expense.expense_id == expense_id,
+            Expense.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    _assert_farm_owned(db, payload.farm_id, current_user)
+
+    updates = payload.model_dump(exclude_unset=True)
+    date_val = updates.pop("expense_date", None)
+    if date_val:
+        try:
+            expense.expense_date = datetime.fromisoformat(date_val)
+        except ValueError:
+            expense.expense_date = datetime.utcnow()
+
+    for key, value in updates.items():
+        if value is not None:
+            setattr(expense, key, value)
+    db.commit()
+    db.refresh(expense)
+
+    return {
+        "status": "success",
+        "message": "Expense updated successfully",
+        "data": _expense_to_dict(expense),
+    }
+
+
+@router.delete("/expenses/{expense_id}")
+def delete_expense(
+    expense_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    expense = (
+        db.query(Expense)
+        .filter(
+            Expense.expense_id == expense_id,
+            Expense.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    db.delete(expense)
+    db.commit()
+    return {
+        "status": "success",
+        "message": "Expense deleted successfully",
+        "data": {"expense_id": expense_id},
     }
 
 
@@ -339,17 +520,43 @@ def list_income(
     limit: int = Query(20, ge=1, le=100),
     farm_id: Optional[str] = None,
     category: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    q: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    q = db.query(Income).filter(Income.user_id == current_user.id)
+    query = db.query(Income).filter(Income.user_id == current_user.id)
     if farm_id:
-        q = q.filter(Income.farm_id == farm_id)
+        query = query.filter(Income.farm_id == farm_id)
     if category:
-        q = q.filter(Income.category == category)
+        query = query.filter(Income.category == category)
+    if start_date:
+        try:
+            sd = datetime.fromisoformat(start_date)
+            query = query.filter(func.coalesce(Income.income_date, Income.created_at) >= sd)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            ed = datetime.fromisoformat(end_date)
+            query = query.filter(func.coalesce(Income.income_date, Income.created_at) <= ed)
+        except ValueError:
+            pass
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Income.category.ilike(term),
+                Income.description.ilike(term),
+                Income.source.ilike(term),
+                Income.buyer.ilike(term),
+                Income.income_id.ilike(term),
+            )
+        )
 
-    total = q.count()
-    items = q.order_by(Income.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    total = query.count()
+    items = query.order_by(Income.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
 
     return {
         "status": "success",
@@ -358,22 +565,7 @@ def list_income(
             "page": page,
             "limit": limit,
             "total_pages": (total + limit - 1) // limit,
-            "items": [
-                {
-                    "id": i.id,
-                    "income_id": i.income_id,
-                    "category": i.category,
-                    "source": i.source,
-                    "amount": i.amount,
-                    "description": i.description,
-                    "buyer": i.buyer,
-                    "payment_method": i.payment_method,
-                    "farm_id": i.farm_id,
-                    "income_date": str(i.income_date) if i.income_date else None,
-                    "created_at": str(i.created_at) if i.created_at else None,
-                }
-                for i in items
-            ],
+            "items": [_income_to_dict(i) for i in items],
         },
     }
 
@@ -384,6 +576,7 @@ def create_income(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _assert_farm_owned(db, payload.farm_id, current_user)
     inc_id = generate_id("FA-INC", db, Income)
     inc_date = None
     if payload.income_date:
@@ -408,175 +601,150 @@ def create_income(
     db.commit()
     db.refresh(income)
 
+    try:
+        create_notification(
+            db=db,
+            user_id=current_user.id,
+            title="Income Recorded",
+            message=(
+                f"₹{payload.amount:,.2f} recorded under {payload.category}. "
+                f"Total income is kept in your financial summary."
+            ),
+            notification_type="finance",
+            reference_id=income.income_id,
+            reference_type="income",
+            icon="fa-arrow-up",
+            action_url="wallet.html",
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return {
         "status": "success",
-        "data": {
-            "id": income.id,
-            "income_id": income.income_id,
-            "category": income.category,
-            "amount": income.amount,
-            "message": "Income record created successfully",
-        },
+        "message": "Income record created successfully",
+        "data": _income_to_dict(income),
     }
 
 
-# ------------------------------------------------------------------
-# Digital Wallet (additive wallet endpoints backed by the existing
-# Transaction model).
-# ------------------------------------------------------------------
-
-class WalletAddMoney(BaseModel):
-    amount: float = Field(gt=0)
-    payment_method: Optional[str] = "UPI"
-    description: Optional[str] = None
-
-
-class WalletTransfer(BaseModel):
-    amount: float = Field(gt=0)
-    recipient: Optional[str] = None
-    recipient_upi: Optional[str] = None
-    note: Optional[str] = None
-    payment_method: Optional[str] = "UPI"
-
-
-@router.get("/wallet/summary")
-def wallet_summary(
+@router.get("/income/{income_id}")
+def get_income(
+    income_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    user_id = current_user.id
-    credit = float(
-        db.query(func.coalesce(func.sum(Transaction.amount), 0.0))
-        .filter(Transaction.user_id == user_id, Transaction.type == "income")
-        .scalar()
-        or 0
+    income = (
+        db.query(Income)
+        .filter(
+            Income.income_id == income_id,
+            Income.user_id == current_user.id,
+        )
+        .first()
     )
-    debit = float(
-        db.query(func.coalesce(func.sum(Transaction.amount), 0.0))
-        .filter(Transaction.user_id == user_id, Transaction.type == "expense")
-        .scalar()
-        or 0
+    if not income:
+        raise HTTPException(status_code=404, detail="Income record not found")
+    return {"status": "success", "data": _income_to_dict(income)}
+
+
+@router.put("/income/{income_id}")
+def update_income(
+    income_id: str,
+    payload: IncomeUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    income = (
+        db.query(Income)
+        .filter(
+            Income.income_id == income_id,
+            Income.user_id == current_user.id,
+        )
+        .first()
     )
-    recent = (
+    if not income:
+        raise HTTPException(status_code=404, detail="Income record not found")
+
+    _assert_farm_owned(db, payload.farm_id, current_user)
+
+    updates = payload.model_dump(exclude_unset=True)
+    date_val = updates.pop("income_date", None)
+    if date_val:
+        try:
+            income.income_date = datetime.fromisoformat(date_val)
+        except ValueError:
+            income.income_date = datetime.utcnow()
+
+    for key, value in updates.items():
+        if value is not None:
+            setattr(income, key, value)
+    db.commit()
+    db.refresh(income)
+
+    return {
+        "status": "success",
+        "message": "Income record updated successfully",
+        "data": _income_to_dict(income),
+    }
+
+
+@router.delete("/income/{income_id}")
+def delete_income(
+    income_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    income = (
+        db.query(Income)
+        .filter(
+            Income.income_id == income_id,
+            Income.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not income:
+        raise HTTPException(status_code=404, detail="Income record not found")
+    db.delete(income)
+    db.commit()
+    return {
+        "status": "success",
+        "message": "Income record deleted successfully",
+        "data": {"income_id": income_id},
+    }
+
+
+@router.get("/transactions/{transaction_id}")
+def get_transaction(
+    transaction_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    txn = (
         db.query(Transaction)
-        .filter(Transaction.user_id == user_id)
-        .order_by(Transaction.created_at.desc())
-        .limit(10)
-        .all()
+        .filter(
+            Transaction.transaction_id == transaction_id,
+            Transaction.user_id == current_user.id,
+        )
+        .first()
     )
+    if not txn:
+        raise HTTPException(status_code=404, detail="Transaction not found")
     return {
         "status": "success",
-        "data": {
-            "balance": round(credit - debit, 2),
-            "total_credits": round(credit, 2),
-            "total_debits": round(debit, 2),
-            "currency": "INR",
-            "recent_transactions": [
-                {
-                    "id": t.id,
-                    "transaction_id": t.transaction_id,
-                    "type": t.type,
-                    "category": t.category,
-                    "amount": t.amount,
-                    "description": t.description,
-                    "payment_method": t.payment_method,
-                    "transaction_date": str(t.transaction_date) if t.transaction_date else None,
-                    "created_at": str(t.created_at) if t.created_at else None,
-                }
-                for t in recent
-            ],
-        },
-    }
-
-
-@router.post("/wallet/add-money", status_code=201)
-def wallet_add_money(
-    payload: WalletAddMoney,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    txn_id = generate_id("FA-TXN", db, Transaction)
-    txn = Transaction(
-        transaction_id=txn_id,
-        user_id=current_user.id,
-        type="income",
-        category="Wallet Top-up",
-        amount=payload.amount,
-        description=payload.description or "Added money to digital wallet",
-        payment_method=payload.payment_method or "UPI",
-        transaction_date=datetime.utcnow(),
-    )
-    db.add(txn)
-    db.commit()
-    db.refresh(txn)
-    return {
-        "status": "success",
-        "message": "Money added to wallet successfully",
         "data": {
             "id": txn.id,
             "transaction_id": txn.transaction_id,
             "type": txn.type,
             "category": txn.category,
             "amount": txn.amount,
+            "description": txn.description,
+            "payment_method": txn.payment_method,
+            "farm_id": txn.farm_id,
+            "reference_id": txn.reference_id,
+            "transaction_date": str(txn.transaction_date) if txn.transaction_date else None,
+            "created_at": str(txn.created_at) if txn.created_at else None,
         },
     }
 
 
-@router.post("/wallet/transfer", status_code=201)
-def wallet_transfer(
-    payload: WalletTransfer,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    credit = float(
-        db.query(func.coalesce(func.sum(Transaction.amount), 0.0))
-        .filter(
-            Transaction.user_id == current_user.id,
-            Transaction.type == "income",
-        )
-        .scalar()
-        or 0
-    )
-    debit = float(
-        db.query(func.coalesce(func.sum(Transaction.amount), 0.0))
-        .filter(
-            Transaction.user_id == current_user.id,
-            Transaction.type == "expense",
-        )
-        .scalar()
-        or 0
-    )
-    if payload.amount > (credit - debit):
-        raise HTTPException(status_code=400, detail="Insufficient wallet balance")
 
-    txn_id = generate_id("FA-TXN", db, Transaction)
-    recipient = payload.recipient or (payload.recipient_upi or "UPI Account")
-    txn = Transaction(
-        transaction_id=txn_id,
-        user_id=current_user.id,
-        type="expense",
-        category="Wallet Transfer",
-        amount=payload.amount,
-        description=(
-            payload.note
-            or f"Transferred {payload.amount:,.2f} to {recipient}"
-        ),
-        payment_method=payload.payment_method or "UPI",
-        reference_id=payload.recipient_upi,
-        transaction_date=datetime.utcnow(),
-    )
-    db.add(txn)
-    db.commit()
-    db.refresh(txn)
-    return {
-        "status": "success",
-        "message": "Transfer completed successfully",
-        "data": {
-            "id": txn.id,
-            "transaction_id": txn.transaction_id,
-            "type": txn.type,
-            "category": txn.category,
-            "amount": txn.amount,
-            "recipient": recipient,
-        },
-    }
+

@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 import os
+import re
 import uuid as _uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
@@ -9,7 +10,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
-from app.utils.auth import get_current_user, generate_id
+from app.utils.auth import get_current_user, generate_id, normalize_farmer_id
 from app.config import settings
 from app.models.user import User
 from app.models.messages import (
@@ -36,26 +37,60 @@ class ReactionCreate(BaseModel):
     emoji: str
 
 
+class ContactCreate(BaseModel):
+    farmer_id: str
+
+
 def _user_info(user: User) -> dict:
     return {
         "id": user.id,
         "farmer_id": user.farmer_id,
         "full_name": user.full_name,
         "profile_image": user.profile_image,
+        "phone_number": user.phone_number,
+        "is_online": bool(getattr(user, "is_online", False)),
+        "last_seen_at": str(user.last_seen_at) if getattr(user, "last_seen_at", None) else None,
     }
 
 
 def _resolve_target_user(db: Session, user_id: Optional[str], farmer_id: Optional[str]) -> User:
     if user_id:
-        target = db.query(User).filter(User.id == user_id).first()
+        target = db.query(User).filter(User.id == user_id, User.is_active == True).first()
         if not target:
             raise HTTPException(status_code=404, detail="User not found")
         return target
+
     if farmer_id:
-        target = db.query(User).filter(User.farmer_id == farmer_id).first()
-        if not target:
-            raise HTTPException(status_code=404, detail="User not found")
-        return target
+        fid = farmer_id.strip()
+        # Try normalized Farmer ID
+        norm = normalize_farmer_id(fid)
+        if norm:
+            target = db.query(User).filter(User.farmer_id == norm, User.is_active == True).first()
+            if target:
+                return target
+
+        # Try phone lookup
+        digits = re.sub(r"\D", "", fid)
+        if len(digits) >= 10:
+            phone_10 = digits[-10:]
+            target = db.query(User).filter(
+                or_(
+                    User.phone_number == phone_10,
+                    User.phone_number == f"+91{phone_10}",
+                    User.phone_number.like(f"%{phone_10}"),
+                ),
+                User.is_active == True,
+            ).first()
+            if target:
+                return target
+
+        # Direct search
+        target = db.query(User).filter(User.farmer_id.ilike(fid), User.is_active == True).first()
+        if target:
+            return target
+
+        raise HTTPException(status_code=404, detail="Farmer not found with this identifier")
+
     raise HTTPException(status_code=400, detail="user_id or farmer_id is required")
 
 
@@ -153,6 +188,9 @@ def _message_to_dict(db: Session, msg: Message) -> dict:
         "content": msg.content,
         "message_type": msg.message_type,
         "attachment_url": msg.attachment_url,
+        "status": msg.status or "sent",
+        "delivered_at": str(msg.delivered_at) if msg.delivered_at else None,
+        "read_at": str(msg.read_at) if msg.read_at else None,
         "created_at": str(msg.created_at) if msg.created_at else None,
         "updated_at": str(msg.updated_at) if msg.updated_at else None,
         "reactions": reaction_list,
@@ -163,6 +201,14 @@ def _conversation_to_dict(db: Session, conv: Conversation, current_user_id: str)
     last_msg = _get_last_message(db, conv.id)
     unread = _get_unread_count(db, conv.id, current_user_id)
     other = _get_other_participant(db, conv.id, current_user_id)
+    participant = (
+        db.query(ConversationParticipant)
+        .filter(
+            ConversationParticipant.conversation_id == conv.id,
+            ConversationParticipant.user_id == current_user_id,
+        )
+        .first()
+    )
     last_message = None
     if last_msg:
         last_message = {
@@ -171,6 +217,7 @@ def _conversation_to_dict(db: Session, conv: Conversation, current_user_id: str)
             "content": last_msg.content,
             "message_type": last_msg.message_type,
             "sender_id": last_msg.sender_id,
+            "status": last_msg.status or "sent",
             "created_at": str(last_msg.created_at) if last_msg.created_at else None,
         }
     return {
@@ -181,10 +228,15 @@ def _conversation_to_dict(db: Session, conv: Conversation, current_user_id: str)
         "other_participant": other,
         "last_message": last_message,
         "unread_count": unread,
+        "muted": bool(participant and participant.muted),
         "created_at": str(conv.created_at) if conv.created_at else None,
         "updated_at": str(conv.updated_at) if conv.updated_at else None,
     }
 
+
+# ==========================================
+# ENDPOINTS
+# ==========================================
 
 @router.get("/unread-count")
 def get_unread_count(
@@ -196,6 +248,7 @@ def get_unread_count(
         .join(ConversationParticipant, ConversationParticipant.conversation_id == Message.conversation_id)
         .filter(
             ConversationParticipant.user_id == current_user.id,
+            ConversationParticipant.deleted_at == None,
             Message.sender_id != current_user.id,
         )
         .filter(
@@ -213,7 +266,10 @@ def list_conversations(
 ):
     participant_rows = (
         db.query(ConversationParticipant)
-        .filter(ConversationParticipant.user_id == current_user.id)
+        .filter(
+            ConversationParticipant.user_id == current_user.id,
+            ConversationParticipant.deleted_at == None,
+        )
         .all()
     )
     conv_ids = [p.conversation_id for p in participant_rows]
@@ -238,6 +294,11 @@ def create_conversation(
         raise HTTPException(status_code=400, detail="Cannot create conversation with yourself")
     existing = _find_existing_direct_conversation(db, current_user.id, target.id)
     if existing:
+        # Re-activate soft-deleted conversation for both users
+        db.query(ConversationParticipant).filter(
+            ConversationParticipant.conversation_id == existing.id,
+        ).update({"deleted_at": None})
+        db.commit()
         return {"status": "success", "data": _conversation_to_dict(db, existing, current_user.id)}
 
     conv_id = generate_id("FA-CNV", db, Conversation)
@@ -279,11 +340,91 @@ def get_conversation(
     return {"status": "success", "data": _conversation_to_dict(db, conv, current_user.id)}
 
 
+@router.delete("/conversations/{conversation_id}")
+def delete_conversation(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    conv = db.query(Conversation).filter(
+        (Conversation.id == conversation_id) | (Conversation.conversation_id == conversation_id)
+    ).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    participant = (
+        db.query(ConversationParticipant)
+        .filter(
+            ConversationParticipant.conversation_id == conv.id,
+            ConversationParticipant.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not participant:
+        raise HTTPException(status_code=403, detail="You are not a participant in this conversation")
+
+    # Soft-delete conversation for this user only (keeps chat history for other party)
+    participant.deleted_at = datetime.utcnow()
+    db.commit()
+    return {"status": "success", "message": "Conversation deleted"}
+
+
+@router.post("/conversations/{conversation_id}/restore")
+def restore_conversation(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    conv = db.query(Conversation).filter(
+        (Conversation.id == conversation_id) | (Conversation.conversation_id == conversation_id)
+    ).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    participant = (
+        db.query(ConversationParticipant)
+        .filter(
+            ConversationParticipant.conversation_id == conv.id,
+            ConversationParticipant.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not participant:
+        raise HTTPException(status_code=403, detail="You are not a participant in this conversation")
+    participant.deleted_at = None
+    db.commit()
+    return {"status": "success", "data": _conversation_to_dict(db, conv, current_user.id)}
+
+
+@router.put("/conversations/{conversation_id}/mute")
+def toggle_mute(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    conv = db.query(Conversation).filter(
+        (Conversation.id == conversation_id) | (Conversation.conversation_id == conversation_id)
+    ).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    participant = (
+        db.query(ConversationParticipant)
+        .filter(
+            ConversationParticipant.conversation_id == conv.id,
+            ConversationParticipant.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not participant:
+        raise HTTPException(status_code=403, detail="You are not a participant in this conversation")
+    participant.muted = not (participant.muted or False)
+    db.commit()
+    return {"status": "success", "data": {"muted": bool(participant.muted)}}
+
+
 @router.get("/conversations/{conversation_id}/messages")
 def list_messages(
     conversation_id: str,
     before_id: Optional[str] = None,
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -351,7 +492,9 @@ def send_message(
     if payload.message_type not in ("text", "image", "file", "system"):
         raise HTTPException(status_code=400, detail="Invalid message_type")
 
-    msg_id = generate_id("FA-MSG", db, Message)
+    msg_id = _generate_id("FA-MSG", db, Message)
+    # Sender's own messages are immediately "read" from their perspective;
+    # status reflects what the *recipient* has done.
     message = Message(
         message_id=msg_id,
         conversation_id=conv.id,
@@ -359,12 +502,45 @@ def send_message(
         content=payload.content.strip(),
         message_type=payload.message_type,
         attachment_url=payload.attachment_url,
+        status="sent",
     )
     db.add(message)
     conv.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(message)
+
+    # Link attachment if provided
+    if payload.attachment_url:
+        att = (
+            db.query(MessageAttachment)
+            .filter(MessageAttachment.file_url == payload.attachment_url)
+            .first()
+        )
+        if att:
+            att.message_id = message.id
+            db.commit()
+
     return {"status": "success", "data": _message_to_dict(db, message)}
+
+
+@router.delete("/conversations/{conversation_id}/messages/{message_id}")
+def delete_message(
+    conversation_id: str,
+    message_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    msg = db.query(Message).filter(
+        (Message.id == message_id) | (Message.message_id == message_id),
+    ).first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if msg.sender_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot delete other user's message")
+
+    db.delete(msg)
+    db.commit()
+    return {"status": "success", "message": "Message deleted"}
 
 
 @router.put("/conversations/{conversation_id}/read")
@@ -389,8 +565,51 @@ def mark_as_read(
     if not participant:
         raise HTTPException(status_code=403, detail="You are not a participant in this conversation")
     participant.last_read_at = datetime.utcnow()
+
+    # Mark inbound messages as read (for read receipts)
+    now = datetime.utcnow()
+    inbound = (
+        db.query(Message)
+        .filter(
+            Message.conversation_id == conv.id,
+            Message.sender_id != current_user.id,
+            Message.status != "read",
+        )
+        .all()
+    )
+    for m in inbound:
+        m.status = "read"
+        m.read_at = m.read_at or now
+        if m.status == "sent":
+            m.delivered_at = m.delivered_at or now
     db.commit()
     return {"status": "success", "data": {"message": "Conversation marked as read"}}
+
+
+@router.put("/conversations/{conversation_id}/unread")
+def mark_as_unread(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    conv = db.query(Conversation).filter(
+        (Conversation.id == conversation_id) | (Conversation.conversation_id == conversation_id)
+    ).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    participant = (
+        db.query(ConversationParticipant)
+        .filter(
+            ConversationParticipant.conversation_id == conv.id,
+            ConversationParticipant.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not participant:
+        raise HTTPException(status_code=403, detail="You are not a participant in this conversation")
+    participant.last_read_at = None
+    db.commit()
+    return {"status": "success", "data": {"message": "Conversation marked as unread"}}
 
 
 @router.post("/conversations/{conversation_id}/messages/{message_id}/reactions", status_code=201)
@@ -443,26 +662,16 @@ def add_reaction(
     return {"status": "success", "data": {"id": reaction.id, "emoji": reaction.emoji, "message": "Reaction added"}}
 
 
-class ContactCreate(BaseModel):
-    farmer_id: str
-
-
-class UserSearchQuery(BaseModel):
-    query: str
-
-
 def _contact_to_dict(c: Contact, db: Session) -> dict:
     cu = db.query(User).filter(User.id == c.contact_user_id).first()
     if not cu:
         return None
-    is_online = False
     return {
         "id": c.id,
         "contact_user_id": c.contact_user_id,
         "nickname": c.nickname,
         "created_at": str(c.created_at),
         "user": _user_info(cu),
-        "is_online": is_online,
     }
 
 
@@ -499,10 +708,7 @@ def add_contact(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    fid = payload.farmer_id.strip().upper()
-    target = db.query(User).filter(User.farmer_id == fid).first()
-    if not target:
-        raise HTTPException(status_code=404, detail="Farmer not found with this ID")
+    target = _resolve_target_user(db, None, payload.farmer_id)
     if target.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot add yourself as a contact")
     existing = (
@@ -543,17 +749,29 @@ def search_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    term = f"%{q}%"
+    query_str = q.strip()
+    term = f"%{query_str}%"
+    norm_fid = normalize_farmer_id(query_str)
+    digits = re.sub(r"\D", "", query_str)
+    phone_10 = digits[-10:] if len(digits) >= 10 else None
+
+    filters = [
+        User.full_name.ilike(term),
+        User.farmer_id.ilike(term),
+    ]
+    if norm_fid:
+        filters.append(User.farmer_id == norm_fid)
+    if phone_10:
+        filters.append(User.phone_number == phone_10)
+        filters.append(User.phone_number == f"+91{phone_10}")
+        filters.append(User.phone_number.like(f"%{phone_10}"))
+
     users = (
         db.query(User)
         .filter(
             User.is_active == True,
             User.id != current_user.id,
-            or_(
-                User.farmer_id.ilike(term),
-                User.full_name.ilike(term),
-                User.phone_number.ilike(term),
-            ),
+            or_(*filters),
         )
         .limit(20)
         .all()
@@ -562,33 +780,102 @@ def search_users(
     return {"status": "success", "data": {"users": items, "total": len(items)}}
 
 
+@router.get("/presence/{user_id}")
+def get_presence(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "status": "success",
+        "data": {
+            "user_id": user.id,
+            "is_online": bool(getattr(user, "is_online", False)),
+            "last_seen_at": str(user.last_seen_at) if getattr(user, "last_seen_at", None) else None,
+        },
+    }
+
+
+@router.post("/presence/online", status_code=200)
+def set_online(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.is_online = True
+    current_user.last_seen_at = datetime.utcnow()
+    db.commit()
+    return {"status": "success", "data": {"is_online": True}}
+
+
+@router.post("/presence/offline", status_code=200)
+def set_offline(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.is_online = False
+    current_user.last_seen_at = datetime.utcnow()
+    db.commit()
+    return {"status": "success", "data": {"is_online": False}}
+
+
+@router.post("/conversations/{conversation_id}/typing", status_code=200)
+def set_typing(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    conv = db.query(Conversation).filter(
+        (Conversation.id == conversation_id) | (Conversation.conversation_id == conversation_id)
+    ).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    participant = (
+        db.query(ConversationParticipant)
+        .filter(
+            ConversationParticipant.conversation_id == conv.id,
+            ConversationParticipant.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not participant:
+        raise HTTPException(status_code=403, detail="You are not a participant in this conversation")
+    return {"status": "success", "data": {"typing": True}}
+
+
 @router.post("/upload", status_code=201)
 async def upload_attachment(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    allowed = settings.STORAGE_ALLOWED_EXTENSIONS.split(",") if hasattr(settings, 'STORAGE_ALLOWED_EXTENSIONS') else ["jpg","jpeg","png","gif","pdf","doc","docx"]
+    allowed = (
+        getattr(settings, "STORAGE_ALLOWED_EXTENSIONS", "jpg,jpeg,png,gif,pdf,doc,docx,xlsx,csv,txt")
+        .split(",")
+    )
     ext = (file.filename.rsplit(".", 1)[-1] if "." in file.filename else "").lower()
-    if ext not in allowed:
+    if ext not in [e.strip().lower() for e in allowed]:
         raise HTTPException(status_code=400, detail=f"File type '{ext}' not allowed")
-    max_mb = getattr(settings, 'STORAGE_MAX_FILE_SIZE_MB', 10)
+    max_mb = getattr(settings, "STORAGE_MAX_FILE_SIZE_MB", 10)
     contents = await file.read()
     if len(contents) > max_mb * 1024 * 1024:
         raise HTTPException(status_code=400, detail=f"File exceeds {max_mb}MB limit")
-    upload_dir = getattr(settings, 'STORAGE_LOCAL_PATH', 'uploads')
+
+    upload_dir = getattr(settings, "STORAGE_LOCAL_PATH", "uploads")
     msg_dir = os.path.join(upload_dir, "messages")
     os.makedirs(msg_dir, exist_ok=True)
     safe_name = f"{_uuid.uuid4().hex}.{ext}"
     file_path = os.path.join(msg_dir, safe_name)
     with open(file_path, "wb") as f:
         f.write(contents)
-    file_url = f"/uploads/messages/{safe_name}"
-    att_id = generate_id("FA-ATT", db, MessageAttachment)
+    file_url = f"/api/v1/storage/messages/{safe_name}"
+    att_id = _generate_id("FA-ATT", db, MessageAttachment)
     attachment = MessageAttachment(
         attachment_id=att_id,
         message_id="",
-        file_name=file.filename,
+        file_name=file.filename or safe_name,
         file_type=file.content_type or f"application/{ext}",
         file_size=len(contents),
         file_url=file_url,
@@ -597,3 +884,30 @@ async def upload_attachment(
     db.commit()
     db.refresh(attachment)
     return {"status": "success", "data": _attachment_to_dict(attachment)}
+
+
+def _generate_id(prefix: str, db: Session, model_class) -> str:
+    """Local ID generator using max numeric value of matching prefix."""
+    col_name = "id"
+    if model_class.__name__ == "Conversation":
+        col_name = "conversation_id"
+    elif model_class.__name__ == "Message":
+        col_name = "message_id"
+    elif model_class.__name__ == "MessageAttachment":
+        col_name = "attachment_id"
+    col = getattr(model_class, col_name, None)
+    if col is None:
+        return f"{prefix}-{str(1).zfill(6)}"
+    rows = db.query(col).filter(col.like(f"{prefix}-%")).all()
+    nums = []
+    for row in rows:
+        value = row[0] if not isinstance(row, (str,)) else row
+        if value:
+            try:
+                part = str(value).split("-")[-1]
+                if part.isdigit():
+                    nums.append(int(part))
+            except (ValueError, IndexError):
+                continue
+    num = (max(nums) + 1) if nums else 1
+    return f"{prefix}-{str(num).zfill(6)}"
