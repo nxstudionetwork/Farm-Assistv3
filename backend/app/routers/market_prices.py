@@ -6,14 +6,17 @@ from the market_prices table, which is populated only by verified sources
 private and strictly scoped to the requesting farmer.
 """
 
+import json
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
+from app.config import settings
 from app.utils.auth import get_current_user, generate_id
 from app.models.user import User, FarmerProfile, UserAddress, UserSettings
 from app.models.farm import Farm
@@ -390,6 +393,188 @@ def recommended_prices(
 
 class _NullRow:
     modal_price = None
+
+
+# ---------------------------------------------------------------------------
+# AI Market Overview (real data → backend → AI service)
+# ---------------------------------------------------------------------------
+
+def _resolve_ai_provider() -> tuple:
+    """Return (api_key, provider, base_url, model) when an AI provider is
+    configured, else (None, None, None, None). Never invoked in tests; no
+    external calls happen unless an API key is present in settings."""
+    if settings.OPENAI_API_KEY:
+        return settings.OPENAI_API_KEY, "openai", "https://api.openai.com/v1", "gpt-4o-mini"
+    if settings.GEMINI_API_KEY:
+        return settings.GEMINI_API_KEY, "gemini", "https://generativelanguage.googleapis.com/v1beta", "gemini-1.5-flash"
+    if settings.ANTHROPIC_API_KEY:
+        return settings.ANTHROPIC_API_KEY, "claude", "https://api.anthropic.com", "claude-3-5-haiku-latest"
+    return None, None, None, None
+
+
+async def _post_json(url: str, payload: dict, headers: dict) -> Dict[str, Any]:
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(url, json=payload, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+
+def _overview_scope_label(*, search=None, category=None, state=None, district=None,
+                          market=None, commodity=None) -> str:
+    parts: List[str] = []
+    if search:
+        parts.append(f"search \"{search}\"")
+    if category and category.lower() != "all":
+        parts.append(category)
+    if state:
+        parts.append(state)
+    if district:
+        parts.append(district)
+    if market:
+        parts.append(market)
+    if commodity:
+        parts.append(commodity)
+    return ", ".join(parts) if parts else "all available data"
+
+
+async def _ai_enhance_overview(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Best-effort: ask a configured AI provider to reword the overview from the
+    real figures only. Returns None when no provider is configured or the call
+    fails, so the data-driven baseline is always served."""
+    api_key, provider, base_url, model = _resolve_ai_provider()
+    if not api_key:
+        return None
+    digest = {
+        "basis": payload.get("basis"),
+        "summary": payload.get("summary"),
+        "rising": [{
+            "commodity": m.get("commodity"), "variety": m.get("variety"),
+            "market": m.get("market"), "modal_price": m.get("modal_price"),
+            "percent": (m.get("change") or {}).get("percent"),
+            "unit": m.get("unit"),
+        } for m in payload.get("rising", [])],
+        "falling": [{
+            "commodity": m.get("commodity"), "variety": m.get("variety"),
+            "market": m.get("market"), "modal_price": m.get("modal_price"),
+            "percent": (m.get("change") or {}).get("percent"),
+            "unit": m.get("unit"),
+        } for m in payload.get("falling", [])],
+        "key_trends": payload.get("key_trends"),
+    }
+    prompt = (
+        "You are Farm Assist's market analyst. Using ONLY the official figures "
+        "provided below (never invent commodity, market, price, date or percentage) "
+        "return a JSON object with exactly these keys: 'summary' (one short "
+        "farmer-friendly paragraph), 'key_trends' (an array of 3-5 bullet strings "
+        "derived strictly from the data), 'farmer_insight' (one actionable, "
+        "data-bound selling tip referencing a specific commodity, market and figure). "
+        "Output valid JSON only. Data: " + json.dumps(digest)
+    )
+    try:
+        if provider == "openai":
+            body = await _post_json(
+                f"{base_url}/chat/completions",
+                {
+                    "model": model, "temperature": 0.3,
+                    "response_format": {"type": "json_object"},
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+                {"Authorization": f"Bearer {api_key}"},
+            )
+            out = body["choices"][0]["message"]["content"]
+        elif provider == "gemini":
+            body = await _post_json(
+                f"{base_url.rstrip('/')}/models/{model}:generateContent",
+                {"contents": [{"parts": [{"text": prompt}]}]},
+                {"x-goog-api-key": api_key},
+            )
+            out = body["candidates"][0]["content"]["parts"][0]["text"]
+        elif provider == "claude":
+            body = await _post_json(
+                f"{base_url}/v1/messages",
+                {
+                    "model": model, "max_tokens": 800, "temperature": 0.3,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+                {"x-api-key": api_key, "anthropic-version": "2023-06-01"},
+            )
+            out = body["content"][0]["text"]
+        else:
+            return None
+    except Exception:
+        return None
+    out = (out or "").strip()
+    if out.startswith("```"):
+        out = out.strip("`").lstrip()
+        if out.lower().startswith("json"):
+            out = out[4:].strip()
+    try:
+        parsed = json.loads(out)
+    except Exception:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    summary = str(parsed.get("summary") or "").strip()
+    trends = [str(t).strip() for t in parsed.get("key_trends", []) if str(t).strip()][:5]
+    insight = str(parsed.get("farmer_insight") or "").strip()
+    if not summary and not trends:
+        return None
+    return {"model": provider, "summary": summary, "key_trends": trends, "farmer_insight": insight}
+
+
+@router.get("/market-prices/ai-overview")
+async def market_ai_overview(
+    q: Optional[str] = Query(None, max_length=100),
+    category: Optional[str] = Query(None, max_length=60),
+    state: Optional[str] = Query(None, max_length=120),
+    district: Optional[str] = Query(None, max_length=120),
+    market: Optional[str] = Query(None, max_length=200),
+    commodity: Optional[str] = Query(None, max_length=120),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """AI Market Overview built from the real filtered market data.
+
+    Deterministic baseline analysis always works and never fabricates figures.
+    When an AI provider key is configured, the provider may reword the summary
+    strictly from the same verified numbers.
+    """
+    query = _apply_filters(
+        _latest_only_query(db),
+        search=q, category=category, state=state, district=district,
+        market=market, commodity=commodity,
+    )
+    scope = _overview_scope_label(
+        search=q, category=category, state=state, district=district,
+        market=market, commodity=commodity,
+    )
+    overview = svc.build_market_overview(db, query, scope)
+    if not overview:
+        return {"status": "success", "data": {
+            "available": False,
+            "insufficient": True,
+            "message": "Not enough current market data to generate a reliable overview.",
+            "model": None,
+            "generated_at": datetime.utcnow().isoformat(),
+        }}
+    enhanced = await _ai_enhance_overview(overview)
+    if enhanced:
+        overview["model"] = enhanced["model"]
+        if enhanced.get("summary"):
+            overview["summary"] = enhanced["summary"]
+        if enhanced.get("key_trends"):
+            overview["key_trends"] = enhanced["key_trends"]
+        if enhanced.get("farmer_insight"):
+            overview["farmer_insight"] = enhanced["farmer_insight"]
+    else:
+        overview["model"] = "data-driven"
+    return {"status": "success", "data": {
+        "available": True,
+        "insufficient": False,
+        "message": None,
+        "generated_at": datetime.utcnow().isoformat(),
+        **overview,
+    }}
 
 
 @router.post("/market-prices/refresh")

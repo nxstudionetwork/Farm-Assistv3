@@ -237,3 +237,49 @@ def test_refresh_without_api_key_is_honest(headers_a):
     data = resp.json()["data"]
     assert data["freshness"]["data_available"] is True
     assert "cache" in data["refresh"]["message"].lower()
+
+
+def test_ai_overview_built_from_real_data(headers_a):
+    resp = client.get("/api/v1/market-prices/ai-overview", headers=headers_a)
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["available"] is True
+    assert data["insufficient"] is False
+    assert data["model"] in ("data-driven", "openai", "gemini", "claude")
+    assert data["generated_at"]
+    assert data["basis"]["commodity_count"] >= 18
+    assert data["basis"]["market_count"] == 1
+    assert data["summary"]
+    assert data["key_trends"]
+    assert data["farmer_insight"]
+    assert isinstance(data["rising"], list)
+    assert isinstance(data["falling"], list)
+    for move in data["rising"] + data["falling"]:
+        assert move["modal_price"] > 0
+        assert move["change"]["percent"] is not None
+
+
+def test_ai_overview_respects_filters(headers_a):
+    resp = client.get(
+        "/api/v1/market-prices/ai-overview",
+        params={"category": "paddy"},
+        headers=headers_a,
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["available"] is True
+    assert "paddy" in data["basis"]["scope"].lower()
+    assert all("Paddy" in m["commodity"] for m in data["rising"] + data["falling"])
+
+
+def test_ai_overview_unfiltered_search_no_match(headers_a):
+    resp = client.get(
+        "/api/v1/market-prices/ai-overview",
+        params={"q": "no-such-crop-xyz"},
+        headers=headers_a,
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["available"] is False
+    assert data["insufficient"] is True
+    assert "Not enough current market data" in data["message"]

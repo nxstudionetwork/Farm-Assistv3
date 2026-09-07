@@ -1126,6 +1126,9 @@ Backend: FastAPI served from the same origin (port 8000).
     get: function (id) {
       return http('GET', '/market-prices/' + encodeURIComponent(id)).then(unwrap);
     },
+    aiOverview: function (params) {
+      return http('GET', '/market-prices/ai-overview' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
     search: function (q) {
       return http('GET', '/market-prices/search?q=' + encodeURIComponent(q)).then(unwrap);
     },
@@ -1438,6 +1441,24 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     getCategories: function () {
       return http('GET', '/categories').then(unwrap);
+    },
+    getCourseTutorials: function (courseId) {
+      return http('GET', '/courses/' + courseId + '/tutorials').then(unwrap);
+    },
+    getTutorial: function (tutorialId) {
+      return http('GET', '/tutorials/' + tutorialId).then(unwrap);
+    },
+    startTutorial: function (tutorialId) {
+      return http('POST', '/tutorials/' + tutorialId + '/start').then(unwrap);
+    },
+    submitQuiz: function (tutorialId, answers) {
+      return http('POST', '/tutorials/' + tutorialId + '/quiz/submit', { answers: answers }).then(unwrap);
+    },
+    completeTutorial: function (tutorialId) {
+      return http('POST', '/tutorials/' + tutorialId + '/complete').then(unwrap);
+    },
+    learningProgress: function () {
+      return http('GET', '/learning/progress').then(unwrap);
     }
   };
 

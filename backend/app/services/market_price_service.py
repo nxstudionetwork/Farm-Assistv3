@@ -541,3 +541,179 @@ def evaluate_alerts(db: Session, user_id: Optional[str] = None) -> int:
 
     db.commit()
     return triggered
+
+
+# ---------------------------------------------------------------------------
+# AI Market Overview (data-driven, honest by construction)
+# ---------------------------------------------------------------------------
+
+def _fmt_rupee(value: Optional[float]) -> str:
+    if value is None or not isinstance(value, (int, float)):
+        return "—"
+    return f"₹{value:,.0f}"
+
+
+def _overview_unit(unit: Optional[str]) -> str:
+    return (unit or "Rs/Quintal").replace("Rs/", "").replace("-", "/") or "Quintal"
+
+
+def _move_label(move: Dict[str, Any]) -> str:
+    label = move.get("commodity") or "Unknown"
+    if move.get("variety"):
+        label += f" ({move['variety']})"
+    return label
+
+
+def build_market_overview(
+    db: Session,
+    query,
+    scope: str = "all available data",
+) -> Optional[Dict[str, Any]]:
+    """Build a market analysis strictly from the stored official records.
+
+    Never invents figures: every number in the returned text comes from the
+    market_prices table. An optional AI provider (when a key is configured)
+    may reword the summary/insight — the router applies that enhancement only
+    on top of this honest, real-data baseline.
+    Returns None when the given scope has no usable price records.
+    """
+    rows = query.limit(2000).all()
+    if not rows:
+        return None
+
+    commodities: set = set()
+    markets: set = set()
+    latest_date: Optional[str] = None
+    source_name: Optional[str] = None
+    moves: List[Dict[str, Any]] = []
+    for row in rows:
+        if row.modal_price is None:
+            continue
+        commodities.add(row.commodity)
+        markets.add(row.market or "Unknown")
+        if source_name is None:
+            source_name = row.source or settings.MARKET_PRICE_SOURCE_NAME
+        if latest_date is None or (row.price_date and row.price_date > latest_date):
+            latest_date = row.price_date
+        prev = previous_price(db, row)
+        change = compute_change(row.modal_price, prev.modal_price if prev else None)
+        moves.append({
+            "commodity": row.commodity,
+            "variety": row.variety,
+            "grade": row.grade,
+            "market": row.market,
+            "state": row.state,
+            "modal_price": row.modal_price,
+            "unit": row.unit or "Rs/Quintal",
+            "price_date": row.price_date,
+            "source": row.source,
+            "change": change,
+        })
+    if not moves:
+        return None
+
+    rising = sorted(
+        (m for m in moves if m["change"]["available"] and m["change"]["direction"] == "up"),
+        key=lambda m: m["change"]["percent"] or 0,
+        reverse=True,
+    )
+    falling = sorted(
+        (m for m in moves if m["change"]["available"] and m["change"]["direction"] == "down"),
+        key=lambda m: m["change"]["percent"] or 0,
+    )
+    steady = [m for m in moves if m["change"]["available"] and m["change"]["direction"] == "stable"]
+    comparable = [m for m in moves if m["change"]["available"]]
+    highest = max(moves, key=lambda m: m["modal_price"] or 0) if moves else None
+
+    latest_label = str(latest_date) if latest_date else "the latest announcement"
+    summary = (
+        f"Current official prices for {len(commodities)} commodities across "
+        f"{len(markets)} market(s) — {len(moves)} verified records as of "
+        f"{latest_label} (source: {source_name}). Compared with the previous "
+        f"announced season, {len(rising)} record(s) rose, {len(falling)} fell and "
+        f"{len(steady)} were steady, out of {len(comparable)} comparable record(s) "
+        f"in {scope}."
+    )
+
+    key_trends: List[str] = []
+    if rising:
+        top = rising[0]
+        c = top["change"]
+        unit = _overview_unit(top["unit"])
+        key_trends.append(
+            f"{_move_label(top)} at {top['market']} shows the largest official rise, "
+            f"{_fmt_rupee(abs(c['absolute']))} ({(abs(c['percent'] or 0)):.1f}% higher) "
+            f"to {_fmt_rupee(top['modal_price'])}/{unit}."
+        )
+    if falling:
+        top = falling[0]
+        c = top["change"]
+        unit = _overview_unit(top["unit"])
+        key_trends.append(
+            f"{_move_label(top)} at {top['market']} shows the largest official fall, "
+            f"{_fmt_rupee(abs(c['absolute']))} ({(abs(c['percent'] or 0)):.1f}% lower) "
+            f"to {_fmt_rupee(top['modal_price'])}/{unit}."
+        )
+    if highest:
+        unit = _overview_unit(highest["unit"])
+        key_trends.append(
+            f"Highest listed price in this scope: {_fmt_rupee(highest['modal_price'])}/"
+            f"{unit} for {_move_label(highest)} at {highest['market']}."
+        )
+    if steady:
+        key_trends.append(
+            f"{len(steady)} record(s) were steady versus the previous season, "
+            "signalling stable procurement prices."
+        )
+    if len(commodities) >= 3:
+        key_trends.append(
+            f"{len(commodities)} distinct commodities are covered, spanning "
+            f"{len(markets)} market(s) in {scope}."
+        )
+
+    farmer_insight = (
+        f"Before selling, open Compare Markets in the item details and rank mandis by "
+        f"the latest published price for your crop. The figures above are official "
+        f"announcements; the actual price you receive still depends on quality, "
+        f"quantity and negotiation."
+    )
+    if rising:
+        top = rising[0]
+        c = top["change"]
+        unit = _overview_unit(top["unit"])
+        farmer_insight = (
+            f"{_move_label(top)} is showing the strongest official movement in this view, "
+            f"up {(abs(c['percent'] or 0)):.1f}% to {_fmt_rupee(top['modal_price'])}/{unit} "
+            f"at {top['market']}. If you hold this crop, compare mandis before selling; "
+            f"the final rate still depends on quality and negotiation."
+        )
+    elif falling:
+        top = falling[0]
+        c = top["change"]
+        unit = _overview_unit(top["unit"])
+        farmer_insight = (
+            f"{_move_label(top)} at {top['market']} is down "
+            f"{(abs(c['percent'] or 0)):.1f}% versus the previous season "
+            f"({_fmt_rupee(top['modal_price'])}/{unit}). Check local demand before "
+            f"finalising a sale, and compare mandis in the item details for the best "
+            f"published rate."
+        )
+
+    return {
+        "basis": {
+            "scope": scope,
+            "commodity_count": len(commodities),
+            "market_count": len(markets),
+            "record_count": len(moves),
+            "unit": "Rs/Quintal",
+            "latest_price_date": latest_date,
+            "source": source_name,
+        },
+        "summary": summary,
+        "key_trends": key_trends,
+        "farmer_insight": farmer_insight,
+        "rising": rising[:4],
+        "falling": falling[:4],
+        "steady_count": len(steady),
+        "no_change_count": len(moves) - len(comparable),
+    }
