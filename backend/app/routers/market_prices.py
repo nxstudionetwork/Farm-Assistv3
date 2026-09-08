@@ -31,6 +31,12 @@ from app.services import market_price_service as svc
 
 router = APIRouter(prefix="/api/v1", tags=["Market Prices"])
 
+# Small TTL cache for the AI overview. The endpoint is cheap in data-driven
+# mode but may call an LLM (up to ~15s) when a provider key is configured;
+# re-serving recent scopes avoids recomputation and repeated slow calls.
+_AI_OVERVIEW_CACHE: Dict[str, Dict[str, Any]] = {}
+_AI_OVERVIEW_CACHE_TTL = 90.0
+
 
 def _latest_only_query(db: Session):
     """Base query restricted to the newest record per (market, commodity, variety)."""
@@ -115,9 +121,10 @@ def market_summary(
             .limit(1000)
             .all()
         )
+        prev_map = svc.previous_prices_batch(db, rows)
         best_up, best_down = None, None
         for row in rows:
-            prev = svc.previous_price(db, row)
+            prev = prev_map.get((row.market, row.commodity, row.variety or ""))
             if not prev:
                 continue
             change = svc.compute_change(row.modal_price, prev.modal_price)
@@ -539,12 +546,20 @@ async def market_ai_overview(
     When an AI provider key is configured, the provider may reword the summary
     strictly from the same verified numbers.
     """
-    query = _apply_filters(
-        _latest_only_query(db),
+    scope = _overview_scope_label(
         search=q, category=category, state=state, district=district,
         market=market, commodity=commodity,
     )
-    scope = _overview_scope_label(
+    cache_key = scope
+    cached = _AI_OVERVIEW_CACHE.get(cache_key)
+    if cached and (datetime.utcnow().timestamp() - cached["_ts"]) < _AI_OVERVIEW_CACHE_TTL:
+        return {"status": "success", "data": {
+            **cached["data"],
+            "generated_at": datetime.utcnow().isoformat(),
+            "model": cached["data"].get("model"),
+        }}
+    query = _apply_filters(
+        _latest_only_query(db),
         search=q, category=category, state=state, district=district,
         market=market, commodity=commodity,
     )
@@ -568,13 +583,15 @@ async def market_ai_overview(
             overview["farmer_insight"] = enhanced["farmer_insight"]
     else:
         overview["model"] = "data-driven"
-    return {"status": "success", "data": {
+    data = {
         "available": True,
         "insufficient": False,
         "message": None,
         "generated_at": datetime.utcnow().isoformat(),
         **overview,
-    }}
+    }
+    _AI_OVERVIEW_CACHE[cache_key] = {"_ts": datetime.utcnow().timestamp(), "data": dict(data)}
+    return {"status": "success", "data": data}
 
 
 @router.post("/market-prices/refresh")
@@ -818,8 +835,9 @@ def list_market_prices(
         .all()
     )
     items = []
+    prev_map = svc.previous_prices_batch(db, rows)
     for row in rows:
-        prev = svc.previous_price(db, row)
+        prev = prev_map.get((row.market, row.commodity, row.variety or ""))
         change = svc.compute_change(row.modal_price, prev.modal_price if prev else None)
         entry = svc.price_to_dict(row, change)
         if prev:

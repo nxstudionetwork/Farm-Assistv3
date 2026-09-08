@@ -338,7 +338,7 @@
     var $ = function (id) { return document.getElementById(id); };
     var mainView = $('mp-main-view'), wlView = $('mp-watchlist-view');
     var listEl = $('mp-list'), catsEl = $('mp-cats'), snapEl = $('mp-snapshot');
-    var aiEl = $('mp-ai'), _aiKey = '';
+    var aiEl = $('mp-ai'), _aiKey = '', _aiPending = '', _aiCache = {};
     var recEl = $('mp-recommended'), freshEl = $('mp-freshness');
     var searchInput = $('mp-search-input'), searchClear = $('mp-search-clear'), suggestEl = $('mp-suggest');
     var stateSel = $('mp-state'), distSel = $('mp-district'), marketSel = $('mp-market'), sortSel = $('mp-sort');
@@ -475,15 +475,21 @@
     function loadAIOverview(force){
       if(!aiEl) return;
       var key = aiParamsKey();
-      if(!force && key === _aiKey) return;
+      var cached = _aiCache[key];
+      if(!force && cached && (Date.now() - cached.ts) < 90000){ renderAIOverview(cached.data); return; }
+      if(!force && (key === _aiKey || key === _aiPending)) return;
+      _aiPending = key;
       aiEl.style.display = 'block';
       aiEl.innerHTML =
         '<div class="mp-ai-head"><i class="fas fa-brain"></i> AI Market Overview<span class="mp-ai-model">Analyzing official data</span></div>' +
         '<div class="mp-ai-skel"><div class="mp-ai-skel-line"></div><div class="mp-ai-skel-line" style="width:80%"></div><div class="mp-ai-skel-line" style="width:62%"></div></div>';
       window.MarketPriceService.aiOverview(currentAiParams()).then(function(d){
+        _aiPending = '';
         _aiKey = key;
+        _aiCache[key] = {ts: Date.now(), data: d};
         renderAIOverview(d);
       }).catch(function(err){
+        _aiPending = '';
         if(err && err.isAuthError){ handleApiError(err, null); return; }
         aiEl.innerHTML =
           '<div class="mp-ai-head"><i class="fas fa-brain"></i> AI Market Overview<span class="mp-ai-model">Unavailable</span></div>' +
@@ -1181,11 +1187,11 @@
     /* ---------------- init ---------------- */
     function loadInitial(){
       renderListLoading();
+      loadList(false);
       window.MarketPriceService.summary().then(function(s){
         renderSnapshot(s);
         renderFreshness(s.freshness);
-        loadList(false);
-      }).catch(function(err){ handleApiError(err, listEl, function(){ loadInitial(); }); });
+      }).catch(function(err){ if(err && err.isAuthError){ handleApiError(err, null); return; } });
       window.MarketPriceService.categories().then(function(d){
         renderCats(d.categories);
       }).catch(function(){ });

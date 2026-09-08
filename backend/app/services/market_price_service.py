@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 
 import httpx
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -425,6 +425,54 @@ def previous_price(db: Session, row: MarketPrice) -> Optional[MarketPrice]:
     return q.order_by(MarketPrice.price_date.desc()).first()
 
 
+def previous_prices_batch(db: Session, rows: "List[MarketPrice]") -> Dict[tuple, MarketPrice]:
+    """Best previous (period-before) record per (market, commodity, variety).
+
+    Fuses the per-row lookups into a single query so list/summary/overview
+    callers avoid N+1 round trips. Callers pass the *latest* record per key
+    (which _latest_only_query guarantees); the previous record for a key is the
+    latest one with a strictly earlier price_date.
+    """
+    if not rows:
+        return {}
+    cur_date: Dict[tuple, str] = {}
+    for row in rows:
+        key = (row.market, row.commodity, row.variety or "")
+        cur_date[key] = max(cur_date.get(key, ""), row.price_date or "")
+    pairs = sorted(cur_date.items())
+    best: Dict[tuple, MarketPrice] = {}
+    chunk = 200
+    for start in range(0, len(pairs), chunk):
+        batch = pairs[start:start + chunk]
+        conds = [
+            and_(
+                MarketPrice.market == m,
+                MarketPrice.commodity == c,
+                func.coalesce(MarketPrice.variety, "") == v,
+                MarketPrice.price_date < cur,
+                MarketPrice.modal_price.isnot(None),
+            )
+            for (m, c, v), cur in batch
+        ]
+        q = (
+            db.query(MarketPrice)
+            .filter(or_(*conds))
+            .order_by(
+                MarketPrice.market,
+                MarketPrice.commodity,
+                func.coalesce(MarketPrice.variety, ""),
+                MarketPrice.price_date.desc(),
+            )
+        )
+        for cand in q.all():
+            key = (cand.market, cand.commodity, cand.variety or "")
+            if (cand.price_date or "") >= cur_date[key]:
+                continue
+            if key not in best:
+                best[key] = cand  # first hit is the latest record below the current date
+    return best
+
+
 def compute_change(current: Optional[float], prev: Optional[float]) -> Dict[str, Any]:
     if current is None or prev is None:
         return {
@@ -581,6 +629,7 @@ def build_market_overview(
     if not rows:
         return None
 
+    prev_map = previous_prices_batch(db, rows)
     commodities: set = set()
     markets: set = set()
     latest_date: Optional[str] = None
@@ -595,7 +644,7 @@ def build_market_overview(
             source_name = row.source or settings.MARKET_PRICE_SOURCE_NAME
         if latest_date is None or (row.price_date and row.price_date > latest_date):
             latest_date = row.price_date
-        prev = previous_price(db, row)
+        prev = prev_map.get((row.market, row.commodity, row.variety or ""))
         change = compute_change(row.modal_price, prev.modal_price if prev else None)
         moves.append({
             "commodity": row.commodity,
