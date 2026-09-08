@@ -283,3 +283,27 @@ def test_ai_overview_unfiltered_search_no_match(headers_a):
     assert data["available"] is False
     assert data["insufficient"] is True
     assert "Not enough current market data" in data["message"]
+
+
+def test_location_cascade_filters_districts_and_markets(headers_a, db):
+    from app.models.market_price import MarketPrice
+    db.add_all([
+        MarketPrice(commodity="Paddy", variety="Common", market="Nalgonda Market", district="Nalgonda", state="Telangana", modal_price=2400.0, unit="Rs/Quintal", price_date="2026-05-20", source="AGMARKNET demo"),
+        MarketPrice(commodity="Paddy", variety="Common", market="Khammam Market", district="Khammam", state="Telangana", modal_price=2450.0, unit="Rs/Quintal", price_date="2026-05-20", source="AGMARKNET demo"),
+        MarketPrice(commodity="Paddy", variety="Common", market="Guntur Market", district="Guntur", state="Andhra Pradesh", modal_price=2380.0, unit="Rs/Quintal", price_date="2026-05-20", source="AGMARKNET demo"),
+    ])
+    db.commit()
+
+    resp = client.get("/api/v1/market-prices/markets", headers=headers_a)
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert "Telangana" in data["states"] and "Andhra Pradesh" in data["states"]
+
+    resp = client.get("/api/v1/market-prices/markets", params={"state": "Telangana"}, headers=headers_a)
+    data = resp.json()["data"]
+    assert data["districts"] == ["Khammam", "Nalgonda"]
+    assert "Guntur" not in data["districts"]
+
+    resp = client.get("/api/v1/market-prices/markets", params={"state": "Telangana", "district": "Nalgonda"}, headers=headers_a)
+    data = resp.json()["data"]
+    assert data["markets"] == ["Nalgonda Market"]

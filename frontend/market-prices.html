@@ -43,8 +43,14 @@
     .mp-tool-icon.active{background:var(--primary-green,#1B5E3F);color:white;border-color:var(--primary-green,#1B5E3F)}
     .mp-tool-icon .mp-badge{position:absolute;top:-6px;right:-6px;background:var(--danger,#D63031);color:white;border:2px solid #fff;padding:1px 5px;font-size:9px}
     .mp-tool-dot{position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--danger,#D63031);border:1.5px solid #fff}
-    .mp-filter-panel{display:none;background:var(--bg-card-soft,#F8FAF5);border:1px solid #e5eee5;border-radius:12px;padding:12px;margin-bottom:12px}
-    .mp-filter-panel.open{display:block}
+    .mp-filter-card{padding:16px 18px 18px}
+    .mp-filter-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+    .mp-filter-head h2{font-size:16px;font-weight:700;margin:0;color:var(--text-primary,#1a1a2e);display:flex;align-items:center;gap:8px}
+    .mp-filter-head h2 i{color:var(--primary-green,#1B5E3F)}
+    .mp-filter-hint{font-size:11px;color:var(--text-muted,#9ca3af);background:var(--bg-card-soft,#F8FAF5);border:1px solid #e5eee5;border-radius:8px;padding:8px 10px;margin-bottom:12px;display:flex;align-items:center;gap:6px;line-height:1.45}
+    .mp-overlay-x{width:34px;height:34px;border-radius:50%;border:1px solid var(--border-light,#e5e7eb);background:#fff;color:var(--text-secondary,#6b7280);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s}
+    .mp-overlay-x:hover{background:var(--bg-secondary,#f5f5f5);color:var(--danger,#D63031)}
+    .mp-filter-panel{padding:0 0 2px}
     .mp-filter-panel .mp-frow{display:flex;gap:8px;flex-wrap:wrap}
     .mp-filter-panel select{flex:1 1 140px;min-width:0;padding:9px 30px 9px 10px;border-radius:9px;border:1px solid var(--border-light,#e5e7eb);font-size:12px;font-family:inherit;color:var(--text-primary,#1a1a2e);background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L1 2h8z'/%3E%3C/svg%3E") no-repeat right 10px center;appearance:none;-webkit-appearance:none;cursor:pointer}
     .mp-filter-panel select:focus{border-color:var(--medium-green,#2D8659)}
@@ -202,7 +208,7 @@
     .mp-chart-empty{margin-top:12px}
     .mp-signal{font-size:11px;font-weight:600;margin-left:auto}
     .mp-footer-note{font-size:11px;color:var(--text-muted,#9ca3af);line-height:1.6;border-top:1px solid var(--border-light,#e5e7eb);margin-top:22px;padding:12px 2px 4px;display:flex;gap:8px}
-    @media(max-width:520px){.mp-page{padding:12px}.mp-hero h1{font-size:19px}.mp-filter-panel select{flex:1 1 100%}.mp-dfacts{grid-template-columns:repeat(2,1fr)}.mp-filter-panel{position:fixed;left:0;right:0;bottom:0;z-index:70;margin:0;border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,0.22);padding:14px 14px calc(14px + env(safe-area-inset-bottom));max-height:80vh;overflow-y:auto;border:1px solid #dfe9df}}
+    @media(max-width:520px){.mp-page{padding:12px}.mp-hero h1{font-size:19px}.mp-filter-panel select{flex:1 1 100%}.mp-dfacts{grid-template-columns:repeat(2,1fr)}}
   </style>
 </head>
 <body>
@@ -230,24 +236,6 @@
           <button class="mp-tool-icon" id="btn-filter" title="Filters"><i class="fas fa-sliders-h"></i><span class="mp-tool-dot" id="mp-filter-badge" style="display:none"></span></button>
           <button class="mp-tool-icon" id="btn-watchlist" title="Watchlist"><i class="fas fa-bookmark"></i><span class="mp-badge" id="wl-count">0</span></button>
           <button class="mp-tool-icon" id="btn-refresh" title="Refresh"><i class="fas fa-sync-alt"></i></button>
-        </div>
-
-        <div class="mp-filter-panel" id="mp-filter-panel">
-          <div class="mp-frow">
-            <select id="mp-state"><option value="">All States</option></select>
-            <select id="mp-district" disabled><option value="">All Districts</option></select>
-            <select id="mp-market" disabled><option value="">All Markets</option></select>
-            <select id="mp-sort">
-              <option value="recent">Recently updated</option>
-              <option value="highest">Highest price</option>
-              <option value="lowest">Lowest price</option>
-            </select>
-          </div>
-          <div class="mp-filter-actions">
-            <button class="mp-loc-btn" id="btn-use-location"><i class="fas fa-map-marker-alt"></i> Use my saved location</button>
-            <button class="mp-clear-btn" id="mp-clear-filters"><i class="fas fa-eraser"></i> Clear Filters</button>
-            <button class="mp-btn mp-apply-btn" id="btn-apply-filters"><i class="fas fa-check"></i> Apply Filters</button>
-          </div>
         </div>
 
         <div class="mp-cats" id="mp-cats"></div>
@@ -293,6 +281,33 @@
     </div>
   </div>
 
+  <div class="mp-overlay" id="mp-filter-overlay">
+    <div class="mp-overlay-card mp-filter-card">
+      <div class="mp-filter-head">
+        <h2><i class="fas fa-sliders-h"></i> Filters</h2>
+        <button class="mp-overlay-x" id="mp-filter-close" title="Close filters" aria-label="Close filters"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mp-filter-hint"><i class="fas fa-map"></i> Choose a state first — districts &amp; mandals load automatically.</div>
+      <div class="mp-filter-panel">
+        <div class="mp-frow">
+          <select id="mp-state"><option value="">All States</option></select>
+          <select id="mp-district" disabled><option value="">All Districts</option></select>
+          <select id="mp-market" disabled><option value="">All Mandals</option></select>
+          <select id="mp-sort">
+            <option value="recent">Recently updated</option>
+            <option value="highest">Highest price</option>
+            <option value="lowest">Lowest price</option>
+          </select>
+        </div>
+        <div class="mp-filter-actions">
+          <button class="mp-loc-btn" id="btn-use-location"><i class="fas fa-map-marker-alt"></i> Use my saved location</button>
+          <button class="mp-clear-btn" id="mp-clear-filters"><i class="fas fa-eraser"></i> Clear Filters</button>
+          <button class="mp-btn mp-apply-btn" id="btn-apply-filters"><i class="fas fa-check"></i> Apply Filters</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="js/database.js"></script>
   <script src="js/services.js"></script>
   <script src="js/userStore.js"></script>
@@ -327,7 +342,7 @@
     var recEl = $('mp-recommended'), freshEl = $('mp-freshness');
     var searchInput = $('mp-search-input'), searchClear = $('mp-search-clear'), suggestEl = $('mp-suggest');
     var stateSel = $('mp-state'), distSel = $('mp-district'), marketSel = $('mp-market'), sortSel = $('mp-sort');
-    var filterPanel = $('mp-filter-panel'), filterBtn = $('btn-filter'), filterBadge = $('mp-filter-badge');
+    var filterOverlay = $('mp-filter-overlay'), filterClose = $('mp-filter-close'), filterBtn = $('btn-filter'), filterBadge = $('mp-filter-badge');
     var loadMoreWrap = $('mp-load-more');
     var searchTimer = null;
 
@@ -523,12 +538,12 @@
     }
     function clearDistricts(){
       distSel.disabled = true; distSel.innerHTML = '<option value="">All Districts</option>';
-      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
     }
     function loadDistricts(keepApplied){
       var state = stateSel.value;
       distSel.disabled = !state;
-      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
       if(!state){ distSel.innerHTML = '<option value="">All Districts</option>'; return Promise.resolve(null); }
       distSel.innerHTML = '<option value="">Loading districts...</option>';
       return window.MarketPriceService.markets({ state: state }).then(function(d){
@@ -540,13 +555,13 @@
     function loadMarkets(keepApplied){
       var state = stateSel.value, dist = distSel.value;
       marketSel.disabled = !state;
-      if(!state){ marketSel.innerHTML = '<option value="">All Markets</option>'; return Promise.resolve(null); }
-      marketSel.innerHTML = '<option value="">Loading markets...</option>';
+      if(!state){ marketSel.innerHTML = '<option value="">All Mandals</option>'; return Promise.resolve(null); }
+      marketSel.innerHTML = '<option value="">Loading mandals...</option>';
       return window.MarketPriceService.markets({ state: state, district: dist }).then(function(d){
-        marketSel.innerHTML = '<option value="">All Markets</option>' + (d.markets || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+        marketSel.innerHTML = '<option value="">All Mandals</option>' + (d.markets || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
         if(keepApplied && S.market){ marketSel.value = S.market; }
         return null;
-      }).catch(function(){ marketSel.innerHTML = '<option value="">All Markets</option>'; return null; });
+      }).catch(function(){ marketSel.innerHTML = '<option value="">All Mandals</option>'; return null; });
     }
     function applyFilters(){
       S.state = stateSel.value;
@@ -557,14 +572,7 @@
       updateFilterBadge();
       loadList(false);
       loadAIOverview();
-      filterPanel.classList.remove('open');
-      filterBtn.classList.remove('active');
-    }
-    function clearFormFilters(){
-      stateSel.value = '';
-      distSel.disabled = true; distSel.innerHTML = '<option value="">All Districts</option>';
-      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
-      sortSel.value = 'recent';
+      closeFilterDialog();
     }
     function useSavedLocation(){
       fetch('/api/v1/users/profile', { headers: { 'Authorization': 'Bearer ' + token }, credentials: 'same-origin' })
@@ -587,6 +595,30 @@
           }).catch(function(){ applyFilters(); showToast('Showing prices for ' + addr.state, 'success'); });
         })
         .catch(function(){ showToast('Could not load your saved location.', 'error'); });
+    }
+
+    /* ---------------- filter dialog ---------------- */
+    function syncFilterForm(){
+      stateSel.value = S.state || '';
+      distSel.innerHTML = '<option value="">All Districts</option>';
+      marketSel.innerHTML = '<option value="">All Mandals</option>';
+      distSel.disabled = !S.state;
+      marketSel.disabled = true;
+      sortSel.value = S.sort || 'recent';
+      if(S.state){ return loadDistricts(true); }
+      return Promise.resolve(null);
+    }
+    function openFilterDialog(){
+      syncFilterForm();
+      filterOverlay.classList.add('active');
+      filterBtn.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeFilterDialog(){
+      if(!filterOverlay.classList.contains('active')) return;
+      filterOverlay.classList.remove('active');
+      filterBtn.classList.remove('active');
+      document.body.style.overflow = '';
     }
 
     /* ---------------- list ---------------- */
@@ -1065,13 +1097,13 @@
                   stateSel.value = v;
                   distSel.disabled = false;
                   distSel.innerHTML = '<option value="">All Districts</option>';
-                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
+                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
                   loadDistricts();
                 }
                 else if(k === 'districts'){
                   distSel.disabled = false;
                   distSel.value = v;
-                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
+                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
                   loadMarkets();
                 }
                 else if(k === 'markets'){ marketSel.value = v; }
@@ -1096,14 +1128,14 @@
       searchInput.value = ''; searchClear.style.display = 'none'; suggestEl.style.display = 'none';
       catsEl.querySelectorAll('.mp-cat').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-cat') === 'all'); });
       stateSel.value=''; distSel.disabled = true; distSel.innerHTML = '<option value="">All Districts</option>';
-      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
       sortSel.value = 'recent';
       updateFilterBadge();
       loadList(false);
       loadAIOverview();
     }
     function updateFilterBadge(){
-      var active = !!(S.state || S.district || S.market || S.category !== 'all' || S.sort !== 'recent' || S.commodity);
+      var active = !!(S.q || S.state || S.district || S.market || S.category !== 'all' || S.sort !== 'recent' || S.commodity);
       filterBadge.style.display = active ? 'block' : 'none';
     }
 
@@ -1172,9 +1204,11 @@
       $('btn-refresh').addEventListener('click', refresh);
       $('btn-watchlist').addEventListener('click', function(){ showView('watchlist'); });
       filterBtn.addEventListener('click', function(){
-        filterPanel.classList.toggle('open');
-        filterBtn.classList.toggle('active', filterPanel.classList.contains('open'));
+        if(filterOverlay.classList.contains('active')){ closeFilterDialog(); }
+        else { openFilterDialog(); }
       });
+      filterClose.addEventListener('click', closeFilterDialog);
+      filterOverlay.addEventListener('click', function(e){ if(e.target === filterOverlay){ closeFilterDialog(); } });
       $('mp-details-close').addEventListener('click', closeDetails);
       $('mp-details').addEventListener('click', function(e){ if(e.target === this) closeDetails(); });
       searchInput.addEventListener('input', onSearchInput);
@@ -1186,12 +1220,12 @@
       sortSel.addEventListener('change', function(){});
       $('btn-apply-filters').addEventListener('click', applyFilters);
       $('btn-use-location').addEventListener('click', useSavedLocation);
-      $('mp-clear-filters').addEventListener('click', function(){ clearFormFilters(); applyFilters(); });
+      $('mp-clear-filters').addEventListener('click', function(){ resetFilters(); closeFilterDialog(); });
       $('mp-btn-load-more').addEventListener('click', function(){ S.page += 1; loadList(true); });
       document.querySelectorAll('[data-back]').forEach(function(b){
         b.addEventListener('click', function(){ showView(b.getAttribute('data-back')); });
       });
-      document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeDetails(); });
+      document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ if(filterOverlay.classList.contains('active')){ closeFilterDialog(); } else { closeDetails(); } } });
 
       // fire/init
       loadInitial();
