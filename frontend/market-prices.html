@@ -346,6 +346,24 @@
     var loadMoreWrap = $('mp-load-more');
     var searchTimer = null;
 
+    /* ---------------- quick data cache ---------------- */
+    function readCache(key, ttl){
+      try {
+        var raw = sessionStorage.getItem('mp_c_' + key);
+        if(!raw) return null;
+        var entry = JSON.parse(raw);
+        if(!entry || !entry.ts) return null;
+        if(Date.now() - entry.ts > ttl) return null;
+        return entry.val;
+      } catch(e){ return null; }
+    }
+    function writeCache(key, val){
+      try { sessionStorage.setItem('mp_c_' + key, JSON.stringify({ts: Date.now(), val: val})); } catch(e){ }
+    }
+    function listCacheKey(params){
+      return 'list:' + JSON.stringify(params);
+    }
+
     /* ---------------- helpers ---------------- */
     function esc(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
     function fmtINR(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return '₹' + Number(n).toLocaleString('en-IN',{maximumFractionDigits:0}); }
@@ -672,37 +690,55 @@
       if(S.district) params.district = S.district;
       if(S.market) params.market = S.market;
       if(S.sort) params.sort = S.sort;
+      var cacheKey = listCacheKey(params);
+      if(!append && !keepContent){
+        var cached = readCache(cacheKey, 180000);
+        if(cached){
+          if(seq !== S.listSeq){ S.loading = false; return; }
+          S.loading = false;
+          S.total = cached.total; S.hasMore = cached.page * cached.limit < cached.total;
+          renderFreshness(cached.freshness);
+          indexItems(cached);
+          listEl.querySelectorAll('.mp-skeleton').forEach(function(s){ s.remove(); });
+          applyListResult(cached, false);
+          return;
+        }
+      }
       window.MarketPriceService.list(params).then(function(d){
         if(seq !== S.listSeq) return;
         S.loading = false;
         S.total = d.total; S.hasMore = d.page * d.limit < d.total;
         renderFreshness(d.freshness);
         indexItems(d);
+        if(!append){ writeCache(cacheKey, d); }
         listEl.querySelectorAll('.mp-skeleton').forEach(function(s){ s.remove(); });
-        var html = cardsHtml(d.items || []);
-        var anyFilter = !!(S.q || S.commodity || (S.category && S.category !== 'all') || S.state || S.district || S.market || S.sort !== 'recent');
-        var empty;
-        if(S.q){ empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-search"></i><h3>No market prices found for your search</h3><p>Try a different crop, market, district or state.</p><button id="mp-empty-clear">Clear Search</button></div>'; }
-        else if(anyFilter){ empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-filter"></i><h3>No market data matches your filters</h3><p>Clear the filters or choose different options.</p><button id="mp-empty-clear">Clear Filters</button></div>'; }
-        else { empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-database"></i><h3>No market data available</h3><p>The backend has no market prices yet. Try again after market data is synced.</p><button id="mp-empty-retry">Retry</button></div>'; }
-        if(!append){ listEl.innerHTML = html || empty; }
-        else {
-          var l = listEl.querySelector('.mp-loading-row');
-          if(!l){ listEl.insertAdjacentHTML('beforeend', html); }
-          else { l.remove(); listEl.insertAdjacentHTML('beforeend', html); }
-        }
-        if(S.hasMore){ loadMoreWrap.style.display = 'block'; } else { loadMoreWrap.style.display = 'none'; }
-        var cf = $('mp-empty-clear');
-        if(cf) cf.addEventListener('click', function(){ resetFilters(); });
-        var er = $('mp-empty-retry');
-        if(er) er.addEventListener('click', function(){ loadList(false); });
-        bindCardEvents();
+        applyListResult(d, append);
       }).catch(function(err){
         if(seq !== S.listSeq) return;
         S.loading = false;
         loadMoreWrap.style.display = 'none';
         handleApiError(err, listEl, function(){ loadList(false); }, 'Retry');
       });
+    }
+    function applyListResult(d, append){
+      var html = cardsHtml(d.items || []);
+      var anyFilter = !!(S.q || S.commodity || (S.category && S.category !== 'all') || S.state || S.district || S.market || S.sort !== 'recent');
+      var empty;
+      if(S.q){ empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-search"></i><h3>No market prices found for your search</h3><p>Try a different crop, market, district or state.</p><button id="mp-empty-clear">Clear Search</button></div>'; }
+      else if(anyFilter){ empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-filter"></i><h3>No market data matches your filters</h3><p>Clear the filters or choose different options.</p><button id="mp-empty-clear">Clear Filters</button></div>'; }
+      else { empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-database"></i><h3>No market data available</h3><p>The backend has no market prices yet. Try again after market data is synced.</p><button id="mp-empty-retry">Retry</button></div>'; }
+      if(!append){ listEl.innerHTML = html || empty; }
+      else {
+        var l = listEl.querySelector('.mp-loading-row');
+        if(!l){ listEl.insertAdjacentHTML('beforeend', html); }
+        else { l.remove(); listEl.insertAdjacentHTML('beforeend', html); }
+      }
+      if(S.hasMore){ loadMoreWrap.style.display = 'block'; } else { loadMoreWrap.style.display = 'none'; }
+      var cf = $('mp-empty-clear');
+      if(cf) cf.addEventListener('click', function(){ resetFilters(); });
+      var er = $('mp-empty-retry');
+      if(er) er.addEventListener('click', function(){ loadList(false); });
+      bindCardEvents();
     }
     function bindCardEvents(){
       listEl.querySelectorAll('.mp-card').forEach(function(card){
@@ -1186,17 +1222,26 @@
 
     /* ---------------- init ---------------- */
     function loadInitial(){
+      var catsC = readCache('categories', 600000);
+      if(catsC){ renderCats(catsC); }
+      var mktsC = readCache('markets', 600000);
+      if(mktsC){ renderStates(mktsC); }
+      var snapC = readCache('summary', 90000);
+      if(snapC){ renderSnapshot(snapC); renderFreshness(snapC.freshness); }
       renderListLoading();
       loadList(false);
       window.MarketPriceService.summary().then(function(s){
         renderSnapshot(s);
         renderFreshness(s.freshness);
+        writeCache('summary', s);
       }).catch(function(err){ if(err && err.isAuthError){ handleApiError(err, null); return; } });
       window.MarketPriceService.categories().then(function(d){
         renderCats(d.categories);
+        writeCache('categories', d.categories);
       }).catch(function(){ });
       window.MarketPriceService.markets().then(function(d){
         renderStates(d.states || []);
+        writeCache('markets', d.states || []);
       }).catch(function(){ });
       loadRecommended();
       loadAIOverview();
