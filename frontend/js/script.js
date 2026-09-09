@@ -47,7 +47,6 @@ function initDynamicPageLogic() {
     else if (page === "marketplace.html") initMarketplaceShop();
     else if (page === "weather.html") initWeatherForecast();
     else if (page === "news.html") initNewsCenter();
-    else if (page === "expert.html") initExpertsDirectory();
     else if (page === "community.html") initCommunityFeed();
     else if (page === "notifications.html") initNotificationsManager();
     else if (page === "water.html") { initWaterManagement('water-content'); showIrrigationScheduler(); }
@@ -788,31 +787,6 @@ function showArticleDetail(id) {
   document.body.appendChild(b);
 }
 window.showArticleDetail = showArticleDetail;
-
-/* ===== EXPERT ===== */
-function initExpertsDirectory() {
-  const list = document.getElementById("experts-list-container");
-  if (!list) return;
-  const experts = (DB().experts || []).slice(0, 15);
-  list.innerHTML = experts.map(e => `
-    <div class="expert-card">
-      <div class="expert-photo-container">
-        <div style="width:60px;height:60px;border-radius:16px;background:rgba(31,122,76,0.1);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:24px;"><i class="fas ${e.imageClass || 'fa-user-tie'}"></i></div>
-        <div class="expert-status ${e.status}"></div>
-      </div>
-      <div class="expert-details">
-        <h4 class="expert-name">${e.name}</h4>
-        <div class="expert-role">${e.role || 'Agri Expert'}</div>
-        <div class="expert-rating"><i class="fas fa-star"></i> <span>${e.rating} ★</span></div>
-        <p style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">${e.bio || `${e.role} with extensive experience.`}</p>
-        <div class="expert-actions">
-          <button class="expert-btn-call" onclick="showToast('Calling ${e.name}...','info')"><i class="fas fa-phone-alt"></i> Call</button>
-          <button class="expert-btn-book" onclick="showToast('Booking appointment with ${e.name}...','success')"><i class="fas fa-calendar-check"></i> Book</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
 
 /* ===== COMMUNITY ===== */
 function initCommunityFeed() {

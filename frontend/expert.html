@@ -7,1324 +7,1667 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    :root{--c-green:#1B5E2F;--c-green-l:#E8F5E9;--c-green-m:#52B788;--c-red:#D32F2F;--c-orange:#E65100;--c-blue:#1565C0;--c-radius:12px;--c-radius-sm:8px;--c-shadow:0 2px 8px rgba(0,0,0,0.06);--c-shadow-lg:0 4px 16px rgba(0,0,0,0.1)}
-    .cns-page{padding:0 16px 100px;max-width:960px;margin:0 auto}
-    .cns-header{padding:16px 0 8px;display:flex;align-items:center;justify-content:space-between}
-    .cns-header h1{font-size:20px;font-weight:700;margin:0}
-    .cns-header p{font-size:12px;color:var(--text-muted);margin:2px 0 0}
-    .cns-section{margin-bottom:24px}
-    .cns-section-title{font-size:15px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:8px}
-    .cns-section-title i{color:var(--c-green);font-size:14px}
-    .cns-section-title .cns-count{font-size:11px;color:var(--text-muted);font-weight:500;margin-left:auto}
+    /* ===== Experts Hub redesign =====
+       Reuses the Farm Assist design language (green theme, rounded cards,
+       soft shadows). Everything on this page is driven by the real backend
+       API (services.js) + authentication - there is no mock expert data. */
+    .eh-page{max-width:1120px;margin:0 auto;padding:14px 14px 110px}
 
-    /* Filter bar */
-    .cns-filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-    .cns-search{flex:1;min-width:180px;position:relative}
-    .cns-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px}
-    .cns-search input{width:100%;padding:9px 12px 9px 32px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);font-size:12px;background:#fff;color:var(--text-primary);box-sizing:border-box}
-    .cns-search input:focus{border-color:var(--c-green);outline:none}
-    .cns-filter-select{padding:9px 28px 9px 12px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);font-size:12px;background:#fff;color:var(--text-primary)}
-    .cns-filter-select:focus{border-color:var(--c-green);outline:none}
-    .cns-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-    .cns-appt-tab{padding:6px 12px;border-radius:16px;border:1px solid #e0e0e0;background:#fff;font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all .15s}
-    .cns-appt-tab:hover{border-color:var(--c-green-m)}
-    .cns-appt-tab.active{background:var(--c-green);color:#fff;border-color:var(--c-green)}
+    .eh-header{display:flex;align-items:center;gap:12px;padding:8px 2px 10px}
+    .eh-header-icon{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--primary-green,#1B5E3F),var(--medium-green,#2D8659));color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+    .eh-header-txt{min-width:0}
+    .eh-header-txt h1{font-size:20px;font-weight:800;margin:0;color:var(--text-primary,#1a1a2e);letter-spacing:-0.2px}
+    .eh-header-txt p{font-size:12px;color:var(--text-muted,#9ca3af);margin:2px 0 0;line-height:1.4}
+    .eh-header .eh-header-extra{margin-left:auto;display:flex;align-items:center;gap:8px}
 
-    /* Available Experts Section */
-    .cns-experts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-    .cns-expert-card{background:#fff;border:1px solid #f0f0f0;border-radius:var(--c-radius);padding:16px;transition:all 0.2s;cursor:pointer;display:flex;flex-direction:column}
-    .cns-expert-card:hover{box-shadow:var(--c-shadow);border-color:var(--c-green-m);transform:translateY(-2px)}
-    .cns-expert-card.selected,.cns-expert-card.active{border-color:var(--c-green);background:var(--c-green-l)}
-    .cns-expert-top{display:flex;gap:12px;align-items:center}
-    .cns-expert-avatar{width:48px;height:48px;border-radius:12px;background:var(--c-green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
-    .cns-expert-info{flex:1;min-width:0}
-    .cns-expert-name{font-size:14px;font-weight:700;margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-    .cns-expert-spec{font-size:11px;color:var(--c-green);font-weight:600;margin-top:2px}
-    .cns-expert-meta{font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
-    .cns-expert-meta i{margin-right:3px}
-    .cns-expert-fee{font-weight:700;color:var(--c-green)}
-    .cns-expert-rating{display:inline-flex;align-items:center;gap:2px;font-size:11px;color:#F9A825}
-    .cns-avail-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:3px}
-    .cns-avail-badge.available{background:var(--c-green-l);color:var(--c-green)}
-    .cns-avail-badge.unavailable{background:#F5F5F5;color:var(--text-muted)}
-    .cns-expert-footer{margin-top:12px;display:flex;align-items:center;justify-content:flex-end}
+    /* Search + Booked icon row (single horizontal line) */
+    .eh-toolrow{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+    .eh-search{flex:1;min-width:0;position:relative}
+    .eh-search i.eh-search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted,#9ca3af);font-size:13px;pointer-events:none}
+    .eh-search input{width:100%;padding:11px 34px 11px 36px;border-radius:11px;border:1px solid var(--border-light,#e5e7eb);font-size:13px;background:#fff;color:var(--text-primary,#1a1a2e);outline:none;transition:border .2s,box-shadow .2s;box-sizing:border-box}
+    .eh-search input:focus{border-color:var(--primary-green,#1B5E3F);box-shadow:0 0 0 3px rgba(27,94,63,0.10)}
+    .eh-search .eh-search-clear{position:absolute;right:9px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted,#9ca3af);cursor:pointer;font-size:12px;display:none}
+    .eh-search .eh-search-clear:hover{color:var(--danger,#D63031)}
+    .eh-search .eh-search-spin{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text-muted,#9ca3af);font-size:12px;display:none}
+    .eh-booked-btn{flex-shrink:0;width:46px;height:46px;border-radius:12px;border:1px solid var(--border-light,#e5e7eb);background:#fff;color:var(--text-secondary,#6b7280);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:all .2s}
+    .eh-booked-btn:hover{color:var(--primary-green,#1B5E3F);border-color:var(--medium-green,#2D8659)}
+    .eh-booked-btn:active{transform:scale(.96)}
+    .eh-booked-btn .eh-booked-badge{position:absolute;top:-6px;right:-6px;background:var(--danger,#D63031);color:#fff;border:2px solid #fff;min-width:16px;height:16px;padding:0 4px;border-radius:10px;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1}
+    .eh-booked-btn .eh-booked-dot{position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--danger,#D63031);border:1.5px solid #fff}
 
-    /* Booked Appointments */
-    .cns-appointments-list{display:flex;flex-direction:column;gap:12px}
-    .cns-appointment-card{background:#fff;border:1px solid #f0f0f0;border-radius:var(--c-radius);padding:16px;transition:all 0.2s;cursor:pointer}
-    .cns-appointment-card:hover{box-shadow:var(--c-shadow);border-color:var(--c-green-m)}
-    .cns-appointment-header{display:flex;gap:12px;align-items:center}
-    .cns-appointment-avatar{width:44px;height:44px;border-radius:10px;background:var(--c-green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
-    .cns-appointment-info{flex:1;min-width:0}
-    .cns-appointment-title{font-size:14px;font-weight:700;margin:0}
-    .cns-appointment-spec{font-size:11px;color:var(--c-green);font-weight:500;margin-top:2px}
-    .cns-appointment-ref{font-size:10px;color:var(--text-muted);margin-top:2px;font-weight:600}
-    .cns-appointment-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin:8px 0;font-size:11px;color:var(--text-muted)}
-    .cns-appointment-meta i{color:var(--c-green-m);width:14px}
-    .cns-appointment-topic{font-size:13px;font-weight:600;color:var(--text-primary);margin:6px 0 0}
-    .cns-appointment-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #f0f0f0;flex-wrap:wrap}
-    .cns-appointment-note{font-size:11px;color:var(--text-muted);padding-top:8px;display:flex;align-items:center;gap:6px}
-    .cns-btn{padding:7px 12px;border-radius:var(--c-radius-sm);font-size:11px;font-weight:600;border:1px solid #e0e0e0;background:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all 0.15s}
-    .cns-btn:hover{border-color:var(--c-green-m);background:var(--c-green-l)}
-    .cns-btn-primary{background:var(--c-green);color:#fff;border-color:var(--c-green)}
-    .cns-btn-primary:hover{filter:brightness(1.1)}
-    .cns-btn-danger{color:var(--c-red);border-color:#FFCDD2}
-    .cns-btn-danger:hover{background:#FFEBEE}
-    .cns-btn-small{padding:6px 10px;font-size:10px}
-    .cns-btn:disabled{opacity:0.5;cursor:not-allowed}
+    /* Horizontal category bar (scrolls inside its own container only) */
+    .eh-categories{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 12px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#d8e3d9 transparent}
+    .eh-categories::-webkit-scrollbar{height:5px}
+    .eh-categories::-webkit-scrollbar-thumb{background:#d8e3d9;border-radius:3px}
+    .eh-chip{flex-shrink:0;padding:7px 14px;border-radius:18px;border:1px solid var(--border-light,#e5e7eb);background:#fff;font-size:12px;font-weight:600;color:var(--text-secondary,#6b7280);cursor:pointer;transition:all .2s;white-space:nowrap}
+    .eh-chip:hover{border-color:var(--medium-green,#2D8659);color:var(--primary-green,#1B5E3F)}
+    .eh-chip.active{background:var(--primary-green,#1B5E3F);color:#fff;border-color:var(--primary-green,#1B5E3F)}
+    .eh-chip:focus-visible{outline:2px solid var(--primary-green,#1B5E3F);outline-offset:2px}
 
-    /* Booking Wizard */
-    .cns-form-card{background:#fff;border:1px solid #f0f0f0;border-radius:var(--c-radius);padding:20px}
-    .cns-form-title{font-size:15px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:8px}
-    .cns-form-title i{color:var(--c-green)}
-    .cns-form-sub{font-size:12px;color:var(--text-muted);margin:0 0 16px}
-    .cns-steps{display:flex;align-items:center;gap:4px;margin:0 0 16px;flex-wrap:wrap}
-    .cns-step-dot{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted)}
-    .cns-step-dot .num{width:22px;height:22px;border-radius:50%;border:1.5px solid #e0e0e0;display:flex;align-items:center;justify-content:center;font-weight:700;background:#fff}
-    .cns-step-dot.active .num{background:var(--c-green);color:#fff;border-color:var(--c-green)}
-    .cns-step-dot.done .num{background:var(--c-green-l);color:var(--c-green);border-color:var(--c-green-m)}
-    .cns-step-dot .lbl{display:none}
-    .cns-step-line{flex:1;min-width:8px;height:2px;background:#f0f0f0}
-    .cns-step-line.filled{background:var(--c-green-m)}
-    .cns-step{display:none}
-    .cns-step.active{display:block}
-    .cns-step h3.cns-step-heading{font-size:13px;font-weight:700;margin:0 0 4px}
-    .cns-step .cns-step-sub{font-size:11px;color:var(--text-muted);margin:0 0 12px}
-    .cns-expert-select-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:2px}
-    .cns-form-group{margin-bottom:14px}
-    .cns-form-group label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px}
-    .cns-form-group label .req{color:var(--c-red)}
-    .cns-form-input{width:100%;padding:10px 12px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);font-size:13px;transition:border-color 0.2s;background:#fff;color:var(--text-primary);box-sizing:border-box}
-    .cns-form-input:focus{border-color:var(--c-green);outline:none;box-shadow:0 0 0 3px rgba(27,94,47,0.08)}
-    .cns-form-input:disabled{background:#f5f5f5;cursor:not-allowed}
-    .cns-form-input.error{border-color:var(--c-red)}
-    .cns-form-error{font-size:11px;color:var(--c-red);margin-top:4px}
-    select.cns-form-input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
-    textarea.cns-form-input{resize:vertical;min-height:70px}
-    .cns-form-row{display:flex;gap:12px}
-    .cns-form-row .cns-form-group{flex:1}
-    .cns-method-group{display:flex;gap:8px;flex-wrap:wrap}
-    .cns-method-opt{flex:1;min-width:130px;padding:12px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);text-align:center;cursor:pointer;transition:all 0.15s;font-size:12px;font-weight:600;background:#fff}
-    .cns-method-opt:hover{border-color:var(--c-green-m);background:var(--c-green-l)}
-    .cns-method-opt.active{border-color:var(--c-green);background:var(--c-green);color:#fff}
-    .cns-method-opt i{display:block;font-size:18px;margin-bottom:4px}
-    .cns-slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
-    .cns-slot-opt{padding:9px 8px;border:1px solid #e0e0e0;border-radius:var(--c-radius-sm);background:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
-    .cns-slot-opt:hover{border-color:var(--c-green-m);background:var(--c-green-l)}
-    .cns-slot-opt.active{border-color:var(--c-green);background:var(--c-green);color:#fff}
-    .cns-review-list{display:flex;flex-direction:column}
-    .cns-review-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f5;font-size:12px;gap:12px}
-    .cns-review-row:last-child{border-bottom:none}
-    .cns-review-label{color:var(--text-muted);font-weight:500;flex-shrink:0}
-    .cns-review-value{color:var(--text-primary);font-weight:600;text-align:right;word-break:break-word}
-    .cns-confirm-card{text-align:center;padding:16px 8px}
-    .cns-confirm-card .big-icon{font-size:44px;color:var(--c-green);margin-bottom:12px}
-    .cns-confirm-card h3{font-size:16px;font-weight:700;margin:0 0 6px}
-    .cns-confirm-card p{font-size:12px;color:var(--text-muted);margin:0 0 16px}
-    .cns-ref-chip{display:inline-block;background:var(--c-green-l);color:var(--c-green);font-weight:700;font-size:12px;padding:4px 12px;border-radius:6px;margin-bottom:14px}
-    .cns-submit{width:100%;padding:12px;border-radius:var(--c-radius-sm);background:var(--c-green);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.15s}
-    .cns-submit:hover{filter:brightness(1.1);transform:translateY(-1px)}
-    .cns-submit:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-    .cns-step-nav{display:flex;gap:8px;margin-top:16px}
-    .cns-step-nav .cns-btn{flex:1;justify-content:center;padding:10px}
+    .eh-result-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;min-height:16px}
+    .eh-result-line .eh-count{font-size:12px;color:var(--text-muted,#9ca3af);font-weight:600}
+    .eh-result-line .eh-clear-filters{font-size:11px;font-weight:700;color:var(--primary-green,#1B5E3F);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;padding:0}
+    .eh-result-line .eh-clear-filters:hover{text-decoration:underline}
 
-    /* Empty States */
-    .cns-empty{text-align:center;padding:32px 16px;color:var(--text-muted)}
-    .cns-empty i{font-size:32px;display:block;margin-bottom:12px;opacity:0.3}
-    .cns-empty h4{font-size:14px;font-weight:600;margin:0 0 4px;color:var(--text-primary)}
-    .cns-empty p{font-size:12px;margin:0 0 16px}
+    /* Cards */
+    .eh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(262px,1fr));gap:12px}
+    .eh-card{background:#fff;border:1px solid var(--border-light,#e5e7eb);border-radius:16px;padding:14px;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s,border-color .2s;position:relative;overflow:hidden}
+    .eh-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(27,94,63,0.10);border-color:var(--medium-green,#2D8659)}
+    .eh-card-top{display:flex;gap:12px;align-items:center}
+    .eh-avatar{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--primary-green,#1B5E3F),var(--medium-green,#2D8659));color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;flex-shrink:0;overflow:hidden}
+    .eh-avatar img{width:100%;height:100%;object-fit:cover}
+    .eh-card-info{flex:1;min-width:0}
+    .eh-name{font-size:14px;font-weight:800;margin:0;color:var(--text-primary,#1a1a2e);display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .eh-name .eh-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .eh-status-dot.ga{background:#2E7D32}
+    .eh-status-dot.gi{background:#C62828}
+    .eh-spec{font-size:11px;font-weight:700;color:var(--primary-green,#1B5E3F);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .eh-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-muted,#9ca3af);margin-top:6px;flex-wrap:wrap}
+    .eh-meta i{margin-right:3px}
+    .eh-rating{display:inline-flex;align-items:center;gap:3px;color:#F9A825;font-weight:700}
+    .eh-bio{font-size:11.5px;color:var(--text-secondary,#6b7280);line-height:1.5;margin:10px 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .eh-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .eh-tag{font-size:10px;font-weight:600;padding:3px 9px;border-radius:10px;background:var(--bg-card-soft,#F8FAF5);color:var(--text-secondary,#6b7280)}
+    .eh-tag.eh-tag-fee{background:#E8F5E9;color:#1B5E3F;font-weight:800}
+    .eh-tag.eh-tag-free{background:#FFF8E1;color:#8a6d1a}
+    .eh-tag.eh-tag-exp{background:#E3F2FD;color:#1565C0}
+    .eh-card-actions{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid #f0f1f2}
+    .eh-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border-radius:10px;font-size:12px;font-weight:700;border:1px solid var(--border-light,#e5e7eb);background:#fff;color:var(--text-secondary,#6b7280);cursor:pointer;transition:all .18s}
+    .eh-btn:hover{border-color:var(--medium-green,#2D8659);color:var(--primary-green,#1B5E3F)}
+    .eh-btn.eh-btn-primary{background:var(--primary-green,#1B5E3F);color:#fff;border-color:var(--primary-green,#1B5E3F)}
+    .eh-btn.eh-btn-primary:hover{filter:brightness(1.12)}
+    .eh-btn:disabled{opacity:.5;cursor:not-allowed}
+    .eh-btn.eh-btn-danger{color:var(--danger,#D63031);border-color:#F5C6C6}
+    .eh-btn.eh-btn-danger:hover{background:#FDECEC}
 
-    /* Modal */
-    .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
-    .modal-overlay.active{display:flex}
-    .modal-box{background:#fff;border-radius:var(--c-radius);padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto}
-    .modal-box h3{font-size:16px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:8px}
-    .modal-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);padding:4px}
-    .modal-info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:12px;gap:12px}
-    .modal-info-row:last-child{border-bottom:none}
-    .modal-info-label{color:var(--text-muted);font-weight:500;flex-shrink:0}
-    .modal-info-value{color:var(--text-primary);font-weight:600;text-align:right;max-width:60%;word-break:break-word}
-    .modal-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
-    .modal-actions .cns-btn{flex:1;justify-content:center;padding:10px}
+    /* Skeleton */
+    .eh-skel{background:#fff;border:1px solid var(--border-light,#e5e7eb);border-radius:16px;padding:14px}
+    .eh-skel .sk{background:linear-gradient(90deg,#f2f4f3 25%,#e8ece9 37%,#f2f4f3 63%);background-size:400% 100%;animation:eh-shimmer 1.2s ease infinite;border-radius:8px}
+    .eh-skel .sk-avatar{width:54px;height:54px;border-radius:50%}
+    .eh-skel .sk-line{height:12px;margin-top:10px}
+    .eh-skel .sk-line.sk-w60{width:60%}
+    .eh-skel .sk-line.sk-w40{width:40%}
+    .eh-skel .sk-line.sk-w85{width:85%}
+    @keyframes eh-shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
 
-    /* Loading */
-    .cns-loading{text-align:center;padding:24px;color:var(--text-muted);font-size:12px}
-    .cns-loading i{animation:cns-spin 1s linear infinite;margin-right:6px}
-    @keyframes cns-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    /* Empty / error states */
+    .eh-state{text-align:center;padding:40px 16px;color:var(--text-muted,#9ca3af)}
+    .eh-state i{font-size:34px;display:block;margin-bottom:12px;opacity:.35}
+    .eh-state h4{font-size:14px;font-weight:700;margin:0 0 4px;color:var(--text-primary,#1a1a2e)}
+    .eh-state p{font-size:12px;margin:0 0 16px;max-width:360px;margin-left:auto;margin-right:auto;line-height:1.5}
+    .eh-state .eh-btn{max-width:200px}
 
-    /* Toast */
-    .cns-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:var(--c-radius-sm);color:#fff;font-size:13px;font-weight:600;z-index:2000;opacity:0;transition:opacity 0.3s;pointer-events:none;max-width:90%;text-align:center}
-    .cns-toast.show{opacity:1}
-    .cns-toast.success{background:#2E7D32}
-    .cns-toast.error{background:#C62828}
-    .cns-toast.info{background:#1565C0}
+    /* Overlays (dialogs + sheets) */
+    .eh-overlay{position:fixed;inset:0;background:rgba(10,24,16,0.5);z-index:1200;display:none;align-items:center;justify-content:center;padding:14px;opacity:0;transition:opacity .2s}
+    .eh-overlay.open{display:flex;opacity:1}
+    .eh-sheet{background:#fff;border-radius:18px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;box-shadow:0 18px 50px rgba(0,0,0,0.25);transform:translateY(12px) scale(.98);transition:transform .2s}
+    .eh-overlay.open .eh-sheet{transform:translateY(0) scale(1)}
+    .eh-sheet-header{display:flex;align-items:center;gap:10px;padding:16px 18px 12px;border-bottom:1px solid #f0f1f2;flex-shrink:0}
+    .eh-sheet-header h3{font-size:16px;font-weight:800;margin:0;color:var(--text-primary,#1a1a2e)}
+    .eh-sheet-header h3 i{color:var(--primary-green,#1B5E3F);margin-right:6px}
+    .eh-sheet-close{width:32px;height:32px;border-radius:50%;border:1px solid var(--border-light,#e5e7eb);background:#fff;color:var(--text-secondary,#6b7280);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:auto;transition:all .18s;flex-shrink:0}
+    .eh-sheet-close:hover{color:var(--danger,#D63031);border-color:#F5C6C6}
+    .eh-sheet-body{padding:16px 18px;overflow-y:auto}
 
-    /* Status Badges */
-    .cns-badge{font-size:10px;padding:3px 10px;border-radius:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
-    .cns-badge.scheduled{background:#FFF3E0;color:#E65100}
-    .cns-badge.requested{background:#FFF3E0;color:#E65100}
-    .cns-badge.confirmed{background:#E3F2FD;color:#1565C0}
-    .cns-badge.in_progress{background:#F3E5F5;color:#7B1FA2}
-    .cns-badge.completed{background:#E8F5E9;color:#2E7D32}
-    .cns-badge.cancelled{background:#FFEBEE;color:#C62828}
+    /* View expert */
+    .eh-profile-top{display:flex;gap:14px;align-items:flex-start}
+    .eh-profile-avatar{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,var(--primary-green,#1B5E3F),var(--medium-green,#2D8659));color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;overflow:hidden}
+    .eh-profile-avatar img{width:100%;height:100%;object-fit:cover}
+    .eh-profile-name{font-size:18px;font-weight:800;margin:0;color:var(--text-primary,#1a1a2e)}
+    .eh-profile-spec{font-size:12px;font-weight:700;color:var(--primary-green,#1B5E3F);margin-top:2px}
+    .eh-profile-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--text-muted,#9ca3af);margin-top:8px}
+    .eh-profile-meta i{margin-right:4px}
+    .eh-avail-line{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-top:10px}
+    .eh-avail-line .eh-on{color:#2E7D32}
+    .eh-avail-line .eh-off{color:#C62828}
+    .eh-profile-bio{font-size:13px;line-height:1.6;color:var(--text-secondary,#6b7280);margin:14px 0 0}
+    .eh-dblock{background:var(--bg-card-soft,#F8FAF5);border:1px solid #e5eee5;border-radius:12px;padding:12px 14px;margin-top:14px}
+    .eh-dblock .eh-db-title{font-size:10px;font-weight:800;color:var(--text-secondary,#6b7280);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .eh-dblock .eh-db-title i{color:var(--primary-green,#1B5E3F)}
+    .eh-drow{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed #e8ece9;font-size:12px}
+    .eh-drow:last-child{border-bottom:none}
+    .eh-drow .eh-dlabel{color:var(--text-muted,#9ca3af);font-weight:500;flex-shrink:0}
+    .eh-drow .eh-dvalue{color:var(--text-primary,#1a1a2e);font-weight:600;text-align:right;word-break:break-word}
+    .eh-sheet-actions{display:flex;gap:8px;padding:14px 18px 18px;border-top:1px solid #f0f1f2;flex-shrink:0}
+    .eh-sheet-actions .eh-btn{flex:1;padding:12px}
 
-    @media(max-width:640px){
-      .cns-header{flex-direction:column;align-items:flex-start;gap:8px}
-      .cns-experts-grid{grid-template-columns:1fr}
-      .cns-form-row{flex-direction:column;gap:0}
-      .cns-method-group{flex-direction:column}
-      .cns-method-opt{min-width:auto}
-      .cns-slots-grid{grid-template-columns:repeat(3,1fr)}
-      .cns-appointment-actions{justify-content:center}
-      .modal-box{max-height:90vh;margin:8px}
+    /* Wizard */
+    .eh-wiz-head{display:flex;align-items:center;gap:6px;margin:2px 0 14px}
+    .eh-wiz-step{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted,#9ca3af);font-weight:600}
+    .eh-wiz-step .eh-wiz-num{width:20px;height:20px;border-radius:50%;border:1.5px solid #d7dcd9;display:flex;align-items:center;justify-content:center;font-weight:800;background:#fff}
+    .eh-wiz-step.active{color:var(--primary-green,#1B5E3F)}
+    .eh-wiz-step.active .eh-wiz-num{background:var(--primary-green,#1B5E3F);color:#fff;border-color:var(--primary-green,#1B5E3F)}
+    .eh-wiz-step.done{color:#2E7D32}
+    .eh-wiz-step.done .eh-wiz-num{background:#E8F5E9;color:#1B5E3F;border-color:#52B788}
+    .eh-wiz-step .eh-wiz-lbl{display:none}
+    .eh-wiz-line{flex:1;height:2px;background:#eef0ee;margin:0 2px}
+    .eh-wiz-line.filled{background:#52B788}
+    .eh-wiz-title{font-size:14px;font-weight:800;color:var(--text-primary,#1a1a2e);margin:0 0 4px}
+    .eh-wiz-sub{font-size:12px;color:var(--text-muted,#9ca3af);margin:0 0 14px}
+    .eh-wiz-pane{display:none}
+    .eh-wiz-pane.active{display:block;animation:eh-fade .22s ease}
+    @keyframes eh-fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+    .eh-expert-pick{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;padding-right:2px}
+    .eh-pick{display:flex;align-items:center;gap:11px;border:1px solid var(--border-light,#e5e7eb);border-radius:12px;padding:9px 11px;cursor:pointer;transition:all .15s;background:#fff}
+    .eh-pick:hover{border-color:var(--medium-green,#2D8659)}
+    .eh-pick.active{border-color:var(--primary-green,#1B5E3F);background:#F2F9F4}
+    .eh-pick .eh-avatar{width:42px;height:42px;font-size:14px}
+    .eh-pick-info{flex:1;min-width:0}
+    .eh-pick-name{font-size:13px;font-weight:800;color:var(--text-primary,#1a1a2e)}
+    .eh-pick-spec{font-size:11px;color:var(--text-muted,#9ca3af)}
+    .eh-pick-fee{font-size:11px;font-weight:800;color:var(--primary-green,#1B5E3F);white-space:nowrap}
+
+    .eh-methods{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .eh-method{padding:12px 10px;border:1px solid var(--border-light,#e5e7eb);border-radius:12px;text-align:center;cursor:pointer;transition:all .15s;background:#fff;font-size:12px;font-weight:700;color:var(--text-secondary,#6b7280)}
+    .eh-method:hover{border-color:var(--medium-green,#2D8659)}
+    .eh-method.active{background:var(--primary-green,#1B5E3F);color:#fff;border-color:var(--primary-green,#1B5E3F)}
+    .eh-method i{display:block;font-size:17px;margin-bottom:5px}
+
+    .eh-field{margin-bottom:14px}
+    .eh-field label{display:block;font-size:11px;font-weight:700;color:var(--text-muted,#9ca3af);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px}
+    .eh-field label .req{color:var(--danger,#D63031)}
+    .eh-input{width:100%;padding:11px 12px;border:1px solid var(--border-light,#e5e7eb);border-radius:11px;font-size:13px;background:#fff;color:var(--text-primary,#1a1a2e);outline:none;transition:border .2s,box-shadow .2s;box-sizing:border-box;font-family:inherit}
+    .eh-input:focus{border-color:var(--primary-green,#1B5E3F);box-shadow:0 0 0 3px rgba(27,94,63,0.10)}
+    .eh-input:disabled{background:#f5f6f5;cursor:not-allowed}
+    textarea.eh-input{resize:vertical;min-height:76px}
+    select.eh-input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L1 2h8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer}
+    .eh-input-error{border-color:var(--danger,#D63031)!important}
+    .eh-err{font-size:11px;color:var(--danger,#D63031);margin-top:4px}
+    .eh-hint{font-size:11px;color:var(--text-muted,#9ca3af);margin-top:4px;display:flex;align-items:center;gap:5px}
+
+    .eh-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:7px}
+    .eh-slot{padding:8px 6px;border:1px solid var(--border-light,#e5e7eb);border-radius:9px;background:#fff;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;color:var(--text-secondary,#6b7280)}
+    .eh-slot:hover{border-color:var(--medium-green,#2D8659)}
+    .eh-slot.active{background:var(--primary-green,#1B5E3F);color:#fff;border-color:var(--primary-green,#1B5E3F)}
+    .eh-slot:disabled{opacity:.45;cursor:not-allowed}
+
+    .eh-review-list{display:flex;flex-direction:column}
+    .eh-review-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed #e8ece9;font-size:12px}
+    .eh-review-row:last-child{border-bottom:none}
+    .eh-review-lab{color:var(--text-muted,#9ca3af);font-weight:500;flex-shrink:0}
+    .eh-review-val{color:var(--text-primary,#1a1a2e);font-weight:700;text-align:right;word-break:break-word}
+    .eh-confirm-success{text-align:center;padding:18px 6px}
+    .eh-confirm-success .eh-big{font-size:46px;color:#2E7D32;margin-bottom:12px}
+    .eh-confirm-success h3{font-size:17px;font-weight:800;margin:0 0 6px;color:var(--text-primary,#1a1a2e)}
+    .eh-confirm-success p{font-size:12px;color:var(--text-muted,#9ca3af);margin:0 0 14px}
+    .eh-ref-chip{display:inline-block;background:#E8F5E9;color:#1B5E3F;font-weight:800;font-size:12px;padding:5px 14px;border-radius:8px;margin-bottom:14px}
+    .eh-wiz-nav{display:flex;gap:8px;margin-top:16px}
+    .eh-wiz-nav .eh-btn{flex:1;padding:12px;font-size:13px}
+
+    /* Appointments */
+    .eh-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+    .eh-tab{padding:6px 12px;border-radius:15px;border:1px solid var(--border-light,#e5e7eb);background:#fff;font-size:11px;font-weight:700;color:var(--text-muted,#9ca3af);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+    .eh-tab:hover{border-color:var(--medium-green,#2D8659);color:var(--primary-green,#1B5E3F)}
+    .eh-tab.active{background:var(--primary-green,#1B5E3F);color:#fff;border-color:var(--primary-green,#1B5E3F)}
+    .eh-tab .eh-tab-count{font-size:9px;background:rgba(0,0,0,0.08);padding:1px 6px;border-radius:9px}
+    .eh-tab.active .eh-tab-count{background:rgba(255,255,255,0.22)}
+    .eh-appts{display:flex;flex-direction:column;gap:10px}
+    .eh-appt{background:#fff;border:1px solid var(--border-light,#e5e7eb);border-radius:14px;padding:13px 14px;display:flex;flex-direction:column;gap:9px;transition:all .15s;cursor:pointer}
+    .eh-appt:hover{border-color:var(--medium-green,#2D8659);box-shadow:0 4px 12px rgba(27,94,63,0.08)}
+    .eh-appt-top{display:flex;gap:11px;align-items:center}
+    .eh-appt-avatar{width:44px;height:44px;border-radius:12px;background:var(--bg-card-soft,#F8FAF5);border:1px solid var(--border-light,#e5e7eb);color:var(--primary-green,#1B5E3F);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+    .eh-appt-info{flex:1;min-width:0}
+    .eh-appt-name{font-size:13.5px;font-weight:800;color:var(--text-primary,#1a1a2e)}
+    .eh-appt-spec{font-size:11px;color:var(--text-muted,#9ca3af)}
+    .eh-appt-badge{flex-shrink:0;font-size:10px;font-weight:800;padding:3px 10px;border-radius:12px}
+    .eh-badge-scheduled{background:#FFF3E0;color:#E65100}
+    .eh-badge-requested{background:#FFF3E0;color:#E65100}
+    .eh-badge-confirmed{background:#E3F2FD;color:#1565C0}
+    .eh-badge-in_progress{background:#F3E5F5;color:#7B1FA2}
+    .eh-badge-completed{background:#E8F5E9;color:#2E7D32}
+    .eh-badge-cancelled{background:#FFEBEE;color:#C62828}
+    .eh-appt-meta{display:flex;flex-wrap:wrap;gap:5px 14px;font-size:11px;color:var(--text-muted,#9ca3af)}
+    .eh-appt-meta i{color:var(--primary-green,#1B5E3F);width:14px;text-align:center;margin-right:2px}
+    .eh-appt-topic{font-size:12px;font-weight:600;color:var(--text-primary,#1a1a2e)}
+    .eh-appt-actions{display:flex;gap:7px;flex-wrap:wrap;padding-top:9px;border-top:1px solid #f0f1f2}
+    .eh-appt-action{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:9px;border:1px solid var(--border-light,#e5e7eb);background:#fff;font-size:11px;font-weight:700;color:var(--text-secondary,#6b7280);cursor:pointer;transition:all .15s}
+    .eh-appt-action:hover{border-color:var(--medium-green,#2D8659);color:var(--primary-green,#1B5E3F)}
+    .eh-appt-action.eh-a-danger{color:var(--danger,#D63031);border-color:#F5C6C6}
+    .eh-appt-action.eh-a-danger:hover{background:#FDECEC}
+    .eh-appt-action.eh-a-primary{background:var(--primary-green,#1B5E3F);color:#fff;border-color:var(--primary-green,#1B5E3F)}
+    .eh-appt-note{font-size:11px;color:var(--text-muted,#9ca3af);display:flex;align-items:center;gap:6px}
+
+    /* Rating stars */
+    .eh-stars{display:flex;gap:5px;font-size:26px;cursor:pointer}
+    .eh-stars i{color:#d7dcd9;transition:color .15s}
+    .eh-stars i.lit{color:#F9A825}
+    .eh-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:eh-spin .7s linear infinite;vertical-align:-2px}
+    @keyframes eh-spin{to{transform:rotate(360deg)}}
+
+    .eh-foot{text-align:center;padding:20px 0 8px;font-size:10px;color:var(--text-muted,#9ca3af)}
+
+    @media(min-width:900px){.eh-page{padding:18px 22px 110px}}
+    @media(max-width:380px){.eh-header-txt p{font-size:11px}.eh-methods{grid-template-columns:1fr 1fr}}
+
+    @media(max-width:560px){
+      .eh-overlay{padding:0;align-items:flex-end}
+      .eh-sheet{border-radius:18px 18px 0 0;max-height:94vh;max-width:100%}
+      .eh-sheet-body{padding:14px 14px}
+      .eh-sheet-actions{padding:12px 14px 16px}
+      .eh-expert-pick{max-height:240px}
+    }
+
+    /* Respect reduced-motion preferences */
+    @media (prefers-reduced-motion: reduce){
+      .eh-card,.eh-sheet,.eh-overlay,.eh-chip,.eh-btn,.eh-appt,.eh-method,.eh-slot,.eh-tab{transition:none!important}
+      .eh-skel .sk{animation:none!important}
+      .eh-wiz-pane.active{animation:none!important}
     }
   </style>
 </head>
 <body>
-<main class="cns-page">
+  <main class="page-container">
+    <div class="eh-page">
 
-  <div class="cns-header">
-    <div>
-      <h1><i class="fas fa-user-doctor" style="color:var(--c-green)"></i> Experts Hub</h1>
-      <p>FARM ASSIST AGRICULTURE EXPERTS &mdash; discover agriculture specialists, check expertise and availability, book consultations, and manage your appointments</p>
-    </div>
-  </div>
-
-  <!-- SECTION 1: AVAILABLE EXPERTS -->
-  <div class="cns-section">
-    <div class="cns-section-title">
-      <i class="fas fa-users"></i> Available Agriculture Experts
-      <span class="cns-count" id="cns-experts-count">0</span>
-    </div>
-    <div class="cns-filter-bar">
-      <div class="cns-search">
-        <i class="fas fa-search"></i>
-        <input type="text" id="cns-expert-search" placeholder="Search by name, specialisation or expertise..." oninput="cnsFilterExperts()">
+      <!-- Header -->
+      <div class="eh-header">
+        <div class="eh-header-icon"><i class="fas fa-user-doctor"></i></div>
+        <div class="eh-header-txt">
+          <h1>Experts Hub</h1>
+          <p>Connect with agricultural experts and get trusted guidance for your farm.</p>
+        </div>
       </div>
-      <select class="cns-filter-select" id="cns-expert-spec-filter" onchange="cnsFilterExperts()">
-        <option value="">All Specialisations</option>
-      </select>
-    </div>
-    <div id="cns-experts-list">
-      <div class="cns-loading"><i class="fas fa-spinner fa-spin"></i> Loading experts...</div>
-    </div>
-    <div id="cns-experts-empty" style="display:none">
-      <div class="cns-empty">
-        <i class="fas fa-user-slash"></i>
-        <h4>No experts are currently available.</h4>
-        <p>Check back later when experts become available for consultation.</p>
+
+      <!-- Search + Booked icon row -->
+      <div class="eh-toolrow">
+        <div class="eh-search">
+          <i class="fas fa-search eh-search-ico"></i>
+          <input type="search" id="eh-search-input" autocomplete="off" placeholder="Search experts, specialisation, crop or area..." aria-label="Search experts">
+          <i class="fas fa-spinner fa-spin eh-search-spin" id="eh-search-spin"></i>
+          <button class="eh-search-clear" id="eh-search-clear" aria-label="Clear search"><i class="fas fa-xmark"></i></button>
+        </div>
+        <button class="eh-booked-btn" id="eh-booked-btn" aria-label="My appointments" title="My appointments">
+          <i class="far fa-calendar-check"></i>
+          <span class="eh-booked-badge" id="eh-booked-badge" style="display:none">0</span>
+          <span class="eh-booked-dot" id="eh-booked-dot" style="display:none"></span>
+        </button>
       </div>
-    </div>
-  </div>
 
-  <!-- SECTION 2: BOOKED APPOINTMENTS -->
-  <div class="cns-section">
-    <div class="cns-section-title">
-      <i class="fas fa-calendar-check"></i> Booked Appointments
-      <span class="cns-count" id="cns-appointments-count">0</span>
-    </div>
-    <div class="cns-tabs" id="cns-appt-tabs"></div>
-    <div id="cns-appointments-list">
-      <div class="cns-loading"><i class="fas fa-spinner fa-spin"></i> Loading appointments...</div>
-    </div>
-    <div id="cns-appointments-empty" style="display:none">
-      <div class="cns-empty">
-        <i class="fas fa-calendar-alt"></i>
-        <h4>No booked appointments yet</h4>
-        <p>Book an appointment with an agriculture expert when you need professional guidance.</p>
-        <button class="cns-btn cns-btn-primary" onclick="cnsOpenWizard('')"><i class="fas fa-plus"></i> Find an Expert</button>
+      <!-- Horizontal category bar -->
+      <div class="eh-categories" id="eh-categories" role="tablist" aria-label="Expert categories"></div>
+
+      <!-- Result line -->
+      <div class="eh-result-line">
+        <span class="eh-count" id="eh-result-count"></span>
+        <button class="eh-clear-filters" id="eh-clear-filters" style="display:none"><i class="fas fa-filter-circle-xmark"></i> Clear filters</button>
       </div>
+
+      <!-- Expert cards -->
+      <div id="eh-experts"></div>
+
+      <div class="eh-foot">Farm Assist &mdash; Agriculture Experts &amp; Consultation Services</div>
     </div>
-  </div>
+  </main>
 
-  <!-- SECTION 3: BOOK EXPERT APPOINTMENT -->
-  <div class="cns-section" id="cns-book-section">
-    <div class="cns-section-title">
-      <i class="fas fa-calendar-plus"></i> Book an Expert Appointment
-    </div>
-    <div class="cns-form-card">
-      <div id="cns-wizard">
-
-        <div class="cns-steps" id="cns-steps"></div>
-
-        <div id="cns-step-content"></div>
-
-        <div class="cns-step-nav" id="cns-step-nav"></div>
-
+  <!-- VIEW EXPERT -->
+  <div class="eh-overlay" id="eh-view" role="dialog" aria-modal="true" aria-label="Expert details">
+    <div class="eh-sheet" style="max-width:560px">
+      <div class="eh-sheet-header">
+        <h3><i class="fas fa-user-doctor"></i> Expert Profile</h3>
+        <button class="eh-sheet-close" data-close="eh-view" aria-label="Close"><i class="fas fa-times"></i></button>
       </div>
+      <div class="eh-sheet-body" id="eh-view-body"></div>
+      <div class="eh-sheet-actions" id="eh-view-actions"></div>
     </div>
   </div>
 
-  <div style="text-align:center;padding:16px 0;font-size:10px;color:var(--text-muted)">
-    Farm Assist v1.0.0 &mdash; Agriculture Experts &amp; Consultation Services
-  </div>
-
-</main>
-
-<!-- DETAIL MODAL -->
-<div class="modal-overlay" id="cns-detail-modal">
-  <div class="modal-box" style="position:relative">
-    <button class="modal-close" onclick="cnsCloseDetail()"><i class="fas fa-times"></i></button>
-    <h3><i class="fas fa-clipboard-list" style="color:var(--c-green)"></i> Appointment Details</h3>
-    <div id="cns-detail-content"></div>
-    <div class="modal-actions" id="cns-detail-actions"></div>
-  </div>
-</div>
-
-<!-- CANCEL MODAL -->
-<div class="modal-overlay" id="cns-cancel-modal">
-  <div class="modal-box" style="position:relative">
-    <button class="modal-close" onclick="cnsCloseCancel()"><i class="fas fa-times"></i></button>
-    <h3><i class="fas fa-calendar-xmark" style="color:var(--c-red)"></i> Cancel Appointment</h3>
-    <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px">Are you sure you want to cancel this appointment? This action cannot be undone.</p>
-    <div class="cns-form-group">
-      <label>Reason for cancellation</label>
-      <textarea class="cns-form-input" id="cns-cancel-reason" placeholder="Optional: Why are you cancelling?" rows="2"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="cns-btn" onclick="cnsCloseCancel()">Keep Appointment</button>
-      <button class="cns-btn cns-btn-danger" id="cns-cancel-confirm-btn" onclick="cnsConfirmCancel()"><i class="fas fa-times"></i> Cancel Appointment</button>
+  <!-- BOOK WIZARD -->
+  <div class="eh-overlay" id="eh-wizard" role="dialog" aria-modal="true" aria-label="Book appointment">
+    <div class="eh-sheet" style="max-width:620px">
+      <div class="eh-sheet-header">
+        <h3><i class="fas fa-calendar-plus"></i> Book Appointment</h3>
+        <button class="eh-sheet-close" id="eh-wizard-close" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="eh-sheet-body" id="eh-wizard-body"></div>
+      <div class="eh-wiz-nav" id="eh-wizard-nav"></div>
     </div>
   </div>
-</div>
 
-<!-- RESCHEDULE MODAL -->
-<div class="modal-overlay" id="cns-reschedule-modal">
-  <div class="modal-box" style="position:relative">
-    <button class="modal-close" onclick="cnsCloseReschedule()"><i class="fas fa-times"></i></button>
-    <h3><i class="fas fa-calendar-week" style="color:var(--c-green)"></i> Reschedule Appointment</h3>
-    <div id="cns-reschedule-content"></div>
-    <div class="modal-actions">
-      <button class="cns-btn" onclick="cnsCloseReschedule()">Keep Current Slot</button>
-      <button class="cns-btn cns-btn-primary" id="cns-reschedule-confirm-btn" onclick="cnsConfirmReschedule()"><i class="fas fa-check"></i> Confirm Reschedule</button>
+  <!-- BOOKED / APPOINTMENTS -->
+  <div class="eh-overlay" id="eh-booked" role="dialog" aria-modal="true" aria-label="My appointments">
+    <div class="eh-sheet" style="max-width:640px">
+      <div class="eh-sheet-header">
+        <h3><i class="far fa-calendar-check"></i> My Appointments</h3>
+        <button class="eh-sheet-close" data-close="eh-booked" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="eh-tabs" id="eh-booked-tabs"></div>
+      <div class="eh-sheet-body" id="eh-booked-body"></div>
     </div>
   </div>
-</div>
 
-<!-- REVIEW MODAL -->
-<div class="modal-overlay" id="cns-review-modal">
-  <div class="modal-box" style="position:relative">
-    <button class="modal-close" onclick="cnsCloseReview()"><i class="fas fa-times"></i></button>
-    <h3><i class="fas fa-star" style="color:#F9A825"></i> Rate Appointment</h3>
-    <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px" id="cns-review-expert-name"></p>
-    <div class="cns-form-group">
-      <label>Rating <span class="req">*</span></label>
-      <div style="display:flex;gap:6px;font-size:24px;cursor:pointer" id="cns-rating-stars">
-        <i class="far fa-star" data-star="1"></i>
-        <i class="far fa-star" data-star="2"></i>
-        <i class="far fa-star" data-star="3"></i>
-        <i class="far fa-star" data-star="4"></i>
-        <i class="far fa-star" data-star="5"></i>
+  <!-- APPOINTMENT DETAIL -->
+  <div class="eh-overlay" id="eh-detail" role="dialog" aria-modal="true" aria-label="Appointment details">
+    <div class="eh-sheet" style="max-width:560px">
+      <div class="eh-sheet-header">
+        <h3><i class="fas fa-clipboard-list"></i> Appointment Details</h3>
+        <button class="eh-sheet-close" data-close="eh-detail" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="eh-sheet-body" id="eh-detail-body"></div>
+      <div class="eh-sheet-actions" id="eh-detail-actions"></div>
+    </div>
+  </div>
+
+  <!-- CANCEL -->
+  <div class="eh-overlay" id="eh-cancel" role="dialog" aria-modal="true" aria-label="Cancel appointment">
+    <div class="eh-sheet">
+      <div class="eh-sheet-header">
+        <h3><i class="fas fa-calendar-xmark" style="color:var(--danger,#D63031)"></i> Cancel Appointment</h3>
+        <button class="eh-sheet-close" data-close="eh-cancel" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="eh-sheet-body">
+        <p style="font-size:13px;color:var(--text-muted,#9ca3af);margin:0 0 12px;line-height:1.5">Are you sure you want to cancel this appointment? This action cannot be undone.</p>
+        <div class="eh-field">
+          <label>Reason (optional)</label>
+          <textarea class="eh-input" id="eh-cancel-reason" placeholder="e.g. Crop was harvested early, no longer needed..." rows="2"></textarea>
+        </div>
+        <div class="eh-sheet-actions" style="padding:0;border:none;margin-top:6px">
+          <button class="eh-btn" data-close="eh-cancel">Keep Appointment</button>
+          <button class="eh-btn eh-btn-danger" id="eh-cancel-confirm"><i class="fas fa-times"></i><span>Cancel Appointment</span></button>
+        </div>
       </div>
     </div>
-    <div class="cns-form-group">
-      <label>Your Review</label>
-      <textarea class="cns-form-input" id="cns-review-text" placeholder="Share your experience..." rows="3"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="cns-btn" onclick="cnsCloseReview()">Cancel</button>
-      <button class="cns-btn cns-btn-primary" id="cns-review-submit" onclick="cnsSubmitReview()"><i class="fas fa-paper-plane"></i> Submit</button>
+  </div>
+
+  <!-- RESCHEDULE -->
+  <div class="eh-overlay" id="eh-resched" role="dialog" aria-modal="true" aria-label="Reschedule appointment">
+    <div class="eh-sheet">
+      <div class="eh-sheet-header">
+        <h3><i class="fas fa-calendar-week"></i> Reschedule Appointment</h3>
+        <button class="eh-sheet-close" data-close="eh-resched" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="eh-sheet-body" id="eh-resched-body"></div>
+      <div class="eh-sheet-actions">
+        <button class="eh-btn" data-close="eh-resched">Keep Current Slot</button>
+        <button class="eh-btn eh-btn-primary" id="eh-resched-confirm"><i class="fas fa-check"></i><span>Confirm Reschedule</span></button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- TOAST -->
-<div class="cns-toast" id="cns-toast"></div>
+  <!-- REVIEW -->
+  <div class="eh-overlay" id="eh-review" role="dialog" aria-modal="true" aria-label="Rate appointment">
+    <div class="eh-sheet">
+      <div class="eh-sheet-header">
+        <h3><i class="fas fa-star" style="color:#F9A825"></i> Rate Appointment</h3>
+        <button class="eh-sheet-close" data-close="eh-review" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="eh-sheet-body">
+        <p style="font-size:12px;color:var(--text-muted,#9ca3af);margin:0 0 12px" id="eh-review-expert"></p>
+        <div class="eh-field">
+          <label>Your rating <span class="req">*</span></label>
+          <div class="eh-stars" id="eh-review-stars" role="radiogroup" aria-label="Rating"></div>
+        </div>
+        <div class="eh-field">
+          <label>Your review</label>
+          <textarea class="eh-input" id="eh-review-text" placeholder="How helpful was this consultation?" rows="3"></textarea>
+        </div>
+        <div class="eh-sheet-actions" style="padding:0;border:none;margin-top:6px">
+          <button class="eh-btn" data-close="eh-review">Close</button>
+          <button class="eh-btn eh-btn-primary" id="eh-review-submit"><i class="fas fa-paper-plane"></i><span>Submit Review</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<script src="js/services.js"></script>
-<script src="js/userStore.js"></script>
-<script src="assets/js/navigation.js"></script>
-<script src="assets/js/app.js"></script>
-<script>
-(function(){
-  "use strict";
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  (function () {
+    'use strict';
 
-  var allExperts = [];
-  var allAppointments = [];
-  var farmsList = [];
-  var cyclesByFarm = {};
-  var cropCatalog = {};
-  var appointmentTab = "All";
-
-  var wizard = { step:1, expertId:"", method:"", date:"", time:"", farmId:"", cropId:"", topic:"", desc:"", type:"" };
-  var zones = ["scheduled","requested","confirmed","in_progress","completed","cancelled"];
-  var upcomingSet = { scheduled:1, requested:1, confirmed:1, in_progress:1 };
-
-  var reviewTargetId = "";
-  var reviewRating = 0;
-  var cancelTargetId = "";
-  var reschedule = { id:"", expertId:"", currentDate:"", currentTime:"", date:"", time:"", slots:[] };
-  var wizardBusy = false;
-  var reschedBusy = false;
-
-  var consultTypes = [
-    "Crop Disease","Pest Control","Soil Health","Irrigation","Fertilizer",
-    "Crop Planning","Livestock","Farm Management","Market Guidance","Government Schemes","Other"
-  ];
-  var methods = [
-    { value:"Phone", icon:"fa-phone", label:"Voice Call" },
-    { value:"Video", icon:"fa-video", label:"Video Meeting" },
-    { value:"In-Person", icon:"fa-user-doctor", label:"In-Person" },
-    { value:"Chat", icon:"fa-comment", label:"Chat" }
-  ];
-  var methodLabels = { Phone:"Voice Call", Video:"Video Meeting", "In-Person":"In-Person", Chat:"Chat" };
-  var statusLabels = { scheduled:"Upcoming", requested:"Upcoming", confirmed:"Confirmed", in_progress:"In Progress", completed:"Completed", cancelled:"Cancelled" };
-
-  function hasApi(){ return window.API && localStorage.getItem("fa-auth-token"); }
-
-  function showToast(msg,type){
-    var t=document.getElementById("cns-toast");
-    t.textContent=msg;
-    t.className="cns-toast "+(type||"info")+" show";
-    clearTimeout(t._t);
-    t._t=setTimeout(function(){t.classList.remove("show")},2800);
-  }
-
-  function esc(s){if(s===null||s===undefined)return"";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
-
-  function todayStr(){
-    var d=new Date();
-    var m=String(d.getMonth()+1).padStart(2,"0");
-    var day=String(d.getDate()).padStart(2,"0");
-    return d.getFullYear()+"-"+m+"-"+day;
-  }
-
-  function fmtDate(s){
-    if(!s)return"--";
-    s=String(s);
-    if(s.indexOf("T")>=0)s=s.split("T")[0];
-    if(s.indexOf(" ")>0)s=s.split(" ")[0];
-    var parts=s.split("-");
-    if(parts.length===3 && parts[0].length===4){
-      var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-      return parseInt(parts[2],10)+" "+m[parseInt(parts[1],10)-1]+" "+parts[0];
-    }
-    var d=new Date(s);
-    if(!isNaN(d.getTime())){
-      var mm=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-      return d.getDate()+" "+mm[d.getMonth()]+" "+d.getFullYear();
-    }
-    return s;
-  }
-
-  function timeAgo(s){
-    if(!s)return"";
-    var d=new Date(String(s).replace(" ","T"));
-    if(isNaN(d.getTime()))return s;
-    var diff=Math.floor((Date.now()-d.getTime())/1000);
-    if(diff<60)return "Just now";
-    if(diff<3600)return Math.floor(diff/60)+"m ago";
-    if(diff<86400)return Math.floor(diff/3600)+"h ago";
-    if(diff<604800)return Math.floor(diff/86400)+"d ago";
-    var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return m[d.getMonth()]+" "+d.getDate();
-  }
-
-  function setBtn(btn,loading){
-    if(!btn)return;
-    if(loading){btn.dataset.orig=btn.innerHTML;btn.innerHTML="<i class='fas fa-spinner fa-spin'></i> Working...";btn.disabled=true;}
-    else{btn.innerHTML=btn.dataset.orig||btn.innerHTML;btn.disabled=false;}
-  }
-
-  function getInitials(name){
-    if(!name)return"EX";
-    var parts=String(name).trim().split(/\s+/).filter(Boolean);
-    if(parts.length===1)return parts[0].charAt(0).toUpperCase();
-    return(parts[0].charAt(0)+parts[parts.length-1].charAt(0)).toUpperCase();
-  }
-
-  function getStatusBadge(status){
-    var label=statusLabels[status]||(status?String(status).replace(/_/g," "):status)||"Unknown";
-    return "<span class=\"cns-badge "+esc(status)+"\">"+esc(label)+"</span>";
-  }
-
-  function getMethodIcon(m){
-    if(m==="Phone")return"fa-phone";
-    if(m==="Video")return"fa-video";
-    if(m==="In-Person")return"fa-user-doctor";
-    if(m==="Chat")return"fa-comment";
-    return"fa-circle";
-  }
-
-  function methodLabel(m){ return methodLabels[m]||m||"--"; }
-
-  function starsHtml(rating){
-    var r=Math.round(parseFloat(rating)||0);
-    var out="";
-    for(var i=1;i<=5;i++)out+="<i class=\"fa"+(i<=r?"s":"r")+" fa-star\"></i>";
-    return out;
-  }
-
-  function findExpert(id){
-    for(var i=0;i<allExperts.length;i++)if(allExperts[i].id===id)return allExperts[i];
-    return null;
-  }
-
-  // ================= EXPERTS SECTION =================
-  function loadExperts(){
-    if(!hasApi())return;
-    var el=document.getElementById("cns-experts-list");
-    API.Community.listExperts({limit:50}).then(function(r){
-      allExperts=(r&&r.items)||[];
-      fillSpecFilter();
-      renderExperts();
-      if(document.getElementById("cns-steps"))renderWizard();
-    }).catch(function(){
-      el.innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load experts</h4><p>Please try again later.</p></div>";
-    });
-  }
-
-  function fillSpecFilter(){
-    var sel=document.getElementById("cns-expert-spec-filter");
-    var seen={};
-    for(var i=0;i<allExperts.length;i++){
-      var sp=allExperts[i].speciality;
-      if(sp&&!seen[sp.toLowerCase()]){seen[sp.toLowerCase()]=1;}
-    }
-    var opts=["<option value=\"\">All Specialisations</option>"];
-    Object.keys(seen).forEach(function(k){
-      var orig="";
-      for(var j=0;j<allExperts.length;j++){if(allExperts[j].speciality.toLowerCase()===k){orig=allExperts[j].speciality;break;}}
-      opts.push("<option value=\""+esc(orig)+"\">"+esc(orig)+"</option>");
-    });
-    sel.innerHTML=opts.join("");
-  }
-
-  function filterExpertsClient(){
-    var q=document.getElementById("cns-expert-search").value.trim().toLowerCase();
-    var sp=document.getElementById("cns-expert-spec-filter").value;
-    return allExperts.filter(function(e){
-      if(sp && e.speciality!==sp)return false;
-      if(q){
-        var hay=(e.full_name+" "+e.speciality+" "+(e.bio||"")+" "+(e.qualification||"")).toLowerCase();
-        if(hay.indexOf(q)<0)return false;
-      }
-      return true;
-    });
-  }
-
-  window.cnsFilterExperts=function(){
-    renderExperts();
-  };
-
-  function renderExperts(){
-    var el=document.getElementById("cns-experts-list");
-    var empty=document.getElementById("cns-experts-empty");
-    var list=filterExpertsClient();
-
-    document.getElementById("cns-experts-count").textContent=list.length+" expert"+(list.length!==1?"s":"");
-
-    if(list.length===0){
-      el.innerHTML="";
-      empty.style.display="block";
-      return;
-    }
-    empty.style.display="none";
-
-    el.innerHTML=list.map(function(e){
-      var initials=getInitials(e.full_name);
-      var avail=e.is_available
-        ? "<span class=\"cns-avail-badge available\"><i class=\"fas fa-circle\" style=\"font-size:6px\"></i> Available</span>"
-        : "<span class=\"cns-avail-badge unavailable\"><i class=\"fas fa-circle\" style=\"font-size:6px\"></i> Unavailable</span>";
-      var fee=e.consultation_fee
-        ? "<span class=\"cns-expert-fee\"><i class=\"fas fa-indian-rupee-sign\"></i> "+e.consultation_fee+"</span>"
-        : "<span class=\"cns-expert-fee\">Free consultation</span>";
-      return "<div class=\"cns-expert-card\">"+
-        "<div class=\"cns-expert-top\">"+
-          "<div class=\"cns-expert-avatar\">"+esc(initials)+"</div>"+
-          "<div class=\"cns-expert-info\">"+
-            "<div class=\"cns-expert-name\">"+esc(e.full_name)+" "+avail+"</div>"+
-            "<div class=\"cns-expert-spec\">"+esc(e.speciality)+"</div>"+
-            "<div class=\"cns-expert-meta\">"+
-              (e.experience_years?"<span><i class=\"fas fa-briefcase\"></i>"+e.experience_years+" yrs exp</span>":"")+
-              (e.qualification?"<span><i class=\"fas fa-graduation-cap\"></i>"+esc(e.qualification)+"</span>":"")+
-              (e.location?"<span><i class=\"fas fa-location-dot\"></i>"+esc(e.location)+"</span>":"")+
-            "</div>"+
-          "</div>"+
-        "</div>"+
-        "<div style=\"margin-top:10px;font-size:11px;color:var(--text-muted)\">"+esc(e.bio||"Agriculture expert providing professional consultation services.")+"</div>"+
-        "<div class=\"cns-expert-meta\" style=\"margin-top:8px\">"+
-          "<span>"+fee+"</span>"+
-          (e.rating?"<span class=\"cns-expert-rating\"><i class=\"fas fa-star\"></i> "+e.rating+"/5</span>":"")+
-          (e.languages&&e.languages.length?"<span><i class=\"fas fa-language\"></i>"+esc(e.languages.join(", "))+"</span>":"")+
-        "</div>"+
-        "<div class=\"cns-expert-footer\">"+
-          "<button class=\"cns-btn cns-btn-primary cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenWizard('"+e.id+"')\"><i class=\"fas fa-calendar-plus\"></i> Book</button>"+
-        "</div>"+
-      "</div>";
-    }).join("");
-  }
-
-  // ================= APPOINTMENTS SECTION =================
-  function loadAppointments(){
-    if(!hasApi())return;
-    var el=document.getElementById("cns-appointments-list");
-    API.Community.listConsultations({limit:50}).then(function(r){
-      allAppointments=(r&&r.items)||[];
-      renderAppointmentTabs();
-      renderAppointments();
-    }).catch(function(err){
-      el.innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load appointments</h4><p>"+esc((err&&err.message)||"Please try again later")+"</p></div>";
-    });
-  }
-
-  function counts(){
-    var c={All:allAppointments.length,Upcoming:0,Completed:0,Cancelled:0};
-    for(var i=0;i<allAppointments.length;i++){
-      var s=allAppointments[i].status;
-      if(upcomingSet[s])c.Upcoming++;
-      else if(s==="completed")c.Completed++;
-      else if(s==="cancelled")c.Cancelled++;
-    }
-    return c;
-  }
-
-  function renderAppointmentTabs(){
-    var c=counts();
-    var defs=[["All","fa-list"],["Upcoming","fa-clock"],["Completed","fa-circle-check"],["Cancelled","fa-circle-xmark"]];
-    document.getElementById("cns-appt-tabs").innerHTML=defs.map(function(d){
-      var count=d[0]==="All"?c.All:(c[d[0]]||0);
-      return "<button class=\"cns-appt-tab"+(appointmentTab===d[0]?" active":"")+"\" onclick=\"cnsSetApptTab('"+d[0]+"')\"><i class=\"fas "+d[1]+"\"></i> "+d[0]+" ("+count+")</button>";
-    }).join("");
-  }
-
-  window.cnsSetApptTab=function(tab){
-    appointmentTab=tab;
-    renderAppointmentTabs();
-    renderAppointments();
-  };
-
-  function appointmentMatches(c){
-    if(appointmentTab==="Upcoming")return !!upcomingSet[c.status];
-    if(appointmentTab==="Completed")return c.status==="completed";
-    if(appointmentTab==="Cancelled")return c.status==="cancelled";
-    return true;
-  }
-
-  function renderAppointments(){
-    var el=document.getElementById("cns-appointments-list");
-    var empty=document.getElementById("cns-appointments-empty");
-    var list=allAppointments.filter(appointmentMatches);
-
-    document.getElementById("cns-appointments-count").textContent=allAppointments.length+" appointment"+(allAppointments.length!==1?"s":"");
-
-    if(allAppointments.length===0){
-      el.innerHTML="";
-      empty.style.display="block";
-      return;
-    }
-    empty.style.display="none";
-
-    if(list.length===0){
-      el.innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-inbox\"></i><h4>No appointments in this category</h4></div>";
-      return;
-    }
-
-    el.innerHTML=list.map(function(c){
-      var initials=getInitials(c.expert_name);
-
-      var actions="";
-      if(upcomingSet[c.status]){
-        actions="<div class=\"cns-appointment-actions\">"+
-          "<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenDetail('"+c.id+"')\"><i class=\"fas fa-eye\"></i> Details</button>";
-        if(c.status==="scheduled"||c.status==="requested"||c.status==="confirmed"){
-          actions+="<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenReschedule('"+c.id+"')\"><i class=\"fas fa-calendar-week\"></i> Reschedule</button>";
-        }
-        if(c.status==="scheduled"||c.status==="requested"||c.status==="confirmed"||c.status==="in_progress"){
-          actions+="<button class=\"cns-btn cns-btn-small cns-btn-danger\" onclick=\"event.stopPropagation();cnsOpenCancel('"+c.id+"')\"><i class=\"fas fa-times\"></i> Cancel</button>";
-        }
-        actions+="</div>";
-      }else if(c.status==="completed"){
-        if(!c.rating){
-          actions="<div class=\"cns-appointment-actions\">"+
-            "<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenDetail('"+c.id+"')\"><i class=\"fas fa-eye\"></i> Details</button>"+
-            "<button class=\"cns-btn cns-btn-small cns-btn-primary\" onclick=\"event.stopPropagation();cnsOpenReview('"+c.id+"','"+esc(c.expert_name)+"')\"><i class=\"fas fa-star\"></i> Rate</button>"+
-          "</div>";
-        }else{
-          actions="<div class=\"cns-appointment-actions\">"+
-            "<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenDetail('"+c.id+"')\"><i class=\"fas fa-eye\"></i> Details</button>"+
-          "</div>"+
-          "<div style=\"font-size:11px;color:var(--text-muted);padding-top:8px\"><i class=\"fas fa-check-circle\" style=\"color:var(--c-green);margin-right:4px\"></i> Reviewed ("+c.rating+"/5)</div>";
-        }
-      }else if(c.status==="cancelled"){
-        actions="<div class=\"cns-appointment-actions\">"+
-          "<button class=\"cns-btn cns-btn-small\" onclick=\"event.stopPropagation();cnsOpenDetail('"+c.id+"')\"><i class=\"fas fa-eye\"></i> Details</button>"+
-        "</div>";
-        actions+="<div class=\"cns-appointment-note\"><i class=\"fas fa-times-circle\" style=\"color:var(--c-red)\"></i> Cancelled"+(c.cancel_reason?": "+esc(c.cancel_reason):"")+"</div>";
-      }
-
-      return "<div class=\"cns-appointment-card\" onclick=\"cnsOpenDetail('"+c.id+"')\">"+
-        "<div class=\"cns-appointment-header\">"+
-          "<div class=\"cns-appointment-avatar\">"+esc(initials)+"</div>"+
-          "<div class=\"cns-appointment-info\">"+
-            "<div class=\"cns-appointment-title\">"+esc(c.expert_name)+"</div>"+
-            "<div class=\"cns-appointment-spec\">"+esc(c.expert_speciality)+"</div>"+
-            "<div class=\"cns-appointment-ref\"><i class=\"fas fa-hashtag\"></i> Booking ID: "+esc(c.consultation_id||c.reference_id||"--")+"</div>"+
-          "</div>"+
-          "<div>"+getStatusBadge(c.status)+"</div>"+
-        "</div>"+
-        "<div class=\"cns-appointment-meta\">"+
-          "<span><i class=\"far fa-calendar-alt\"></i> "+fmtDate(c.scheduled_date)+"</span>"+
-          "<span><i class=\"far fa-clock\"></i> "+esc(c.scheduled_time||"--")+"</span>"+
-          "<span><i class=\"fas "+getMethodIcon(c.consultation_method)+"\"></i> "+esc(methodLabel(c.consultation_method))+"</span>"+
-          (c.consultation_type?"<span><i class=\"fas fa-tag\"></i> "+esc(c.consultation_type)+"</span>":"")+
-        "</div>"+
-        "<div class=\"cns-appointment-topic\">"+esc(c.topic)+"</div>"+
-        actions+
-      "</div>";
-    }).join("");
-  }
-
-  // ================= WIZARD =================
-  function cnsScrollToBooking(){
-    document.getElementById("cns-book-section").scrollIntoView({behavior:"smooth"});
-  }
-
-  window.cnsOpenWizard=function(expertId){
-    if(!hasApi())return;
-    wizard.step=1;
-    wizard.expertId=expertId||"";
-    wizard.method="";
-    wizard.date="";
-    wizard.time="";
-    wizard.farmId=farmsList.length===1?farmsList[0].id:"";
-    wizard.cropId="";
-    wizard.topic="";
-    wizard.desc="";
-    wizard.type="";
-    wizardBusy=false;
-    cnsScrollToBooking();
-    renderWizard();
-  };
-
-  var stepNames=["Expert","Type","Date &amp; Time","Farm &amp; Issue","Review","Confirmation"];
-
-  function renderWizard(){
-    var stepsHtml="";
-    for(var i=0;i<6;i++){
-      var cls="cns-step-dot";
-      if(i+1===wizard.step)cls+=" active";
-      else if(i+1<wizard.step)cls+=" done";
-      stepsHtml+="<div class=\""+cls+"\"><i class=\"fas "+(i+1<wizard.step?"fa-check":"fa-"+["fa-user","fa-phone","fa-calendar-day","fa-tractor","fa-list-check","fa-circle-check"][i])+"\" style=\"font-size:9px\"></i><span class=\"num\">"+(i+1<wizard.step?"<i class='fas fa-check' style='font-size:9px'></i>":(i+1))+"</span><span class=\"lbl\">"+stepNames[i]+"</span></div>";
-      if(i<5)stepsHtml+="<div class=\"cns-step-line"+(i+1<wizard.step?" filled":"")+"\"></div>";
-    }
-    document.getElementById("cns-steps").innerHTML=stepsHtml;
-
-    var content="";
-    if(wizard.step===1)content=renderStep1();
-    else if(wizard.step===2)content=renderStep2();
-    else if(wizard.step===3)content=renderStep3();
-    else if(wizard.step===4)content=renderStep4();
-    else if(wizard.step===5)content=renderStep5();
-    else if(wizard.step===6)content=renderStep6();
-    document.getElementById("cns-step-content").innerHTML=content;
-
-    renderStepNav();
-  }
-
-  function renderStep1(){
-    if(allExperts.length===0){
-      return "<div class=\"cns-empty\"><i class=\"fas fa-user-slash\"></i><h4>No experts are currently available.</h4><p>Check back later.</p></div>";
-    }
-    return "<h3 class=\"cns-step-heading\"><i class=\"fas fa-user-doctor\" style=\"color:var(--c-green)\"></i> Select an Expert</h3>"+
-      "<p class=\"cns-step-sub\">Choose the agriculture specialist you would like to consult.</p>"+
-      "<div class=\"cns-expert-select-list\">"+
-      allExperts.map(function(e){
-        var initials=getInitials(e.full_name);
-        var fee=e.consultation_fee
-          ? "<i class=\"fas fa-indian-rupee-sign\"></i> "+e.consultation_fee
-          : "Free";
-        return "<div class=\"cns-expert-card"+(wizard.expertId===e.id?" active":"")+"\" data-expert-id=\""+e.id+"\" onclick=\"wizSelectExpert(this,'"+e.id+"')\">"+
-          "<div class=\"cns-expert-top\">"+
-            "<div class=\"cns-expert-avatar\">"+esc(initials)+"</div>"+
-            "<div class=\"cns-expert-info\">"+
-              "<div class=\"cns-expert-name\">"+esc(e.full_name)+"</div>"+
-              "<div class=\"cns-expert-spec\">"+esc(e.speciality)+"</div>"+
-              "<div class=\"cns-expert-meta\">"+
-                (e.experience_years?"<span><i class=\"fas fa-briefcase\"></i>"+e.experience_years+" yrs</span>":"")+
-                (e.rating?"<span class=\"cns-expert-rating\"><i class=\"fas fa-star\"></i> "+e.rating+"</span>":"")+
-                "<span>"+fee+"</span>"+
-              "</div>"+
-            "</div>"+
-          "</div>"+
-        "</div>";
-      }).join("")+
-      "</div>";
-  }
-
-  window.wizSelectExpert=function(el,id){
-    wizard.expertId=id;
-    wizard.date="";
-    wizard.time="";
-    var cards=document.querySelectorAll("#cns-step-content .cns-expert-card");
-    for(var i=0;i<cards.length;i++){
-      cards[i].classList.toggle("active",cards[i].getAttribute("data-expert-id")===id);
-    }
-    renderStepNav();
-  };
-
-  function renderStep2(){
-    return "<h3 class=\"cns-step-heading\"><i class=\"fas fa-phone\" style=\"color:var(--c-green)\"></i> Select Consultation Type</h3>"+
-      "<p class=\"cns-step-sub\">Choose how you would like to connect with the expert.</p>"+
-      "<div class=\"cns-method-group\">"+
-      methods.map(function(m){
-        return "<div class=\"cns-method-opt"+(wizard.method===m.value?" active":"")+"\" data-method=\""+m.value+"\" onclick=\"wizSelectMethod(this)\">"+
-          "<i class=\"fas "+m.icon+"\"></i> "+m.label+
-        "</div>";
-      }).join("")+
-      "</div>";
-  }
-
-  window.wizSelectMethod=function(el){
-    wizard.method=el.getAttribute("data-method");
-    var opts=document.querySelectorAll(".cns-method-opt");
-    for(var i=0;i<opts.length;i++)opts[i].classList.remove("active");
-    el.classList.add("active");
-    renderStepNav();
-  };
-
-  function renderStep3(){
-    var expert=findExpert(wizard.expertId);
-    return "<h3 class=\"cns-step-heading\"><i class=\"fas fa-calendar-day\" style=\"color:var(--c-green)\"></i> Select Date &amp; Time</h3>"+
-      "<p class=\"cns-step-sub\">Consulting with <b>"+esc(expert?expert.full_name:"the expert")+"</b>. Choose an available slot for your appointment.</p>"+
-      "<div class=\"cns-form-group\">"+
-        "<label>Appointment Date <span class=\"req\">*</span></label>"+
-        "<input type=\"date\" class=\"cns-form-input\" id=\"cns-wiz-date\" min=\""+todayStr()+"\" value=\""+esc(wizard.date)+"\" onchange=\"wizDateChanged()\">"+
-      "</div>"+
-      "<div id=\"cns-wiz-slots\"><div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading available slots...</div></div>";
-  }
-
-  window.wizDateChanged=function(){
-    wizard.date=document.getElementById("cns-wiz-date").value;
-    wizard.time="";
-    renderSlotArea();
-  };
-
-  function renderSlotArea(){
-    var holder=document.getElementById("cns-wiz-slots");
-    if(!holder)return;
-    if(!wizard.expertId||!wizard.date){
-      holder.innerHTML="<p class=\"cns-empty\" style=\"padding:24px\"><i class=\"fas fa-clock\"></i><h4>Select a date to see available time slots.</h4></p>";
-      return;
-    }
-    holder.innerHTML="<div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading available slots...</div>";
-    API.Community.getExpertSlots(wizard.expertId,wizard.date).then(function(r){
-      if(!holder)return;
-      var slots=(r&&r.slots)||[];
-      renderSlotsInto(holder,slots,"wizPickSlot",wizard.time);
-      renderStepNav();
-    }).catch(function(err){
-      holder.innerHTML="<div class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load appointment slots.</h4><p>"+esc((err&&err.message)||"Please try again.")+"</p></div>";
-    });
-  }
-
-  function renderSlotsInto(holder,slots,fnName,selected){
-    if(!slots||slots.length===0){
-      holder.innerHTML="<div class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-clock\"></i><h4>No available slots for this date.</h4><p>Try another date.</p></div>";
-      return;
-    }
-    holder.innerHTML="<div style=\"font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px\">Available Time Slots</div>"+
-      "<div class=\"cns-slots-grid\">"+
-      slots.map(function(s){
-        return "<button type=\"button\" class=\"cns-slot-opt"+(selected===s?" active":"")+"\" data-time=\""+esc(s)+"\" onclick=\""+fnName+"(this)\">"+esc(s)+"</button>";
-      }).join("")+
-      "</div>";
-  }
-
-  window.wizPickSlot=function(el){
-    wizard.time=el.getAttribute("data-time");
-    var opts=document.querySelectorAll("#cns-wiz-slots .cns-slot-opt");
-    for(var i=0;i<opts.length;i++)opts[i].classList.remove("active");
-    el.classList.add("active");
-    renderStepNav();
-  };
-
-  function renderStep4(){
-    var expert=findExpert(wizard.expertId);
-    var farmOptions="<option value=\"\">Select farm"+(farmsList.length>0?"":" (no farm on your account)")+"</option>";
-    farmsList.forEach(function(f){
-      farmOptions+="<option value=\""+esc(f.id)+"\""+(wizard.farmId===f.id?" selected":"")+">"+esc(f.farm_name)+(f.total_area?" ("+f.total_area+" "+(f.area_unit||"Acres")+")":"")+"</option>";
-    });
-    var cropOptions="<option value=\"\">Select crop (optional)</option>";
-    if(wizard.farmId&&cyclesByFarm[wizard.farmId]){
-      cyclesByFarm[wizard.farmId].forEach(function(c){
-        cropOptions+="<option value=\""+esc(c.crop_id)+"\""+(wizard.cropId===c.crop_id?" selected":"")+">"+esc(cropName(c.crop_id))+"</option>";
-      });
-    }
-    var typeOptions="<option value=\"\">Select issue category (optional)</option>";
-    consultTypes.forEach(function(t){
-      typeOptions+="<option value=\""+esc(t)+"\""+(wizard.type===t?" selected":"")+">"+esc(t)+"</option>";
-    });
-
-    var farmBlock=farmsList.length===0
-      ? "<p style=\"font-size:11px;color:var(--text-muted)\"><i class=\"fas fa-info-circle\"></i> No farms added to your account yet &mdash; you can still book without a farm.</p>"
-      : "<div class=\"cns-form-group\"><label>Farm / Plot <span class=\"req\">*</span></label>"+
-        "<select class=\"cns-form-input\" id=\"cns-wiz-farm\" onchange=\"wizFarmChanged()\">"+farmOptions+"</select></div>"+
-        "<div class=\"cns-form-group\"><label>Crop (Optional)</label>"+
-        "<select class=\"cns-form-input\" id=\"cns-wiz-crop\">"+cropOptions+"</select></div>";
-
-    return "<h3 class=\"cns-step-heading\"><i class=\"fas fa-tractor\" style=\"color:var(--c-green)\"></i> Farm &amp; Issue Details</h3>"+
-      "<p class=\"cns-step-sub\">Tell the expert about your <b>"+esc(expert?expert.full_name:"")+"</b> consultation.</p>"+
-      "<div id=\"cns-wiz-step4\">"+farmBlock+
-      "<div class=\"cns-form-group\"><label>Issue Category (Optional)</label>"+
-      "<select class=\"cns-form-input\" id=\"cns-wiz-type\" onchange=\"wizStep4Changed()\">"+typeOptions+"</select></div>"+
-      "<div class=\"cns-form-group\"><label>Consultation Topic <span class=\"req\">*</span></label>"+
-      "<input type=\"text\" class=\"cns-form-input\" id=\"cns-wiz-topic\" placeholder=\"e.g. Tomato leaves turning yellow\" maxlength=\"200\" value=\""+esc(wizard.topic)+"\" oninput=\"wizStep4Changed()\"></div>"+
-      "<div class=\"cns-form-group\"><label>Short Description</label>"+
-      "<textarea class=\"cns-form-input\" id=\"cns-wiz-desc\" placeholder=\"Describe your issue or question in detail...\" rows=\"3\" oninput=\"wizStep4Changed()\">"+esc(wizard.desc)+"</textarea></div>"+
-      "</div>";
-  }
-
-  window.wizFarmChanged=function(){
-    wizard.farmId=document.getElementById("cns-wiz-farm").value;
-    wizard.cropId="";
-    renderWizard();
-  };
-
-  window.wizStep4Changed=function(){
-    wizard.topic=document.getElementById("cns-wiz-topic").value.trim();
-    wizard.desc=document.getElementById("cns-wiz-desc").value.trim();
-    var readType=document.getElementById("cns-wiz-type");
-    if(readType)wizard.type=readType.value;
-    renderStepNav();
-  };
-
-  function cropName(cropId){
-    if(cropCatalog[cropId])return cropCatalog[cropId].name||cropCatalog[cropId].crop_name||cropId;
-    return cropId;
-  }
-
-  function renderStep5(){
-    var expert=findExpert(wizard.expertId);
-    var farmName="";
-    for(var i=0;i<farmsList.length;i++)if(farmsList[i].id===wizard.farmId)farmName=farmsList[i].farm_name;
-    var fee=expert&&expert.consultation_fee
-      ? "<i class=\"fas fa-indian-rupee-sign\"></i> "+expert.consultation_fee
-      : "Free consultation";
-    var rows=[
-      ["Expert",expert?expert.full_name:"--"],
-      ["Specialisation",expert?expert.speciality:"--"],
-      ["Consultation Type",methodLabel(wizard.method)],
-      ["Date",wizard.date?fmtDate(wizard.date):"--"],
-      ["Time",wizard.time||"--"],
-      ["Farm",farmName||"--"],
-      ["Crop",wizard.cropId?cropName(wizard.cropId):"--"],
-      ["Issue Category",wizard.type||"--"],
-      ["Topic",wizard.topic||"--"]
+    /* ============================================================ state */
+    var CATEGORIES = [
+      { label: 'All', icon: 'fa-th-large' },
+      { label: 'Crop Experts', icon: 'fa-seedling' },
+      { label: 'Soil Experts', icon: 'fa-mountain' },
+      { label: 'Plant Pathologists', icon: 'fa-vial' },
+      { label: 'Pest & Disease', icon: 'fa-bug' },
+      { label: 'Horticulture', icon: 'fa-apple-whole' },
+      { label: 'Organic Farming', icon: 'fa-leaf' },
+      { label: 'Irrigation', icon: 'fa-droplet' },
+      { label: 'Fertilizer & Nutrition', icon: 'fa-flask' },
+      { label: 'Livestock', icon: 'fa-cow' },
+      { label: 'Dairy', icon: 'fa-glass-whiskey' },
+      { label: 'Agricultural Engineering', icon: 'fa-tractor' },
+      { label: 'Farm Management', icon: 'fa-clipboard-check' },
+      { label: 'Agri Business', icon: 'fa-handshake' },
+      { label: 'Market & Pricing', icon: 'fa-chart-line' },
+      { label: 'Government Schemes', icon: 'fa-landmark' },
+      { label: 'Other Specialists', icon: 'fa-award' }
     ];
-    var html="<h3 class=\"cns-step-heading\"><i class=\"fas fa-list-check\" style=\"color:var(--c-green)\"></i> Review Your Appointment</h3>"+
-      "<p class=\"cns-step-sub\">Please confirm the details before booking.</p><div class=\"cns-review-list\">";
-    rows.forEach(function(r){
-      if(r[0]==="Consultation Type"&&r[1]==="--")return;
-      html+="<div class=\"cns-review-row\"><span class=\"cns-review-label\">"+r[0]+"</span><span class=\"cns-review-value\">"+esc(r[1])+"</span></div>";
-    });
-    html+="<div class=\"cns-review-row\"><span class=\"cns-review-label\">Fee</span><span class=\"cns-review-value cns-expert-fee\">"+fee+"</span></div></div>";
-    return html;
-  }
 
-  function renderStep6(){
-    return "<div class=\"cns-confirm-card\">"+
-      "<div class=\"big-icon\"><i class=\"fas fa-circle-check\"></i></div>"+
-      "<h3>Appointment booked successfully!</h3>"+
-      "<p>Your consultation has been scheduled. Keep a note of your booking ID below.</p>"+
-      "<div class=\"cns-ref-chip\" id=\"cns-booked-ref\">"+esc(wizard.confirmedRef||"")+"</div>"+
-      "<div class=\"cns-review-list\">"+
-        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Expert</span><span class=\"cns-review-value\">"+esc(wizard.confirmedName||wizard.expertId)+"</span></div>"+
-        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Date</span><span class=\"cns-review-value\">"+fmtDate(wizard.date)+"</span></div>"+
-        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Time</span><span class=\"cns-review-value\">"+esc(wizard.time)+"</span></div>"+
-        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Type</span><span class=\"cns-review-value\">"+esc(methodLabel(wizard.method))+"</span></div>"+
-        "<div class=\"cns-review-row\"><span class=\"cns-review-label\">Farm</span><span class=\"cns-review-value\">"+esc(farmNameById(wizard.farmId)||"--")+"</span></div>"+
-      "</div></div>";
-  }
+    var METHODS = [
+      { value: 'Video', icon: 'fa-video', label: 'Video Meeting', note: 'Online video call' },
+      { value: 'Phone', icon: 'fa-phone', label: 'Phone Call', note: 'Call on your number' },
+      { value: 'In-Person', icon: 'fa-user-doctor', label: 'In-Person', note: 'Meet the expert' },
+      { value: 'Chat', icon: 'fa-comment', label: 'Chat', note: 'Text consultation' }
+    ];
+    var CONSULT_TYPES = [
+      'Crop Disease', 'Pest Control', 'Soil Health', 'Irrigation', 'Fertilizer',
+      'Crop Planning', 'Livestock', 'Farm Management', 'Market Guidance', 'Government Schemes', 'Other'
+    ];
 
-  function farmNameById(id){
-    for(var i=0;i<farmsList.length;i++)if(farmsList[i].id===id)return farmsList[i].farm_name;
-    return "";
-  }
+    var FUTURE_STATUSES = { scheduled: 1, requested: 1, confirmed: 1, in_progress: 1 };
 
-  function renderStepNav(){
-    var nav=document.getElementById("cns-step-nav");
-    var html="";
-    if(wizard.step>1&&wizard.step<6){
-      html+="<button class=\"cns-btn\" onclick=\"cnsWizardBack()\"><i class=\"fas fa-arrow-left\"></i> Back</button>";
-    }
-    if(wizard.step<5){
-      html+="<button class=\"cns-btn cns-btn-primary\" id=\"cns-wiz-next\" onclick=\"cnsWizardNext()\"><i class=\"fas fa-arrow-right\"></i> Continue</button>";
-    }else if(wizard.step===5){
-      html+="<button class=\"cns-btn cns-btn-primary\" id=\"cns-wiz-confirm\" onclick=\"cnsWizardConfirm()\"><i class=\"fas fa-calendar-check\"></i> Confirm Booking</button>";
-    }else if(wizard.step===6){
-      html+="<button class=\"cns-btn cns-btn-primary\" onclick=\"cnsOpenDetailFromConfirm()\"><i class=\"fas fa-eye\"></i> View Appointment</button>";
-      html+="<button class=\"cns-btn\" onclick=\"cnsOpenWizard('')\"><i class=\"fas fa-plus\"></i> Book Another</button>";
-    }
-    nav.innerHTML=html;
-  }
-
-  window.cnsWizardBack=function(){
-    if(wizard.step>1)wizard.step--;
-    if(wizard.step===3)renderSlotArea();
-    renderWizard();
-  };
-
-  function wizCanContinue(){
-    if(wizard.step===1)return !!wizard.expertId;
-    if(wizard.step===2)return !!wizard.method;
-    if(wizard.step===3)return !!(wizard.date&&wizard.time);
-    if(wizard.step===4)return wizard.topic.length>=3 && (farmsList.length===0||wizard.farmId);
-    return true;
-  }
-
-  window.cnsWizardNext=function(){
-    if(wizardBusy)return;
-    if(!wizCanContinue()){
-      if(wizard.step===1){showToast("Please select an expert","error");return;}
-      if(wizard.step===2){showToast("Please select a consultation type","error");return;}
-      if(wizard.step===3){showToast("Please select a date and time slot","error");return;}
-      if(wizard.step===4){
-        if(wizard.topic.length<3){showToast("Topic must be at least 3 characters","error");return;}
-        showToast("Please select a farm","error");return;
-      }
-      return;
-    }
-    wizard.step++;
-    renderWizard();
-    if(wizard.step===3&&wizard.expertId&&wizard.date)renderSlotArea();
-  };
-
-  window.cnsWizardConfirm=function(){
-    if(wizardBusy)return;
-    if(!wizard.expertId||!wizard.method||!wizard.date||!wizard.time||wizard.topic.length<3){
-      showToast("Please complete the appointment details","error");
-      return;
-    }
-    wizardBusy=true;
-    var btn=document.getElementById("cns-wiz-confirm");
-    setBtn(btn,true);
-
-    var payload={
-      expert_id:wizard.expertId,
-      topic:wizard.topic,
-      description:wizard.desc||null,
-      consultation_type:wizard.type||"Other",
-      consultation_method:wizard.method,
-      scheduled_date:wizard.date,
-      scheduled_time:wizard.time,
-      farm_id:wizard.farmId||null,
-      farm_name:farmNameById(wizard.farmId)||null,
-      crop_id:wizard.cropId||null,
-      crop_name:wizard.cropId?cropName(wizard.cropId):null
+    var state = {
+      experts: [],
+      appointments: [],
+      farms: [],
+      cropCatalog: {},
+      cyclesByFarm: {},
+      search: '',
+      category: 'All',
+      activeTab: 'upcoming',
+      busy: false,
+      reqId: 0
     };
 
-    API.Community.bookConsultation(payload).then(function(r){
-      wizardBusy=false;
-      setBtn(btn,false);
-      var expert=findExpert(wizard.expertId);
-      wizard.confirmedRef=(r&&(r.consultation_id||r.reference_id))||"--";
-      wizard.confirmedName=expert?expert.full_name:(r&&r.expert_name)||"";
-      wizard.confirmedId=(r&&r.id)||"";
-      wizard.step=6;
-      renderWizard();
-      showToast("Appointment booked successfully","success");
-      loadAppointments();
-    }).catch(function(err){
-      wizardBusy=false;
-      setBtn(btn,false);
-      var msg=(err&&err.message)||"Unable to book the appointment.";
-      if(msg==="This time slot is no longer available. Please choose another time."){
-        wizard.time="";
-        wizard.step=3;
-        renderWizard();
-        renderSlotArea();
-      }
-      showToast(msg,"error");
-    });
-  };
+    var model = { experts: {}, appointments: {} };
+    var wizard = { expertId: '', method: '', date: '', time: '', type: '', topic: '', desc: '', farmId: '', cropId: '', confirmed: null };
+    var resched = { id: '', expertId: '', date: '', time: '' };
+    var review = { id: '', rating: 0 };
 
-  window.cnsOpenDetailFromConfirm=function(){
-    if(wizard.confirmedId)window.cnsOpenDetail(wizard.confirmedId);
-  };
-
-  // ================= DETAIL MODAL =================
-  window.cnsOpenDetail=function(id){
-    if(!hasApi())return;
-    var modal=document.getElementById("cns-detail-modal");
-    document.getElementById("cns-detail-content").innerHTML="<div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading...</div>";
-    document.getElementById("cns-detail-actions").innerHTML="";
-    modal.classList.add("active");
-    API.Community.getConsultation(id).then(function(r){
-      var c=r||{};
-      var isUpcoming=!!upcomingSet[c.status];
-
-      var html="<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-hashtag\"></i> Booking ID</span><span class=\"modal-info-value\">"+esc(c.consultation_id||c.reference_id||"--")+"</span></div>"+
-        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-user\"></i> Expert</span><span class=\"modal-info-value\">"+esc(c.expert_name||c.expert_name||"Unknown")+"</span></div>"+
-        (c.expert_speciality?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-flask\"></i> Specialisation</span><span class=\"modal-info-value\">"+esc(c.expert_speciality)+"</span></div>":"")+
-        (c.expert_qualification?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-graduation-cap\"></i> Qualification</span><span class=\"modal-info-value\">"+esc(c.expert_qualification)+"</span></div>":"")+
-        (c.expert_experience?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-briefcase\"></i> Experience</span><span class=\"modal-info-value\">"+c.expert_experience+" years</span></div>":"")+
-        (c.expert_rating?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-star\"></i> Rating</span><span class=\"modal-info-value\">"+c.expert_rating+"/5</span></div>":"")+
-        (c.expert_languages&&c.expert_languages.length?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-language\"></i> Languages</span><span class=\"modal-info-value\">"+esc(c.expert_languages.join(", "))+"</span></div>":"")+
-        "<div style=\"height:8px\"></div>"+
-        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-tag\"></i> Topic</span><span class=\"modal-info-value\">"+esc(c.topic)+"</span></div>"+
-        (c.consultation_type?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-folder-open\"></i> Category</span><span class=\"modal-info-value\">"+esc(c.consultation_type)+"</span></div>":"")+
-        (c.description?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-info-circle\"></i> Description</span><span class=\"modal-info-value\" style=\"font-weight:400\">"+esc(c.description)+"</span></div>":"")+
-        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-calendar-alt\"></i> Date</span><span class=\"modal-info-value\">"+fmtDate(c.scheduled_date)+"</span></div>"+
-        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-clock\"></i> Time</span><span class=\"modal-info-value\">"+esc(c.scheduled_time||"--")+"</span></div>"+
-        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-phone\"></i> Consultation Type</span><span class=\"modal-info-value\">"+esc(methodLabel(c.consultation_method))+"</span></div>"+
-        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-calendar-check\"></i> Status</span><span class=\"modal-info-value\">"+getStatusBadge(c.status)+"</span></div>"+
-        (c.farm_name?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-tractor\"></i> Farm</span><span class=\"modal-info-value\">"+esc(c.farm_name)+"</span></div>":"")+
-        (c.crop_name?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-seedling\"></i> Crop</span><span class=\"modal-info-value\">"+esc(c.crop_name)+"</span></div>":"")+
-        (c.meeting_location?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-location-arrow\"></i> Location</span><span class=\"modal-info-value\">"+esc(c.meeting_location)+"</span></div>":"")+
-        (c.cancel_reason?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-times-circle\" style=\"color:var(--c-red)\"></i> Cancel Reason</span><span class=\"modal-info-value\" style=\"color:var(--c-red)\">"+esc(c.cancel_reason)+"</span></div>":"")+
-        (c.rating?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-star\" style=\"color:#F9A825\"></i> Your Rating</span><span class=\"modal-info-value\">"+c.rating+"/5</span></div>":"")+
-        (c.feedback?"<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-comment\"></i> Your Review</span><span class=\"modal-info-value\" style=\"font-weight:400\">"+esc(c.feedback)+"</span></div>":"")+
-        "<div class=\"modal-info-row\"><span class=\"modal-info-label\"><i class=\"fas fa-clock\"></i> Booked</span><span class=\"modal-info-value\" style=\"font-size:11px\">"+timeAgo(c.created_at)+"</span></div>";
-
-      document.getElementById("cns-detail-content").innerHTML=html;
-
-      var actions="";
-      if(isUpcoming){
-        if(c.consultation_method==="Phone"&&c.status==="confirmed"){
-          actions+="<button class=\"cns-btn cns-btn-small\" onclick=\"showToast('The expert will call you at your registered number at the scheduled time.','info')\"><i class=\"fas fa-phone\"></i> Call</button>";
-        }
-        if(c.consultation_method==="Video"&&c.meeting_reference){
-          var href=esc(c.meeting_reference);
-          actions+="<a class=\"cns-btn cns-btn-small cns-btn-primary\" href=\""+href+"\" target=\"_blank\" rel=\"noopener\" onclick=\"event.stopPropagation()\"><i class=\"fas fa-video\"></i> Join Meeting</a>";
-        }
-        if(c.consultation_method==="In-Person"&&c.meeting_location){
-          actions+="<button class=\"cns-btn cns-btn-small\" onclick=\"showToast('Location: "+esc(c.meeting_location)+"','info')\"><i class=\"fas fa-map-marker-alt\"></i> Location</button>";
-        }
-        if(c.status==="scheduled"||c.status==="requested"||c.status==="confirmed"){
-          actions+="<button class=\"cns-btn cns-btn-small\" onclick=\"cnsCloseDetail();cnsOpenReschedule('"+c.id+"')\"><i class=\"fas fa-calendar-week\"></i> Reschedule</button>";
-        }
-        if(c.status==="scheduled"||c.status==="requested"||c.status==="confirmed"||c.status==="in_progress"){
-          actions+="<button class=\"cns-btn cns-btn-small cns-btn-danger\" onclick=\"cnsCloseDetail();cnsOpenCancel('"+c.id+"')\"><i class=\"fas fa-times\"></i> Cancel</button>";
-        }
-      }
-      if(c.status==="completed"&&!c.rating){
-        actions+="<button class=\"cns-btn cns-btn-small cns-btn-primary\" onclick=\"cnsCloseDetail();cnsOpenReview('"+c.id+"','"+esc(c.expert_name)+"')\"><i class=\"fas fa-star\"></i> Rate</button>";
-      }
-      document.getElementById("cns-detail-actions").innerHTML=actions;
-    }).catch(function(err){
-      document.getElementById("cns-detail-content").innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load details</h4><p>"+esc((err&&err.message)||"Please try again.")+"</p></div>";
-    });
-  };
-
-  window.cnsCloseDetail=function(){
-    document.getElementById("cns-detail-modal").classList.remove("active");
-  };
-
-  function openModal(id){document.getElementById(id).classList.add("active");}
-  function closeModal(id){document.getElementById(id).classList.remove("active");}
-
-  // ================= CANCEL =================
-  window.cnsOpenCancel=function(id){
-    cancelTargetId=id;
-    document.getElementById("cns-cancel-reason").value="";
-    openModal("cns-cancel-modal");
-  };
-
-  window.cnsCloseCancel=function(){
-    cancelTargetId="";
-    closeModal("cns-cancel-modal");
-  };
-
-  window.cnsConfirmCancel=function(){
-    if(!cancelTargetId||!hasApi())return;
-    var reason=document.getElementById("cns-cancel-reason").value.trim();
-    var btn=document.getElementById("cns-cancel-confirm-btn");
-    setBtn(btn,true);
-
-    API.Community.updateConsultation(cancelTargetId,{status:"cancelled",cancel_reason:reason||null}).then(function(){
-      setBtn(btn,false);
-      cnsCloseCancel();
-      showToast("Appointment cancelled","success");
-      loadAppointments();
-    }).catch(function(err){
-      setBtn(btn,false);
-      showToast((err&&err.message)||"Failed to cancel appointment","error");
-    });
-  };
-
-  // ================= RESCHEDULE =================
-  window.cnsOpenReschedule=function(id){
-    reschedule.id=id;
-    reschedule.date="";
-    reschedule.time="";
-    reschedule.slots=[];
-    reschedBusy=false;
-    var box=document.getElementById("cns-reschedule-content");
-    box.innerHTML="<div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading...</div>";
-    openModal("cns-reschedule-modal");
-    API.Community.getConsultation(id).then(function(c){
-      reschedule.expertId=c.expert_id;
-      reschedule.currentDate=c.scheduled_date;
-      reschedule.currentTime=c.scheduled_time;
-      box.innerHTML="<p style=\"font-size:12px;color:var(--text-muted);margin:0 0 12px\">Current slot: <b>"+fmtDate(c.scheduled_date)+" &middot; "+esc(c.scheduled_time)+"</b> with "+
-        "<b>"+esc(c.expert_name)+"</b>. Changing will free your current slot for others.</p>"+
-        "<div class=\"cns-form-group\"><label>New Date <span class=\"req\">*</span></label>"+
-        "<input type=\"date\" class=\"cns-form-input\" id=\"cns-resched-date\" min=\""+todayStr()+"\" onchange=\"reschedDateChanged()\"></div>"+
-        "<div id=\"cns-resched-slots\"><p class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-clock\"></i><h4>Select a date to see available slots.</h4></p></div>";
-      renderReschedNav();
-    }).catch(function(err){
-      box.innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load appointment</h4><p>"+esc((err&&err.message)||"Please try again.")+"</p></div>";
-    });
-  };
-
-  window.reschedDateChanged=function(){
-    reschedule.date=document.getElementById("cns-resched-date").value;
-    reschedule.time="";
-    var holder=document.getElementById("cns-resched-slots");
-    if(!reschedule.expertId||!reschedule.date){
-      holder.innerHTML="<p class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-clock\"></i><h4>Select a date to see available slots.</h4></p>";
-      renderReschedNav();
-      return;
+    /* ============================================================ helpers */
+    function hasApi() {
+      return !!(window.API && (localStorage.getItem('fa-auth-token') || (window.UserStore && UserStore.getToken && UserStore.getToken())));
     }
-    holder.innerHTML="<div class=\"cns-loading\"><i class=\"fas fa-spinner fa-spin\"></i> Loading available slots...</div>";
-    API.Community.getExpertSlots(reschedule.expertId,reschedule.date).then(function(r){
-      reschedule.slots=(r&&r.slots)||[];
-      renderSlotsInto(holder,reschedule.slots,"reschedPickSlot",reschedule.time);
-      renderReschedNav();
-    }).catch(function(err){
-      holder.innerHTML="<div class=\"cns-empty\" style=\"padding:20px\"><i class=\"fas fa-exclamation-circle\"></i><h4>Unable to load appointment slots.</h4><p>"+esc((err&&err.message)||"Please try again.")+"</p></div>";
-    });
-  };
 
-  window.reschedPickSlot=function(el){
-    reschedule.time=el.getAttribute("data-time");
-    var opts=document.querySelectorAll("#cns-resched-slots .cns-slot-opt");
-    for(var i=0;i<opts.length;i++)opts[i].classList.remove("active");
-    el.classList.add("active");
-    renderReschedNav();
-  };
-
-  function renderReschedNav(){
-    var btn=document.getElementById("cns-reschedule-confirm-btn");
-    if(!btn)return;
-    var releasable=reschedule.time&&reschedule.date&&(reschedule.date!==reschedule.currentDate||reschedule.time!==reschedule.currentTime);
-    btn.disabled=!releasable;
-  }
-
-  window.cnsConfirmReschedule=function(){
-    if(!reschedule.id||reschedBusy||!reschedule.date||!reschedule.time)return;
-    reschedBusy=true;
-    var btn=document.getElementById("cns-reschedule-confirm-btn");
-    setBtn(btn,true);
-    API.Community.updateConsultation(reschedule.id,{scheduled_date:reschedule.date,scheduled_time:reschedule.time}).then(function(){
-      reschedBusy=false;
-      setBtn(btn,false);
-      cnsCloseReschedule();
-      showToast("Appointment rescheduled successfully","success");
-      loadAppointments();
-    }).catch(function(err){
-      reschedBusy=false;
-      setBtn(btn,false);
-      showToast((err&&err.message)||"Unable to reschedule the appointment.","error");
-    });
-  };
-
-  window.cnsCloseReschedule=function(){
-    reschedule.id="";
-    reschedBusy=false;
-    closeModal("cns-reschedule-modal");
-  };
-
-  // ================= REVIEW =================
-  window.cnsOpenReview=function(id,expertName){
-    reviewTargetId=id;
-    reviewRating=0;
-    document.getElementById("cns-review-expert-name").textContent="Rate your consultation with "+expertName;
-    document.getElementById("cns-review-text").value="";
-    var stars=document.querySelectorAll("#cns-rating-stars i");
-    for(var i=0;i<stars.length;i++)stars[i].className="far fa-star";
-    openModal("cns-review-modal");
-  };
-
-  window.cnsCloseReview=function(){
-    reviewTargetId="";
-    reviewRating=0;
-    closeModal("cns-review-modal");
-  };
-
-  window.cnsSubmitReview=function(){
-    if(!reviewTargetId||!hasApi())return;
-    if(!reviewRating){showToast("Please select a rating","error");return;}
-    var text=document.getElementById("cns-review-text").value.trim();
-    var btn=document.getElementById("cns-review-submit");
-    setBtn(btn,true);
-
-    API.Community.reviewConsultation(reviewTargetId,{rating:reviewRating,feedback:text||null}).then(function(){
-      setBtn(btn,false);
-      cnsCloseReview();
-      showToast("Review submitted! Thank you.","success");
-      loadAppointments();
-    }).catch(function(err){
-      setBtn(btn,false);
-      showToast((err&&err.message)||"Failed to submit review","error");
-    });
-  };
-
-  // ===== RATING STARS =====
-  (function(){
-    var container=document.getElementById("cns-rating-stars");
-    if(!container)return;
-    var stars=container.querySelectorAll("i");
-    for(var i=0;i<stars.length;i++){
-      (function(star){
-        star.addEventListener("click",function(){
-          reviewRating=parseInt(star.getAttribute("data-star"),10);
-          for(var j=0;j<stars.length;j++)stars[j].className=(j<reviewRating)?"fas fa-star":"far fa-star";
-        });
-        star.addEventListener("mouseenter",function(){
-          var v=parseInt(star.getAttribute("data-star"),10);
-          for(var j=0;j<stars.length;j++)stars[j].className=(j<v)?"fas fa-star":"far fa-star";
-        });
-        star.addEventListener("mouseleave",function(){
-          for(var j=0;j<stars.length;j++)stars[j].className=(j<reviewRating)?"fas fa-star":"far fa-star";
-        });
-      })(stars[i]);
+    function toast(msg, type) {
+      if (typeof window.showToast === 'function') { window.showToast(msg, type || 'info'); return; }
+      var t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:3000;box-shadow:0 6px 20px rgba(0,0,0,0.3)';
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 2600);
     }
-  })();
 
-  // ===== MODAL BACKDROP =====
-  document.querySelectorAll(".modal-overlay").forEach(function(m){
-    m.addEventListener("click",function(e){if(e.target===m)m.classList.remove("active");});
-  });
+    function esc(s) {
+      if (s === null || s === undefined) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
 
-  // ===== LOAD FARMS + CROPS =====
-  function loadFarmsAndCrops(){
-    if(!hasApi())return;
-    Promise.all([API.Profile.getFarms(), API.Crop.listCrops(), API.Crop.listCycles()]).then(function(results){
-      var farmData=results[0]||{};
-      var cropData=results[1]||[];
-      var cycleData=results[2]||[];
-      farmsList=Array.isArray(farmData)?farmData:(Array.isArray(farmData.data)?farmData.data:[]);
-      cropData.forEach(function(c){if(c&&c.crop_id)cropCatalog[c.crop_id]={name:c.name||c.crop_name};});
-      cyclesByFarm={};
-      cycleData.forEach(function(cy){
-        if(!cy||!cy.farm_id)return;
-        if(!cyclesByFarm[cy.farm_id])cyclesByFarm[cy.farm_id]=[];
-        cyclesByFarm[cy.farm_id].push(cy);
+    function todayStr() {
+      var d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function fmtDate(s) {
+      if (!s) return '--';
+      s = String(s);
+      if (s.indexOf('T') >= 0) s = s.split('T')[0];
+      if (s.indexOf(' ') > 0) s = s.split(' ')[0];
+      var parts = s.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        var m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var mi = parseInt(parts[1], 10) - 1;
+        return parseInt(parts[2], 10) + ' ' + (m[mi] || mi + 1) + ' ' + parts[0];
+      }
+      return s;
+    }
+
+    function timeAgo(s) {
+      if (!s) return '';
+      var d = new Date(String(s).replace(' ', 'T'));
+      if (isNaN(d.getTime())) return s;
+      var diff = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (diff < 60) return 'Just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+      var m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return m[d.getMonth()] + ' ' + d.getDate();
+    }
+
+    function getInitials(name) {
+      if (!name) return 'EX';
+      var parts = String(name).trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
+    function slotToMinutes(t) {
+      if (!t) return null;
+      var m = String(t).trim().toUpperCase().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/);
+      if (!m) return null;
+      var h = parseInt(m[1], 10), min = parseInt(m[2], 10), ap = m[3];
+      if (ap === 'PM' && h !== 12) h += 12;
+      if (ap === 'AM' && h === 12) h = 0;
+      return h * 60 + min;
+    }
+
+    function dateTimeValue(dateStr, timeStr) {
+      var d = new Date(dateStr + 'T00:00:00');
+      if (isNaN(d.getTime())) return null;
+      var mins = slotToMinutes(timeStr);
+      if (mins === null) mins = 0;
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, mins, 0, 0).getTime();
+    }
+
+    function methodLabel(v) {
+      for (var i = 0; i < METHODS.length; i++) if (METHODS[i].value === v) return METHODS[i].label;
+      return v || '--';
+    }
+    function methodIcon(v) {
+      for (var i = 0; i < METHODS.length; i++) if (METHODS[i].value === v) return METHODS[i].icon;
+      return 'fa-circle';
+    }
+
+    function statusBadge(status) {
+      var labels = { scheduled: 'Upcoming', requested: 'Pending', confirmed: 'Confirmed', in_progress: 'In Progress', completed: 'Completed', cancelled: 'Cancelled' };
+      var label = labels[status] || (status ? status.replace(/_/g, ' ') : status) || 'Unknown';
+      return '<span class="eh-appt-badge eh-badge-' + esc(status) + '">' + esc(label) + '</span>';
+    }
+
+    function feeHtml(e) {
+      if (!e) return 'Free consultation';
+      if (!e.consultation_fee && e.consultation_fee !== 0) return '<span class="eh-tag eh-tag-fee">Free</span>';
+      if (e.consultation_fee === 0) return '<span class="eh-tag eh-tag-free">Free consultation</span>';
+      return '<span class="eh-tag eh-tag-fee"><i class="fas fa-indian-rupee-sign"></i> ' + esc(e.consultation_fee) + '</span>';
+    }
+
+    function byId(id) {
+      return model.experts[id] || null;
+    }
+
+    /* ============================================================ overlays */
+    function openOverlay(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeOverlay(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var open = document.querySelector('.eh-overlay.open');
+      if (open) {
+        e.stopPropagation();
+        closeOverlay(open.id);
+      }
+    });
+    document.addEventListener('click', function (e) {
+      var closer = e.target.closest('[data-close]');
+      if (closer) { closeOverlay(closer.getAttribute('data-close')); return; }
+      var overlay = e.target.closest('.eh-overlay');
+      if (overlay && e.target === overlay) closeOverlay(overlay.id);
+    });
+
+    /* ============================================================ category bar */
+    function renderCategories() {
+      var wrap = document.getElementById('eh-categories');
+      wrap.innerHTML = CATEGORIES.map(function (c) {
+        return '<button class="eh-chip' + (state.category === c.label ? ' active' : '') + '" role="tab" aria-selected="' + (state.category === c.label) + '" data-cat="' + esc(c.label) + '"><i class="fas ' + c.icon + '"></i> ' + esc(c.label) + '</button>';
+      }).join('');
+    }
+    document.addEventListener('click', function (e) {
+      var chip = e.target.closest('.eh-chip[data-cat]');
+      if (!chip) return;
+      state.category = chip.getAttribute('data-cat');
+      renderCategories();
+      loadExperts();
+    });
+
+    /* ============================================================ experts */
+    function skeletonCards(n) {
+      var html = '';
+      for (var i = 0; i < n; i++) {
+        html += '<div class="eh-skel"><div class="eh-card-top"><div class="sk sk-avatar"></div>' +
+          '<div style="flex:1"><div class="sk sk-line sk-w60"></div><div class="sk sk-line sk-w40"></div></div></div>' +
+          '<div class="sk sk-line sk-w85"></div><div class="sk sk-line sk-w85"></div></div>';
+      }
+      return html;
+    }
+
+    function stateHtml() {
+      var el = document.getElementById('eh-experts');
+      return el;
+    }
+
+    function renderExperts() {
+      var el = document.getElementById('eh-experts');
+      document.getElementById('eh-result-count').textContent = state.experts.length + (state.experts.length === 1 ? ' specialist' : ' specialists');
+      if (state.experts.length === 0) {
+        var hasFilters = state.search || state.category !== 'All';
+        el.innerHTML = '<div class="eh-state"><i class="fas ' + (hasFilters ? 'fa-filter-circle-xmark' : 'fa-user-slash') + '"></i>' +
+          '<h4>' + (hasFilters ? 'No experts match your search' : 'No experts are available right now') + '</h4>' +
+          '<p>' + (hasFilters ? 'Try a different keyword or category to find the right specialist.' : 'Check back later when specialists become available.') + '</p>' +
+          (hasFilters ? '<button class="eh-btn eh-btn-primary" id="eh-retry-clear"><i class="fas fa-rotate-left"></i> Clear filters</button>' :
+            '<button class="eh-btn eh-btn-primary" id="eh-retry-load"><i class="fas fa-rotate-right"></i> Retry</button>') + '</div>';
+        return;
+      }
+      el.innerHTML = state.experts.map(cardHtml).join('');
+    }
+
+    function cardHtml(e) {
+      model.experts[e.id] = e;
+      var avail = e.is_available
+        ? '<span class="eh-status-dot ga" style="display:inline-block;margin-right:2px" aria-label="Available"></span>'
+        : '<span class="eh-status-dot gi" style="display:inline-block;margin-right:2px" aria-label="Unavailable"></span>';
+      var tags = '';
+      if (e.experience_years) tags += '<span class="eh-tag eh-tag-exp"><i class="fas fa-briefcase"></i> ' + esc(e.experience_years) + ' yrs</span>';
+      t = e.qualification ? '<span class="eh-tag"><i class="fas fa-graduation-cap"></i> ' + esc(e.qualification) + '</span>' : '';
+      if (t) tags += t;
+      if (e.location) tags += '<span class="eh-tag"><i class="fas fa-location-dot"></i> ' + esc(e.location) + '</span>';
+      tags += feeHtml(e);
+      var avatar = e.profile_image
+        ? '<img src="' + esc(e.profile_image) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' + esc(getInitials(e.full_name))
+        : esc(getInitials(e.full_name));
+      return '<div class="eh-card">' +
+        '<div class="eh-card-top">' +
+          '<div class="eh-avatar">' + avatar + '</div>' +
+          '<div class="eh-card-info">' +
+            '<div class="eh-name">' + esc(e.full_name) + ' <span class="eh-status-dot ' + (e.is_available ? 'ga' : 'gi') + '"></span></div>' +
+            '<div class="eh-spec">' + esc(e.speciality) + '</div>' +
+            '<div class="eh-meta">' +
+              (e.rating ? '<span class="eh-rating"><i class="fas fa-star"></i> ' + esc(e.rating) + '</span>' : '') +
+              (e.total_consultations ? '<span><i class="fas fa-comments"></i>' + esc(e.total_consultations) + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="eh-bio">' + esc(e.bio || (e.speciality ? e.speciality + ' specialist with professional consultation services.' : 'Agriculture expert with professional consultation services.')) + '</div>' +
+        '<div class="eh-tags">' + tags + '</div>' +
+        '<div style="font-size:11px;font-weight:700;margin-top:8px;' + (e.is_available ? 'color:#2E7D32' : 'color:#C62828') + '">' +
+          (e.is_available ? '<i class="fas fa-circle" style="font-size:6px;vertical-align:middle;margin-right:4px"></i> Available for consultation' : '<i class="fas fa-circle" style="font-size:6px;vertical-align:middle;margin-right:4px"></i> Currently unavailable') +
+        '</div>' +
+        '<div class="eh-card-actions">' +
+          '<button class="eh-btn" onclick="EH.viewExpert(\'' + esc(e.id) + '\')"><i class="fas fa-eye"></i> View</button>' +
+          '<button class="eh-btn eh-btn-primary" data-book="' + esc(e.id) + '"' + (e.is_available ? '' : ' disabled') + '><i class="fas fa-calendar-plus"></i> Book</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function loadExperts() {
+      var el = document.getElementById('eh-experts');
+      if (!hasApi()) {
+        el.innerHTML = '<div class="eh-state"><i class="fas fa-lock"></i><h4>Please log in</h4><p>Log in to discover experts and book consultations.</p></div>';
+        return;
+      }
+      var rid = ++state.reqId;
+      el.innerHTML = skeletonCards(6);
+      document.getElementById('eh-result-count').textContent = '';
+      var params = { limit: 50 };
+      if (state.search) params.search = state.search;
+      if (state.category && state.category !== 'All') params.category = state.category;
+      var spin = document.getElementById('eh-search-spin');
+      if (spin) spin.style.display = 'inline-block';
+      API.Community.listExperts(params).then(function (r) {
+        if (rid !== state.reqId) return;
+        if (spin) spin.style.display = 'none';
+        var data = r && r.data ? r.data : (r || {});
+        state.experts = data.items || [];
+        renderExperts();
+      }).catch(function (err) {
+        if (rid !== state.reqId) return;
+        if (spin) spin.style.display = 'none';
+        el.innerHTML = '<div class="eh-state"><i class="fas fa-triangle-exclamation"></i><h4>Could not load experts</h4>' +
+          '<p>' + esc(friendlyErr(err)) + '</p>' +
+          '<button class="eh-btn eh-btn-primary" id="eh-retry-load"><i class="fas fa-rotate-right"></i> Retry</button></div>';
       });
-      if(farmsList.length===1&&!wizard.farmId){
-        wizard.farmId=farmsList[0].id;
+    }
+
+    function friendlyErr(err) {
+      if (!err) return 'Please try again.';
+      var m = err.message || err.detail || '';
+      if (m === 'Failed to fetch') return 'Unable to reach the server. Check your connection and try again.';
+      if (typeof m === 'string' && /(401|logout|token|invalid)/i.test(m)) return 'Your session has expired. Please log in again.';
+      return 'Please try again.';
+    }
+
+    document.getElementById('eh-experts').addEventListener('click', function (e) {
+      var retry = e.target.closest('#eh-retry-load');
+      var clear = e.target.closest('#eh-retry-clear');
+      var book = e.target.closest('[data-book]');
+      if (retry) { loadExperts(); return; }
+      if (clear) { clearFilters(); return; }
+      if (book) { openWizard(book.getAttribute('data-book')); }
+    });
+
+    /* ============================================================ search */
+    var searchTimer = null;
+    document.getElementById('eh-search-input').addEventListener('input', function (e) {
+      var v = e.target.value.trim();
+      document.getElementById('eh-search-clear').style.display = v ? 'block' : 'none';
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () { state.search = v; updateFilterLine(); loadExperts(); }, 300);
+    });
+    document.getElementById('eh-search-clear').addEventListener('click', function () {
+      document.getElementById('eh-search-input').value = '';
+      document.getElementById('eh-search-clear').style.display = 'none';
+      state.search = '';
+      updateFilterLine();
+      loadExperts();
+    });
+
+    function clearFilters() {
+      state.search = '';
+      state.category = 'All';
+      var inp = document.getElementById('eh-search-input');
+      if (inp) { inp.value = ''; }
+      document.getElementById('eh-search-clear').style.display = 'none';
+      renderCategories();
+      updateFilterLine();
+      loadExperts();
+    }
+
+    document.getElementById('eh-clear-filters').addEventListener('click', clearFilters);
+
+    function updateFilterLine() {
+      document.getElementById('eh-clear-filters').style.display = (state.search || state.category !== 'All') ? 'inline-flex' : 'none';
+    }
+
+    /* ============================================================ view expert */
+    window.EH = {};
+    EH.viewExpert = function (id) {
+      var expert = byId(id);
+      if (!expert) return;
+      var body = document.getElementById('eh-view-body');
+      var actions = document.getElementById('eh-view-actions');
+      var tags = '';
+      if (expert.qualification) tags += '<div class="eh-drow"><span class="eh-dlabel">Qualification</span><span class="eh-dvalue">' + esc(expert.qualification) + '</span></div>';
+      if (expert.experience_years) tags += '<div class="eh-drow"><span class="eh-dlabel">Experience</span><span class="eh-dvalue">' + esc(expert.experience_years) + ' years</span></div>';
+      if (expert.total_consultations) tags += '<div class="eh-drow"><span class="eh-dlabel">Consultations done</span><span class="eh-dvalue">' + esc(expert.total_consultations) + '</span></div>';
+      if (expert.location) tags += '<div class="eh-drow"><span class="eh-dlabel">Location</span><span class="eh-dvalue">' + esc(expert.location) + '</span></div>';
+      if (expert.languages && expert.languages.length) tags += '<div class="eh-drow"><span class="eh-dlabel">Languages</span><span class="eh-dvalue">' + esc(expert.languages.join(', ')) + '</span></div>';
+      tags += '<div class="eh-drow"><span class="eh-dlabel">Consultation fee</span><span class="eh-dvalue">' + ((!expert.consultation_fee) ? 'Free consultation' : '<i class="fas fa-indian-rupee-sign"></i> ' + esc(expert.consultation_fee)) + '</span></div>';
+
+      body.innerHTML =
+        '<div class="eh-profile-top">' +
+          '<div class="eh-profile-avatar">' + (expert.profile_image ? '<img src="' + esc(expert.profile_image) + '" alt="" onerror="this.style.display=\'none\'">' : '') + esc(getInitials(expert.full_name)) + '</div>' +
+          '<div style="min-width:0;flex:1">' +
+            '<h2 class="eh-profile-name">' + esc(expert.full_name) + '</h2>' +
+            '<div class="eh-profile-spec">' + esc(expert.speciality) + '</div>' +
+            '<div class="eh-profile-meta">' +
+              (expert.rating ? '<span><i class="fas fa-star" style="color:#F9A825"></i> ' + esc(expert.rating) + '/5</span>' : '') +
+              (expert.location ? '<span><i class="fas fa-location-dot"></i> ' + esc(expert.location) + '</span>' : '') +
+            '</div>' +
+            '<div class="eh-avail-line">' +
+              (expert.is_available ? '<span class="eh-on"><i class="fas fa-circle" style="font-size:7px"></i>&nbsp; Available for new consultations</span>' : '<span class="eh-off"><i class="fas fa-circle" style="font-size:7px"></i>&nbsp; Currently unavailable</span>') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<p class="eh-profile-bio">' + esc(expert.bio || (expert.speciality + ' specialist providing consultation services for farmers.')) + '</p>' +
+        '<div class="eh-dblock"><div class="eh-db-title"><i class="fas fa-clipboard-list"></i> Professional Details</div>' + tags + '</div>' +
+        '<div class="eh-dblock"><div class="eh-db-title"><i class="fas fa-video"></i> Consultation Modes</div>' +
+          '<div class="eh-profile-meta" style="margin-top:2px">' +
+            METHODS.map(function (m) { return '<span><i class="fas ' + m.icon + '"></i> ' + esc(m.label) + '</span>'; }).join('') +
+          '</div></div>';
+
+      actions.innerHTML =
+        '<button class="eh-btn" data-close="eh-view">Close</button>' +
+        (expert.is_available
+          ? '<button class="eh-btn eh-btn-primary" id="eh-view-book"><i class="fas fa-calendar-plus"></i> Book Appointment</button>'
+          : '<button class="eh-btn" disabled><i class="fas fa-ban"></i> Not Available</button>');
+
+      document.getElementById('eh-view-book').addEventListener('click', function () {
+        closeOverlay('eh-view');
+        openWizard(expert.id);
+      });
+      openOverlay('eh-view');
+      loadAppointments();
+    };
+
+    /* ============================================================ wizard */
+    function openWizard(expertId) {
+      if (!hasApi()) { toast('Please log in to book an appointment', 'warning'); return; }
+      wizard.expertId = expertId || '';
+      wizard.method = '';
+      wizard.date = '';
+      wizard.time = '';
+      wizard.type = '';
+      wizard.topic = '';
+      wizard.desc = '';
+      wizard.farmId = state.farms.length === 1 ? state.farms[0].id : '';
+      wizard.cropId = '';
+      wizard.confirmed = null;
+      state.busy = false;
+      renderWizard();
+      openOverlay('eh-wizard');
+    }
+
+    document.getElementById('eh-wizard-close').addEventListener('click', function () { closeOverlay('eh-wizard'); });
+
+    var WIZ_NAMES = ['Expert', 'Type &amp; Slot', 'Issue', 'Review'];
+    function wizStepsHtml(step) {
+      var html = '';
+      for (var i = 0; i < 4; i++) {
+        var cls = 'eh-wiz-step';
+        if (i + 1 === step) cls += ' active';
+        else if (i + 1 < step) cls += ' done';
+        html += '<div class="' + cls + '"><span class="eh-wiz-num">' + (i + 1 < step ? '<i class="fas fa-check" style="font-size:8px"></i>' : (i + 1)) + '</span><span class="eh-wiz-lbl">' + WIZ_NAMES[i] + '</span></div>';
+        if (i < 3) html += '<div class="eh-wiz-line' + (i + 1 < step ? ' filled' : '') + '"></div>';
+      }
+      return html;
+    }
+
+    function renderWizard() {
+      var body = document.getElementById('eh-wizard-body');
+      var nav = document.getElementById('eh-wizard-nav');
+      var step = wizard.confirmed ? 5 : (wizardPane());
+      body.innerHTML = '<div class="eh-wiz-head">' + wizStepsHtml(step) + '</div>' + paneHtml(step);
+      nav.innerHTML = navHtml(step);
+      bindWizard(step);
+    }
+
+    function wizardPane() {
+      if (!wizard.expertId) return 1;
+      if (!wizard.method || !wizard.date || !wizard.time) return 2;
+      if (wizard.topic.length < 3) return 3;
+      return 4;
+    }
+
+    function paneHtml(step) {
+      if (step === 1) return wizPane1();
+      if (step === 2) return wizPane2();
+      if (step === 3) return wizPane3();
+      if (step === 4) return wizPane4();
+      return wizPane5();
+    }
+
+    function wizPane1() {
+      if (state.experts.length === 0) {
+        return '<div class="eh-state"><i class="fas fa-user-slash"></i><h4>No experts available</h4><p>Please close and try again later.</p></div>';
+      }
+      var list = state.experts.filter(function (e) { return e.is_available !== false; });
+      if (list.length === 0) {
+        return '<div class="eh-state"><i class="fas fa-user-slash"></i><h4>No experts currently available</h4><p>All specialists are fully booked right now.</p></div>';
+      }
+      return '<h4 class="eh-wiz-title">Choose an expert</h4>' +
+        '<p class="eh-wiz-sub">Select the agriculture specialist you would like to consult.</p>' +
+        '<div class="eh-expert-pick">' +
+        list.map(function (e) {
+          return '<div class="eh-pick' + (wizard.expertId === e.id ? ' active' : '') + '" data-pick="' + esc(e.id) + '">' +
+            '<div class="eh-avatar">' + (e.profile_image ? '<img src="' + esc(e.profile_image) + '" alt="" onerror="this.style.display=\'none\'">' : '') + esc(getInitials(e.full_name)) + '</div>' +
+            '<div class="eh-pick-info"><div class="eh-pick-name">' + esc(e.full_name) + '</div><div class="eh-pick-spec">' + esc(e.speciality) + (e.location ? ' &middot; ' + esc(e.location) : '') + '</div></div>' +
+            '<div class="eh-pick-fee">' + (e.consultation_fee ? '<i class="fas fa-indian-rupee-sign"></i> ' + esc(e.consultation_fee) : 'Free') + '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+    }
+
+    function wizPane2() {
+      var expert = byId(wizard.expertId);
+      return '<h4 class="eh-wiz-title">Choose type &amp; slot</h4>' +
+        '<p class="eh-wiz-sub">Consulting with <b>' + esc(expert ? expert.full_name : 'the expert') + '</b>.</p>' +
+        '<div class="eh-field"><label>Consultation type <span class="req">*</span></label>' +
+          '<div class="eh-methods">' +
+          METHODS.map(function (m) {
+            return '<div class="eh-method' + (wizard.method === m.value ? ' active' : '') + '" data-method="' + m.value + '" role="button" tabindex="0">' +
+              '<i class="fas ' + m.icon + '"></i>' + esc(m.label) + '<span style="display:block;font-size:9px;font-weight:600;opacity:.75;margin-top:2px">' + esc(m.note) + '</span></div>';
+          }).join('') + '</div></div>' +
+        '<div class="eh-field"><label>Date <span class="req">*</span></label>' +
+          '<input type="date" class="eh-input" id="eh-wiz-date" min="' + todayStr() + '" value="' + esc(wizard.date) + '"></div>' +
+        '<div id="eh-wiz-slots"><div class="eh-hint"><i class="fas fa-circle-info"></i> Pick a date to see the expert\'s available time slots.</div></div>';
+    }
+
+    function wizPane3() {
+      var expert = byId(wizard.expertId);
+      var typeOpts = '<option value="">Select issue category (optional)</option>';
+      CONSULT_TYPES.forEach(function (t) {
+        typeOpts += '<option value="' + esc(t) + '"' + (wizard.type === t ? ' selected' : '') + '>' + esc(t) + '</option>';
+      });
+      var farmBlock = state.farms.length === 0
+        ? '<div class="eh-hint" style="margin-bottom:12px"><i class="fas fa-circle-info"></i> No farms on your account yet &mdash; you can still book without one.</div>'
+        : '<div class="eh-field"><label>Farm / plot</label>' +
+          '<select class="eh-input" id="eh-wiz-farm"><option value="">Select farm (optional)</option>' +
+          state.farms.map(function (f) {
+            return '<option value="' + esc(f.id) + '"' + (wizard.farmId === f.id ? ' selected' : '') + '>' + esc(f.farm_name || 'Farm') + '</option>';
+          }).join('') + '</select></div>' +
+          '<div class="eh-field"><label>Crop (optional)</label><select class="eh-input" id="eh-wiz-crop"><option value="">Select crop (optional)</option></select></div>';
+      return '<h4 class="eh-wiz-title">Add your reason</h4>' +
+        '<p class="eh-wiz-sub">Tell ' + esc(expert ? expert.full_name : 'the expert') + ' what you need help with.</p>' +
+        farmBlock +
+        '<div class="eh-field"><label>Issue category</label>' +
+          '<select class="eh-input" id="eh-wiz-type">' + typeOpts + '</select></div>' +
+        '<div class="eh-field"><label>Topic / question <span class="req">*</span></label>' +
+          '<input type="text" class="eh-input" id="eh-wiz-topic" maxlength="200" placeholder="e.g. Tomato leaves turning yellow" value="' + esc(wizard.topic) + '">' +
+          '<div class="eh-err" id="eh-wiz-topic-err" style="display:none">Please enter at least 3 characters.</div></div>' +
+        '<div class="eh-field"><label>Description (optional)</label>' +
+          '<textarea class="eh-input" id="eh-wiz-desc" rows="3" placeholder="Describe your issue or question in detail...">' + esc(wizard.desc) + '</textarea></div>';
+    }
+
+    function wizPane4() {
+      var expert = byId(wizard.expertId);
+      var farmName = '';
+      state.farms.forEach(function (f) { if (f.id === wizard.farmId) farmName = f.farm_name; });
+      var rows = [
+        ['Expert', expert ? expert.full_name : '--'],
+        ['Specialisation', expert ? expert.speciality : '--'],
+        ['Type', methodLabel(wizard.method)],
+        ['Date', fmtDate(wizard.date)],
+        ['Time', wizard.time || '--'],
+        ['Crop', wizard.cropId ? (state.cropCatalog[wizard.cropId] || wizard.cropId) : '--'],
+        ['Farm', farmName || '--'],
+        ['Category', wizard.type || '--'],
+        ['Topic', wizard.topic]
+      ];
+      var html = '<h4 class="eh-wiz-title">Review &amp; confirm</h4>' +
+        '<p class="eh-wiz-sub">Please confirm your appointment details before booking.</p>' +
+        '<div class="eh-review-list">' +
+        rows.filter(function (r) { return r[1]; }).map(function (r) {
+          return '<div class="eh-review-row"><span class="eh-review-lab">' + r[0] + '</span><span class="eh-review-val">' + esc(r[1]) + '</span></div>';
+        }).join('') +
+        '<div class="eh-review-row"><span class="eh-review-lab">Fee</span><span class="eh-review-val">' + (expert && expert.consultation_fee ? '<i class="fas fa-indian-rupee-sign"></i> ' + esc(expert.consultation_fee) : 'Free') + '</span></div>' +
+        '</div>';
+      return html;
+    }
+
+    function wizPane5() {
+      var c = wizard.confirmed || {};
+      return '<div class="eh-confirm-success">' +
+        '<div class="eh-big"><i class="fas fa-circle-check"></i></div>' +
+        '<h3>Appointment booked successfully!</h3>' +
+        '<p>Your consultation is confirmed. Keep a note of your booking reference below.</p>' +
+        '<div class="eh-ref-chip" id="eh-booked-ref">' + esc(c.consultation_id || c.reference_id || '') + '</div>' +
+        '<div class="eh-review-list">' +
+          '<div class="eh-review-row"><span class="eh-review-lab">Expert</span><span class="eh-review-val">' + esc(c.expert_name || wizardExpertName()) + '</span></div>' +
+          '<div class="eh-review-row"><span class="eh-review-lab">Date</span><span class="eh-review-val">' + fmtDate(c.scheduled_date || wizard.date) + '</span></div>' +
+          '<div class="eh-review-row"><span class="eh-review-lab">Time</span><span class="eh-review-val">' + esc(c.scheduled_time || wizard.time) + '</span></div>' +
+          '<div class="eh-review-row"><span class="eh-review-lab">Type</span><span class="eh-review-val">' + esc(methodLabel(c.consultation_method || wizard.method)) + '</span></div>' +
+        '</div></div>';
+    }
+
+    function wizardExpertName() {
+      var e = byId(wizard.expertId);
+      return e ? e.full_name : '';
+    }
+
+    function navHtml(step) {
+      if (step === 5) {
+        return '<button class="eh-btn" id="eh-wiz-done"><i class="fas fa-check"></i> Done</button>' +
+          (wizard.confirmed && wizard.confirmed.id ? '<button class="eh-btn eh-btn-primary" id="eh-wiz-view"><i class="fas fa-eye"></i> View Appointment</button>' : '');
+      }
+      var html = step > 1 ? '<button class="eh-btn" id="eh-wiz-back"><i class="fas fa-arrow-left"></i> Back</button>' : '';
+      if (step < 4) {
+        html += '<button class="eh-btn eh-btn-primary" id="eh-wiz-next"><i class="fas fa-arrow-right"></i> Continue</button>';
+      } else {
+        html += '<button class="eh-btn eh-btn-primary" id="eh-wiz-confirm"><i class="fas fa-calendar-check"></i> Confirm Booking</button>';
+      }
+      return html;
+    }
+
+    function bindWizard(step) {
+      var body = document.getElementById('eh-wizard-body');
+      if (step === 1) {
+        body.querySelectorAll('[data-pick]').forEach(function (el) {
+          el.addEventListener('click', function () {
+            wizard.expertId = el.getAttribute('data-pick');
+            wizard.date = ''; wizard.time = '';
+            renderWizard();
+          });
+        });
+      } else if (step === 2) {
+        body.querySelectorAll('[data-method]').forEach(function (el) {
+          el.addEventListener('click', function () {
+            wizard.method = el.getAttribute('data-method');
+            renderWizard();
+          });
+        });
+        var dateInput = document.getElementById('eh-wiz-date');
+        dateInput.addEventListener('change', function () {
+          wizard.date = dateInput.value;
+          wizard.time = '';
+          loadSlots();
+        });
+        if (wizard.date) loadSlots();
+      } else if (step === 3) {
+        var farm = document.getElementById('eh-wiz-farm');
+        if (farm) {
+          var prev = wizard.farmId;
+          farm.addEventListener('change', function () {
+            wizard.farmId = farm.value;
+            wizard.cropId = '';
+            fillCrops();
+          });
+        }
+        var crop = document.getElementById('eh-wiz-crop');
+        if (crop) {
+          fillCrops();
+          crop.addEventListener('change', function () { wizard.cropId = crop.value; });
+        }
+        var type = document.getElementById('eh-wiz-type');
+        if (type) type.addEventListener('change', function () { wizard.type = type.value; });
+        var topic = document.getElementById('eh-wiz-topic');
+        topic.addEventListener('input', function () {
+          wizard.topic = topic.value.trim();
+          document.getElementById('eh-wiz-topic-err').style.display = wizard.topic.length >= 3 || !wizard.topic ? 'none' : 'block';
+        });
+        document.getElementById('eh-wiz-desc').addEventListener('input', function () { wizard.desc = this.value.trim(); });
+        void prev;
+      }
+      var nav = document.getElementById('eh-wizard-nav');
+      var back = nav.querySelector('#eh-wiz-back');
+      if (back) back.addEventListener('click', function () { wizardStepBack(); });
+      var next = nav.querySelector('#eh-wiz-next');
+      if (next) next.addEventListener('click', function () { wizardStepNext(); });
+      var confirm = nav.querySelector('#eh-wiz-confirm');
+      if (confirm) confirm.addEventListener('click', function () { wizardConfirm(confirm); });
+      var done = nav.querySelector('#eh-wiz-done');
+      if (done) done.addEventListener('click', function () { closeOverlay('eh-wizard'); loadAppointments(); });
+      var view = nav.querySelector('#eh-wiz-view');
+      if (view) view.addEventListener('click', function () {
+        closeOverlay('eh-wizard');
+        openDetail(wizard.confirmed.id);
+      });
+    }
+
+    function fillCrops() {
+      var crop = document.getElementById('eh-wiz-crop');
+      if (!crop) return;
+      var options = ['<option value="">Select crop (optional)</option>'];
+      if (wizard.farmId && state.cyclesByFarm[wizard.farmId]) {
+        state.cyclesByFarm[wizard.farmId].forEach(function (cy) {
+          var name = state.cropCatalog[cy.crop_id] || cy.crop_id;
+          if (!name && cy.crop_name) name = cy.crop_name;
+          options.push('<option value="' + esc(cy.crop_id) + '"' + (wizard.cropId === cy.crop_id ? ' selected' : '') + '>' + esc(name) + '</option>');
+        });
+      }
+      crop.innerHTML = options.join('');
+    }
+
+    function wizardStepBack() {
+      var step = wizardPane();
+      if (step === 2) { wizard.method = ''; }
+      else if (step === 3) { wizard.date = ''; wizard.time = ''; }
+      else if (step === 4) { wizard.topic = ''; }
+      renderWizard();
+    }
+
+    function wizardStepNext() {
+      var step = wizardPane();
+      if (step === 1 && !wizard.expertId) { toast('Please select an expert', 'error'); return; }
+      if (step === 2) {
+        if (!wizard.method) { toast('Please select a consultation type', 'error'); return; }
+        if (!wizard.date) { toast('Please select a date', 'error'); return; }
+        if (!wizard.time) { toast('Please select a time slot', 'error'); return; }
+      }
+      if (step === 3) {
+        if (wizard.topic.length < 3) {
+          document.getElementById('eh-wiz-topic-err').style.display = 'block';
+          toast('Topic must be at least 3 characters', 'error');
+          return;
+        }
       }
       renderWizard();
-    }).catch(function(){
-      farmsList=[];
-    });
-  }
+    }
 
-  // ===== INIT =====
-  if(hasApi()){
-    loadExperts();
-    loadAppointments();
-    loadFarmsAndCrops();
-    renderWizard();
-  }else{
-    document.getElementById("cns-experts-list").innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-lock\"></i><h4>Please log in</h4><p>You need to be logged in to view experts and book appointments.</p></div>";
-    document.getElementById("cns-appointments-list").innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-lock\"></i><h4>Please log in</h4><p>You need to be logged in to view your appointments.</p></div>";
-    document.getElementById("cns-step-content").innerHTML="<div class=\"cns-empty\"><i class=\"fas fa-lock\"></i><h4>Please log in</h4></div>";
-    document.getElementById("cns-step-nav").innerHTML="";
-  }
-})();
-</script>
+    function loadSlots() {
+      var holder = document.getElementById('eh-wiz-slots');
+      if (!holder) return;
+      if (!wizard.expertId || !wizard.date) {
+        holder.innerHTML = '<div class="eh-hint"><i class="fas fa-circle-info"></i> Pick a date to see available time slots.</div>';
+        return;
+      }
+      holder.innerHTML = '<div class="eh-loading-line"><i class="fas fa-spinner fa-spin"></i> Loading available slots...</div>';
+      API.Community.getExpertSlots(wizard.expertId, wizard.date).then(function (r) {
+        if (!document.getElementById('eh-wiz-slots')) return;
+        var slots = (((r && r.data) || r) && ((r && r.data) || r).slots) || [];
+        renderSlots(holder, slots);
+      }).catch(function (err) {
+        if (!document.getElementById('eh-wiz-slots')) return;
+        holder.innerHTML = '<div class="eh-state" style="padding:18px"><i class="fas fa-triangle-exclamation"></i><h4>Unable to load slots</h4>' +
+          '<p>' + esc(friendlyErr(err)) + '</p></div>';
+      });
+    }
+
+    function renderSlots(holder, slots) {
+      if (!slots || slots.length === 0) {
+        holder.innerHTML = '<div class="eh-state" style="padding:18px;border:1px dashed #e5e7eb;border-radius:12px;margin-top:2px">' +
+          '<i class="fas fa-clock"></i><h4>No slots available</h4><p>This expert has no open slots for this date. Try another date.</p></div>';
+        return;
+      }
+      holder.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-muted,#9ca3af);margin-bottom:8px">Available Time Slots</div>' +
+        '<div class="eh-slots">' +
+        slots.map(function (s) {
+          return '<button type="button" class="eh-slot' + (wizard.time === s ? ' active' : '') + '" data-slot="' + esc(s) + '" tabindex="0">' + esc(s) + '</button>';
+        }).join('') + '</div>';
+      holder.querySelectorAll('[data-slot]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          wizard.time = b.getAttribute('data-slot');
+          holder.querySelectorAll('[data-slot]').forEach(function (x) { x.classList.remove('active'); });
+          b.classList.add('active');
+        });
+      });
+    }
+
+    function wizardConfirm(btn) {
+      if (state.busy) return;
+      if (!wizard.expertId || !wizard.method || !wizard.date || !wizard.time || wizard.topic.length < 3) {
+        toast('Please complete the appointment details', 'error');
+        return;
+      }
+      state.busy = true;
+      setBusy(btn, true, 'Booking');
+
+      var payload = {
+        expert_id: wizard.expertId,
+        topic: wizard.topic,
+        description: wizard.desc || null,
+        consultation_type: wizard.type || 'Other',
+        consultation_method: wizard.method,
+        scheduled_date: wizard.date,
+        scheduled_time: wizard.time,
+        farm_id: wizard.farmId || null,
+        farm_name: null,
+        crop_id: wizard.cropId || null,
+        crop_name: wizard.cropId ? (state.cropCatalog[wizard.cropId] || null) : null
+      };
+      state.farms.forEach(function (f) { if (f.id === wizard.farmId) payload.farm_name = f.farm_name || null; });
+
+      API.Community.bookConsultation(payload).then(function (r) {
+        state.busy = false;
+        setBusy(btn, false);
+        var data = (r && r.data) || r || {};
+        wizard.confirmed = {
+          id: data.id,
+          consultation_id: data.consultation_id || data.reference_id,
+          expert_name: (byId(wizard.expertId) || {}).full_name || data.expert_name,
+          scheduled_date: data.scheduled_date || wizard.date,
+          scheduled_time: data.scheduled_time || wizard.time,
+          consultation_method: data.consultation_method || wizard.method
+        };
+        renderWizard();  // step 5 success (only after backend/database confirmation)
+        toast('Appointment booked successfully', 'success');
+        loadAppointments();
+      }).catch(function (err) {
+        state.busy = false;
+        setBusy(btn, false);
+        var msg = (err && err.message) || (err && err.detail) || 'Unable to book the appointment.';
+        if (/slot is no longer available|conflict/i.test(msg)) {
+          wizard.time = '';
+          toast(msg, 'error');
+          renderWizard();
+          return;
+        }
+        if (/expert is not currently available/i.test(msg)) {
+          toast('This expert is not available right now. Please choose another specialist or slot.', 'error');
+          return;
+        }
+        toast(msg, 'error');
+      });
+    }
+
+    function setBusy(btn, on, label) {
+      if (!btn) return;
+      if (on) {
+        btn.dataset.html = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="eh-spinner"></span> ' + (label || 'Working') + '...';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset.html || btn.innerHTML;
+      }
+    }
+
+    /* ============================================================ appointments */
+    function partitionAppointments() {
+      var now = Date.now();
+      var upcoming = [], pending = [], booked = [], completed = [], cancelled = [];
+      state.appointments.forEach(function (c) {
+        if (c.status === 'completed') { completed.push(c); return; }
+        if (c.status === 'cancelled') { cancelled.push(c); return; }
+        if (c.status === 'requested') { pending.push(c); return; }
+        var at = dateTimeValue(c.scheduled_date, c.scheduled_time);
+        var future = at !== null ? at > now : false;
+        if (future) upcoming.push(c);
+        else booked.push(c);
+      });
+      return { upcoming: upcoming, pending: pending, booked: booked, completed: completed, cancelled: cancelled };
+    }
+
+    function activeCount(groups) {
+      return groups.upcoming.length + groups.pending.length + groups.booked.length;
+    }
+
+    function loadAppointments() {
+      if (!hasApi()) return;
+      API.Community.listConsultations({ limit: 100 }).then(function (r) {
+        var data = (r && r.data) || r || {};
+        state.appointments = data.items || [];
+        updateBookedBadge();
+        var open = document.getElementById('eh-booked');
+        if (open.classList.contains('open')) renderBooked();
+        var detailOpen = document.getElementById('eh-detail');
+        if (detailOpen.classList.contains('open') && detailOpen._ref) {
+          var found = state.appointments.find(function (c) { return c.id === detailOpen._ref || c.consultation_id === detailOpen._ref; });
+          if (found) renderDetail(found);
+        }
+      }).catch(function () { /* keep last known list; badge stays safe */ });
+    }
+
+    function updateBookedBadge() {
+      var groups = partitionAppointments();
+      var n = activeCount(groups);
+      var badge = document.getElementById('eh-booked-badge');
+      if (n > 0) {
+        badge.style.display = 'inline-flex';
+        badge.textContent = n > 99 ? '99+' : n;
+        document.getElementById('eh-booked-dot').style.display = 'none';
+      } else {
+        badge.style.display = 'none';
+        document.getElementById('eh-booked-dot').style.display = 'none';
+      }
+    }
+
+    document.getElementById('eh-booked-btn').addEventListener('click', function () {
+      openBooked();
+    });
+
+    function openBooked() {
+      if (!hasApi()) { toast('Please log in to view your appointments', 'warning'); return; }
+      openOverlay('eh-booked');
+      renderBooked();
+      loadAppointments();
+    }
+
+    function renderBooked() {
+      var tabs = document.getElementById('eh-booked-tabs');
+      var body = document.getElementById('eh-booked-body');
+      var g = partitionAppointments();
+      var defs = [
+        { key: 'upcoming', label: 'Upcoming', icon: 'fa-clock' },
+        { key: 'pending', label: 'Pending', icon: 'fa-hourglass-half' },
+        { key: 'booked', label: 'Booked', icon: 'fa-calendar-check' },
+        { key: 'completed', label: 'Completed', icon: 'fa-circle-check' },
+        { key: 'cancelled', label: 'Cancelled', icon: 'fa-circle-xmark' }
+      ].filter(function (d) {
+        // Hide a tab only when the backend never produces that status (e.g. Pending).
+        if (d.key === 'pending' && g.pending.length === 0) return false;
+        return true;
+      });
+      if (!tabs.querySelector('.eh-tab.active') && defs.length) state.activeTab = 'upcoming';
+      tabs.innerHTML = defs.map(function (d) {
+        var count = g[d.key] ? g[d.key].length : 0;
+        return '<button class="eh-tab' + (state.activeTab === d.key ? ' active' : '') + '" data-tab="' + d.key + '"><i class="fas ' + d.icon + '"></i> ' + d.label + ' <span class="eh-tab-count">' + count + '</span></button>';
+      }).join('');
+      tabs.querySelectorAll('[data-tab]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          state.activeTab = b.getAttribute('data-tab');
+          renderBooked();
+        });
+      });
+      renderApptList(body, g[state.activeTab] || [], state.activeTab);
+    }
+
+    function renderApptList(holder, list, tabKey) {
+      if (state.appointments.length === 0) {
+        holder.innerHTML = '<div class="eh-state"><i class="fas fa-calendar-alt"></i><h4>No appointments yet</h4>' +
+          '<p>Book an appointment with an agriculture expert whenever you need professional guidance.</p>' +
+          '<button class="eh-btn eh-btn-primary" id="eh-bookie"><i class="fas fa-plus"></i> Find an Expert</button></div>';
+        var b = holder.querySelector('#eh-bookie');
+        if (b) b.addEventListener('click', function () { closeOverlay('eh-booked'); openWizard(''); });
+        return;
+      }
+      if (!list || list.length === 0) {
+        var labels = { upcoming: 'No upcoming appointments', pending: 'No pending appointments', booked: 'No current bookings', completed: 'No completed appointments', cancelled: 'No cancelled appointments' };
+        holder.innerHTML = '<div class="eh-state"><i class="fas fa-inbox"></i><h4>' + (labels[tabKey] || 'Nothing here') + '</h4><p>This list will update automatically as your appointments change.</p></div>';
+        return;
+      }
+      holder.innerHTML = list.map(function (c) {
+        return apptCardHtml(c);
+      }).join('');
+    }
+
+    function apptCardHtml(c) {
+      var actions = '';
+      var canResched = (c.status === 'scheduled' || c.status === 'requested' || c.status === 'confirmed');
+      var canCancel = (c.status === 'scheduled' || c.status === 'requested' || c.status === 'confirmed' || c.status === 'in_progress');
+      actions += '<button class="eh-appt-action" data-detail="' + esc(c.id) + '"><i class="fas fa-eye"></i> Details</button>';
+      if (canResched) actions += '<button class="eh-appt-action" data-resched="' + esc(c.id) + '"><i class="fas fa-calendar-week"></i> Reschedule</button>';
+      if (canCancel) actions += '<button class="eh-appt-action eh-a-danger" data-cancel="' + esc(c.id) + '"><i class="fas fa-times"></i> Cancel</button>';
+      if (c.status === 'completed' && !c.rating) actions += '<button class="eh-appt-action eh-a-primary" data-review="' + esc(c.id) + '"><i class="fas fa-star"></i> Rate</button>';
+      if (c.status === 'completed' && c.rating) actions += '<span class="eh-appt-note"><i class="fas fa-check-circle" style="color:#2E7D32"></i> You rated ' + esc(c.rating) + '/5</span>';
+
+      return '<div class="eh-appt" data-detail-open="' + esc(c.id) + '">' +
+        '<div class="eh-appt-top">' +
+          '<div class="eh-appt-avatar"><i class="fas ' + (c.expert_profile_image ? 'fa-user-doctor' : 'fa-user-doctor') + '"></i></div>' +
+          '<div class="eh-appt-info">' +
+            '<div class="eh-appt-name">' + esc(c.expert_name) + '</div>' +
+            '<div class="eh-appt-spec">' + esc(c.expert_speciality) + ' &middot; ' + esc(c.consultation_id || c.reference_id || '') + '</div>' +
+          '</div>' +
+          statusBadge(c.status) +
+        '</div>' +
+        '<div class="eh-appt-meta">' +
+          '<span><i class="far fa-calendar-alt"></i> ' + fmtDate(c.scheduled_date) + '</span>' +
+          '<span><i class="far fa-clock"></i> ' + esc(c.scheduled_time || '--') + '</span>' +
+          '<span><i class="fas ' + methodIcon(c.consultation_method) + '"></i> ' + esc(methodLabel(c.consultation_method)) + '</span>' +
+          (c.consultation_type ? '<span><i class="fas fa-tag"></i> ' + esc(c.consultation_type) + '</span>' : '') +
+        '</div>' +
+        '<div class="eh-appt-topic">' + esc(c.topic) + '</div>' +
+        '<div class="eh-appt-actions">' + actions + '</div>' +
+      '</div>';
+    }
+
+    document.getElementById('eh-booked-body').addEventListener('click', function (e) {
+      var detailBtn = e.target.closest('[data-detail]');
+      var reschedBtn = e.target.closest('[data-resched]');
+      var cancelBtn = e.target.closest('[data-cancel]');
+      var reviewBtn = e.target.closest('[data-review]');
+      var openCard = e.target.closest('[data-detail-open]');
+      if (detailBtn) { openDetail(detailBtn.getAttribute('data-detail')); return; }
+      if (reschedBtn) { openResched(reschedBtn.getAttribute('data-resched')); return; }
+      if (cancelBtn) { openCancel(cancelBtn.getAttribute('data-cancel')); return; }
+      if (reviewBtn) { openReview(reviewBtn.getAttribute('data-review')); return; }
+      if (openCard) { openDetail(openCard.getAttribute('data-detail-open')); return; }
+    });
+
+    /* ============================================================ detail */
+    function openDetail(id) {
+      if (!hasApi()) { toast('Please log in', 'warning'); return; }
+      var modal = document.getElementById('eh-detail');
+      modal._ref = id;
+      document.getElementById('eh-detail-body').innerHTML = '<div class="eh-state"><i class="fas fa-circle-notch fa-spin" style="animation-duration:1s"></i></div>';
+      document.getElementById('eh-detail-actions').innerHTML = '';
+      openOverlay('eh-detail');
+      API.Community.getConsultation(id).then(function (r) {
+        var data = (r && r.data) || r || {};
+        renderDetail(data);
+      }).catch(function (err) {
+        document.getElementById('eh-detail-body').innerHTML = '<div class="eh-state"><i class="fas fa-triangle-exclamation"></i><h4>Unable to load details</h4>' +
+          '<p>' + esc(friendlyErr(err)) + '</p></div>';
+      });
+    }
+
+    function renderDetail(c) {
+      if (!c) return;
+      var body = document.getElementById('eh-detail-body');
+      var actions = document.getElementById('eh-detail-actions');
+      var rows = [
+        ['Booking ID', c.consultation_id || c.reference_id || '--'],
+        ['Expert', c.expert_name || 'Unknown'],
+        ['Specialisation', c.expert_speciality],
+        ['Qualification', c.expert_qualification],
+        ['Experience', c.expert_experience ? c.expert_experience + ' years' : ''],
+        ['Type', methodLabel(c.consultation_method)],
+        ['Date', fmtDate(c.scheduled_date)],
+        ['Time', c.scheduled_time],
+        ['Category', c.consultation_type],
+        ['Farm', c.farm_name],
+        ['Crop', c.crop_name],
+        ['Booked', timeAgo(c.created_at)]
+      ].filter(function (r) { return r[1]; });
+
+      var meeting = '';
+      if (c.consultation_method === 'Video' && c.meeting_reference) {
+        meeting = '<div class="eh-dblock"><div class="eh-db-title"><i class="fas fa-video"></i> Meeting</div>' +
+          '<a class="eh-btn eh-btn-primary" style="width:100%;text-decoration:none" href="' + esc(c.meeting_reference) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-video"></i> Join Video Meeting</a>' +
+          '<div class="eh-hint" style="margin-top:8px"><i class="fas fa-circle-info"></i> Use the link above at your scheduled time.</div></div>';
+      } else if (c.consultation_method === 'In-Person' && c.meeting_location) {
+        meeting = '<div class="eh-dblock"><div class="eh-db-title"><i class="fas fa-location-dot"></i> Location</div><div style="font-size:13px">' + esc(c.meeting_location) + '</div></div>';
+      } else if (c.consultation_method === 'Phone') {
+        meeting = '<div class="eh-dblock"><div class="eh-db-title"><i class="fas fa-phone"></i> Phone Consultation</div><div style="font-size:12px;color:var(--text-muted,#9ca3af)">The expert will call you at your registered number at the scheduled time.</div></div>';
+      }
+
+      var extra = '';
+      if (c.cancel_reason) {
+        extra += '<div class="eh-dblock" style="border-color:#F5C6C6;background:#FFF5F5"><div class="eh-db-title" style="color:var(--danger,#D63031)"><i class="fas fa-circle-xmark"></i> Cancellation</div>' +
+          '<div style="font-size:12px">' + esc(c.cancel_reason) + '</div></div>';
+      }
+      if (c.rating) {
+        extra += '<div class="eh-dblock"><div class="eh-db-title"><i class="fas fa-star" style="color:#F9A825"></i> Your Review</div>' +
+          '<div style="font-size:13px;font-weight:700;color:#F9A825">' + esc(c.rating) + '/5</div>' +
+          (c.feedback ? '<div style="font-size:12px;color:var(--text-secondary,#6b7280);margin-top:4px">' + esc(c.feedback) + '</div>' : '') + '</div>';
+      }
+
+      body.innerHTML =
+        '<div class="eh-profile-top">' +
+          '<div class="eh-profile-avatar" style="width:56px;height:56px;font-size:18px">' + esc(getInitials(c.expert_name)) + '</div>' +
+          '<div style="min-width:0;flex:1">' +
+            '<h2 class="eh-profile-name" style="font-size:16px">' + esc(c.expert_name || 'Unknown') + '</h2>' +
+            '<div class="eh-profile-spec">' + esc(c.expert_speciality || '') + '</div>' +
+            '<div style="margin-top:8px">' + statusBadge(c.status) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<p class="eh-profile-spec" style="font-size:12px;color:var(--text-primary,#1a1a2e);font-weight:700;margin-top:12px">' + esc(c.topic) + '</p>' +
+        (c.description ? '<p class="eh-profile-bio" style="margin-top:6px">' + esc(c.description) + '</p>' : '') +
+        '<div class="eh-dblock"><div class="eh-db-title"><i class="fas fa-list"></i> Details</div>' +
+          rows.map(function (r) {
+            return '<div class="eh-drow"><span class="eh-dlabel">' + r[0] + '</span><span class="eh-dvalue">' + esc(r[1]) + '</span></div>';
+          }).join('') + '</div>' +
+        meeting + extra;
+
+      var actionsHtml = '<button class="eh-btn" data-close="eh-detail">Close</button>';
+      var canResched = c.status === 'scheduled' || c.status === 'requested' || c.status === 'confirmed';
+      var canCancel = c.status === 'scheduled' || c.status === 'requested' || c.status === 'confirmed' || c.status === 'in_progress';
+      if (canResched) actionsHtml += '<button class="eh-btn" id="eh-detail-resched"><i class="fas fa-calendar-week"></i> Reschedule</button>';
+      if (canCancel) actionsHtml += '<button class="eh-btn eh-btn-danger" id="eh-detail-cancel"><i class="fas fa-times"></i> Cancel</button>';
+      if (c.status === 'completed' && !c.rating) actionsHtml += '<button class="eh-btn eh-btn-primary" id="eh-detail-review"><i class="fas fa-star"></i> Rate</button>';
+      actions.innerHTML = actionsHtml;
+
+      var rs = document.getElementById('eh-detail-resched');
+      if (rs) rs.addEventListener('click', function () { closeOverlay('eh-detail'); openResched(c.id); });
+      var cc = document.getElementById('eh-detail-cancel');
+      if (cc) cc.addEventListener('click', function () { closeOverlay('eh-detail'); openCancel(c.id); });
+      var rv = document.getElementById('eh-detail-review');
+      if (rv) rv.addEventListener('click', function () { closeOverlay('eh-detail'); openReview(c.id); });
+    }
+
+    /* ============================================================ cancel */
+    function openCancel(id) {
+      if (!hasApi()) return;
+      cancelTarget = id;
+      document.getElementById('eh-cancel-reason').value = '';
+      openOverlay('eh-cancel');
+    }
+    var cancelTarget = '';
+    document.getElementById('eh-cancel-confirm').addEventListener('click', function () {
+      if (!cancelTarget || state.busy) return;
+      state.busy = true;
+      var btn = document.getElementById('eh-cancel-confirm');
+      setBusy(btn, true, 'Cancelling');
+      var reason = document.getElementById('eh-cancel-reason').value.trim();
+      API.Community.updateConsultation(cancelTarget, { status: 'cancelled', cancel_reason: reason || null }).then(function () {
+        state.busy = false;
+        setBusy(btn, false);
+        closeOverlay('eh-cancel');
+        toast('Appointment cancelled', 'success');
+        loadAppointments();
+      }).catch(function (err) {
+        state.busy = false;
+        setBusy(btn, false);
+        toast((err && err.message) || 'Failed to cancel appointment', 'error');
+      });
+    });
+
+    /* ============================================================ reschedule */
+    function openResched(id) {
+      if (!hasApi()) return;
+      resched.id = id;
+      resched.date = '';
+      resched.time = '';
+      openOverlay('eh-resched');
+      var box = document.getElementById('eh-resched-body');
+      box.innerHTML = '<div class="eh-state"><i class="fas fa-circle-notch fa-spin" style="animation-duration:1s"></i></div>';
+      API.Community.getConsultation(id).then(function (r) {
+        var c = (r && r.data) || r || {};
+        resched.expertId = c.expert_id;
+        resched.currentDate = c.scheduled_date;
+        resched.currentTime = c.scheduled_time;
+        resched.originalTopic = c.topic;
+        box.innerHTML = '<div class="eh-hint" style="margin-bottom:12px;line-height:1.5"><i class="fas fa-circle-info"></i> Current slot: <b>' + fmtDate(c.scheduled_date) + ' &middot; ' + esc(c.scheduled_time) + '</b> with <b>' + esc(c.expert_name) + '</b>. Changing will free your current slot for others.</div>' +
+          '<div class="eh-field"><label>New date <span class="req">*</span></label>' +
+          '<input type="date" class="eh-input" id="eh-resched-date" min="' + todayStr() + '"></div>' +
+          '<div id="eh-resched-slots"><div class="eh-hint"><i class="fas fa-circle-info"></i> Pick a date to see available slots.</div></div>';
+        var d = document.getElementById('eh-resched-date');
+        d.addEventListener('change', function () {
+          resched.date = d.value;
+          resched.time = '';
+          loadReschedSlots();
+        });
+      }).catch(function (err) {
+        box.innerHTML = '<div class="eh-state"><i class="fas fa-triangle-exclamation"></i><h4>Unable to load appointment</h4><p>' + esc(friendlyErr(err)) + '</p></div>';
+      });
+    }
+
+    function loadReschedSlots() {
+      var holder = document.getElementById('eh-resched-slots');
+      if (!resched.expertId || !resched.date) {
+        holder.innerHTML = '<div class="eh-hint"><i class="fas fa-circle-info"></i> Pick a date to see available slots.</div>';
+        return;
+      }
+      holder.innerHTML = '<div class="eh-hint"><i class="fas fa-spinner fa-spin"></i> Loading available slots...</div>';
+      API.Community.getExpertSlots(resched.expertId, resched.date).then(function (r) {
+        var data = (r && r.data) || r || {};
+        var slots = data.slots || [];
+        if (!slots || slots.length === 0) {
+          holder.innerHTML = '<div class="eh-state" style="padding:16px;border:1px dashed #e5e7eb;border-radius:12px"><i class="fas fa-clock"></i><h4>No slots available</h4><p>Try another date.</p></div>';
+          return;
+        }
+        holder.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-muted,#9ca3af);margin-bottom:8px">Available Time Slots</div><div class="eh-slots">' +
+          slots.map(function (s) {
+            return '<button type="button" class="eh-slot" data-slot="' + esc(s) + '">' + esc(s) + '</button>';
+          }).join('') + '</div>';
+        holder.querySelectorAll('[data-slot]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            resched.time = b.getAttribute('data-slot');
+            holder.querySelectorAll('[data-slot]').forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+          });
+        });
+      }).catch(function (err) {
+        holder.innerHTML = '<div class="eh-state" style="padding:16px"><i class="fas fa-triangle-exclamation"></i><h4>Unable to load slots</h4><p>' + esc(friendlyErr(err)) + '</p></div>';
+      });
+    }
+
+    document.getElementById('eh-resched-confirm').addEventListener('click', function () {
+      if (!resched.id || state.busy) return;
+      if (!resched.date || !resched.time) { toast('Please pick a new date and time', 'error'); return; }
+      if (resched.date === resched.currentDate && resched.time === resched.currentTime) {
+        toast('That is your current slot. Pick a different one.', 'error');
+        return;
+      }
+      state.busy = true;
+      var btn = document.getElementById('eh-resched-confirm');
+      setBusy(btn, true, 'Rescheduling');
+      API.Community.updateConsultation(resched.id, { scheduled_date: resched.date, scheduled_time: resched.time }).then(function () {
+        state.busy = false;
+        setBusy(btn, false);
+        closeOverlay('eh-resched');
+        toast('Appointment rescheduled successfully', 'success');
+        loadAppointments();
+      }).catch(function (err) {
+        state.busy = false;
+        setBusy(btn, false);
+        var msg = (err && err.message) || 'Unable to reschedule the appointment.';
+        if (/slot is no longer available|conflict/i.test(msg)) {
+          toast(msg, 'error');
+          loadReschedSlots();
+          return;
+        }
+        toast(msg, 'error');
+      });
+    });
+
+    /* ============================================================ review */
+    function openReview(id) {
+      if (!hasApi()) return;
+      review.id = id;
+      review.rating = 0;
+      var c = state.appointments.find(function (x) { return x.id === id || x.consultation_id === id; });
+      document.getElementById('eh-review-expert').textContent = c ? ('Rate your consultation with ' + c.expert_name) : 'Rate your consultation';
+      document.getElementById('eh-review-text').value = '';
+      renderStars(0);
+      openOverlay('eh-review');
+    }
+
+    function renderStars(v) {
+      var html = '';
+      for (var i = 1; i <= 5; i++) {
+        html += '<i class="fas fa-star' + (i <= v ? ' lit' : '') + '" data-star="' + i + '" role="radio" tabindex="0" aria-label="' + i + ' star"></i>';
+      }
+      var box = document.getElementById('eh-review-stars');
+      box.innerHTML = html;
+    }
+    document.getElementById('eh-review-stars').addEventListener('click', function (e) {
+      var star = e.target.closest('[data-star]');
+      if (!star) return;
+      review.rating = parseInt(star.getAttribute('data-star'), 10);
+      renderStars(review.rating);
+    });
+    document.getElementById('eh-review-stars').addEventListener('keydown', function (e) {
+      var star = e.target.closest('[data-star]');
+      if (star && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        review.rating = parseInt(star.getAttribute('data-star'), 10);
+        renderStars(review.rating);
+      }
+    });
+
+    document.getElementById('eh-review-submit').addEventListener('click', function () {
+      if (!review.id || state.busy) return;
+      if (!review.rating) { toast('Please select a rating', 'error'); return; }
+      state.busy = true;
+      var btn = document.getElementById('eh-review-submit');
+      setBusy(btn, true, 'Submitting');
+      var text = document.getElementById('eh-review-text').value.trim();
+      API.Community.reviewConsultation(review.id, { rating: review.rating, feedback: text || null }).then(function () {
+        state.busy = false;
+        setBusy(btn, false);
+        closeOverlay('eh-review');
+        toast('Review submitted! Thank you.', 'success');
+        loadAppointments();
+      }).catch(function (err) {
+        state.busy = false;
+        setBusy(btn, false);
+        toast((err && err.message) || 'Failed to submit review', 'error');
+      });
+    });
+
+    /* ============================================================ farms + crops */
+    function loadFarmsAndCrops() {
+      if (!hasApi()) return;
+      Promise.all([API.Profile.getFarms(), API.Crop.listCrops(), API.Crop.listCycles()]).then(function (results) {
+        var farmData = results[0] || {};
+        var cropData = results[1] || [];
+        var cycleData = results[2] || [];
+        state.farms = Array.isArray(farmData) ? farmData : (Array.isArray(farmData.data) ? farmData.data : []);
+        cropData.forEach(function (c) { if (c && c.crop_id) state.cropCatalog[c.crop_id] = c.name || c.crop_name || c.crop_id; });
+        cycleData.forEach(function (cy) {
+          if (!cy || !cy.farm_id) return;
+          if (!state.cyclesByFarm[cy.farm_id]) state.cyclesByFarm[cy.farm_id] = [];
+          state.cyclesByFarm[cy.farm_id].push(cy);
+        });
+        if (state.farms.length === 1 && !wizard.farmId) wizard.farmId = state.farms[0].id;
+      }).catch(function () {
+        state.farms = [];
+      });
+    }
+
+    /* ============================================================ deep link */
+    function handleDeepLink() {
+      var params = new URLSearchParams(window.location.search);
+      var ref = params.get('ref');
+      if (ref) {
+        // Wait for the appointments fetch so the badge + detail can resolve.
+        setTimeout(function () { openDetail(ref); }, 300);
+      }
+      var expertId = params.get('expert');
+      if (expertId) {
+        setTimeout(function () { if (byId(expertId)) EH.viewExpert(expertId); }, 400);
+      }
+    }
+
+    /* ============================================================ init */
+    function init() {
+      renderCategories();
+      if (hasApi()) {
+        loadExperts();
+        loadAppointments();
+        loadFarmsAndCrops();
+        handleDeepLink();
+      } else {
+        document.getElementById('eh-experts').innerHTML =
+          '<div class="eh-state"><i class="fas fa-lock"></i><h4>Please log in</h4><p>Log in to discover agriculture experts, view their profiles and book consultations.</p></div>';
+      }
+    }
+
+    init();
+  })();
+  </script>
 </body>
 </html>

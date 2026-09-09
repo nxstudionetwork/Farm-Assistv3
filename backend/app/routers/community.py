@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from app.database.connection import get_db
 from app.utils.auth import get_current_user, generate_id
@@ -1471,13 +1471,63 @@ def share_post(
     }
 
 
-# ---------------------------------------------------------------- Experts (unchanged)
+# ---------------------------------------------------------------- Experts
+# Browseable expert categories. Each category maps to the speciality keywords that
+# classify an expert into it; "Other Specialists" is the exact inverse (every
+# speciality that no named category covers). The frontend renders these chips and
+# passes the label straight back, so filtering always happens against the database.
+EXPERT_CATEGORIES = [
+    ("All", None),
+    ("Crop Experts", ["crop science", "agronomy", "crop"]),
+    ("Soil Experts", ["soil"]),
+    ("Plant Pathologists", ["plant pathology", "pathology"]),
+    ("Pest & Disease", ["plant protection", "pest", "entomology", "disease"]),
+    ("Horticulture", ["horticulture"]),
+    ("Organic Farming", ["organic"]),
+    ("Irrigation", ["water management", "irrigation"]),
+    ("Fertilizer & Nutrition", ["fertilizer", "nutrition"]),
+    ("Livestock", ["livestock", "animal husbandry", "veterinary", "dairy"]),
+    ("Dairy", ["dairy", "livestock"]),
+    ("Agricultural Engineering", ["engineering", "machinery", "mechanization"]),
+    ("Farm Management", ["farm management", "farm operations"]),
+    ("Agri Business", ["agribusiness", "agri business", "marketing"]),
+    ("Market & Pricing", ["market", "pricing", "mandi"]),
+    ("Government Schemes", ["government schemes", "government", "policy", "subsidy"]),
+    ("Other Specialists", None),
+]
+
+_COVERED_KEYWORDS = [
+    kw
+    for _label, keywords in EXPERT_CATEGORIES
+    if keywords
+    for kw in keywords
+]
+
+
+def _expert_category_clause(category: Optional[str]):
+    """Translate a category label into a real SQLAlchemy filter (or None for "All")."""
+    if not category:
+        return None
+    label = category.strip().lower()
+    if label == "all":
+        return None
+    for clabel, keywords in EXPERT_CATEGORIES:
+        if clabel.lower() == label:
+            if keywords is None:
+                # Other Specialists: specialities that no named category covers.
+                covered = [Expert.speciality.ilike(f"%{kw}%") for kw in _COVERED_KEYWORDS]
+                return ~or_(*covered) if covered else None
+            return or_(*[Expert.speciality.ilike(f"%{kw}%") for kw in keywords])
+    return None
+
+
 @router.get("/experts")
 def list_experts(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
     speciality: Optional[str] = None,
+    category: Optional[str] = Query(None),
     is_available: Optional[bool] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -1485,6 +1535,9 @@ def list_experts(
     q = db.query(Expert)
     if is_available is not None:
         q = q.filter(Expert.is_available == is_available)
+    clause = _expert_category_clause(category)
+    if clause is not None:
+        q = q.filter(clause)
     if speciality:
         q = q.filter(Expert.speciality.ilike(f"%{speciality}%"))
     if search:
@@ -1504,6 +1557,7 @@ def list_experts(
             "page": page,
             "limit": limit,
             "total_pages": (total + limit - 1) // limit,
+            "category": category or "All",
             "items": [_expert_dict(e) for e in items],
         },
     }
@@ -1643,9 +1697,8 @@ def book_consultation(
     data["message"] = "Appointment booked successfully"
 
     try:
-        notif_id = generate_id("FA-NOT", db, Notification)
-        db.add(Notification(
-            notification_id=notif_id,
+        create_notification(
+            db=db,
             user_id=current_user.id,
             title="Appointment Confirmed",
             message=(
@@ -1658,8 +1711,7 @@ def book_consultation(
             reference_type="consultation",
             icon="fa-user-doctor",
             action_url=f"expert.html?ref={con_id}",
-            is_read=False,
-        ))
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -1744,6 +1796,10 @@ def update_consultation(
 
     now = datetime.utcnow()
 
+    prev_status = consultation.status
+    prev_date = consultation.scheduled_date
+    prev_time = consultation.scheduled_time
+
     if payload.status is not None:
         valid_transitions = {
             "scheduled": ["cancelled", "confirmed"],
@@ -1809,6 +1865,48 @@ def update_consultation(
     db.refresh(consultation)
 
     expert = db.query(Expert).filter(Expert.id == consultation.expert_id).first()
+    expert_name = expert.full_name if expert else "the expert"
+    con_id = consultation.consultation_id
+
+    # Notify the farmer about state changes through the existing notification
+    # system. create_notification() adds to the session; the commit after it
+    # persists both the notification and the appointment update.
+    was_cancelled = prev_status != "cancelled" and consultation.status == "cancelled"
+    if was_cancelled:
+        create_notification(
+            db=db,
+            user_id=current_user.id,
+            title="Appointment Cancelled",
+            message=(
+                f"Your appointment with {expert_name} on {prev_date} at {prev_time} "
+                f"was cancelled. Ref: {con_id}"
+            ),
+            notification_type="consultation",
+            reference_id=con_id,
+            reference_type="consultation",
+            icon="fa-user-doctor",
+            action_url=f"expert.html?ref={con_id}",
+        )
+        db.commit()
+    elif consultation.status not in ("completed", "cancelled") and (
+        consultation.scheduled_date != prev_date or consultation.scheduled_time != prev_time
+    ):
+        create_notification(
+            db=db,
+            user_id=current_user.id,
+            title="Appointment Rescheduled",
+            message=(
+                f"Your appointment with {expert_name} has been moved to "
+                f"{consultation.scheduled_date} at {consultation.scheduled_time}. "
+                f"Ref: {con_id}"
+            ),
+            notification_type="consultation",
+            reference_id=con_id,
+            reference_type="consultation",
+            icon="fa-user-doctor",
+            action_url=f"expert.html?ref={con_id}",
+        )
+        db.commit()
 
     return {
         "status": "success",
