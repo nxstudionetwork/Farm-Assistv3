@@ -196,8 +196,10 @@
     .eh-wiz-nav .eh-btn{flex:1;padding:12px;font-size:13px}
 
     /* Appointments */
-    .eh-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-    .eh-tab{padding:6px 12px;border-radius:15px;border:1px solid var(--border-light,#e5e7eb);background:#fff;font-size:11px;font-weight:700;color:var(--text-muted,#9ca3af);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+.eh-tabs{display:flex;gap:6px;flex-wrap:nowrap;margin-bottom:12px;overflow-x:auto;overflow-y:hidden;padding:4px 2px 9px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#d8e3d9 transparent}
+.eh-tabs::-webkit-scrollbar{height:6px}
+.eh-tabs::-webkit-scrollbar-thumb{background:#d8e3d9;border-radius:3px}
+.eh-tab{padding:6px 12px;border-radius:15px;border:1px solid var(--border-light,#e5e7eb);background:#fff;font-size:11px;font-weight:700;color:var(--text-muted,#9ca3af);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;white-space:nowrap}
     .eh-tab:hover{border-color:var(--medium-green,#2D8659);color:var(--primary-green,#1B5E3F)}
     .eh-tab.active{background:var(--primary-green,#1B5E3F);color:#fff;border-color:var(--primary-green,#1B5E3F)}
     .eh-tab .eh-tab-count{font-size:9px;background:rgba(0,0,0,0.08);padding:1px 6px;border-radius:9px}
@@ -632,7 +634,15 @@
 
     function renderExperts() {
       var el = document.getElementById('eh-experts');
-      document.getElementById('eh-result-count').textContent = state.experts.length + (state.experts.length === 1 ? ' specialist' : ' specialists');
+      var shown = state.experts.length;
+      var total = state.total || shown;
+      if (shown === 0) {
+        document.getElementById('eh-result-count').textContent = '';
+      } else if (total > shown) {
+        document.getElementById('eh-result-count').textContent = total + ' specialists · showing first ' + shown;
+      } else {
+        document.getElementById('eh-result-count').textContent = total + (total === 1 ? ' specialist' : ' specialists');
+      }
       if (state.experts.length === 0) {
         var hasFilters = state.search || state.category !== 'All';
         el.innerHTML = '<div class="eh-state"><i class="fas ' + (hasFilters ? 'fa-filter-circle-xmark' : 'fa-user-slash') + '"></i>' +
@@ -643,6 +653,10 @@
         return;
       }
       el.innerHTML = state.experts.map(cardHtml).join('');
+      if (state.experts.length < (state.total || state.experts.length)) {
+        el.innerHTML += '<div style="grid-column:1/-1;text-align:center;margin-top:14px;padding-bottom:6px">' +
+          '<button class="eh-btn" id="eh-load-more"><i class="fas fa-plus"></i> Load more experts <span class="eh-tab-count" style="margin-left:4px">' + ((state.total || 0) - state.experts.length) + '</span></button></div>';
+      }
     }
 
     function cardHtml(e) {
@@ -652,7 +666,7 @@
         : '<span class="eh-status-dot gi" style="display:inline-block;margin-right:2px" aria-label="Unavailable"></span>';
       var tags = '';
       if (e.experience_years) tags += '<span class="eh-tag eh-tag-exp"><i class="fas fa-briefcase"></i> ' + esc(e.experience_years) + ' yrs</span>';
-      t = e.qualification ? '<span class="eh-tag"><i class="fas fa-graduation-cap"></i> ' + esc(e.qualification) + '</span>' : '';
+      var t = e.qualification ? '<span class="eh-tag"><i class="fas fa-graduation-cap"></i> ' + esc(e.qualification) + '</span>' : '';
       if (t) tags += t;
       if (e.location) tags += '<span class="eh-tag"><i class="fas fa-location-dot"></i> ' + esc(e.location) + '</span>';
       tags += feeHtml(e);
@@ -690,9 +704,10 @@
         return;
       }
       var rid = ++state.reqId;
+      state.page = 1;
       el.innerHTML = skeletonCards(6);
       document.getElementById('eh-result-count').textContent = '';
-      var params = { limit: 50 };
+      var params = { limit: 100 };
       if (state.search) params.search = state.search;
       if (state.category && state.category !== 'All') params.category = state.category;
       var spin = document.getElementById('eh-search-spin');
@@ -702,6 +717,7 @@
         if (spin) spin.style.display = 'none';
         var data = r && r.data ? r.data : (r || {});
         state.experts = data.items || [];
+        state.total = data.total || state.experts.length;
         renderExperts();
       }).catch(function (err) {
         if (rid !== state.reqId) return;
@@ -709,6 +725,30 @@
         el.innerHTML = '<div class="eh-state"><i class="fas fa-triangle-exclamation"></i><h4>Could not load experts</h4>' +
           '<p>' + esc(friendlyErr(err)) + '</p>' +
           '<button class="eh-btn eh-btn-primary" id="eh-retry-load"><i class="fas fa-rotate-right"></i> Retry</button></div>';
+      });
+    }
+
+    function loadMoreExperts() {
+      if (!hasApi() || !state.experts.length) return;
+      var rid = ++state.reqId;
+      var page = (state.page || 1) + 1;
+      var params = { page: page, limit: 100 };
+      if (state.search) params.search = state.search;
+      if (state.category && state.category !== 'All') params.category = state.category;
+      var btn = document.getElementById('eh-load-more');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...'; }
+      API.Community.listExperts(params).then(function (r) {
+        if (rid !== state.reqId) return;
+        var data = r && r.data ? r.data : (r || {});
+        state.page = page;
+        state.experts = state.experts.concat(data.items || []);
+        state.total = data.total || state.total;
+        renderExperts();
+      }).catch(function () {
+        if (rid !== state.reqId) return;
+        var b = document.getElementById('eh-load-more');
+        if (b) { b.disabled = false; b.textContent = 'Retry load more'; }
+        toast('Could not load more experts', 'error');
       });
     }
 
@@ -724,9 +764,11 @@
       var retry = e.target.closest('#eh-retry-load');
       var clear = e.target.closest('#eh-retry-clear');
       var book = e.target.closest('[data-book]');
+      var more = e.target.closest('#eh-load-more');
       if (retry) { loadExperts(); return; }
       if (clear) { clearFilters(); return; }
       if (book) { openWizard(book.getAttribute('data-book')); }
+      if (more) { loadMoreExperts(); return; }
     });
 
     /* ============================================================ search */
@@ -1280,7 +1322,7 @@
         if (d.key === 'pending' && g.pending.length === 0) return false;
         return true;
       });
-      if (!tabs.querySelector('.eh-tab.active') && defs.length) state.activeTab = 'upcoming';
+      if (!defs.some(function (d) { return d.key === state.activeTab; })) state.activeTab = defs.length ? defs[0].key : '';
       tabs.innerHTML = defs.map(function (d) {
         var count = g[d.key] ? g[d.key].length : 0;
         return '<button class="eh-tab' + (state.activeTab === d.key ? ' active' : '') + '" data-tab="' + d.key + '"><i class="fas ' + d.icon + '"></i> ' + d.label + ' <span class="eh-tab-count">' + count + '</span></button>';
@@ -1648,7 +1690,17 @@
       }
       var expertId = params.get('expert');
       if (expertId) {
-        setTimeout(function () { if (byId(expertId)) EH.viewExpert(expertId); }, 400);
+        setTimeout(function () {
+          if (byId(expertId)) { EH.viewExpert(expertId); return; }
+          API.Community.getExpert(expertId).then(function (r) {
+            var ex = (r && r.data && r.data.id) ? r.data : (r && r.id ? r : null);
+            if (ex && ex.id) {
+              model.experts[ex.id] = ex;
+              state.experts.unshift(ex);
+              EH.viewExpert(ex.id);
+            }
+          }).catch(function () {});
+        }, 400);
       }
     }
 

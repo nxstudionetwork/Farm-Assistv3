@@ -95,6 +95,167 @@ EXPERT_CATALOG = [
      "Beekeeping and pollination specialist supporting apiary income and crop pollination."),
 ]
 
+# ---------------------------------------------------------------------------
+# Additional catalogue to bring the Experts Hub to 100+ discoverable experts.
+# Generated deterministically (no randomness) so seeding stays idempotent.
+# ---------------------------------------------------------------------------
+
+_EXTRA_NAMES = (
+    "Dr. Madhavi Latha", "Prof. Chandra Shekar", "Dr. Arun Rao", "Dr. Suneetha Devi",
+    "Dr. Praveen Kumar", "Prof. Rajeshwari", "Dr. Manoj Reddy", "Dr. Vasantha Kumari",
+    "Dr. Naveen Chandra", "Er. Raghunandan", "Dr. Divya Bharathi", "Dr. Santhosh Rao",
+    "Dr. Anusha Reddy", "Prof. Sreedevi", "Dr. Mahesh Goud", "Dr. Prasanna Lakshmi",
+    "Dr. Vikram Singh", "Er. Hanumanthu", "Dr. Saritha Devi", "Dr. Karthik Reddy",
+    "Dr. Rohini Prasad", "Prof. Janardhan", "Dr. Tejaswi Rao", "Dr. Anand Varma",
+    "Dr. Archana Joshi", "Dr. Balaji Naik", "Prof. Kalpana Devi", "Dr. Suresh Babu",
+    "Dr. Renuka Devi", "Er. Narasimha Rao", "Dr. Ganesh Kumar", "Dr. Madhuri Sarma",
+    "Dr. Haritha Devi", "Prof. Lokanath", "Dr. Sai Kumar", "Dr. Laxmi Prasanna",
+    "Dr. Venkata Subbarao", "Er. Obul Reddy", "Dr. Jhansi Rani", "Dr. Nagarjuna Rao",
+    "Dr. Pallavi Menon", "Dr. Dinesh Chand", "Prof. Saraswathi", "Dr. Mohan Krishna",
+    "Dr. Sowmya Devi", "Er. Prakash Rao", "Dr. Gangadhar", "Dr. Swapna Rani",
+    "Dr. Uday Kiran", "Prof. Vanaja Devi", "Dr. Sitaram", "Dr. Pallavi Reddy",
+    "Dr. Ashok Naidu", "Er. Ramesh Reddy", "Dr. Leela Kumari", "Dr. Venu Gopal",
+    "Prof. Nagalakshmi", "Dr. Kiran Kumar", "Dr. Deepa Rani", "Dr. Sathish Kumar",
+    "Dr. Anitha Rao", "Er. Yashwanth", "Dr. Madhuri Reddy", "Dr. Srikant",
+    "Dr. Akhila Devi", "Prof. Chandrasekhar Rao", "Dr. Gokul Das", "Dr. Swathi Reddy",
+    "Dr. Rajendra Prasad", "Er. Somasekhar", "Dr. Meghana Rao", "Dr. Pavan Kalyan",
+    "Dr. Sangeetha Mohan", "Dr. Trivikram Reddy", "Prof. Anuradha", "Dr. Bhargav Ram",
+    "Dr. Charitha Devi", "Dr. Dhananjay", "Dr. Eswar Reddy", "Er. Farhan Khan",
+    "Dr. Geetha Rao", "Dr. Hemalatha", "Dr. Indra Shekhar", "Dr. Jayaramulu",
+    "Prof. Kusuma Devi", "Dr. Lokesh Naik", "Dr. Manjula Devi", "Dr. Nirmala Kumari",
+    "Dr. Omprakash", "Er. Praveen Chowdary", "Dr. Ramakrishna", "Dr. Sailaja Devi",
+    "Dr. Tirumala Prasad", "Dr. Usha Rani", "Prof. Vennela Rao", "Dr. Zareena Begum",
+)
+
+# (speciality, qualification, city)
+_EXTRA_LINES = (
+    ("Crop Science", "PhD Agriculture", "Secunderabad"),
+    ("Agronomy & Cropping Systems", "MSc Agronomy", "Anantapur"),
+    ("Crop Science", "PhD Crop Physiology", "Nizamabad"),
+    ("Agronomy", "MSc Agronomy", "Mahabubnagar"),
+    ("Crop Science", "PhD Seed Science", "Khammam"),
+    ("Crop Science & Millet Systems", "PhD Agronomy", "Zaheerabad"),
+    ("Agronomy", "MSc Agronomy", "Suryapet"),
+    ("Crop Science", "PhD Agriculture", "Gadwal"),
+    ("Agronomy", "PhD Agronomy", "Siddipet"),
+    ("Crop Science", "MSc Crop Science", "Adilabad"),
+    ("Soil Science", "PhD Soil Science", "Karimnagar"),
+    ("Soil Health & Fertility", "PhD Soil Fertility", "Vikarabad"),
+    ("Soil Science", "MSc Soil Science", "Jagitial"),
+    ("Soil Testing & Reclamation", "PhD Soil Chemistry", "Mancherial"),
+    ("Soil Health & Fertility", "PhD Soil Science", "Kodangal"),
+    ("Soil Science", "MSc Soil Science", "Bhadrachalam"),
+    ("Soil Testing & Amendment", "PhD Soil Botany", "Jogulamba"),
+    ("Soil Health & Conservation", "PhD Soil Science", "Nagarkurnool"),
+    ("Plant Pathology", "PhD Plant Pathology", "Madhira"),
+    ("Plant Diseases", "PhD Plant Virology", "Nirmal"),
+    ("Plant Pathology", "MSc Plant Pathology", "Miryalaguda"),
+    ("Plant Disease Diagnosis", "PhD Plant Pathology", "Wanaparthy"),
+    ("Plant Pathology", "PhD Mycology", "Devarakonda"),
+    ("Plant Diseases & Virology", "PhD Plant Virology", "Bhongir"),
+    ("Pest Management", "MSc Entomology", "Kalwakurthy"),
+    ("Plant Protection", "PhD Insect Ecology", "Kothagudem"),
+    ("Integrated Pest Management", "PhD Entomology", "Nakrekal"),
+    ("Pest & Disease Control", "MSc Plant Protection", "Sathupalli"),
+    ("Plant Protection", "PhD Nematology", "Ibrahimpatnam"),
+    ("Pest Scouting & IPM", "MSc Entomology", "Tandur"),
+    ("Pest & Disease Management", "PhD Entomology", "Palwancha"),
+    ("Pest Control", "MSc Agricultural Entomology", "Armoor"),
+    ("Horticulture", "PhD Horticulture", "Chevella"),
+    ("Fruit Science", "PhD Fruit Science", "Peddapalli"),
+    ("Vegetable Science", "PhD Vegetable Science", "Jangaon"),
+    ("Horticulture", "MSc Horticulture", "Shadnagar"),
+    ("Orchards & Fruit Crops", "PhD Pomology", "Medchal"),
+    ("Spices & Plantations", "PhD Spice Crop Science", "Yellandu"),
+    ("Organic Farming", "PhD Organic Agriculture", "Alampur"),
+    ("Natural Farming", "MSc Natural Farming", "Kukatpally"),
+    ("Organic Farming & Certification", "PhD Agroecology", "Jainoor"),
+    ("Natural Farming", "MSc Organic Agriculture", "Metpally"),
+    ("Organic Farming", "PhD Soil Ecology", "Dubbaka"),
+    ("Zero Budget Natural Farming", "MSc Natural Farming", "Kaddam"),
+    ("Irrigation Management", "MTech Irrigation Engineering", "Mancherial"),
+    ("Water Management", "MTech Water Resources", "Kodad"),
+    ("Micro-Irrigation", "MTech Irrigation Engineering", "Medak"),
+    ("Irrigation Scheduling", "PhD Water Management", "Gajwel"),
+    ("Water Management", "MTech Hydrology", "Narsapur"),
+    ("Drip & Sprinkler Systems", "BTech Agricultural Engineering", "Banswada"),
+    ("Irrigation & Water Conservation", "MTech Irrigation Engineering", "Sangareddy"),
+    ("Fertilizer Management", "PhD Soil Chemistry", "Mulugu"),
+    ("Plant Nutrition", "PhD Plant Physiology", "Choutuppal"),
+    ("Fertilizer & Nutrition", "MSc Soil Science", "Medipally"),
+    ("Micronutrient Management", "PhD Soil Chemistry", "Vemulawada"),
+    ("Plant Nutrition", "PhD Biochemistry", "Pargi"),
+    ("Fertilizer Scheduling", "MSc Soil Fertility", "Sircilla"),
+    ("Fertilizer & Nutrition", "PhD Crop Nutrition", "Asifabad"),
+    ("Livestock Science", "MVSc Animal Science", "Narayanpet"),
+    ("Animal Husbandry", "MVSc Animal Reproduction", "Oglapur"),
+    ("Livestock & Poultry", "MVSc Poultry Science", "Kamareddy"),
+    ("Livestock Nutrition", "MVSc Animal Nutrition", "Thungaturthy"),
+    ("Livestock Health", "MVSc Veterinary Medicine", "Yellareddy"),
+    ("Animal Husbandry", "BVSc & AH", "Aswaraopeta"),
+    ("Dairy Science", "MVSc Dairy Science", "Chityal"),
+    ("Dairy Farming", "MVSc Dairy Technology", "Palakurthy"),
+    ("Dairy & Cattle Management", "BVSc & AH", "Motkur"),
+    ("Dairy Science", "PhD Dairy Science", "Ghatkesar"),
+    ("Agricultural Engineering", "MTech Farm Machinery", "Ameenpur"),
+    ("Farm Machinery", "BTech Agricultural Engineering", "Uppal"),
+    ("Precision Farming Technology", "MTech Precision Agriculture", "Regode"),
+    ("Agricultural Engineering", "MTech Power Systems", "Timmapur"),
+    ("Mechanisation Consultant", "BTech Agricultural Engineering", "Basara"),
+    ("Farm Management", "MBA Agri Business", "Shankarpally"),
+    ("Farm Operations", "MSc Agricultural Management", "Kutbullapur"),
+    ("Farm Management", "MBA Agri Management", "Palvoncha"),
+    ("Farm Planning & Budgeting", "MSc Farm Management", "Zaffargadh"),
+    ("Agri Business", "MBA Agri Business", "Cherial"),
+    ("Agribusiness Development", "MBA Rural Management", "Manuguru"),
+    ("Agri Marketing", "MBA Agri Marketing", "Kodimial"),
+    ("Agri Business", "MBA Agri Finance", "Bonakal"),
+    ("Market & Pricing", "MSc Agri Economics", "Kataram"),
+    ("Mandi Prices & Markets", "MSc Agri Economics", "Vemsoor"),
+    ("Market Intelligence", "MA Applied Economics", "Narasampet"),
+    ("Market & Pricing", "MSc Agri Economics", "Garla"),
+    ("Government Schemes", "MSc Agricultural Extension", "Chandampet"),
+    ("Subsidy & KCC Guidance", "MBA Rural Development", "Shamsabad"),
+    ("Government Schemes", "PhD Agricultural Policy", "Raikal"),
+    ("Crop Insurance & Schemes", "MSc Agricultural Extension", "Dornakal"),
+    ("Apiculture & Bee Keeping", "PhD Entomology", "Gollapally"),
+    ("Sericulture & Mulberry", "PhD Sericulture", "Palair"),
+    ("Mushroom Cultivation", "MSc Plant Pathology", "Achampet"),
+    ("Agro Climatic Forecasting", "PhD Agricultural Meteorology", "Sarangapuram"),
+    ("Agri Journalism & Extension", "MA Agricultural Extension", "Mallampet"),
+    ("Weed Management", "PhD Weed Science", "Pegadapally"),
+    ("Fishery & Aquaculture", "MVSc Aquaculture", "Mallapur"),
+)
+
+_EXTRA_LANGS = (
+    ["Telugu", "English"],
+    ["Telugu", "Hindi", "English"],
+    ["Hindi", "English"],
+    ["Telugu", "English"],
+)
+
+
+def _extend_catalog():
+    """Append a deterministic batch of experts to EXPERT_CATALOG."""
+    start = len(EXPERT_CATALOG)
+    for i, (speciality, qualification, city) in enumerate(_EXTRA_LINES):
+        idx = start + i + 1
+        availability = (i % 12) != 0
+        fee = 0 if i in (3, 27, 51, 78) else 250 + (i % 8) * 50
+        rating = round(4.0 + (i % 9) / 10, 1)
+        consults = 35 + ((i * 7) % 165)
+        years = 3 + (i % 13)
+        languages = list(_EXTRA_LANGS[i % len(_EXTRA_LANGS)])
+        bio = ("{0} specialist advising {1} farmers with practical, field-ready "
+               "recommendations, season planning and follow-up support.").format(speciality, city)
+        EXPERT_CATALOG.append(
+            ("FA-EXPT-" + str(idx).zfill(6), _EXTRA_NAMES[i], speciality, qualification,
+             years, city, fee, rating, consults, availability, languages, bio)
+        )
+
+
+_extend_catalog()
+
 
 def seed_experts(db: Session) -> int:
     """Create expert catalog entries that are not already present.
