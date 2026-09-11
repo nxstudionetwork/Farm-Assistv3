@@ -113,15 +113,6 @@
       </div>
     </div>
 
-    <!-- ============================== ELIGIBILITY MODAL ============================== -->
-    <div class="scheme-modal" id="eligModal" role="dialog" aria-modal="true" aria-labelledby="eligModalTitle" hidden>
-      <div class="scheme-modal-backdrop" data-close-elig></div>
-      <div class="scheme-modal-panel scheme-elig-panel" role="document">
-        <button type="button" class="scheme-modal-close" data-close-elig aria-label="Close eligibility checker"><i class="fas fa-times"></i></button>
-        <div id="eligModalBody"></div>
-      </div>
-    </div>
-
     <!-- ============================== APPLIED DRAWER ============================== -->
     <div class="scheme-modal" id="appliedModal" role="dialog" aria-modal="true" aria-labelledby="appliedModalTitle" hidden>
       <div class="scheme-modal-backdrop" data-close-applied></div>
@@ -705,8 +696,7 @@
           '</section>' +
 
           '<div class="scheme-detail-actions">' +
-            '<button type="button" class="scheme-card-btn primary" data-apply="' + esc(s.id) + '"><i class="fas ' + (State.appliedIds[s.id] ? 'fa-clipboard-check' : 'fa-paper-plane') + '"></i> ' + (State.appliedIds[s.id] ? 'View Application' : 'Apply Now') + '</button>' +
-            '<button type="button" class="scheme-card-btn ghost wide" data-elig="' + esc(s.id) + '"><i class="fas fa-user-check"></i> Check Eligibility</button>' +
+            '<button type="button" class="scheme-card-btn primary" data-apply="' + esc(s.id) + '"><i class="fas fa-paper-plane"></i> Apply Now</button>' +
             '<button type="button" class="scheme-card-btn ghost wide" data-share="' + esc(s.id) + '"><i class="fas fa-share-alt"></i> Share</button>' +
           '</div>' +
         '</div>';
@@ -782,8 +772,6 @@
       function bindDetailActions(s) {
         var applyBtn = document.querySelector('.scheme-detail-actions [data-apply]');
         if (applyBtn) applyBtn.addEventListener('click', function () { openApply(s); });
-        var eligBtn = document.querySelector('.scheme-detail-actions [data-elig]');
-        if (eligBtn) eligBtn.addEventListener('click', function () { openEligibility(s); });
         var shareBtn = document.querySelector('.scheme-detail-actions [data-share]');
         if (shareBtn) shareBtn.addEventListener('click', function () { shareScheme(s); });
 
@@ -826,184 +814,6 @@
         try { document.execCommand('copy'); showToast('Link copied to clipboard', 'success'); }
         catch (e) { showToast('Copy not supported', 'error'); }
         document.body.removeChild(ta);
-      }
-
-      // =====================================================================
-      // ELIGIBILITY CHECKER
-      // =====================================================================
-      function openEligibility(s) {
-        var modal = document.getElementById('eligModal');
-        var body = document.getElementById('eligModalBody');
-        modal.hidden = false;
-        lockScroll();
-        var u = (window.UserStore && UserStore.getCurrentUser()) || {};
-        var addr = (u.addresses && u.addresses[0]) || {};
-        var state = addr.state || '';
-        var crop = '';
-        if (u.preferred_crops && u.preferred_crops.length) crop = u.preferred_crops[0];
-
-        body.innerHTML =
-          '<div class="scheme-elig">' +
-            '<h3 id="eligModalTitle"><i class="fas fa-user-check"></i> Check Eligibility</h3>' +
-            '<p class="scheme-elig-sub">Answer a few questions about your farm to see which schemes you may qualify for.</p>' +
-            '<label class="scheme-field">Farmer Type' +
-              '<select id="eligFarmerType">' +
-                '<option value="Small and Marginal Farmer" ' + (u.farming_type === 'small' ? 'selected' : '') + '>Small / Marginal Farmer</option>' +
-                '<option value="Farmer" ' + (!u.farming_type || u.farming_type === 'large' ? 'selected' : '') + '>Farmer (Any type)</option>' +
-                '<option value="Tenant Farmer">Tenant Farmer</option>' +
-                '<option value="Women Farmer" ' + (u.gender === 'female' ? 'selected' : '') + '>Women Farmer</option>' +
-              '</select>' +
-            '</label>' +
-            '<label class="scheme-field">State' +
-              '<input type="text" id="eligState" value="' + esc(state) + '" placeholder="e.g. Maharashtra">' +
-            '</label>' +
-            '<label class="scheme-field">District' +
-              '<input type="text" id="eligDistrict" value="' + esc(addr.district || '') + '" placeholder="e.g. Pune">' +
-            '</label>' +
-            '<label class="scheme-field">Land Size (hectares)' +
-              '<input type="number" id="eligLand" step="0.1" min="0" value="' + esc(u.land_size || '') + '" placeholder="e.g. 2">' +
-            '</label>' +
-            '<label class="scheme-field">Primary Crop' +
-              '<input type="text" id="eligCrop" value="' + esc(crop) + '" placeholder="e.g. wheat, rice, cotton">' +
-            '</label>' +
-            '<label class="scheme-field">Annual Income Category' +
-              '<select id="eligIncome">' +
-                '<option value="Below 1 Lakh">Below 1 Lakh</option>' +
-                '<option value="1 - 2 Lakh">1 - 2 Lakh</option>' +
-                '<option value="2 - 5 Lakh">2 - 5 Lakh</option>' +
-                '<option value="Above 5 Lakh">Above 5 Lakh</option>' +
-              '</select>' +
-            '</label>' +
-            '<label class="scheme-field">Age' +
-              '<input type="number" id="eligAge" min="18" max="100" value="" placeholder="e.g. 40">' +
-            '</label>' +
-            '<button type="button" class="scheme-card-btn primary wide" id="eligSubmit"><i class="fas fa-search"></i> Check My Eligibility</button>' +
-            '<p class="scheme-elig-disclaimer">This check is an indicative guide based on the information you provide. Final eligibility is determined by the official scheme authority.</p>' +
-          '</div>';
-        focusTrap(modal);
-
-        document.getElementById('eligSubmit').addEventListener('click', function () {
-          var payload = {
-            farmer_type: document.getElementById('eligFarmerType').value,
-            state: document.getElementById('eligState').value.trim(),
-            district: document.getElementById('eligDistrict').value.trim(),
-            land_size_hectares: parseFloat(document.getElementById('eligLand').value) || undefined,
-            crop: document.getElementById('eligCrop').value.trim(),
-            income_category: document.getElementById('eligIncome').value,
-            age: parseInt(document.getElementById('eligAge').value, 10) || undefined
-          };
-          var submitBtn = this;
-          submitBtn.disabled = true;
-          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
-          API.GovernmentService.checkEligibility(payload).then(function (data) {
-            renderEligibilityResults(data, payload);
-          }).catch(function (err) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-search"></i> Check My Eligibility';
-            showToast((err && err.message) || 'Could not check eligibility', 'error');
-          });
-        });
-      }
-
-      function renderEligibilityResults(data, payload) {
-        var body = document.getElementById('eligModalBody');
-        var results = (data && data.results) || [];
-        var html = '<div class="scheme-elig">' +
-          '<h3><i class="fas fa-check-circle"></i> Eligibility Results</h3>' +
-          '<p class="scheme-elig-sub">Based on your details: ' + esc(payload.farmer_type || 'Farmer') + (payload.state ? ', ' + esc(payload.state) : '') + (payload.crop ? ', ' + esc(payload.crop) : '') + '.</p>';
-        var eligible = 0, partial = 0;
-        for (var i = 0; i < results.length; i++) {
-          var r = results[i];
-          var rElig = !!r.likely_eligible;
-          var rReasons = r.matching || r.match_reasons || [];
-          var cls = rElig ? 'eligible' : (rReasons.length ? 'partial' : 'noteligible');
-          if (rElig) eligible++;
-          else if (rReasons.length) partial++;
-          html += '<div class="scheme-elig-result ' + cls + '">' +
-            '<div class="scheme-elig-result-head">' +
-              '<span class="scheme-elig-result-icon"><i class="fas ' + (rElig ? 'fa-check' : 'fa-times') + '"></i></span>' +
-              '<div><strong>' + esc(r.name || r.scheme_name || 'Scheme') + '</strong>' +
-              '<span class="scheme-elig-result-label">' + (rElig ? 'Likely Eligible' : (rReasons.length ? 'Maybe Eligible' : 'Not Eligible')) + '</span></div>' +
-            '</div>' +
-            (rReasons.length ? '<ul class="scheme-elig-reasons">' + rReasons.map(function (m) { return '<li><i class="fas fa-chevron-circle-right"></i> ' + esc(m) + '</li>'; }).join('') + '</ul>' : '') +
-            (r.scheme_id || r.id ? '<button type="button" class="scheme-elig-view" data-elig-view="' + esc(r.scheme_id || r.id) + '">View Details</button>' : '') +
-          '</div>';
-        }
-        html += '<p class="scheme-elig-disclaimer">' + esc((data && data.disclaimer) || 'This is an indicative guide only. Final eligibility is determined by the official scheme authority.') + '</p>' +
-          '<div class="scheme-elig-summary">' +
-            '<span class="eligible"><i class="fas fa-check-circle"></i> ' + eligible + ' likely eligible</span>' +
-            '<span class="partial"><i class="fas fa-info-circle"></i> ' + partial + ' maybe eligible</span>' +
-          '</div>' +
-          '<button type="button" class="scheme-card-btn ghost wide" id="eligBack"><i class="fas fa-arrow-left"></i> Adjust Answers</button>' +
-        '</div>';
-        body.innerHTML = html;
-
-        var eligViews = body.querySelectorAll('[data-elig-view]');
-        for (var i2 = 0; i2 < eligViews.length; i2++) {
-          eligViews[i2].addEventListener('click', function () {
-            var rid = this.getAttribute('data-elig-view');
-            document.getElementById('eligModal').hidden = true;
-            unlockScroll();
-            openDetails(rid);
-          });
-        }
-        document.getElementById('eligBack').addEventListener('click', function () {
-          renderEligibilityFormBack(payload);
-        });
-      }
-
-      function renderEligibilityFormBack(payload) {
-        var body = document.getElementById('eligModalBody');
-        // Re-open form with previous answers
-        openEligibilityForm(payload);
-      }
-
-      function openEligibilityForm(payload) {
-        var body = document.getElementById('eligModalBody');
-        var p = payload || {};
-        body.innerHTML =
-          '<div class="scheme-elig">' +
-            '<h3><i class="fas fa-user-check"></i> Check Eligibility</h3>' +
-            '<p class="scheme-elig-sub">Answer a few questions about your farm to see which schemes you may qualify for.</p>' +
-            '<label class="scheme-field">Farmer Type<select id="eligFarmerType">' +
-              '<option value="Small and Marginal Farmer" ' + (p.farmer_type === 'Small and Marginal Farmer' ? 'selected' : '') + '>Small / Marginal Farmer</option>' +
-              '<option value="Farmer" ' + (p.farmer_type === 'Farmer' ? 'selected' : '') + '>Farmer (Any type)</option>' +
-              '<option value="Tenant Farmer" ' + (p.farmer_type === 'Tenant Farmer' ? 'selected' : '') + '>Tenant Farmer</option>' +
-              '<option value="Women Farmer" ' + (p.farmer_type === 'Women Farmer' ? 'selected' : '') + '>Women Farmer</option></select></label>' +
-            '<label class="scheme-field">State<input type="text" id="eligState" value="' + esc(p.state || '') + '"></label>' +
-            '<label class="scheme-field">District<input type="text" id="eligDistrict" value="' + esc(p.district || '') + '"></label>' +
-            '<label class="scheme-field">Land Size (hectares)<input type="number" id="eligLand" step="0.1" min="0" value="' + esc(p.land_size_hectares || '') + '"></label>' +
-            '<label class="scheme-field">Primary Crop<input type="text" id="eligCrop" value="' + esc(p.crop || '') + '"></label>' +
-            '<label class="scheme-field">Annual Income Category<select id="eligIncome">' +
-              '<option value="Below 1 Lakh" ' + (p.income_category === 'Below 1 Lakh' ? 'selected' : '') + '>Below 1 Lakh</option>' +
-              '<option value="1 - 2 Lakh" ' + (p.income_category === '1 - 2 Lakh' ? 'selected' : '') + '>1 - 2 Lakh</option>' +
-              '<option value="2 - 5 Lakh" ' + (p.income_category === '2 - 5 Lakh' ? 'selected' : '') + '>2 - 5 Lakh</option>' +
-              '<option value="Above 5 Lakh" ' + (p.income_category === 'Above 5 Lakh' ? 'selected' : '') + '>Above 5 Lakh</option></select></label>' +
-            '<label class="scheme-field">Age<input type="number" id="eligAge" min="18" max="100" value="' + esc(p.age || '') + '"></label>' +
-            '<button type="button" class="scheme-card-btn primary wide" id="eligSubmit"><i class="fas fa-search"></i> Check My Eligibility</button>' +
-            '<p class="scheme-elig-disclaimer">This check is an indicative guide based on the information you provide. Final eligibility is determined by the official scheme authority.</p>' +
-          '</div>';
-        document.getElementById('eligSubmit').addEventListener('click', function () {
-          var payload = {
-            farmer_type: document.getElementById('eligFarmerType').value,
-            state: document.getElementById('eligState').value.trim(),
-            district: document.getElementById('eligDistrict').value.trim(),
-            land_size_hectares: parseFloat(document.getElementById('eligLand').value) || undefined,
-            crop: document.getElementById('eligCrop').value.trim(),
-            income_category: document.getElementById('eligIncome').value,
-            age: parseInt(document.getElementById('eligAge').value, 10) || undefined
-          };
-          var submitBtn = this;
-          submitBtn.disabled = true;
-          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
-          API.GovernmentService.checkEligibility(payload).then(function (data) {
-            renderEligibilityResults(data, payload);
-          }).catch(function (err) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-search"></i> Check My Eligibility';
-            showToast((err && err.message) || 'Could not check eligibility', 'error');
-          });
-        });
       }
 
       // =====================================================================
@@ -1055,11 +865,6 @@
             }
           });
         });
-      }
-
-      function updateDetailApplyBtn(id) {
-        var btn = document.querySelector('.scheme-detail-actions [data-apply]');
-        if (btn) btn.innerHTML = '<i class="fas fa-clipboard-check"></i> View Application';
       }
 
       // =====================================================================
@@ -1395,7 +1200,7 @@
         document.getElementById('schemesRefreshBtn').addEventListener('click', triggerSync);
 
         // Modal close buttons (backdrops + closes)
-        var closeSelectors = ['[data-close-modal]', '[data-close-elig]', '[data-close-applied]', '[data-close-apply]'];
+        var closeSelectors = ['[data-close-modal]', '[data-close-applied]', '[data-close-apply]'];
         closeSelectors.forEach(function (sel) {
           var els = document.querySelectorAll(sel);
           for (var j = 0; j < els.length; j++) els[j].addEventListener('click', closeAllModals);
