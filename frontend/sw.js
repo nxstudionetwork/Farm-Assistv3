@@ -1,4 +1,4 @@
-var CACHE_NAME = 'farm-assist-v12';
+var CACHE_NAME = 'farm-assist-v17';
 var STATIC_CACHE = CACHE_NAME + '-static';
 var IMAGE_CACHE = CACHE_NAME + '-images';
 var FONT_CACHE = CACHE_NAME + '-fonts';
@@ -180,9 +180,16 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  // Static assets: Cache first
+// Static assets: Cache first. JS/CSS are network-first so app code and style
+  // updates (services.js, schemes.css, etc.) are picked up instead of serving
+  // a stale cached copy.
   if (isSameOrigin(url) && !isNavigate) {
-    e.respondWith(cacheFirst(e.request, STATIC_CACHE));
+    var path = url.split('?')[0].toLowerCase();
+    if (path.indexOf('.js') === path.length - 3 || path.indexOf('.css') === path.length - 4) {
+      e.respondWith(networkFirst(e.request, STATIC_CACHE));
+    } else {
+      e.respondWith(cacheFirst(e.request, STATIC_CACHE));
+    }
     return;
   }
 

@@ -23,19 +23,47 @@
         </div>
       </header>
 
-      <!-- ============================== SEARCH + APPLIED ============================== -->
+      <!-- ============================== TOOLBAR (Filter + Applied) ============================== -->
       <div class="schemes-toolbar">
+        <button type="button" class="schemes-applied-btn schemes-filter-btn" id="filterToggleBtn" aria-expanded="false" aria-controls="filterPanel">
+          <i class="fas fa-filter" aria-hidden="true"></i>
+          <span>Filters</span>
+          <span class="schemes-filters-badge" id="filterActiveBadge" hidden><i class="fas fa-circle"></i></span>
+        </button>
+        <span class="schemes-toolbar-right">
+          <span class="schemes-lastupd" id="syncStatusWrap" hidden>
+            <i class="fa-solid fa-circle-check schemes-lastupd-icon" id="syncStatusIcon" aria-hidden="true"></i>
+            <span id="syncStatusText">Checking official sources...</span>
+          </span>
+          <button type="button" class="schemes-icon-btn" id="schemesRefreshBtn" aria-label="Refresh schemes from official sources" title="Refresh from official sources">
+            <i class="fas fa-rotate-right" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="schemes-applied-btn" id="appliedBtn" aria-label="My Applications">
+            <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+            <span>Applied</span>
+            <span class="schemes-applied-count" id="appliedCount" hidden>0</span>
+          </button>
+        </span>
+      </div>
+
+      <!-- ============================== FILTER PANEL (Search + State) ============================== -->
+      <div class="schemes-filter-panel" id="filterPanel" hidden>
         <div class="schemes-search">
           <i class="fas fa-search schemes-search-icon" aria-hidden="true"></i>
           <label class="sr-only" for="schemeSearchInput">Search government schemes</label>
           <input type="text" id="schemeSearchInput" class="schemes-search-input" placeholder="Search schemes, subsidies, crop support..." autocomplete="off" aria-label="Search government schemes">
           <button type="button" class="schemes-search-clear" id="schemeSearchClear" aria-label="Clear search" hidden><i class="fas fa-times-circle"></i></button>
         </div>
-        <button type="button" class="schemes-applied-btn" id="appliedBtn" aria-label="My Applications">
-          <i class="fas fa-clipboard-check" aria-hidden="true"></i>
-          <span>Applied</span>
-          <span class="schemes-applied-count" id="appliedCount" hidden>0</span>
-        </button>
+        <div class="schemes-filter-row">
+          <label class="schemes-filter-label" for="filterState">State</label>
+          <select id="filterState" class="schemes-filter-select" aria-label="Filter by state">
+            <option value="">All States</option>
+          </select>
+        </div>
+        <div class="schemes-filter-actions">
+          <button type="button" class="schemes-filter-apply" id="filterApply"><i class="fas fa-check"></i> Apply Filters</button>
+          <button type="button" class="schemes-filter-reset" id="filterReset"><i class="fas fa-undo"></i> Reset</button>
+        </div>
       </div>
 
       <!-- ============================== CATEGORY QUICK FILTERS ============================== -->
@@ -226,10 +254,10 @@
       function card(s, appliedIds) {
         var dl = deadlineInfo(s);
         var bf = benefitText(s);
-        var savings = '';
-        if (appliedIds && appliedIds[s.id]) {
-          savings = '<span class="schemes-card-saved"><i class="fas fa-check-circle"></i> Applied</span>';
-        }
+        var isApplied = !!(appliedIds && appliedIds[s.id]);
+        var secondary = isApplied
+          ? '<button type="button" class="scheme-card-btn ghost" data-appstatus="' + esc(s.id) + '"><i class="fas fa-clipboard-check"></i> Status</button>'
+          : '<button type="button" class="scheme-card-btn ghost" data-apply-card="' + esc(s.id) + '"><i class="fas fa-paper-plane"></i> Apply</button>';
         return '<article class="scheme-card" data-id="' + esc(s.id) + '">' +
           '<div class="scheme-card-top">' +
             statusBadge(s, appliedIds) +
@@ -245,10 +273,10 @@
           '</div>' +
           '<div class="scheme-card-actions">' +
             '<button type="button" class="scheme-card-btn primary" data-view="' + esc(s.id) + '"><i class="fas fa-arrow-right"></i> View Details</button>' +
-            '<button type="button" class="scheme-card-btn ghost" data-toggle-save="' + esc(s.id) + '" aria-label="' + (s.is_saved ? 'Unsave scheme' : 'Save scheme') + '">' +
+            secondary +
+            '<button type="button" class="scheme-card-btn subtle-ghost" data-toggle-save="' + esc(s.id) + '" aria-label="' + (s.is_saved ? 'Unsave scheme' : 'Save scheme') + '" title="' + (s.is_saved ? 'Unsave scheme' : 'Save scheme') + '">' +
               '<i class="fas ' + (s.is_saved ? 'fa-bookmark' : 'fa-bookmark-o') + '"></i></button>' +
           '</div>' +
-          (savings ? '<div class="scheme-card-applied-flag">' + savings + '</div>' : '') +
         '</article>';
       }
 
@@ -316,6 +344,7 @@
         all: [],
         search: '',
         category: '',
+        state: '',
         sort: 'recent',
         page: 1,
         limit: 12,
@@ -347,12 +376,13 @@
         Promise.resolve(saved || Promise.resolve({ items: [] })).then(function (r) {
           var items = (r && (r.items || r)) || [];
           if (Array.isArray(items)) {
+            State.savedAll = items;
             for (var i = 0; i < items.length; i++) {
               var s = items[i];
               if (s && s.id) State.savedIds[s.id] = true;
             }
           }
-          refreshAppliedFlag();
+          refreshAllGrids();
         }).catch(function () {});
 
         Promise.resolve(applied || Promise.resolve({ items: [] })).then(function (r) {
@@ -363,28 +393,29 @@
               if (a && (a.scheme_id || a.schemeId)) State.appliedIds[a.scheme_id || a.schemeId] = true;
             }
           }
-          var count = Object.keys(State.appliedIds).length;
-          var el = document.getElementById('appliedCount');
-          if (el) {
-            el.textContent = count;
-            el.hidden = count === 0;
-          }
-          refreshAppliedFlag();
+          updateAppliedCount();
+          refreshAllGrids();
         }).catch(function () {});
       }
 
-      function refreshAppliedFlag() {
-        var cards = document.querySelectorAll('#schemesGrid .scheme-card, #recommendedGrid .scheme-card');
-        for (var i = 0; i < cards.length; i++) {
-          var id = cards[i].getAttribute('data-id');
-          if (id && State.appliedIds[id]) {
-            if (!cards[i].querySelector('.scheme-card-applied-flag')) {
-              var flag = document.createElement('div');
-              flag.className = 'scheme-card-applied-flag';
-              flag.innerHTML = '<i class="fas fa-check-circle"></i> Applied';
-              cards[i].appendChild(flag);
-            }
-          }
+      function updateAppliedCount() {
+        var count = Object.keys(State.appliedIds).length;
+        var el = document.getElementById('appliedCount');
+        if (el) {
+          el.textContent = count;
+          el.hidden = count === 0;
+        }
+      }
+
+      function refreshAllGrids() {
+        grid(document.getElementById('schemesGrid'), State.all, State.appliedIds);
+        bindCardEvents(document.getElementById('schemesGrid'));
+        grid(document.getElementById('recommendedGrid'), State.recommended, State.appliedIds);
+        bindCardEvents(document.getElementById('recommendedGrid'));
+        var savedData = State.savedAll;
+        if (savedData) {
+          grid(document.getElementById('savedGrid'), savedData, State.appliedIds);
+          bindCardEvents(document.getElementById('savedGrid'));
         }
       }
 
@@ -392,11 +423,14 @@
         if (reset) { State.page = 1; State.failCount = 0; }
         var gridEl = document.getElementById('schemesGrid');
         var requestId = ++State.loadRequest;
-        if (State.page === 1) renderSkeletons(gridEl, 4);
+        // Skip skeletons when we already rendered a fast client-side preview
+        // (active search with cards on screen) to avoid flashing over results.
+        if (State.page === 1 && !((State.search || State.state) && gridEl.querySelector('.scheme-card'))) renderSkeletons(gridEl, 4);
 
         var params = { limit: State.limit, page: State.page };
         if (State.search) params.search = State.search;
         if (State.category) params.category = State.category;
+        if (State.state) params.state = State.state;
         if (State.sort) params.sort = State.sort;
 
         API.GovernmentService.listSchemes(params).then(function (data) {
@@ -421,8 +455,8 @@
           }
 
           if (!State.all.length) {
-            if (State.search || State.category) {
-              state(gridEl, 'fa-search-minus', 'No schemes found', 'Try another scheme name, crop, category or keyword.');
+            if (State.search || State.category || State.state) {
+              state(gridEl, 'fa-search-minus', 'No schemes found', 'Try another scheme name, crop, category, state or keyword.');
             } else {
               state(gridEl, 'fa-inbox', 'No schemes available', 'Government schemes will appear here when available.');
             }
@@ -452,6 +486,7 @@
         API.GovernmentService.recommended({ limit: 3 }).then(function (data) {
           var items = (data && data.items) || [];
           if (!items.length) return;
+          State.recommended = items;
           sec.hidden = false;
           grid(document.getElementById('recommendedGrid'), items, State.appliedIds);
           bindCardEvents(document.getElementById('recommendedGrid'));
@@ -474,20 +509,36 @@
         }).catch(function () {});
       }
 
+      function loadStateFilter() {
+        var stateSelect = document.getElementById('filterState');
+        if (!stateSelect || !API.GovernmentService.states) return;
+        API.GovernmentService.states().then(function (data) {
+          var states = (data && data.states) || [];
+          var html = '<option value="">All States</option>';
+          for (var i = 0; i < states.length; i++) {
+            var label = states[i].name + (states[i].count ? ' (' + states[i].count + ')' : '');
+            html += '<option value="' + esc(states[i].name) + '">' + esc(label) + '</option>';
+          }
+          stateSelect.innerHTML = html;
+          if (State.state) stateSelect.value = State.state;
+        }).catch(function () {
+          // Leave the default "All States" option when the states lookup fails.
+        });
+      }
+
       function loadSaved() {
         var sec = document.getElementById('savedSection');
         var gridEl = document.getElementById('savedGrid');
         if (!API.GovernmentService.savedSchemes) return;
         API.GovernmentService.savedSchemes({ limit: 100 }).then(function (data) {
           var items = (data && data.items) || [];
+          State.savedAll = items;
           if (!items.length) {
             sec.hidden = true;
             return;
           }
           sec.hidden = false;
-          var html = '';
-          for (var i = 0; i < items.length; i++) html += card(items[i], State.appliedIds);
-          gridEl.innerHTML = html;
+          grid(gridEl, items, State.appliedIds);
           bindCardEvents(gridEl);
         }).catch(function () {
           sec.hidden = true;
@@ -501,8 +552,12 @@
         if (!scope) return;
         var views = scope.querySelectorAll('.scheme-card-btn.primary[data-view]');
         for (var i = 0; i < views.length; i++) views[i].addEventListener('click', onViewDetail);
-        var saves = scope.querySelectorAll('.scheme-card-btn.ghost[data-toggle-save]');
+        var saves = scope.querySelectorAll('.scheme-card-btn[data-toggle-save]');
         for (var j = 0; j < saves.length; j++) saves[j].addEventListener('click', onToggleSave);
+        var applies = scope.querySelectorAll('.scheme-card-btn[data-apply-card]');
+        for (var k = 0; k < applies.length; k++) applies[k].addEventListener('click', onCardApply);
+        var statuses = scope.querySelectorAll('.scheme-card-btn[data-appstatus]');
+        for (var m = 0; m < statuses.length; m++) statuses[m].addEventListener('click', onAppStatus);
       }
 
       function bindDelegatedEvents() {
@@ -525,43 +580,57 @@
         toggleSave(id, !saved);
       }
 
+      function onCardApply(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var id = e.currentTarget.getAttribute('data-apply-card');
+        var s = findScheme(id);
+        if (s) openApply(s);
+      }
+
+      function onAppStatus(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openApplied();
+      }
+
+      function findScheme(id) {
+        var lists = [State.all, State.recommended, State.savedAll];
+        for (var i = 0; i < lists.length; i++) {
+          var arr = lists[i];
+          if (!arr) continue;
+          for (var j = 0; j < arr.length; j++) {
+            if (arr[j] && (arr[j].id === id || arr[j].scheme_id === id)) return arr[j];
+          }
+        }
+        return null;
+      }
+
       // =====================================================================
       // SAVE / UNSAVE
       // =====================================================================
       function toggleSave(id, saving) {
-        var card = document.querySelector('[data-id="' + id + '"]');
         if (!API.GovernmentService) return;
         var p = saving ? API.GovernmentService.saveScheme(id) : API.GovernmentService.unsaveScheme(id);
         p.then(function () {
           if (saving) State.savedIds[id] = true;
           else delete State.savedIds[id];
-          if (card) {
-            var btn = card.querySelector('.scheme-card-btn.ghost');
-            if (btn) {
-              var ic = btn.querySelector('i');
-              if (ic) ic.className = 'fas ' + (saving ? 'fa-bookmark' : 'fa-bookmark-o');
-              btn.setAttribute('aria-label', saving ? 'Unsave scheme' : 'Save scheme');
-              if (!saving) {
-                var bm = card.querySelector('.schemes-card-bookmarked');
-                if (bm) bm.parentNode && card.querySelector('.scheme-card-top').removeChild(bm);
-              } else {
-                var top = card.querySelector('.scheme-card-top');
-                if (top && !card.querySelector('.schemes-card-bookmarked')) {
-                  var sp = document.createElement('span');
-                  sp.className = 'schemes-card-bookmarked';
-                  sp.title = 'Saved';
-                  sp.innerHTML = '<i class="fas fa-bookmark"></i>';
-                  top.appendChild(sp);
-                }
-              }
-            }
-          }
+          markSavings(State.all);
+          markSavings(State.recommended);
+          refreshAllGrids();
           showToast(saving ? 'Scheme saved' : 'Scheme removed from saved', saving ? 'success' : 'info');
           if (!saving) loadSaved();
         }).catch(function (err) {
           var msg = (err && err.message) || 'Could not update saved schemes';
           showToast(msg, 'error');
         });
+      }
+
+      function markSavings(list) {
+        if (!list) return;
+        for (var i = 0; i < list.length; i++) {
+          if (list[i]) list[i].is_saved = !!State.savedIds[list[i].id];
+        }
       }
 
       // =====================================================================
@@ -571,7 +640,7 @@
         var modal = document.getElementById('schemeModal');
         var body = document.getElementById('schemeModalBody');
         modal.hidden = false;
-        document.body.classList.add('modal-open');
+        lockScroll();
         body.innerHTML =
           '<div class="scheme-detail-loading"><div class="skeleton-loader" style="height:20px;width:60%;border-radius:6px;"></div>' +
           '<div class="skeleton-loader" style="height:14px;width:80%;margin-top:12px;border-radius:6px;"></div>' +
@@ -766,7 +835,7 @@
         var modal = document.getElementById('eligModal');
         var body = document.getElementById('eligModalBody');
         modal.hidden = false;
-        document.body.classList.add('modal-open');
+        lockScroll();
         var u = (window.UserStore && UserStore.getCurrentUser()) || {};
         var addr = (u.addresses && u.addresses[0]) || {};
         var state = addr.state || '';
@@ -874,7 +943,7 @@
           eligViews[i2].addEventListener('click', function () {
             var rid = this.getAttribute('data-elig-view');
             document.getElementById('eligModal').hidden = true;
-            document.body.classList.remove('modal-open');
+            unlockScroll();
             openDetails(rid);
           });
         }
@@ -949,7 +1018,7 @@
         var modal = document.getElementById('applyModal');
         var body = document.getElementById('applyModalBody');
         modal.hidden = false;
-        document.body.classList.add('modal-open');
+        lockScroll();
         body.innerHTML =
           '<div class="scheme-apply">' +
             '<h3 id="applyModalTitle"><i class="fas fa-paper-plane"></i> Apply for Scheme</h3>' +
@@ -965,14 +1034,10 @@
           btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
           API.GovernmentService.applyScheme(s.id).then(function (data) {
             State.appliedIds[s.id] = true;
-            var count = Object.keys(State.appliedIds).length;
-            var el = document.getElementById('appliedCount');
-            if (el) { el.textContent = count; el.hidden = count === 0; }
-            modal.hidden = true;
-            document.body.classList.remove('modal-open');
-            refreshAppliedFlag();
-            updateDetailApplyBtn(s.id);
-            showToast('Application submitted successfully', 'success');
+            updateAppliedCount();
+            closeAllModals();
+            refreshAllGrids();
+            showToast((data && data.message) || 'Application submitted successfully', 'success');
             openApplied();
           }).catch(function (err) {
             btn.disabled = false;
@@ -980,8 +1045,10 @@
             var msg = (err && err.message) || 'Could not submit application';
             if (msg.toLowerCase().indexOf('already') >= 0) {
               State.appliedIds[s.id] = true;
-              modal.hidden = true;
-              document.body.classList.remove('modal-open');
+              updateAppliedCount();
+              closeAllModals();
+              refreshAllGrids();
+              showToast('You have already applied to this scheme', 'info');
               openApplied();
             } else {
               showToast(msg, 'error');
@@ -1002,7 +1069,7 @@
         var modal = document.getElementById('appliedModal');
         var body = document.getElementById('appliedModalBody');
         modal.hidden = false;
-        document.body.classList.add('modal-open');
+        lockScroll();
         body.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-spinner fa-spin"></i></div><h4>Loading applications...</h4></div>';
         focusTrap(modal);
 
@@ -1027,19 +1094,42 @@
           for (var j = 0; j < closeBtns.length; j++) {
             closeBtns[j].addEventListener('click', function () {
               modal.hidden = true;
-              document.body.classList.remove('modal-open');
+              unlockScroll();
               var sec = document.getElementById('recommendedSection');
               if (sec && sec.hidden === false) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
               else document.getElementById('page-content') && document.getElementById('page-content').scrollIntoView({ behavior: 'smooth' });
             });
+          }
+          var viewRows = body.querySelectorAll('[data-app-view]');
+          for (var r = 0; r < viewRows.length; r++) {
+            applyAppViewBinding(viewRows[r], modal);
           }
         }).catch(function (err) {
           body.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
             '<h4>Unable to load applications</h4><p>' + esc((err && err.message) || 'Something went wrong.') + '</p>' +
             '<button type="button" class="schemes-state-btn" data-close-applied>Close</button></div>';
           var cb = body.querySelector('[data-close-applied]');
-          if (cb) cb.addEventListener('click', function () { modal.hidden = true; document.body.classList.remove('modal-open'); });
+          if (cb) cb.addEventListener('click', function () { modal.hidden = true; unlockScroll(); });
         });
+      }
+
+      function applyAppViewBinding(row, modal) {
+        var open = function () {
+          var sid = row.getAttribute('data-app-view');
+          if (!sid) return;
+          modal.hidden = true;
+          unlockScroll();
+          openDetails(sid);
+        };
+        row.addEventListener('click', function (e) {
+          if (e.target.closest('[data-app-view-btn]')) return;
+          open();
+        });
+        row.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+        });
+        var btn = row.querySelector('[data-app-view-btn]');
+        if (btn) btn.addEventListener('click', function (e) { e.stopPropagation(); open(); });
       }
 
       function applicationRow(a) {
@@ -1055,7 +1145,8 @@
 
         var ref = txt(a.application_id || a.reference_id || a.id || '');
         var name = txt(a.scheme_name || a.scheme || 'Scheme');
-        return '<div class="scheme-app-row">' +
+        var sid = a.scheme_id || a.schemeId || '';
+        return '<div class="scheme-app-row" data-app-view="' + esc(sid) + '" role="button" tabindex="0" aria-label="View details for ' + esc(name) + '" title="View scheme details">' +
           '<div class="scheme-app-statusicon ' + statusCls + '"><i class="fas ' + statusIcon + '"></i></div>' +
           '<div class="scheme-app-main">' +
             '<strong class="scheme-app-name">' + name + '</strong>' +
@@ -1065,6 +1156,7 @@
           '<div class="scheme-app-side">' +
             '<span class="scheme-app-status ' + statusCls + '"><i class="fas ' + statusIcon + '"></i> ' + status + '</span>' +
             '<span class="scheme-app-updated">' + (a.updated_at ? 'Updated ' + esc(fmtDate(a.updated_at)) : '') + '</span>' +
+            '<button type="button" class="scheme-app-view" data-app-view-btn="' + esc(sid) + '" aria-label="View details for ' + esc(name) + '"><i class="fas fa-arrow-right"></i> View Details</button>' +
           '</div>' +
         '</div>';
       }
@@ -1077,12 +1169,55 @@
         if (focusables.length) focusables[0].focus();
       }
 
+      function lockScroll() {
+        document.body.classList.add('modal-open');
+        document.documentElement.classList.add('modal-open');
+        var pc = document.getElementById('page-content');
+        if (pc) pc.style.overflow = 'hidden';
+        // Cancel any in-flight smooth-scroll animation (e.g. from an element
+        // scrollIntoView or our own scrollTo) so the page cannot continue
+        // drifting after the dialog opens.
+        var prev = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = 'auto';
+        window.scrollTo(0, window.scrollY);
+        document.documentElement.style.scrollBehavior = prev;
+      }
+
+      function unlockScroll() {
+        document.body.classList.remove('modal-open');
+        document.documentElement.classList.remove('modal-open');
+        var pc = document.getElementById('page-content');
+        if (pc) pc.style.overflow = '';
+      }
+
+      // Belt-and-suspenders guard: while any dialog is open, wheel deltas are
+      // clamped to the visible panel and never chain to the page scroller
+      // behind the modal (CSS overscroll-behavior is not reliable for large
+      // deltas in Chromium).
+      document.addEventListener('wheel', function (e) {
+        var modals = document.querySelectorAll('.scheme-modal');
+        for (var i = 0; i < modals.length; i++) {
+          if (modals[i].hidden) continue;
+          var panel = e.target && e.target.closest ? e.target.closest('.scheme-modal-panel') : null;
+          if (panel) {
+            var max = panel.scrollHeight - panel.clientHeight;
+            if (max > 0) {
+              var next = panel.scrollTop + e.deltaY;
+              next = Math.max(0, Math.min(max, next));
+              panel.scrollTop = next;
+            }
+          }
+          e.preventDefault();
+          return;
+        }
+      }, { passive: false });
+
       function closeAllModals() {
         var modals = document.querySelectorAll('.scheme-modal');
         for (var i = 0; i < modals.length; i++) {
           modals[i].hidden = true;
         }
-        document.body.classList.remove('modal-open');
+        unlockScroll();
       }
 
       // =====================================================================
@@ -1092,25 +1227,137 @@
         // Search
         var searchInput = document.getElementById('schemeSearchInput');
         var clearBtn = document.getElementById('schemeSearchClear');
+        var filterBtn = document.getElementById('filterToggleBtn');
+        var filterPanel = document.getElementById('filterPanel');
+        var stateSelect = document.getElementById('filterState');
         var debounceTimer = null;
 
+        function updateActiveFilters() {
+          var active = Boolean(State.search || State.state || State.category);
+          var badge = document.getElementById('filterActiveBadge');
+          if (badge) badge.hidden = !active;
+          if (filterBtn) {
+            filterBtn.classList.toggle('is-active', active);
+            filterBtn.setAttribute('aria-expanded', filterPanel ? String(!filterPanel.hidden) : 'false');
+          }
+        }
+
         function doSearch() {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
           State.search = searchInput.value.trim();
           clearBtn.hidden = searchInput.value.length === 0;
           loadSchemes(true);
+          updateActiveFilters();
         }
 
         searchInput.addEventListener('input', function () {
           clearBtn.hidden = this.value.length === 0;
           clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(doSearch, 350);
+          // Preview results instantly from already-loaded data, then let the
+          // server response replace them with authoritative matches.
+          State.search = this.value.trim();
+          var isPreview = Boolean(State.search || State.state || State.category);
+          if (isPreview) {
+            var local = [];
+            for (var i = 0; i < State.all.length; i++) {
+              var s = State.all[i];
+              var catMatch = true;
+              if (State.category) {
+                var catL = String(State.category).toLowerCase();
+                if (catL === 'central' || catL === 'central schemes') catMatch = (s.level || '').toLowerCase() === 'central';
+                else if (catL === 'state' || catL === 'state schemes') catMatch = (s.level || '').toLowerCase() === 'state';
+                else catMatch = (s.category || '').toLowerCase().indexOf(catL) !== -1;
+              }
+              if (!catMatch) continue;
+              if (State.state && (s.state || '').toLowerCase().indexOf(State.state.toLowerCase()) === -1) continue;
+              if (!State.search) { local.push(s); continue; }
+              var hay = ((s.name || '') + ' ' + (s.description || '') + ' ' + (s.department || '') + ' ' +
+                (s.category || '') + ' ' + (s.state || '') + ' ' + (s.crop || '') + ' ' +
+                (s.benefit_type || '') + ' ' + (s.benefits || '') + ' ' + (s.eligibility || '')).toLowerCase();
+              if (hay.indexOf(State.search.toLowerCase()) !== -1) local.push(s);
+            }
+            var gridEl = document.getElementById('schemesGrid');
+            if (gridEl) {
+              if (local.length) {
+                grid(gridEl, local, State.appliedIds);
+                bindCardEvents(gridEl);
+                document.getElementById('schemesTotal').textContent = '(' + local.length + ')';
+              } else {
+                state(gridEl, 'fa-search-minus', 'No schemes found', 'Try another scheme name, crop, category or keyword.');
+              }
+            }
+          }
+          debounceTimer = setTimeout(doSearch, 250);
+        });
+        searchInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            doSearch();
+          }
+          if (e.key === 'Escape' && this.value) {
+            this.value = '';
+            clearBtn.hidden = true;
+            State.search = '';
+            loadSchemes(true);
+            updateActiveFilters();
+          }
         });
         clearBtn.addEventListener('click', function () {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
           searchInput.value = '';
           clearBtn.hidden = true;
           State.search = '';
           loadSchemes(true);
+          updateActiveFilters();
           searchInput.focus();
+        });
+
+        // Filter toggle
+        filterBtn.addEventListener('click', function () {
+          var willOpen = filterPanel.hidden;
+          filterPanel.hidden = !willOpen;
+          updateActiveFilters();
+          if (willOpen) {
+            setTimeout(function () { searchInput.focus(); }, 60);
+          }
+        });
+
+        // State filter
+        stateSelect.addEventListener('change', function () {
+          State.state = this.value;
+          updateActiveFilters();
+        });
+
+        // Apply Filters button
+        document.getElementById('filterApply').addEventListener('click', function () {
+          State.search = searchInput.value.trim();
+          clearBtn.hidden = searchInput.value.length === 0;
+          State.state = stateSelect.value;
+          updateActiveFilters();
+          loadSchemes(true);
+          filterPanel.hidden = true;
+          filterBtn.setAttribute('aria-expanded', 'false');
+        });
+
+        // Reset filters
+        document.getElementById('filterReset').addEventListener('click', function () {
+          searchInput.value = '';
+          clearBtn.hidden = true;
+          stateSelect.value = '';
+          State.search = '';
+          State.state = '';
+          State.category = '';
+          var all = document.querySelectorAll('.schemes-cat-chip');
+          for (var i = 0; i < all.length; i++) {
+            all[i].classList.remove('is-active');
+            all[i].setAttribute('aria-pressed', 'false');
+            if (all[i].getAttribute('data-cat') === '') all[i].classList.add('is-active');
+          }
+          filterPanel.hidden = true;
+          updateActiveFilters();
+          loadSchemes(true);
         });
 
         // Sort
@@ -1137,11 +1384,15 @@
           chip.classList.add('is-active');
           chip.setAttribute('aria-pressed', 'true');
           State.category = chip.getAttribute('data-cat') || '';
+          updateActiveFilters();
           loadSchemes(true);
         });
 
         // Applied button
         document.getElementById('appliedBtn').addEventListener('click', openApplied);
+
+        // Refresh from official sources
+        document.getElementById('schemesRefreshBtn').addEventListener('click', triggerSync);
 
         // Modal close buttons (backdrops + closes)
         var closeSelectors = ['[data-close-modal]', '[data-close-elig]', '[data-close-applied]', '[data-close-apply]'];
@@ -1150,10 +1401,19 @@
           for (var j = 0; j < els.length; j++) els[j].addEventListener('click', closeAllModals);
         });
 
-        // Escape key
+        // Escape key: close dialogs first, then the filter panel, then blur.
         document.addEventListener('keydown', function (e) {
           if (e.key === 'Escape') {
-            closeAllModals();
+            var modals = document.querySelectorAll('.scheme-modal');
+            var anyOpen = false;
+            for (var mi = 0; mi < modals.length; mi++) { if (!modals[mi].hidden) { anyOpen = true; break; } }
+            if (anyOpen) {
+              closeAllModals();
+            } else if (!filterPanel.hidden) {
+              filterPanel.hidden = true;
+              filterBtn.setAttribute('aria-expanded', 'false');
+              updateActiveFilters();
+            }
             if (document.activeElement && document.activeElement.id === 'schemeSearchInput') {
               document.activeElement.blur();
             }
@@ -1161,16 +1421,147 @@
         });
       }
 
-      function init() {
-        if (!window.API || !API.GovernmentService) return;
-        if (!UserStore.isLoggedIn()) {
-          // still allow browsing; guard handled elsewhere
+      // =====================================================================
+      // OFFICIAL SOURCE STATUS + REFRESH
+      // =====================================================================
+      function syncLabel(info) {
+        var label = (info && info.label) || 'unavailable';
+        var text = '';
+        var cls = '';
+        var icon = 'fa-circle-check';
+        var lastAt = info && info.last_sync && info.last_sync.synced_at;
+        var when = lastAt ? fmtDateTime(lastAt) : 'never';
+        switch (label) {
+          case 'live':
+            text = 'Live · verified ' + when;
+            cls = '';
+            icon = 'fa-circle-check';
+            break;
+          case 'latest':
+            text = 'Verified ' + when;
+            cls = 'is-muted';
+            icon = 'fa-circle-check';
+            break;
+          case 'stale':
+            text = 'Updated ' + when + ' · refresh available';
+            cls = 'is-warn';
+            icon = 'fa-circle-exclamation';
+            break;
+          case 'not_configured':
+            text = 'Official sync not configured on server';
+            cls = 'is-muted';
+            icon = 'fa-circle-info';
+            break;
+          default:
+            text = 'Official sources unavailable · showing stored catalog';
+            cls = 'is-warn';
+            icon = 'fa-triangle-exclamation';
         }
-        wireEvents();
-        loadCategories();
-        loadSchemes(true);
-        loadTokenStores();
-        loadSaved();
+        return { text: text, cls: cls, icon: icon };
+      }
+
+      function fmtDateTime(iso) {
+        try {
+          var d = new Date(iso);
+          if (isNaN(d.getTime())) return iso;
+          var day = String(d.getDate()).padStart(2, '0');
+          var mon = String(d.getMonth() + 1).padStart(2, '0');
+          var hr = String(d.getHours()).padStart(2, '0');
+          var min = String(d.getMinutes()).padStart(2, '0');
+          return day + '/' + mon + '/' + d.getFullYear() + ' ' + hr + ':' + min;
+        } catch (e) { return iso; }
+      }
+
+      function loadSyncStatus(autoRefresh) {
+        if (!window.API || !API.GovernmentService || !API.GovernmentService.syncStatus) return;
+        API.GovernmentService.syncStatus().then(function (info) {
+          var wrap = document.getElementById('syncStatusWrap');
+          if (wrap) {
+            wrap.hidden = false;
+            var lbl = syncLabel(info);
+            wrap.className = 'schemes-lastupd' + (lbl.cls ? ' ' + lbl.cls : '');
+            document.getElementById('syncStatusIcon').className = 'fa-solid ' + lbl.icon + ' schemes-lastupd-icon';
+            document.getElementById('syncStatusText').textContent = lbl.text;
+          }
+          if (autoRefresh && info && info.label === 'stale' && API.GovernmentService.syncNow) {
+            triggerSync(true);
+          }
+        }).catch(function () {
+          var wrap = document.getElementById('syncStatusWrap');
+          if (wrap) {
+            wrap.hidden = false;
+            wrap.className = 'schemes-lastupd is-error';
+            document.getElementById('syncStatusIcon').className = 'fa-solid fa-triangle-exclamation schemes-lastupd-icon';
+            document.getElementById('syncStatusText').textContent = 'Could not check official sources';
+          }
+        });
+      }
+
+      function triggerSync(silent) {
+        var btn = document.getElementById('schemesRefreshBtn');
+        var icon = btn ? btn.querySelector('i') : null;
+        var original = icon ? icon.className : '';
+        if (btn) {
+          btn.disabled = true;
+          if (icon) icon.className = 'fas fa-spinner fa-spin';
+        }
+        API.GovernmentService.syncNow().then(function (report) {
+          if (btn) {
+            btn.disabled = false;
+            if (icon) icon.className = original;
+          }
+          if (report && report.ok === false) {
+            if (!silent) showToast(report.message || 'Could not refresh schemes', report.reason === 'not_configured' ? 'info' : 'error');
+          } else if (!silent && report && report.message) {
+            showToast(report.message, 'success');
+          }
+          loadSyncStatus(false);
+          refreshAllGrids();
+        }).catch(function (err) {
+          if (btn) {
+            btn.disabled = false;
+            if (icon) icon.className = original;
+          }
+          if (!silent) showToast((err && err.message) || 'Could not refresh schemes', 'error');
+        });
+      }
+
+      function init() {
+        try {
+          console.log('Government Schemes: Initializing...');
+          if (!window.API) {
+            console.error('Government Schemes: API not available');
+            var gridEl = document.getElementById('schemesGrid');
+            if (gridEl) {
+              gridEl.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-exclamation-triangle"></i></div><h4>Service unavailable</h4><p>The application services failed to load. Please refresh the page.</p></div>';
+            }
+            return;
+          }
+          if (!API.GovernmentService) {
+            console.error('Government Schemes: GovernmentService not available');
+            var gridEl = document.getElementById('schemesGrid');
+            if (gridEl) {
+              gridEl.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-exclamation-triangle"></i></div><h4>Service unavailable</h4><p>The government schemes service failed to load. Please refresh the page.</p></div>';
+            }
+            return;
+          }
+          if (!UserStore) {
+            console.error('Government Schemes: UserStore not available');
+          }
+          wireEvents();
+          loadCategories();
+          loadSchemes(true);
+          loadSyncStatus(true);
+          loadStateFilter();
+          loadTokenStores();
+          loadSaved();
+        } catch (e) {
+          console.error('Government Schemes: Init error', e);
+          var gridEl = document.getElementById('schemesGrid');
+          if (gridEl) {
+            gridEl.innerHTML = '<div class="schemes-state"><div class="schemes-state-icon"><i class="fas fa-exclamation-triangle"></i></div><h4>Initialization error</h4><p>An error occurred while loading the page. Please refresh.</p></div>';
+          }
+        }
       }
 
       if (document.readyState === 'loading') {
