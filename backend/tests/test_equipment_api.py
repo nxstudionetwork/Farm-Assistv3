@@ -214,9 +214,13 @@ def seed_rentals(session, owner):
         model="Yuvo 475",
         description="45HP tractor for ploughing and transport",
         daily_rate=2500,
+        deposit_amount=7500,
+        min_duration_days=2,
+        rental_terms="Fuel included for first 50 km. Refundable security deposit.",
         owner_id=owner.id,
         is_available=True,
         location="Nellore",
+        image_url="https://img.example/rnt-tractor.jpg",
     )
     tiller = RentalEquipment(
         equipment_id="FA-RNT-0002",
@@ -224,6 +228,9 @@ def seed_rentals(session, owner):
         type="Tiller",
         brand="Kubota",
         daily_rate=1800,
+        deposit_amount=2000,
+        min_duration_days=1,
+        rental_terms="Operator must be licensed.",
         owner_id=owner.id,
         is_available=False,
         location="Warangal",
@@ -366,7 +373,7 @@ def test_recommended_matches_farmer_crops():
         fallback = client.get("/api/equipment/recommended", headers=headers(bare_farmer)).json()["data"]
         assert fallback["farmer_crops"] == []
         assert fallback["items"]
-        assert fallback["items"][0]["recommendation_reason"] == "Essential high-rated farm equipment"
+        assert fallback["items"][0]["recommendation_reason"] == "Curated from the Farm Assist equipment catalogue"
         assert fallback["items"][0]["name"] == "Harvest Sickle"
     finally:
         session.close()
@@ -434,37 +441,74 @@ def test_rentals_list_book_and_my_bookings():
         rentals = client.get("/api/equipment/rentals/list", headers=headers(farmer)).json()["data"]
         assert rentals["total"] == 2
         assert rentals["items"][0]["mode"] == "rent"
+        assert {item["category_name"] for item in rentals["items"]} == {"Tractors", "Tillers"}
 
         searched = client.get(
             "/api/equipment/rentals/list", headers=headers(farmer), params={"search": "tractor"}
         ).json()["data"]
         assert searched["total"] == 1
 
-        filtered = client.get(
+        by_type = client.get(
             "/api/equipment/rentals/list", headers=headers(farmer), params={"type": "Tractor"}
         ).json()["data"]
-        assert filtered["total"] == 1
+        assert by_type["total"] == 1
+
+        by_category = client.get(
+            "/api/equipment/rentals/list", headers=headers(farmer), params={"category": "tractors"}
+        ).json()["data"]
+        assert by_category["total"] == 1
+        assert by_category["items"][0]["name"] == "Tractor 45HP"
+
+        by_location = client.get(
+            "/api/equipment/rentals/list", headers=headers(farmer), params={"location": "Nellore"}
+        ).json()["data"]
+        assert by_location["total"] == 1
 
         available = client.get(
             "/api/equipment/rentals/list", headers=headers(farmer), params={"is_available": True}
         ).json()["data"]
         assert available["total"] == 1
 
+        sorted_asc = client.get(
+            "/api/equipment/rentals/list",
+            headers=headers(farmer),
+            params={"sort_by": "rate", "sort_order": "asc"},
+        ).json()["data"]["items"]
+        assert sorted_asc[0]["name"] == "Power Tiller"
+
+        above_rate = client.get(
+            "/api/equipment/rentals/list", headers=headers(farmer), params={"min_rate": 2000}
+        ).json()["data"]
+        assert above_rate["total"] == 1
+
+        # min duration guard: tractor requires 2 days
+        too_short = client.post(
+            "/api/equipment/rentals/book",
+            headers=headers(farmer),
+            json={"equipment_id": "FA-RNT-0001", "duration_days": 1},
+        )
+        assert too_short.status_code == 400
+
         rental_response = client.post(
             "/api/equipment/rentals/book",
             headers=headers(farmer),
-            json={"equipment_id": "FA-RNT-0001", "duration_days": 2},
+            json={"equipment_id": "FA-RNT-0001", "duration_days": 2, "booking_date": "2026-10-01"},
         )
         assert rental_response.status_code == 201
         booking = rental_response.json()["data"]
-        assert booking["status"] == "confirmed"
+        assert booking["status"] == "requested"
         assert booking["total_cost"] == 5000
+        assert booking["deposit"] == 7500
         assert booking["equipment_name"] == "Tractor 45HP"
+        assert booking["booking_date"] == "2026-10-01"
+        assert "rental_terms" in booking
 
         mine = client.get("/api/equipment/rentals/my-bookings", headers=headers(farmer)).json()["data"]["items"]
         assert len(mine) == 1
         assert mine[0]["booking_id"] == booking["booking_id"]
         assert mine[0]["duration_days"] == 2
+        assert mine[0]["status"] == "requested"
+        assert mine[0]["location"] == "Nellore"
 
         unavailable = client.post(
             "/api/equipment/rentals/book",
@@ -472,5 +516,61 @@ def test_rentals_list_book_and_my_bookings():
             json={"equipment_id": "FA-RNT-0002", "duration_days": 1},
         )
         assert unavailable.status_code == 409
+    finally:
+        session.close()
+
+
+def test_rental_categories_filters_detail_and_cancel():
+    session = SessionLocal()
+    try:
+        farmer = user(session, 9)
+        seed_rentals(session, farmer)
+
+        categories = client.get("/api/equipment/rentals/categories", headers=headers(farmer)).json()["data"]
+        assert categories["total_categories"] == 15
+        by_slug = {c["slug"]: c for c in categories["items"]}
+        assert by_slug["tractors"]["count"] == 1
+        assert by_slug["tillers"]["count"] == 1
+        assert all(c["rentable"] is True for c in categories["items"])
+
+        filters = client.get("/api/equipment/rentals/filters", headers=headers(farmer)).json()["data"]
+        assert set(filters["locations"]) == {"Nellore", "Warangal"}
+        assert filters["rate_range"] == {"min": 1800.0, "max": 2500.0}
+        assert len(filters["categories"]) == 15
+
+        detail = client.get("/api/equipment/rentals/FA-RNT-0001", headers=headers(farmer))
+        assert detail.status_code == 200
+        data = detail.json()["data"]
+        assert data["name"] == "Tractor 45HP"
+        assert data["category_slug"] == "tractors"
+        assert data["min_duration_days"] == 2
+        assert data["deposit_amount"] == 7500
+        assert data["is_available"] is True
+
+        missing = client.get("/api/equipment/rentals/does-not-exist", headers=headers(farmer))
+        assert missing.status_code == 404
+
+        booked = client.post(
+            "/api/equipment/rentals/book",
+            headers=headers(farmer),
+            json={"equipment_id": "FA-RNT-0001", "duration_days": 3},
+        ).json()["data"]
+
+        cancelled = client.patch(
+            f"/api/equipment/rentals/bookings/{booked['booking_id']}", headers=headers(farmer)
+        )
+        assert cancelled.status_code == 200
+        assert cancelled.json()["data"]["status"] == "cancelled"
+
+        again = client.patch(
+            f"/api/equipment/rentals/bookings/{booked['booking_id']}", headers=headers(farmer)
+        )
+        assert again.status_code == 409
+
+        another_farmer = user(session, 10)
+        foreigner = client.patch(
+            f"/api/equipment/rentals/bookings/{booked['booking_id']}", headers=headers(another_farmer)
+        )
+        assert foreigner.status_code == 404
     finally:
         session.close()

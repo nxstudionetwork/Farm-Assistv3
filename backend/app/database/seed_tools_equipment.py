@@ -34,12 +34,14 @@ _backend = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _backend not in sys.path:
     sys.path.insert(0, _backend)
 
+from sqlalchemy import Integer, cast, func  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.database.connection import SessionLocal, engine  # noqa: E402
 from app.database.base import Base  # noqa: E402
 from app.database.schema_upgrade import run_additive_migrations  # noqa: E402
 from app.config import settings as app_settings  # noqa: E402
+from app.routers.sensors import Sensor, SensorReading  # noqa: E402,F401  (register mappers like the server does)
 from app.models.marketplace import (  # noqa: E402
     Product,
     ProductCategory,
@@ -687,34 +689,37 @@ def _upsert_rent_row(db, row, equipment_id):
 
 
 def _remap_legacy_products(db, category_by_slug):
-    """Re-home legacy equipment products into the taxonomy.
+    """Sanitise every equipment-metadata product and re-home legacy ones.
 
-    Only products that carry ``equipment_metadata`` are moved; Input Store
-    products in shared slugs (seeds/fertilisers/...) are never touched.
-    Also zeroes the fabricated ratings/sellers seeded earlier so the page never
-    presents them as real.
+    Every product that carries ``equipment_metadata`` is treated as catalogue
+    stock: fabricated ratings/reviews/sellers from the earlier demo seeders are
+    zeroed and catalogue tags (``source``/``location``) are applied. Only rows
+    currently sitting in one of the legacy equipment category slugs are
+    re-homed into the taxonomy (so nothing on the Input Store page moves).
     """
     moved = count = 0
-    old_cats = (
-        db.query(ProductCategory.id)
+    old_ids = [
+        r[0]
+        for r in db.query(ProductCategory.id)
         .filter(ProductCategory.slug.in_(LEGACY_EQUIP_SLUGS))
         .all()
-    )
-    old_ids = [r[0] for r in old_cats] or [""]
+    ]
+    old_ids = list(old_ids) or [""]
     rows = (
         db.query(Product)
         .join(EquipmentMetadata, EquipmentMetadata.product_id == Product.id)
-        .filter(Product.category_id.in_(old_ids))
         .all()
     )
     for product in rows:
         meta = product.equipment_metadata
-        source = meta.equipment_type or (product.category.name if product.category else "")
-        new_slug = slug_for_type(source)
-        new_cat = category_by_slug.get(new_slug)
-        if new_cat and product.category_id != new_cat.id:
-            product.category_id = new_cat.id
-            moved += 1
+        pid_src = product.product_id or ""
+        is_catalogue = pid_src.startswith("FT-EQP-") or pid_src.startswith("FT-RNT-")
+        if product.category_id in old_ids and not is_catalogue:
+            source = meta.equipment_type or (product.category.name if product.category else "")
+            new_cat = category_by_slug.get(slug_for_type(source))
+            if new_cat and product.category_id != new_cat.id:
+                product.category_id = new_cat.id
+                moved += 1
         product.seller_id = None
         product.rating = 0
         product.total_reviews = 0
@@ -763,15 +768,30 @@ def seed(db: Session):
     for ci, (slug, _name, _icon, _rentable) in enumerate(TAXONOMY):
         cat = category_by_slug[slug]
         existing = (
-            db.query(Product).filter(Product.category_id == cat.id, Product.is_active == True).count()  # noqa: E712
+            db.query(Product)
+            .join(EquipmentMetadata, EquipmentMetadata.product_id == Product.id)
+            .filter(Product.category_id == cat.id, Product.is_active == True)  # noqa: E712
+            .count()
         )
         needed = 300 - existing
         if needed > 0:
-            for seq in range(1, needed + 1):
-                pid = f"FT-EQP-{ci:02d}{seq:04d}"
-                _upsert_buy_product(db, cat, _buy_rows(slug, needed)[seq - 1], pid, seq)
+            prefix = f"FT-EQP-{ci:02d}"
+            max_seq = (
+                db.query(
+                    func.max(
+                        cast(func.substr(Product.product_id, len(prefix) + 1), Integer)
+                    )
+                )
+                .filter(Product.product_id.like(f"{prefix}%"))
+                .scalar()
+            )
+            start = (int(max_seq) + 1) if max_seq else 1
+            rows = _buy_rows(slug, needed)
+            for i, seq in enumerate(range(start, start + needed)):
+                pid = f"{prefix}{seq:04d}"
+                _upsert_buy_product(db, cat, rows[i], pid, seq)
                 created_products += 1
-        per_category[slug] = max(existing, 300) if existing > 300 else 300 if existing >= 300 else existing + needed
+        per_category[slug] = 300
     db.flush()
 
     per_rent_category = {}
@@ -792,7 +812,10 @@ def seed(db: Session):
     for slug, _n, _i, _r in TAXONOMY:
         cat = category_by_slug[slug]
         totals[slug] = (
-            db.query(Product).filter(Product.category_id == cat.id, Product.is_active == True).count()  # noqa: E712
+            db.query(Product)
+            .join(EquipmentMetadata, EquipmentMetadata.product_id == Product.id)
+            .filter(Product.category_id == cat.id, Product.is_active == True)  # noqa: E712
+            .count()
             if cat
             else 0
         )

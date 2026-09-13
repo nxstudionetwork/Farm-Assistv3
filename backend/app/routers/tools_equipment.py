@@ -217,8 +217,13 @@ def _equipment_base_query(db: Session):
 
 def _rent_types_for_category(db: Session, slug: str) -> list:
     """All ``Equipment.type`` labels that belong to a taxonomy category."""
-    labels = [t[0] for t in db.query(Equipment.type).distinct().all() if t[0]]
-    return [label for label in labels if slug_for_type(label) == slug]
+    labels = [RENT_TYPE_BY_SLUG[slug]] if slug in RENT_TYPE_BY_SLUG else []
+    labels += [
+        t[0]
+        for t in db.query(Equipment.type).distinct().all()
+        if t[0] and t[0] not in labels and slug_for_type(t[0]) == slug
+    ]
+    return labels
 
 
 def _rental_payload(e: Equipment) -> dict:

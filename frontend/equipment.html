@@ -9,10 +9,26 @@
   <style>
     :root{--eq-accent:#C77413;--eq-green:#2D8659;--eq-radius:12px;--eq-radius-sm:8px;--eq-radius-lg:16px;}
     html,body{overflow-x:hidden;max-width:100vw}*{box-sizing:border-box}img{max-width:100%}
-    .store-toolbar{flex-wrap:wrap}
-    .store-search{min-width:160px}
-    .store-toolbar{position:sticky;top:var(--topbar-height,64px);z-index:30;background:var(--bg-card);border-bottom:1px solid var(--border-light);padding:12px 0;display:flex;align-items:center;gap:10px}
-    .store-search{flex:1;position:relative}
+    button{font-family:inherit}
+
+    /* Compact header */
+    .eq-compact{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 0 6px}
+    .eq-compact h1{font-size:22px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:10px;margin:0}
+    .eq-compact h1 i{color:var(--eq-accent)}
+    .eq-compact p{font-size:12px;color:var(--text-muted);margin:3px 0 0}
+    .eq-compact-actions{display:flex;align-items:center;gap:12px}
+
+    /* Rent | Buy segmented tabs */
+    .mode-tabs{display:flex;background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:14px;padding:4px;margin:14px 0 4px;gap:4px}
+    .mode-tab{flex:1;padding:11px 14px;border-radius:11px;border:none;background:transparent;color:var(--text-secondary);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+    .mode-tab i{font-size:14px}
+    .mode-tab.active{background:var(--eq-green);color:#fff;box-shadow:var(--shadow-sm)}
+    .mode-tab.active.rent-tab{background:linear-gradient(135deg,#2D8659,#3d9d6f)}
+    .mode-tab.active.buy-tab{background:linear-gradient(135deg,#C77413,#E0963C)}
+    .mode-tab:hover:not(.active){color:var(--eq-green);background:var(--bg-card)}
+
+    .store-toolbar{flex-wrap:wrap;position:sticky;top:var(--topbar-height,64px);z-index:30;background:var(--bg-card);border-bottom:1px solid var(--border-light);padding:12px 0;display:flex;align-items:center;gap:10px}
+    .store-search{min-width:160px;flex:1;position:relative}
     .store-search input{width:100%;padding:11px 14px 11px 40px;border-radius:var(--eq-radius-sm);border:1px solid var(--border-light);background:var(--bg-card-soft);font-size:14px;color:var(--text-primary);outline:none;transition:border-color .2s}
     .store-search input:focus{border-color:var(--eq-green)}
     .store-search i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px}
@@ -102,6 +118,7 @@
     .is-card-pricing{display:flex;align-items:baseline;gap:6px;margin-bottom:6px}
     .is-card-pricing .price{font-size:17px;font-weight:800;color:var(--eq-green)}
     .is-card-pricing .mrp{font-size:11px;color:var(--text-muted);text-decoration:line-through}
+    .is-card-pricing .per{font-size:11px;font-weight:600;color:var(--text-muted)}
     .is-card-pricing .disc{font-size:11px;font-weight:700;color:var(--danger)}
     .is-card-stock{margin-bottom:8px}
     .stock-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px}
@@ -132,7 +149,7 @@
     .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1039;display:none}
     .sheet-bg.open{display:block}
     .sheet{position:fixed;z-index:1040;background:var(--bg-card);display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.16,1,.3,1)}
-    .sheet.right{top:0;right:0;width:420px;max-width:90vw;height:100%;transform:translateX(100%)}
+    .sheet.right{top:0;right:0;width:440px;max-width:92vw;height:100%;transform:translateX(100%)}
     .sheet.right.open{transform:translateX(0)}
     .sheet.bottom{bottom:0;left:0;right:0;max-height:85vh;border-radius:var(--eq-radius-lg) var(--eq-radius-lg) 0 0;transform:translateY(100%)}
     .sheet.bottom.open{transform:translateY(0)}
@@ -159,6 +176,7 @@
     .is-btn.gold{background:linear-gradient(135deg,#C77413,#E0963C);color:#fff}
     .is-btn.gold:hover{filter:brightness(1.08)}
     .is-btn.outline{background:transparent;border:1px solid var(--border-light);color:var(--text-primary)}
+    .is-btn:disabled{opacity:.5;cursor:not-allowed}
     .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1049;display:none;align-items:center;justify-content:center;padding:16px}
     .modal-bg.open{display:flex}
     .modal{background:var(--bg-card);border-radius:var(--eq-radius-lg);width:100%;max-width:700px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;animation:modalIn .25s ease}
@@ -174,7 +192,7 @@
     .prod-rating{display:flex;align-items:center;gap:6px;margin-bottom:12px}
     .prod-rating .stars{color:#f5a623;font-size:14px}
     .prod-rating span{font-size:12px;color:var(--text-muted)}
-    .prod-price-row{display:flex;align-items:baseline;gap:8px;margin-bottom:14px}
+    .prod-price-row{display:flex;align-items:baseline;gap:8px;margin-bottom:14px;flex-wrap:wrap}
     .prod-price-row .price{font-size:24px;font-weight:800;color:var(--eq-green)}
     .prod-price-row .mrp{font-size:14px;color:var(--text-muted);text-decoration:line-through}
     .prod-price-row .disc{font-size:13px;font-weight:700;color:var(--danger)}
@@ -200,7 +218,7 @@
     .prod-actions .is-btn{flex:1}
     .checkout-lines{max-height:220px;overflow-y:auto;margin-bottom:14px}
     .checkout-line{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:12px;color:var(--text-secondary)}
-    .checkout-line .cl-name{flex:1;font-weight:600;color:var(--text-primary);margin-right:8px}
+    .checkout-line .cl-name{flex:1;font-weight:600;color:var(--text-primary);margin-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .checkout-line .cl-qty{min-width:36px;text-align:center}
     .checkout-line .cl-price{min-width:70px;text-align:right;font-weight:600;color:var(--eq-green)}
     .checkout-form{margin-bottom:14px}
@@ -210,7 +228,7 @@
     .success-icon{width:64px;height:64px;border-radius:50%;background:var(--soft-green);color:var(--eq-green);font-size:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
     .success-title{text-align:center;font-size:18px;font-weight:800;margin-bottom:6px}
     .success-sub{text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:16px}
-    .success-actions{display:flex;gap:10px;justify-content:center}
+    .success-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
     .success-actions .is-btn{width:auto;padding:12px 24px}
     .wk-item-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light)}
     .wk-item-img{width:48px;height:48px;border-radius:var(--eq-radius-sm);object-fit:cover;background:#e9ecef;flex-shrink:0}
@@ -259,28 +277,84 @@
     .compare-table .cp-view{display:inline-block;margin-top:6px;padding:6px 12px;border-radius:var(--eq-radius-sm);background:var(--soft-green);color:var(--eq-green);font-size:11px;font-weight:700;cursor:pointer;border:none}
     .compare-table .cp-x{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;margin-top:4px}
     .compare-table .cp-x:hover{color:var(--danger)}
+
+    /* Rental specifics */
+    .rent-avail{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+    .rent-min-days{display:inline-flex;align-items:center;gap:5px;background:var(--bg-card-soft);border:1px solid var(--border-light);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;color:var(--text-secondary)}
+    .cta-rent{background:linear-gradient(135deg,#2D8659,#3d9d6f)}
+    .cta-rent:hover{filter:brightness(1.08)}
+
+    /* Booking box */
+    .booking-box{margin-top:6px}
+    .booking-box h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin:0 0 12px}
+    .bk-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+    .bk-row label{font-size:13px;color:var(--text-secondary);font-weight:600}
+    .bk-row input[type=date]{padding:9px 12px;border-radius:var(--eq-radius-sm);border:1px solid var(--border-light);background:var(--bg-card-soft);font-size:13px;color:var(--text-primary);outline:none}
+    .bk-totals{background:var(--bg-card-soft);border-radius:var(--eq-radius-sm);padding:12px 14px;margin-bottom:14px}
+    .bk-totals .bk-line{display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);padding:4px 0}
+    .bk-totals .bk-grand{font-size:14px;font-weight:800;color:var(--text-primary);border-top:1px dashed var(--border-light);margin-top:4px;padding-top:8px}
+    .bk-totals .bk-grand span:last-child{color:var(--eq-green)}
+    .bk-note{font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.5}
+    .bk-terms{margin:12px 0;font-size:12px;color:var(--text-secondary);line-height:1.6}
+    .bk-terms i{color:var(--eq-green);margin-right:6px}
+
+    /* Status chips */
+    .st-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;text-transform:capitalize}
+    .st-chip.requested,.st-chip.pending{background:#fff8e1;color:#b06e00}
+    .st-chip.confirmed,.st-chip.processing,.st-chip.active{background:var(--soft-green);color:var(--eq-green)}
+    .st-chip.delivered,.st-chip.completed{background:#e8f5e9;color:#2e7d32}
+    .st-chip.shipped{background:#e3f2fd;color:#1565c0}
+    .st-chip.cancelled{background:#ffebee;color:#c62828}
+
+    /* Orders sheet */
+    .ord-tabs{display:flex;background:var(--bg-card-soft);border-radius:10px;padding:3px;gap:3px;margin-bottom:8px}
+    .ord-tab{flex:1;padding:9px;border:none;border-radius:8px;background:transparent;color:var(--text-secondary);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+    .ord-tab.active{background:var(--eq-green);color:#fff}
+    .ord-row{display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid var(--border-light);cursor:pointer}
+    .ord-row .ord-thumb{width:50px;height:50px;border-radius:var(--eq-radius-sm);object-fit:cover;background:#e9ecef;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:18px}
+    .ord-info{flex:1;min-width:0}
+    .ord-title{font-size:13px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ord-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .ord-amt{font-size:14px;font-weight:800;color:var(--eq-green)}
+    .ord-detail{background:var(--bg-card-soft);border-radius:var(--eq-radius-sm);padding:12px 14px;margin:8px 0;font-size:12px;color:var(--text-secondary)}
+    .ord-detail .od-line{display:flex;justify-content:space-between;padding:4px 0;align-items:center}
+    .ord-detail .od-line strong{color:var(--text-primary)}
+    .ord-cancel{border:1px solid var(--danger);color:var(--danger);background:transparent;border-radius:var(--eq-radius-sm);padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s}
+    .ord-cancel:hover{background:var(--danger);color:#fff}
+    .ord-empty{text-align:center;padding:44px 16px;color:var(--text-muted)}
+    .ord-empty i{font-size:42px;opacity:.35;margin-bottom:10px;display:block}
+    .ord-empty p{font-size:13px}
   </style>
 </head>
 <body>
 
 <main class="page-container" id="eq-root">
-  <div class="page-header">
+  <!-- Compact header -->
+  <div class="page-header eq-compact">
     <div>
-      <h1><i class="fas fa-tractor" style="color:var(--eq-accent)"></i> Tools &amp; Equipment</h1>
-      <p style="font-size:12px;color:var(--text-muted);margin-top:2px;">Reliable equipment for everyday farm work.</p>
+      <h1><i class="fas fa-tractor"></i> Tools &amp; Equipment</h1>
+      <p>Rent or buy agricultural tools and machinery for your farm.</p>
     </div>
+    <div class="eq-compact-actions">
+      <button class="store-icon-btn" id="orders-trigger" title="My Orders &amp; Rental Requests"><i class="fas fa-box"></i><span class="badge" id="orders-badge"></span></button>
+      <button class="store-icon-btn" id="cart-trigger" title="Cart"><i class="fas fa-shopping-cart"></i><span class="badge" id="cart-badge"></span></button>
+    </div>
+  </div>
+
+  <!-- Rent | Buy segmented control -->
+  <div class="mode-tabs" id="mode-tabs" role="tablist" aria-label="Catalogue mode">
+    <button class="mode-tab rent-tab active" data-mode="rent" role="tab" aria-selected="true"><i class="fas fa-hand-holding-hand"></i> Rent</button>
+    <button class="mode-tab buy-tab" data-mode="buy" role="tab" aria-selected="false"><i class="fas fa-bag-shopping"></i> Buy</button>
   </div>
 
   <div class="store-toolbar" id="store-toolbar">
     <div class="store-search" id="store-search-wrap">
       <i class="fas fa-search"></i>
-      <input type="text" id="store-search" placeholder="Search tools, equipment, pumps, sprayers..." autocomplete="off">
+      <input type="text" id="store-search" placeholder="Search tractors, grass cutters, harvesters..." autocomplete="off">
       <button class="clear-search" id="clear-search"><i class="fas fa-xmark"></i></button>
     </div>
-    <button class="filter-mobile-btn" id="filter-mobile-btn"><i class="fas fa-sliders"></i> Filter</button>
+    <button class="filter-mobile-btn" id="filter-mobile-btn" style="display:inline-flex"><i class="fas fa-sliders"></i> Filter</button>
     <button class="store-icon-btn" id="wishlist-trigger" title="Wishlist"><i class="fas fa-heart"></i><span class="badge" id="wk-badge"></span></button>
-    <button class="store-icon-btn" id="cart-trigger" title="Cart"><i class="fas fa-shopping-cart"></i><span class="badge" id="cart-badge"></span></button>
-    <a href="my-orders.html" class="store-icon-btn" title="My Orders"><i class="fas fa-box"></i></a>
   </div>
 
   <div class="store-cats" id="store-cats"></div>
@@ -302,15 +376,7 @@
     <div class="store-listing-head">
       <span class="store-count" id="store-count">Loading...</span>
       <div class="store-sort">
-        <select id="sort-select">
-          <option value="relevance">Relevance</option>
-          <option value="price|asc">Price: Low to High</option>
-          <option value="price|desc">Price: High to Low</option>
-          <option value="rating|desc">Rating</option>
-          <option value="name|asc">Name: A-Z</option>
-          <option value="name|desc">Name: Z-A</option>
-          <option value="created_at|desc">Newest First</option>
-        </select>
+        <select id="sort-select"></select>
       </div>
     </div>
     <div class="store-body">
@@ -321,6 +387,7 @@
         <div class="filter-group"><h4>Power Source</h4><div class="filter-chips" id="f-power"></div></div>
         <div class="filter-group"><h4>Suitable For</h4><div class="filter-chips" id="f-use"></div></div>
         <div class="filter-group"><h4>Brand</h4><div class="filter-chips" id="f-brand"></div></div>
+        <div class="filter-group"><h4>Location</h4><div class="filter-chips" id="f-location"></div></div>
         <div class="filter-group"><h4>Seller</h4><div class="filter-chips" id="f-seller"></div></div>
         <div class="filter-group"><h4>Crops</h4><div class="filter-chips" id="f-crop"></div></div>
         <div class="filter-group"><h4>Rating</h4><div class="filter-chips" id="f-rating"></div></div>
@@ -356,6 +423,16 @@
   <div class="sheet-body" id="wk-sheet-body"></div>
 </div>
 
+<!-- Orders & Rental Requests Drawer -->
+<div class="sheet right" id="orders-sheet">
+  <div class="sheet-head"><h3><i class="fas fa-box" style="color:var(--eq-green)"></i> Orders &amp; Requests</h3><button class="close-btn" id="orders-sheet-close"><i class="fas fa-xmark"></i></button></div>
+  <div class="ord-tabs">
+    <button class="ord-tab active" data-otab="buy" id="otab-buy"><i class="fas fa-bag-shopping"></i> Orders</button>
+    <button class="ord-tab" data-otab="rent" id="otab-rent"><i class="fas fa-hand-holding-hand"></i> Rental Requests</button>
+  </div>
+  <div class="sheet-body" id="orders-sheet-body"></div>
+</div>
+
 <!-- Compare Bar -->
 <div class="compare-bar" id="compare-bar">
   <span class="cb-label"><i class="fas fa-scale-balanced"></i> Compare (<span id="cb-count">0</span>/4)</span>
@@ -368,6 +445,14 @@
   <div class="modal" style="position:relative">
     <button class="modal-close" id="prod-modal-close"><i class="fas fa-xmark"></i></button>
     <div class="modal-body" id="prod-modal-body"></div>
+  </div>
+</div>
+
+<!-- Rental Detail Modal -->
+<div class="modal-bg" id="rent-modal">
+  <div class="modal" style="position:relative">
+    <button class="modal-close" id="rent-modal-close"><i class="fas fa-xmark"></i></button>
+    <div class="modal-body" id="rent-modal-body"></div>
   </div>
 </div>
 
@@ -428,195 +513,307 @@ function unwrap(r){return r&&r.data!==undefined?r.data:r;}
 var fmtPrice=function(v){return'₹'+Number(v||0).toLocaleString('en-IN')};
 window.imgFallback=function(){return'<div style="height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2D8659,#52B788);color:#fff;font-size:36px"><i class="fas fa-tractor"></i></div>';};
 var starsHTML=function(r){
-  r=Number(r)||0;var f=Math.floor(r),h=r%1>=.5?1:0,e=5-f-h,s='';
+  if(!(Number(r)||0)) return '';
+  r=Number(r);var f=Math.floor(r),h=r%1>=.5?1:0,e=5-f-h,s='';
   for(var i=0;i<f;i++)s+='<i class="fas fa-star"></i>';if(h)s+='<i class="fas fa-star-half-alt"></i>';
   for(var i=0;i<e;i++)s+='<i class="far fa-star"></i>';
-  return s+(r?' <span style="font-size:10px;color:var(--text-muted);margin-left:2px">'+r.toFixed(1)+'</span>':'');
+  return s+' <span style="font-size:10px;color:var(--text-muted);margin-left:2px">'+r.toFixed(1)+'</span>';
 };
 
 var CAT_ICONS={
-  'hand-tools':'fa-hammer',
-  'equipment':'fa-toolbox',
-  'irrigation-equipment':'fa-faucet-drip',
-  'harvesting-tools':'fa-fan',
-  'planting-tools':'fa-seedling',
-  'soil-field-tools':'fa-shovel',
-  'spraying-equipment':'fa-spray-can',
-  'safety-equipment':'fa-helmet-safety',
-  'storage-equipment':'fa-warehouse',
-  'small-machinery':'fa-tractor',
-  'other-equipment':'fa-tractor'
+  'hand-tools':'fa-hammer','equipment':'fa-toolbox','irrigation-equipment':'fa-faucet-drip',
+  'harvesting-tools':'fa-fan','planting-tools':'fa-seedling','soil-field-tools':'fa-shovel',
+  'spraying-equipment':'fa-spray-can','safety-equipment':'fa-helmet-safety','storage-equipment':'fa-warehouse',
+  'small-machinery':'fa-tractor','other-equipment':'fa-tractor','tractors':'fa-tractor','harvesters':'fa-fan',
+  'cutting-machines':'fa-scissors','grass-cutters':'fa-scissors','brush-cutters':'fa-fan','rotavators':'fa-gears',
+  'tillers':'fa-trowel','seeders':'fa-seedling','sprayers':'fa-spray-can','irrigation-equipment-2':'fa-faucet-drip',
+  'ploughs':'fa-shovel','cultivators':'fa-layer-group','threshers':'fa-fan','pumps':'fa-water',
+  'trailers':'fa-truck','agricultural-tools':'fa-toolbox'
 };
 
 var S={
-  products:[], page:1, limit:20, total:0, totalPages:0,
-  sortBy:'relevance', sortOrder:'asc',
-  search:'', catId:'',
-  powerSource:'', suitableUse:'', brand:'', sellerId:'', crop:'',
-  minPrice:null, maxPrice:null, inStock:false, minRating:null,
-  cart:null, wishlist:[], categories:[], filtersData:null,
-  recommended:[], recent:[], compare:{}
+  mode:'rent',
+  buy:{products:[],page:1,limit:20,total:0,totalPages:0,sortBy:'relevance',sortOrder:'asc',search:'',catId:'',
+    powerSource:'',suitableUse:'',brand:'',sellerId:'',crop:'',location:'',minPrice:null,maxPrice:null,inStock:false,minRating:null,
+    categories:[],filtersData:null,recommended:[],recent:[],compare:{}},
+  rent:{items:[],page:1,limit:20,total:0,totalPages:0,sortBy:'created_at',sortOrder:'desc',search:'',cat:'',
+    location:'',minRate:null,maxRate:null,avail:true,categories:[],filtersData:null},
+  cart:null,wishlist:[],orders:[],bookings:[],ordersTab:'buy'
 };
+var B=S.buy, R=S.rent;
 var profile={full_name:'Farmer', phone_number:''};
 var wishlistIds=new Set();
+var _curRental=null; var _rentBookingDur=1; var _curOrder=null;
 
 function toast(msg,type){
   var el=document.createElement('div');el.className='is-toast '+(type||'info');el.textContent=msg;
   document.getElementById('toast-wrap').appendChild(el);
   setTimeout(function(){el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(function(){el.remove()},300);},2600);
 }
-
 function showSheet(id){document.getElementById('sheet-bg').classList.add('open');document.getElementById(id).classList.add('open');}
 function hideSheet(){document.getElementById('sheet-bg').classList.remove('open');document.querySelectorAll('.sheet.open').forEach(function(s){s.classList.remove('open')});}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function esc(s){return String(s==null?'':s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function jse(s){return String(s==null?'':s).replace(/'/g,"\\'").replace(/"/g,'').replace(/</g,'&lt;');}
+
+/* ─── MODE ─── */
+function current(){return S.mode==='rent'?R:B;}
+function setSortOptions(){
+  var sel=document.getElementById('sort-select');
+  if(S.mode==='rent'){
+    sel.innerHTML='<option value="created_at|desc">Newest First</option><option value="rate|asc">Rate: Low to High</option><option value="rate|desc">Rate: High to Low</option><option value="name|asc">Name: A-Z</option><option value="name|desc">Name: Z-A</option>';
+    R.sortBy='created_at';R.sortOrder='desc';
+  } else {
+    sel.innerHTML='<option value="relevance">Relevance</option><option value="price|asc">Price: Low to High</option><option value="price|desc">Price: High to Low</option><option value="name|asc">Name: A-Z</option><option value="name|desc">Name: Z-A</option><option value="created_at|desc">Newest First</option>';
+    B.sortBy='relevance';B.sortOrder='asc';
+  }
+}
+function switchMode(m){
+  if(S.mode===m) return;
+  S.mode=m;
+  document.querySelectorAll('#mode-tabs .mode-tab').forEach(function(t){
+    var on=t.getAttribute('data-mode')===m;
+    t.classList.toggle('active',on); t.setAttribute('aria-selected',on?'true':'false');
+  });
+  document.getElementById('store-search').value='';
+  document.getElementById('store-search-wrap').classList.remove('has-val');
+  setSortOptions();
+  current().page=1;
+  applyModeUI();
+  loadCategories(); loadFiltersData(); loadList(); renderAppliedFilters();
+}
+function applyModeUI(){
+  var buyOnly=['wishlist-trigger','reco-section','recent-section'];
+  buyOnly.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=(S.mode==='buy')?'':'none';});
+  var fp=document.getElementById('filter-panel'); if(fp) fp.style.display=(S.mode==='buy')?'block':'none';
+  document.getElementById('compare-bar').classList.remove('open');
+  renderCompareBar();
+}
+window.switchMode=switchMode;
 
 /* ─── CATEGORIES ─── */
 function loadCategories(){
-  eqReq('GET','/tools-equipment/categories').then(function(res){
+  var path=S.mode==='rent'?'/tools-equipment/rentals/categories':'/tools-equipment/categories';
+  eqReq('GET',path).then(function(res){
     var d=unwrap(res);
-    S.categories=(d&&d.items)||[];
+    if(S.mode==='rent') R.categories=(d&&d.items)||[]; else B.categories=(d&&d.items)||[];
     renderCats();
   }).catch(function(){});
 }
 function renderCats(){
   var wrap=document.getElementById('store-cats');
-  var html='<button class="is-pill'+(S.catId===''?' active':'')+'" data-cat="">All</button>';
-  S.categories.forEach(function(c){
-    var active=S.catId===c.id?' active':'';
-    html+='<button class="is-pill'+active+'" data-cat="'+c.id+'" data-slug="'+c.slug+'"><i class="fas '+(CAT_ICONS[c.slug]||'fa-tag')+'"></i> '+c.name+' <span class="cat-count">'+c.count+'</span></button>';
+  var c=current();
+  var active=currentActiveCatKey();
+  var allKey='';
+  var html='<button class="is-pill'+(active===allKey?' active':'')+'" data-cat="">All</button>';
+  (c.categories||[]).forEach(function(item){
+    var key=S.mode==='rent'?(item.slug):(item.id);
+    var on=active===key?' active':'';
+    var icon=(CAT_ICONS[item.icon]||CAT_ICONS[item.slug]||'fa-tag');
+    html+='<button class="is-pill'+on+'" data-cat="'+key+'"><i class="fas '+(icon==='fa-tag'?'fa-tag':icon)+'"></i> '+esc(item.name)+' <span class="cat-count">'+(item.count||0)+'</span></button>';
   });
   wrap.innerHTML=html;
 }
+function currentActiveCatKey(){
+  var c=current();
+  if(S.mode==='rent') return c.cat||'';
+  return c.catId||'';
+}
+window.renderCats=renderCats;
 
 /* ─── FILTERS DATA ─── */
 function loadFiltersData(){
-  eqReq('GET','/tools-equipment/filters').then(function(res){
+  var path=S.mode==='rent'?'/tools-equipment/rentals/filters':'/tools-equipment/filters';
+  eqReq('GET',path).then(function(res){
     var d=unwrap(res);
-    S.filtersData=d;
+    current().filtersData=d;
     renderFilterGroups();
   }).catch(function(){});
 }
 function chipHTML(kind,val,label,active){
-  return '<button class="f-chip'+(active?' active':'')+'" data-kind="'+kind+'" data-val="'+val+'">'+label+'</button>';
+  return '<button class="f-chip'+(active?' active':'')+'" data-kind="'+kind+'" data-val="'+esc(val)+'">'+esc(label)+'</button>';
 }
 function renderFilterGroups(){
-  var d=S.filtersData; if(!d) return;
-  var catsHTML=(S.categories||[]).map(function(c){return chipHTML('cat',c.id,c.name+' ('+c.count+')',S.catId===c.id)}).join('');
-  var powerHTML=(d.power_sources||[]).map(function(p){return chipHTML('power',p,p,S.powerSource===p)}).join('');
-  var useHTML=(d.suitable_uses||[]).map(function(u){return chipHTML('use',u,u,S.suitableUse===u)}).join('');
-  var brandHTML=(d.brands||[]).map(function(b){return chipHTML('brand',b,b,S.brand===b)}).join('');
-  var sellerHTML=(d.sellers||[]).map(function(sl){return chipHTML('seller',sl.id,sl.shop_name+(sl.location?' · '+sl.location:''),S.sellerId===sl.id)}).join('');
-  var cropHTML=(d.crops||[]).map(function(c){return chipHTML('crop',c,c,S.crop===c)}).join('');
-  var ratingHTML=[['4.5','4.5+'],['4','4+'],['3','3+']].map(function(r){return chipHTML('rating',r[0],r[1],S.minRating===r[0])}).join('');
+  if(S.mode!=='buy') return;
+  var d=B.filtersData; if(!d) return;
+  var catsHTML=(B.categories||[]).map(function(c){return chipHTML('cat',c.id,c.name+' ('+c.count+')',B.catId===c.id)}).join('');
+  var powerHTML=(d.power_sources||[]).map(function(p){return chipHTML('power',p,p,B.powerSource===p)}).join('');
+  var useHTML=(d.suitable_uses||[]).map(function(u){return chipHTML('use',u,u,B.suitableUse===u)}).join('');
+  var brandHTML=(d.brands||[]).map(function(b){return chipHTML('brand',b,b,B.brand===b)}).join('');
+  var locHTML=(d.locations||[]).map(function(l){return chipHTML('location',l,l,B.location===l)}).join('');
+  var sellerHTML=(d.sellers||[]).map(function(sl){return chipHTML('seller',sl.id,sl.shop_name+(sl.location?' · '+sl.location:''),B.sellerId===sl.id)}).join('');
+  var cropHTML=(d.crops||[]).map(function(c){return chipHTML('crop',c,c,B.crop===c)}).join('');
+  var ratingHTML=[['4.5','4.5+'],['4','4+'],['3','3+']].map(function(r){return chipHTML('rating',r[0],r[1],B.minRating===r[0])}).join('');
   var set=function(id,h){var el=document.getElementById(id);if(el)el.innerHTML=h;};
   set('f-cats',catsHTML);set('f-power',powerHTML);set('f-use',useHTML);set('f-brand',brandHTML);
-  set('f-seller',sellerHTML);set('f-crop',cropHTML);set('f-rating',ratingHTML);
-  var minEl=document.getElementById('f-min');if(minEl)minEl.value=S.minPrice!=null?S.minPrice:'';
-  var maxEl=document.getElementById('f-max');if(maxEl)maxEl.value=S.maxPrice!=null?S.maxPrice:'';
-  var stEl=document.getElementById('f-stock');if(stEl)stEl.checked=S.inStock;
+  set('f-location',locHTML);set('f-seller',sellerHTML);set('f-crop',cropHTML);set('f-rating',ratingHTML);
+  var minEl=document.getElementById('f-min');if(minEl)minEl.value=B.minPrice!=null?B.minPrice:'';
+  var maxEl=document.getElementById('f-max');if(maxEl)maxEl.value=B.maxPrice!=null?B.maxPrice:'';
+  var stEl=document.getElementById('f-stock');if(stEl)stEl.checked=B.inStock;
 }
 function sheetFilterHTML(){
-  var d=S.filtersData; if(!d) return '';
-  var catsHTML=(S.categories||[]).map(function(c){return chipHTML('cat',c.id,c.name+' ('+c.count+')',S.catId===c.id)}).join('');
-  var powerHTML=(d.power_sources||[]).map(function(p){return chipHTML('power',p,p,S.powerSource===p)}).join('');
-  var useHTML=(d.suitable_uses||[]).map(function(u){return chipHTML('use',u,u,S.suitableUse===u)}).join('');
-  var brandHTML=(d.brands||[]).map(function(b){return chipHTML('brand',b,b,S.brand===b)}).join('');
-  var sellerHTML=(d.sellers||[]).map(function(sl){return chipHTML('seller',sl.id,sl.shop_name,S.sellerId===sl.id)}).join('');
-  var cropHTML=(d.crops||[]).map(function(c){return chipHTML('crop',c,c,S.crop===c)}).join('');
-  var ratingHTML=[['4.5','4.5+'],['4','4+'],['3','3+']].map(function(r){return chipHTML('rating',r[0],r[1],S.minRating===r[0])}).join('');
-  return '<div class="filter-group"><h4>Price Range</h4><div class="f-price-row"><input id="f-min-s" type="number" placeholder="Min" value="'+(S.minPrice!=null?S.minPrice:'')+'"><span style="color:var(--text-muted)">–</span><input id="f-max-s" type="number" placeholder="Max" value="'+(S.maxPrice!=null?S.maxPrice:'')+'"></div></div>'
-  +'<div class="filter-group"><h4>Availability</h4><div class="f-toggle"><label><input type="checkbox" id="f-stock-s"'+(S.inStock?' checked':'')+' style="margin-right:6px">In Stock Only</label></div></div>'
+  if(S.mode==='rent') return rentFilterHTML();
+  var d=B.filtersData; if(!d) return '<p style="color:var(--text-muted);font-size:13px">No filters available.</p>';
+  var catsHTML=(B.categories||[]).map(function(c){return chipHTML('cat',c.id,c.name+' ('+c.count+')',B.catId===c.id)}).join('');
+  var powerHTML=(d.power_sources||[]).map(function(p){return chipHTML('power',p,p,B.powerSource===p)}).join('');
+  var useHTML=(d.suitable_uses||[]).map(function(u){return chipHTML('use',u,u,B.suitableUse===u)}).join('');
+  var brandHTML=(d.brands||[]).map(function(b){return chipHTML('brand',b,b,B.brand===b)}).join('');
+  var locHTML=(d.locations||[]).map(function(l){return chipHTML('location',l,l,B.location===l)}).join('');
+  var sellerHTML=(d.sellers||[]).map(function(sl){return chipHTML('seller',sl.id,sl.shop_name,B.sellerId===sl.id)}).join('');
+  var cropHTML=(d.crops||[]).map(function(c){return chipHTML('crop',c,c,B.crop===c)}).join('');
+  var ratingHTML=[['4.5','4.5+'],['4','4+'],['3','3+']].map(function(r){return chipHTML('rating',r[0],r[1],B.minRating===r[0])}).join('');
+  return '<div class="filter-group"><h4>Price Range</h4><div class="f-price-row"><input id="f-min-s" type="number" placeholder="Min" value="'+(B.minPrice!=null?B.minPrice:'')+'"><span style="color:var(--text-muted)">–</span><input id="f-max-s" type="number" placeholder="Max" value="'+(B.maxPrice!=null?B.maxPrice:'')+'"></div></div>'
+  +'<div class="filter-group"><h4>Availability</h4><div class="f-toggle"><label><input type="checkbox" id="f-stock-s"'+(B.inStock?' checked':'')+' style="margin-right:6px">In Stock Only</label></div></div>'
   +'<div class="filter-group"><h4>Category</h4><div class="filter-chips">'+catsHTML+'</div></div>'
   +'<div class="filter-group"><h4>Power Source</h4><div class="filter-chips">'+powerHTML+'</div></div>'
   +'<div class="filter-group"><h4>Suitable For</h4><div class="filter-chips">'+useHTML+'</div></div>'
   +'<div class="filter-group"><h4>Brand</h4><div class="filter-chips">'+brandHTML+'</div></div>'
+  +'<div class="filter-group"><h4>Location</h4><div class="filter-chips">'+locHTML+'</div></div>'
   +'<div class="filter-group"><h4>Seller</h4><div class="filter-chips">'+sellerHTML+'</div></div>'
   +'<div class="filter-group"><h4>Crops</h4><div class="filter-chips">'+cropHTML+'</div></div>'
   +'<div class="filter-group"><h4>Rating</h4><div class="filter-chips">'+ratingHTML+'</div></div>';
 }
+function rentFilterHTML(){
+  var d=R.filtersData;
+  var locs=(d&&d.locations)||[];
+  var locHTML=locs.map(function(l){return chipHTML('location',l,l,R.location===l)}).join('');
+  return '<div class="filter-group"><h4>Daily Rate Range</h4><div class="f-price-row"><input id="f-min-s" type="number" placeholder="Min" value="'+(R.minRate!=null?R.minRate:'')+'"><span style="color:var(--text-muted)">–</span><input id="f-max-s" type="number" placeholder="Max" value="'+(R.maxRate!=null?R.maxRate:'')+'"></div></div>'
+  +'<div class="filter-group"><h4>Availability</h4><div class="f-toggle"><label><input type="checkbox" id="f-avail-s"'+(R.avail?' checked':'')+' style="margin-right:6px">Available for rent only</label></div></div>'
+  +'<div class="filter-group"><h4>Location</h4><div class="filter-chips">'+(locHTML||'<span style="font-size:11px;color:var(--text-muted)">No locations</span>')+'</div></div>';
+}
+function applyFiltersFromSheet(){
+  if(S.mode==='rent'){
+    var locs=collectChips(document.getElementById('filter-sheet-body'));
+    R.location=locs.location||'';
+    var minEl=document.getElementById('f-min-s');var maxEl=document.getElementById('f-max-s');
+    R.minRate=minEl&&minEl.value?Number(minEl.value):null;
+    R.maxRate=maxEl&&maxEl.value?Number(maxEl.value):null;
+    var avEl=document.getElementById('f-avail-s');
+    R.avail=avEl?avEl.checked:true;
+    R.page=1;loadList();renderAppliedFilters();hideSheet();return;
+  }
+  var chips=collectChips(document.getElementById('filter-sheet-body'));
+  B.catId=chips.cat||'';B.powerSource=chips.power||'';B.suitableUse=chips.use||'';
+  B.brand=chips.brand||'';B.location=chips.location||'';B.sellerId=chips.seller||'';B.crop=chips.crop||'';B.minRating=chips.rating;
+  var stEl=document.getElementById('f-stock-s');B.inStock=stEl?stEl.checked:false;
+  var minEl=document.getElementById('f-min-s');var maxEl=document.getElementById('f-max-s');
+  B.minPrice=minEl&&minEl.value?Number(minEl.value):null;
+  B.maxPrice=maxEl&&maxEl.value?Number(maxEl.value):null;
+  B.page=1;loadProducts();renderCats();renderAppliedFilters();hideSheet();
+}
 function collectChips(container){
-  var out={cat:'',power:'',use:'',brand:'',seller:'',crop:'',rating:null};
+  var out={};
   var list=container.querySelectorAll('.f-chip.active');
   Array.prototype.forEach.call(list,function(ch){
     var k=ch.getAttribute('data-kind'),v=ch.getAttribute('data-val');
-    if(!k)return;
-    if(k==='rating'){out.rating=v;}else{out[k]=v;}
+    if(k) out[k]=v;
   });
   return out;
 }
-function applyFiltersFromPanel(scope){
-  var container=scope==='sheet'?document.getElementById('filter-sheet-body'):document.getElementById('filter-panel');
-  var pre=scope==='sheet'?'-s':'';
-  var chips=collectChips(container);
-  S.catId=chips.cat||'';S.powerSource=chips.power||'';S.suitableUse=chips.use||'';
-  S.brand=chips.brand||'';S.sellerId=chips.seller||'';S.crop=chips.crop||'';S.minRating=chips.rating;
-  var stockEl=document.getElementById('f-stock'+pre);
-  S.inStock=stockEl?stockEl.checked:false;
-  var minEl=document.getElementById('f-min'+pre);
-  var maxEl=document.getElementById('f-max'+pre);
-  S.minPrice=minEl&&minEl.value?Number(minEl.value):null;
-  S.maxPrice=maxEl&&maxEl.value?Number(maxEl.value):null;
-  S.page=1;loadProducts();renderCats();renderAppliedFilters();
-  if(scope==='sheet')hideSheet();
-}
 
-/* ─── PRODUCTS ─── */
+/* ─── LISTING ─── */
 function searchParams(){
-  var params={page:S.page,limit:S.limit,sort_by:S.sortBy,sort_order:S.sortOrder};
-  if(S.search) params.search=S.search;
-  if(S.catId) params.category_id=S.catId;
-  if(S.powerSource) params.power_source=S.powerSource;
-  if(S.suitableUse) params.suitable_use=S.suitableUse;
-  if(S.brand) params.brand=S.brand;
-  if(S.sellerId) params.seller_id=S.sellerId;
-  if(S.crop) params.crop=S.crop;
-  if(S.minPrice!=null) params.min_price=S.minPrice;
-  if(S.maxPrice!=null) params.max_price=S.maxPrice;
-  if(S.inStock) params.in_stock=true;
-  if(S.minRating!=null) params.min_rating=Number(S.minRating);
+  if(S.mode==='rent'){
+    var p={page:R.page,limit:R.limit,sort_by:R.sortBy,sort_order:R.sortOrder};
+    if(R.search) p.search=R.search;
+    if(R.cat&&R.cat!=='') p.category=R.cat;
+    if(R.location&&R.location!=='') p.location=R.location;
+    if(R.minRate!=null) p.min_rate=R.minRate;
+    if(R.maxRate!=null) p.max_rate=R.maxRate;
+    if(!R.avail) p.is_available=false;
+    return p;
+  }
+  var params={page:B.page,limit:B.limit,sort_by:B.sortBy,sort_order:B.sortOrder};
+  if(B.search) params.search=B.search;
+  if(B.catId) params.category_id=B.catId;
+  if(B.powerSource) params.power_source=B.powerSource;
+  if(B.suitableUse) params.suitable_use=B.suitableUse;
+  if(B.brand) params.brand=B.brand;
+  if(B.sellerId) params.seller_id=B.sellerId;
+  if(B.crop) params.crop=B.crop;
+  if(B.location) params.location=B.location;
+  if(B.minPrice!=null) params.min_price=B.minPrice;
+  if(B.maxPrice!=null) params.max_price=B.maxPrice;
+  if(B.inStock) params.in_stock=true;
+  if(B.minRating!=null) params.min_rating=Number(B.minRating);
   return params;
 }
-function loadProducts(){
-  document.getElementById('store-grid').innerHTML=Array(8).fill(0).map(function(){
+function loadList(){
+  var skeleton=Array(8).fill(0).map(function(){
     return '<div class="is-card" style="pointer-events:none"><div class="is-skeleton" style="height:150px"></div><div style="padding:14px"><div class="is-skeleton" style="height:14px;width:70%;margin-bottom:6px"></div><div class="is-skeleton" style="height:10px;width:50%;margin-bottom:10px"></div><div class="is-skeleton" style="height:18px;width:40%"></div></div></div>';
   }).join('');
+  document.getElementById('store-grid').innerHTML=skeleton;
+  if(S.mode==='rent'){loadRentals();return;}
+  loadProducts();
+}
+window.loadList=loadList;
+
+function loadProducts(){
   var params=searchParams();
   var qs=[];Object.keys(params).forEach(function(k){if(params[k]!==undefined&&params[k]!==''&&params[k]!==null)qs.push(k+'='+encodeURIComponent(params[k]))});
   eqReq('GET','/tools-equipment/products'+(qs.length?'?'+qs.join('&'):'')).then(function(res){
-    var d=unwrap(res);S.products=d.items||[];S.total=d.total||0;S.page=d.page||1;S.totalPages=d.total_pages||0;
-    renderProducts();renderPager();renderCount();renderAppliedFilters();
+    var d=unwrap(res);B.products=d.items||[];B.total=d.total||0;B.page=d.page||1;B.totalPages=d.total_pages||0;
+    renderGrid();renderPager();renderCount();renderAppliedFilters();
   }).catch(function(err){
-    document.getElementById('store-grid').innerHTML='<div class="is-error"><i class="fas fa-exclamation-triangle"></i><h4>Equipment could not be loaded.</h4><p>'+(err.message||'Please try again')+'</p><button class="is-btn outline" style="width:auto;margin:12px auto 0;padding:10px 24px" onclick="loadProducts()">Retry</button></div>';
+    document.getElementById('store-grid').innerHTML='<div class="is-error"><i class="fas fa-exclamation-triangle"></i><h4>Equipment could not be loaded.</h4><p>'+(err.message||'Please try again')+'</p><button class="is-btn outline" style="width:auto;margin:12px auto 0;padding:10px 24px" onclick="window.loadList()">Retry</button></div>';
   });
 }
-window.loadProducts=loadProducts;
+function loadRentals(){
+  var params=searchParams();
+  var qs=[];Object.keys(params).forEach(function(k){if(params[k]!==undefined&&params[k]!==''&&params[k]!==null)qs.push(k+'='+encodeURIComponent(params[k]))});
+  eqReq('GET','/tools-equipment/rentals/list'+(qs.length?'?'+qs.join('&'):'')).then(function(res){
+    var d=unwrap(res);R.items=d.items||[];R.total=d.total||0;R.page=d.page||1;R.totalPages=d.total_pages||0;
+    renderGrid();renderPager();renderCount();renderAppliedFilters();
+  }).catch(function(err){
+    document.getElementById('store-grid').innerHTML='<div class="is-error"><i class="fas fa-exclamation-triangle"></i><h4>Rental equipment could not be loaded.</h4><p>'+(err.message||'Please try again')+'</p><button class="is-btn outline" style="width:auto;margin:12px auto 0;padding:10px 24px" onclick="window.loadList()">Retry</button></div>';
+  });
+}
 function renderCount(){
   var el=document.getElementById('store-count');
-  if(S.total===0){el.textContent='No tools or equipment are available right now.';return;}
-  var start=(S.page-1)*S.limit+1;
-  var end=Math.min(S.page*S.limit,S.total);
-  el.textContent=start+'–'+end+' of '+S.total+' products';
+  var c=current();
+  if(c.total===0){el.textContent=S.mode==='rent'?'No rental equipment is available right now.':'No tools or equipment are available right now.';return;}
+  var start=(c.page-1)*c.limit+1;
+  var end=Math.min(c.page*c.limit,c.total);
+  el.textContent=start+'–'+end+' of '+c.total+(S.mode==='rent'?' items':' products');
 }
 function renderAppliedFilters(){
   var chips=[];
-  if(S.search) chips.push({label:'"'+S.search+'"',clear:function(){S.search='';document.getElementById('store-search').value='';document.getElementById('store-search-wrap').classList.remove('has-val');}});
-  if(S.catId){var c=S.categories.find(function(x){return x.id===S.catId});chips.push({label:(c?c.name:'Category'),clear:function(){S.catId=''}});}
-  if(S.powerSource) chips.push({label:'Power: '+S.powerSource,clear:function(){S.powerSource=''}});
-  if(S.suitableUse) chips.push({label:'Use: '+S.suitableUse,clear:function(){S.suitableUse=''}});
-  if(S.brand) chips.push({label:'Brand: '+S.brand,clear:function(){S.brand=''}});
-  if(S.sellerId){var sl=(S.filtersData&&S.filtersData.sellers||[]).find(function(x){return x.id===S.sellerId});chips.push({label:'Seller: '+(sl?sl.shop_name:''),clear:function(){S.sellerId=''}});}
-  if(S.crop) chips.push({label:'Crop: '+S.crop,clear:function(){S.crop=''}});
-  if(S.minPrice!=null) chips.push({label:'Min: ₹'+S.minPrice,clear:function(){S.minPrice=null}});
-  if(S.maxPrice!=null) chips.push({label:'Max: ₹'+S.maxPrice,clear:function(){S.maxPrice=null}});
-  if(S.inStock) chips.push({label:'In Stock',clear:function(){S.inStock=false}});
-  if(S.minRating!=null) chips.push({label:S.minRating+'+ Stars',clear:function(){S.minRating=null}});
+  if(S.mode==='rent'){
+    if(R.search) chips.push({label:'"'+R.search+'"',clear:function(){R.search='';document.getElementById('store-search').value='';document.getElementById('store-search-wrap').classList.remove('has-val');}});
+    if(R.cat){var c=R.categories.find(function(x){return x.slug===R.cat});chips.push({label:c?c.name:'Category',clear:function(){R.cat='';}});}
+    if(R.location) chips.push({label:'Location: '+R.location,clear:function(){R.location='';}});
+    if(R.minRate!=null) chips.push({label:'Min rate: ₹'+R.minRate,clear:function(){R.minRate=null;}});
+    if(R.maxRate!=null) chips.push({label:'Max rate: ₹'+R.maxRate,clear:function(){R.maxRate=null;}});
+    if(!R.avail) chips.push({label:'Unavailable only',clear:function(){R.avail=true;}});
+  } else {
+    if(B.search) chips.push({label:'"'+B.search+'"',clear:function(){B.search='';document.getElementById('store-search').value='';document.getElementById('store-search-wrap').classList.remove('has-val');}});
+    if(B.catId){var c=B.categories.find(function(x){return x.id===B.catId});chips.push({label:(c?c.name:'Category'),clear:function(){B.catId='';}});}
+    if(B.powerSource) chips.push({label:'Power: '+B.powerSource,clear:function(){B.powerSource='';}});
+    if(B.suitableUse) chips.push({label:'Use: '+B.suitableUse,clear:function(){B.suitableUse='';}});
+    if(B.brand) chips.push({label:'Brand: '+B.brand,clear:function(){B.brand='';}});
+    if(B.location) chips.push({label:'Location: '+B.location,clear:function(){B.location='';}});
+    if(B.crop) chips.push({label:'Crop: '+B.crop,clear:function(){B.crop='';}});
+    if(B.minPrice!=null) chips.push({label:'Min: ₹'+B.minPrice,clear:function(){B.minPrice=null;}});
+    if(B.maxPrice!=null) chips.push({label:'Max: ₹'+B.maxPrice,clear:function(){B.maxPrice=null;}});
+    if(B.inStock) chips.push({label:'In Stock',clear:function(){B.inStock=false;}});
+    if(B.minRating!=null) chips.push({label:B.minRating+'+ Stars',clear:function(){B.minRating=null;}});
+  }
   var wrap=document.getElementById('applied-filters');
   if(!chips.length){wrap.innerHTML='';return;}
   wrap.innerHTML=chips.map(function(c,i){return'<span class="af-chip">'+c.label+' <button onclick="window._clearAF('+i+')">&times;</button></span>'}).join('');
-  window._clearAF=function(i){chips[i].clear();S.page=1;loadProducts();renderCats();renderAppliedFilters();renderFilterGroups();};
+  window._clearAF=function(i){
+    chips[i].clear();
+    current().page=1;
+    loadList();renderCats();renderAppliedFilters();renderFilterGroups();
+  };
+}
+function renderGrid(){
+  if(S.mode==='rent') renderRentCards(); else renderProducts();
 }
 function renderProducts(){
   var grid=document.getElementById('store-grid');
-  var items=S.products;
+  var items=B.products;
   if(!items||!items.length){grid.innerHTML='<div class="is-empty"><i class="fas fa-tractor"></i><h4>No tools or equipment are available right now.</h4><p>Try a different search or adjust filters</p></div>';return;}
   grid.innerHTML=items.map(function(p){
     var stockCls=p.stock_status==='out'?'out':p.stock_status==='low'?'low':'in';
@@ -624,15 +821,16 @@ function renderProducts(){
     var disc=p.discount;
     var inCart=S.cart&&S.cart.items?S.cart.items.find(function(ci){return ci.product&&ci.product.id===p.id}):null;
     var isWish=wishlistIds.has(p.id);
-    var isComp=!!S.compare[p.product_id||p.id];
+    var isComp=!!B.compare[p.product_id||p.id];
     var cat=p.category?p.category.name:'';
-    var seller=p.seller?p.seller.shop_name:'';
+    var seller=(!p.catalog&&p.seller)?p.seller.shop_name:'';
     var bestFor=p.suitable_use||p.equipment_type;
     var img=p.image_url||'';
-    var imgHTML=img?'<img src="'+img+'" alt="'+String(p.name||'').replace(/"/g,'')+'" loading="lazy" onerror="this.outerHTML=window.imgFallback()">':imgFallback();
+    var imgHTML=img?'<img src="'+img+'" alt="'+esc(p.name||'')+'" loading="lazy" onerror="this.outerHTML=window.imgFallback()">':imgFallback();
+    var ratingRow=p.rating>0?'<div class="is-card-rating"><span class="stars">'+starsHTML(p.rating)+'</span>'+(p.total_reviews?'<span class="rv-count">('+(p.total_reviews)+')</span>':'')+'</div>':'';
     var actionHTML='';
     if(inCart){
-      actionHTML='<button class="btn-cart ghost" onclick="event.stopPropagation();openProduct(\''+p.id+'\')"><div class="qty-stepper"><button onclick="event.stopPropagation();cartQty(\''+inCart.id+'\','+inCart.quantity+'-1,\''+p.id+'\')">-</button><span>'+Math.round(inCart.quantity)+'</span><button onclick="event.stopPropagation();cartQty(\''+inCart.id+'\','+inCart.quantity+'+1,\''+p.id+'\')">+</button></div></button>';
+      actionHTML='<button class="btn-cart ghost" onclick="event.stopPropagation();openProduct(\''+p.id+'\')"><div class="qty-stepper"><button onclick="event.stopPropagation();cartQty(\''+inCart.id+'\','+inCart.quantity+'-1)">-</button><span>'+Math.round(inCart.quantity)+'</span><button onclick="event.stopPropagation();cartQty(\''+inCart.id+'\','+inCart.quantity+'+1)">+</button></div></button>';
     } else if(p.stock_status!=='out'){
       actionHTML='<button class="btn-cart ghost" onclick="event.stopPropagation();openProduct(\''+p.id+'\')">View</button><button class="btn-cart primary" onclick="event.stopPropagation();addToCart(\''+p.product_id+'\')"><i class="fas fa-cart-plus"></i> Add</button>';
     } else {
@@ -641,100 +839,133 @@ function renderProducts(){
     return '<div class="is-card" onclick="openProduct(\''+p.id+'\')">'
       +'<div class="is-card-img">'+imgHTML
       +(disc?'<span class="badge-discount">-'+disc+'%</span>':'')
-      +'<button class="compare-btn'+(isComp?' active':'')+'" onclick="event.stopPropagation();toggleCompare(\''+(p.product_id||p.id)+'\',\''+p.id+'\',\''+String(p.name||'').replace(/'/g,"\\'").replace(/"/g,'')+'\',\''+String(img).replace(/'/g,"\\'")+'\')" title="Compare"><i class="fas fa-scale-balanced"></i></button>'
+      +'<button class="compare-btn'+(isComp?' active':'')+'" onclick="event.stopPropagation();toggleCompare(\''+(p.product_id||p.id)+'\',\''+p.id+'\',\''+jse(p.name||'')+'\',\''+jse(img)+'\')" title="Compare"><i class="fas fa-scale-balanced"></i></button>'
       +'<button class="wishlist-btn'+(isWish?' active':'')+'" onclick="event.stopPropagation();toggleWish(\''+p.id+'\')" title="Save"><i class="fas fa-heart"></i></button>'
       +'</div>'
       +'<div class="is-card-body">'
-      +'<div class="is-card-cat">'+cat+'</div>'
-      +'<div class="is-card-name">'+p.name+'</div>'
-      +'<div class="is-card-rating"><span class="stars">'+starsHTML(p.rating||0)+'</span>'+(p.total_reviews?'<span class="rv-count">('+(p.total_reviews)+')</span>':'')+'</div>'
-      +'<div class="is-card-meta">'+(bestFor?'<span class="best-for"><i class="fas fa-thumbs-up"></i> '+bestFor+'</span>':'')+(p.brand?'<span><i class="fas fa-tag"></i> '+p.brand+'</span>':'')+(seller?'<span><i class="fas fa-store"></i> '+seller+'</span>':'')+'</div>'
+      +'<div class="is-card-cat">'+esc(cat)+'</div>'
+      +'<div class="is-card-name">'+esc(p.name)+'</div>'
+      +ratingRow
+      +'<div class="is-card-meta">'+(bestFor?'<span class="best-for"><i class="fas fa-thumbs-up"></i> '+esc(bestFor)+'</span>':'')+(p.brand?'<span><i class="fas fa-tag"></i> '+esc(p.brand)+'</span>':'')+(p.location?'<span><i class="fas fa-location-dot"></i> '+esc(p.location)+'</span>':'')+(seller?'<span><i class="fas fa-store"></i> '+esc(seller)+'</span>':'')+'</div>'
       +'<div class="is-card-pricing"><span class="price">'+fmtPrice(p.price)+'</span>'+(p.mrp?'<span class="mrp">'+fmtPrice(p.mrp)+'</span>':'')+(disc?'<span class="disc">-'+disc+'%</span>':'')+'</div>'
       +'<div class="is-card-stock"><span class="stock-chip '+stockCls+'"><i class="fas fa-circle" style="font-size:6px"></i> '+stockTxt+'</span></div>'
       +'<div class="is-card-actions">'+actionHTML+'</div>'
       +'</div></div>';
   }).join('');
 }
+function renderRentCards(){
+  var grid=document.getElementById('store-grid');
+  var items=R.items;
+  if(!items||!items.length){grid.innerHTML='<div class="is-empty"><i class="fas fa-tractor"></i><h4>No rental equipment is available right now.</h4><p>Try a different search or adjust filters</p></div>';return;}
+  grid.innerHTML=items.map(function(e){
+    var avg=esc(e.name||'')+'';
+    var img=e.image_url||'';
+    var imgHTML=img?'<img src="'+img+'" alt="'+avg+'" loading="lazy" onerror="this.outerHTML=window.imgFallback()">':imgFallback();
+    var avail=e.is_available;
+    var availCls=avail?'in':'out';
+    var availTxt=avail?'Available for rent':'Unavailable';
+    return '<div class="is-card" onclick="openRent(\''+e.id+'\')">'
+      +'<div class="is-card-img">'+imgHTML
+      +(avail?'<span class="badge-organic"><i class="fas fa-hand-holding-hand"></i> Rent</span>':'<span class="badge-discount"><i class="fas fa-circle-xmark"></i> Unavailable</span>')
+      +'</div>'
+      +'<div class="is-card-body">'
+      +'<div class="is-card-cat">'+esc(e.category_name||e.type||'')+'</div>'
+      +'<div class="is-card-name">'+esc(e.name)+'</div>'
+      +(e.brand?'<div class="is-card-meta"><span><i class="fas fa-tag"></i> '+esc(e.brand)+'</span>'+(e.type?'<span><i class="fas fa-cog"></i> '+esc(e.type)+'</span>':'')+(e.location?'<span><i class="fas fa-location-dot"></i> '+esc(e.location)+'</span>':'')+'</div>':'')
+      +'<div class="is-card-pricing"><span class="price">'+fmtPrice(e.daily_rate)+'</span><span class="per"> / day</span></div>'
+      +'<div class="is-card-meta">'+(e.deposit_amount?'<span><i class="fas fa-coins"></i> Deposit '+fmtPrice(e.deposit_amount)+'</span>':'')+'<span class="rent-min-days"><i class="fas fa-calendar-days"></i> Min '+Math.round(e.min_duration_days||1)+' day'+(e.min_duration_days>1?'s':'')+'</span></div>'
+      +'<div class="is-card-stock"><span class="stock-chip '+availCls+'"><i class="fas fa-circle" style="font-size:6px"></i> '+availTxt+'</span></div>'
+      +'<div class="is-card-actions">'
+      +'<button class="btn-cart ghost" onclick="event.stopPropagation();openRent(\''+e.id+'\')">View</button>'
+      +(avail?'<button class="btn-cart primary cta-rent" onclick="event.stopPropagation();openRent(\''+e.id+'\',true)"><i class="fas fa-hand-holding-hand"></i> Rent Now</button>':'<button class="btn-cart primary" disabled>Unavailable</button>')
+      +'</div>'
+      +'</div></div>';
+  }).join('');
+}
 function renderPager(){
   var wrap=document.getElementById('store-pager');
-  if(S.totalPages<=1){wrap.innerHTML='';return;}
-  var html='<button '+(S.page<=1?'disabled':'')+' onclick="goPage('+(S.page-1)+')"><i class="fas fa-chevron-left"></i></button>';
-  var start=Math.max(1,S.page-2),end=Math.min(S.totalPages,S.page+2);
+  var c=current();
+  if(c.totalPages<=1){wrap.innerHTML='';return;}
+  var page=c.page,totalPages=c.totalPages;
+  var html='<button '+(page<=1?'disabled':'')+' onclick="goPage('+(page-1)+')"><i class="fas fa-chevron-left"></i></button>';
+  var start=Math.max(1,page-2),end=Math.min(totalPages,page+2);
   if(start>1) html+='<button onclick="goPage(1)">1</button>';
   if(start>2) html+='<span class="pg-info">…</span>';
-  for(var i=start;i<=end;i++) html+='<button class="'+(i===S.page?'active':'')+'" onclick="goPage('+i+')">'+i+'</button>';
-  if(end<S.totalPages-1) html+='<span class="pg-info">…</span>';
-  if(end<S.totalPages) html+='<button onclick="goPage('+S.totalPages+')">'+S.totalPages+'</button>';
-  html+='<button '+(S.page>=S.totalPages?'disabled':'')+' onclick="goPage('+(S.page+1)+')"><i class="fas fa-chevron-right"></i></button>';
+  for(var i=start;i<=end;i++) html+='<button class="'+(i===page?'active':'')+'" onclick="goPage('+i+')">'+i+'</button>';
+  if(end<totalPages-1) html+='<span class="pg-info">…</span>';
+  if(end<totalPages) html+='<button onclick="goPage('+totalPages+')">'+totalPages+'</button>';
+  html+='<button '+(page>=totalPages?'disabled':'')+' onclick="goPage('+(page+1)+')"><i class="fas fa-chevron-right"></i></button>';
   wrap.innerHTML=html;
 }
-window.goPage=function(p){if(p<1||p>S.totalPages)return;S.page=p;loadProducts();if(window.scrollTo)window.scrollTo({top:0,behavior:'smooth'});};
+window.goPage=function(p){
+  var c=current();
+  if(p<1||p>c.totalPages)return;
+  c.page=p;loadList();
+  if(window.scrollTo)window.scrollTo({top:0,behavior:'smooth'});
+};
 
-/* ─── RECOMMENDED ─── */
+/* ─── RECOMMENDED / RECENT (buy) ─── */
 function loadRecommended(){
   eqReq('GET','/tools-equipment/recommended?limit=16').then(function(res){
     var d=unwrap(res);
     if(d&&d.items&&d.items.length){
-      S.recommended=d.items;
+      B.recommended=d.items;
       var section=document.getElementById('reco-section');
-      section.style.display='block';
+      if(S.mode==='buy') section.style.display='block';
       var subs=[];
       if(d.farmer_crops&&d.farmer_crops.length)subs.push('Your crops: '+d.farmer_crops.map(function(c){return c[0].toUpperCase()+c.slice(1)}).join(', '));
       if(d.active_tasks&&d.active_tasks.length)subs.push('Upcoming tasks: '+d.active_tasks.join(', '));
       document.getElementById('reco-sub').textContent=subs.join(' · ');
       document.getElementById('reco-row').innerHTML=d.items.map(function(p){
         var img=p.image_url||'';
-        var imgHTML=img?'<img src="'+img+'" alt="'+String(p.name||'').replace(/"/g,'')+'" loading="lazy" onerror="this.style.display=\'none\'">':'';
-        return '<div class="reco-card" onclick="openProduct(\''+p.id+'\')">'+imgHTML+'<div class="reco-body"><div class="reco-name">'+p.name+'</div><div class="reco-price">'+fmtPrice(p.price)+(p.mrp?'<span class="mrp">'+fmtPrice(p.mrp)+'</span>':'')+'</div></div></div>';
+        var imgHTML=img?'<img src="'+img+'" alt="'+esc(p.name||'')+'" loading="lazy" onerror="this.style.display=\'none\'">':'';
+        return '<div class="reco-card" onclick="openProduct(\''+p.id+'\')">'+imgHTML+'<div class="reco-body"><div class="reco-name">'+esc(p.name)+'</div><div class="reco-price">'+fmtPrice(p.price)+(p.mrp?'<span class="mrp">'+fmtPrice(p.mrp)+'</span>':'')+'</div></div></div>';
       }).join('');
     }
   }).catch(function(){});
 }
-
-/* ─── RECENTLY VIEWED ─── */
 function loadRecent(){
   eqReq('GET','/tools-equipment/recent?limit=10').then(function(res){
     var d=unwrap(res);
     if(d&&d.items&&d.items.length){
-      S.recent=d.items;
+      B.recent=d.items;
       var section=document.getElementById('recent-section');
-      section.style.display='block';
+      if(S.mode==='buy') section.style.display='block';
       document.getElementById('recent-row').innerHTML=d.items.map(function(p){
         var img=p.image_url||'';
-        var imgHTML=img?'<img src="'+img+'" alt="'+String(p.name||'').replace(/"/g,'')+'" loading="lazy" onerror="this.style.display=\'none\'">':'';
-        return '<div class="reco-card" onclick="openProduct(\''+p.id+'\')">'+imgHTML+'<div class="reco-body"><div class="reco-name">'+p.name+'</div><div class="reco-price">'+fmtPrice(p.price)+(p.mrp?'<span class="mrp">'+fmtPrice(p.mrp)+'</span>':'')+'</div></div></div>';
+        var imgHTML=img?'<img src="'+img+'" alt="'+esc(p.name||'')+'" loading="lazy" onerror="this.style.display=\'none\'">':'';
+        return '<div class="reco-card" onclick="openProduct(\''+p.id+'\')">'+imgHTML+'<div class="reco-body"><div class="reco-name">'+esc(p.name)+'</div><div class="reco-price">'+fmtPrice(p.price)+(p.mrp?'<span class="mrp">'+fmtPrice(p.mrp)+'</span>':'')+'</div></div></div>';
       }).join('');
     }
   }).catch(function(){});
 }
 window.loadRecent=loadRecent;
 
-/* ─── COMPARE ─── */
+/* ─── COMPARE (buy) ─── */
 window.toggleCompare=function(pid,id,name,img){
   var key=pid||id;
-  if(S.compare[key]){delete S.compare[key];}
-  else if(Object.keys(S.compare).length>=4){toast('You can compare up to 4 items','info');return;}
-  else{S.compare[key]={product_id:key,id:id,name:name,image_url:img};}
-  renderCompareBar();
-  renderProducts();
+  if(B.compare[key]){delete B.compare[key];}
+  else if(Object.keys(B.compare).length>=4){toast('You can compare up to 4 items','info');return;}
+  else{B.compare[key]={product_id:key,id:id,name:name,image_url:img};}
+  renderCompareBar();renderGrid();
 };
 function renderCompareBar(){
   var bar=document.getElementById('compare-bar');
-  var ids=Object.keys(S.compare);
+  var ids=Object.keys(B.compare);
   document.getElementById('cb-count').textContent=ids.length;
   document.getElementById('cb-items').innerHTML=ids.map(function(k){
-    var it=S.compare[k];
-    return '<div class="cb-item"><img src="'+(it.image_url||'')+'" onerror="this.style.display=\'none\'" alt=""><button class="cb-x" onclick="toggleCompare(\''+it.product_id+'\',\''+it.id+'\',\''+String(it.name||'').replace(/'/g,"\\'").replace(/"/g,'')+'\',\''+String(it.image_url||'').replace(/'/g,"\\'")+'\')">×</button></div>';
+    var it=B.compare[k];
+    return '<div class="cb-item"><img src="'+(it.image_url||'')+'" onerror="this.style.display=\'none\'" alt=""><button class="cb-x" onclick="toggleCompare(\''+it.product_id+'\',\''+it.id+'\',\''+jse(it.name||'')+'\',\''+jse(it.image_url||'')+'\')">×</button></div>';
   }).join('');
   document.getElementById('cb-open').disabled=ids.length<2;
-  bar.classList.toggle('open',ids.length>0);
+  bar.classList.toggle('open',ids.length>0 && S.mode==='buy');
 }
 window.openCompareModal=function(){
-  var ids=Object.keys(S.compare);
+  var ids=Object.keys(B.compare);
   if(ids.length<2){toast('Select at least 2 products to compare','info');return;}
   var body=document.getElementById('compare-modal-body');
   body.innerHTML='<h3 style="font-size:18px;font-weight:800;margin-bottom:12px"><i class="fas fa-scale-balanced" style="color:var(--eq-green)"></i> Compare Equipment</h3><div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:28px"></i><p style="margin-top:10px;font-size:13px">Loading comparison...</p></div>';
-  document.getElementById('compare-modal').classList.add('open');
+  openModal('compare-modal');
   eqReq('GET','/tools-equipment/compare?ids='+encodeURIComponent(ids.join(','))).then(function(res){
     var d=unwrap(res);renderCompareTable(d.items||[]);
   }).catch(function(err){
@@ -757,7 +988,8 @@ function renderCompareTable(items){
     if(p.suitable_use) m['Best For']=p.suitable_use;
     if(p.operating_width) m['Operating Width']=p.operating_width;
     if(p.capacity) m['Capacity']=p.capacity;
-    if(p.rating) m['Rating']=p.rating+'★';
+    if(p.location) m['Location']=p.location;
+    if(p.rating>0) m['Rating']=p.rating+'★';
     m['Stock']=p.stock_status==='out'?'Out of Stock':p.stock_status==='low'?'Low Stock':'In Stock';
     if(p.category&&p.category.name) m['Category']=p.category.name;
     return m;
@@ -765,7 +997,7 @@ function renderCompareTable(items){
   var maps=items.map(rows);
   var allKeys=[];maps.forEach(function(m){Object.keys(m).forEach(function(k){if(allKeys.indexOf(k)===-1)allKeys.push(k)})});
   var head='<tr><th style="text-align:left">Specification</th>'+items.map(function(p){
-    return '<th><img class="cp-img" src="'+(p.image_url||'')+'" onerror="this.style.display=\'none\'"><div class="cp-name">'+p.name+'</div><div class="cp-price">'+fmtPrice(p.price)+'</div><button class="cp-view" onclick="openProduct(\''+(p.id)+'\')">View Details</button><br><button class="cp-x" onclick="removeFromCompare(\''+(p.product_id||p.id)+'\')"><i class="fas fa-trash"></i> Remove</button></th>';
+    return '<th><img class="cp-img" src="'+(p.image_url||'')+'" onerror="this.style.display=\'none\'"><div class="cp-name">'+esc(p.name)+'</div><div class="cp-price">'+fmtPrice(p.price)+'</div><button class="cp-view" onclick="openProduct(\''+(p.id)+'\')">View Details</button><br><button class="cp-x" onclick="removeFromCompare(\''+(p.product_id||p.id)+'\')"><i class="fas fa-trash"></i> Remove</button></th>';
   }).join('')+'</tr>';
   var trs=allKeys.map(function(k){
     return '<tr><td class="row-label">'+k+'</td>'+items.map(function(p){
@@ -775,18 +1007,17 @@ function renderCompareTable(items){
   body.innerHTML='<h3 style="font-size:18px;font-weight:800;margin-bottom:12px"><i class="fas fa-scale-balanced" style="color:var(--eq-green)"></i> Compare Equipment</h3>'
     +'<table class="compare-table"><thead>'+head+'</thead><tbody>'+trs+'</tbody></table>';
 }
-window.removeFromCompare=function(pid){var k=Object.keys(S.compare).find(function(x){return S.compare[x].product_id===pid});if(k)delete S.compare[k];renderCompareBar();renderProducts();openCompareModal();};
-window.closeCompareModal=function(){document.getElementById('compare-modal').classList.remove('open');};
+window.removeFromCompare=function(pid){var k=Object.keys(B.compare).find(function(x){return B.compare[x].product_id===pid});if(k)delete B.compare[k];renderCompareBar();renderGrid();openCompareModal();};
+window.closeCompareModal=function(){closeModal('compare-modal');};
 
-/* ─── CART ─── */
+/* ─── CART (buy) ─── */
 function loadCart(){
   if(!window.API||!API.Marketplace)return;
   API.Marketplace.getCart().then(function(d){
     S.cart=d;
     var count=d&&d.items?d.items.length:0;
     document.getElementById('cart-badge').textContent=count||'';
-    renderCartSheet();
-    renderProducts();
+    renderCartSheet();renderGrid();
   }).catch(function(){});
 }
 window.loadCart=loadCart;
@@ -798,16 +1029,15 @@ function addToCart(productId,qty){
     var count=d&&d.items?d.items.length:0;
     document.getElementById('cart-badge').textContent=count||'';
     toast('Added to cart','success');
-    renderCartSheet();renderProducts();
+    renderCartSheet();renderGrid();
   }).catch(function(err){toast(err.message||'Failed to add to cart','error')});
 }
 window.addToCart=addToCart;
-function cartQty(itemId,currentQty,delta,productId){
-  var newQty=currentQty+delta;
-  if(newQty<1){removeCartItem(itemId);return;}
-  eqReq('PATCH','/cart/'+itemId,{product_id:productId,quantity:newQty}).then(function(res){
+function cartQty(itemId,currentQty){
+  if(currentQty<1){removeCartItem(itemId);return;}
+  eqReq('PATCH','/cart/'+itemId,{quantity:currentQty}).then(function(res){
     var d=unwrap(res);S.cart=d;
-    renderCartSheet();renderProducts();
+    renderCartSheet();renderGrid();
   }).catch(function(err){toast(err.message||'Failed to update cart','error')});
 }
 window.cartQty=cartQty;
@@ -816,7 +1046,7 @@ function removeCartItem(itemId){
     var d=unwrap(res);S.cart=d;
     var count=d&&d.items?d.items.length:0;
     document.getElementById('cart-badge').textContent=count||'';
-    renderCartSheet();renderProducts();toast('Removed from cart','info');
+    renderCartSheet();renderGrid();toast('Removed from cart','info');
   }).catch(function(err){toast(err.message||'Failed','error')});
 }
 window.removeCartItem=removeCartItem;
@@ -831,14 +1061,14 @@ function renderCartSheet(){
     var p=it.product||{};
     return '<div class="cart-item-row">'
       +'<img class="cart-item-img" src="'+(p.image_url||'')+'" onerror="this.style.display=\'none\'">'
-      +'<div class="cart-item-info"><div class="cart-item-name">'+p.name+'</div><div class="cart-item-sub">'+fmtPrice(p.price)+' × '+Math.round(it.quantity)+' = '+fmtPrice(it.subtotal)+'</div></div>'
-      +'<div class="cart-item-qty"><button onclick="cartQty(\''+it.id+'\','+it.quantity+'-1,\''+p.id+'\')"><i class="fas fa-minus"></i></button><span>'+Math.round(it.quantity)+'</span><button onclick="cartQty(\''+it.id+'\','+it.quantity+'+1,\''+p.id+'\')"><i class="fas fa-plus"></i></button></div>'
+      +'<div class="cart-item-info"><div class="cart-item-name">'+esc(p.name)+'</div><div class="cart-item-sub">'+fmtPrice(p.price)+' × '+Math.round(it.quantity)+' = '+fmtPrice(it.subtotal)+'</div></div>'
+      +'<div class="cart-item-qty"><button onclick="cartQty(\''+it.id+'\','+it.quantity+'-1)"><i class="fas fa-minus"></i></button><span>'+Math.round(it.quantity)+'</span><button onclick="cartQty(\''+it.id+'\','+it.quantity+'+1)"><i class="fas fa-plus"></i></button></div>'
       +'<button class="cart-item-remove" onclick="removeCartItem(\''+it.id+'\')"><i class="fas fa-trash"></i></button>'
       +'</div>';
   }).join('');
 }
 
-/* ─── WISHLIST ─── */
+/* ─── WISHLIST (buy) ─── */
 function loadWishlist(){
   if(!isAuthed()||!window.API||!API.Marketplace)return;
   API.Marketplace.getWishlist().then(function(d){
@@ -846,7 +1076,7 @@ function loadWishlist(){
     S.wishlist=items;wishlistIds.clear();
     items.forEach(function(w){if(w.product)wishlistIds.add(w.product.id)});
     document.getElementById('wk-badge').textContent=items.length||'';
-    renderWishlistSheet();renderProducts();
+    renderWishlistSheet();renderGrid();
   }).catch(function(){});
 }
 window.toggleWish=function(productId){
@@ -864,17 +1094,17 @@ function renderWishlistSheet(){
     var p=w.product||{};
     return '<div class="wk-item-row">'
       +'<img class="wk-item-img" src="'+(p.image_url||'')+'" onerror="this.style.display=\'none\'">'
-      +'<div class="wk-item-info"><div class="wk-item-name">'+p.name+'</div><div class="wk-item-price">'+fmtPrice(p.price)+'</div></div>'
+      +'<div class="wk-item-info"><div class="wk-item-name">'+esc(p.name)+'</div><div class="wk-item-price">'+fmtPrice(p.price)+'</div></div>'
       +'<div class="wk-item-actions"><button class="wk-add" onclick="addToCart(\''+p.product_id+'\')">Add to Cart</button><button class="wk-remove" onclick="toggleWish(\''+p.id+'\')">✕</button></div>'
       +'</div>';
   }).join('');
 }
 
-/* ─── PRODUCT DETAIL ─── */
+/* ─── BUY PRODUCT DETAIL ─── */
 window.openProduct=function(id){
-  var p=(S.products||[]).find(function(x){return x.id===id})
-    ||(S.recommended||[]).find(function(x){return x.id===id})
-    ||(S.recent||[]).find(function(x){return x.id===id});
+  var p=(B.products||[]).find(function(x){return x.id===id})
+    ||(B.recommended||[]).find(function(x){return x.id===id})
+    ||(B.recent||[]).find(function(x){return x.id===id});
   if(p){
     showProductModal(p);
     if(p.product_id) eqReq('POST','/tools-equipment/viewed/'+p.product_id).catch(function(){});
@@ -890,11 +1120,11 @@ function showProductModal(p){
   var isWish=wishlistIds.has(p.id);
   var img=p.image_url||'';
   var desc=p.description||'';
-  var seller=p.seller||{};
+  var seller=(!p.catalog&&p.seller)?p.seller:{};
   var stockCls=p.stock_status==='out'?'out':p.stock_status==='low'?'low':'in';
   var stockTxt=p.stock_status==='out'?'Out of Stock':p.stock_status==='low'?'Low Stock':'In Stock';
   var specRows=[];
-  function addSpec(label,val){if(val)specRows.push('<dt>'+label+'</dt><dd>'+val+'</dd>');}
+  function addSpec(label,val){if(val)specRows.push('<dt>'+esc(label)+'</dt><dd>'+esc(val)+'</dd>');}
   if(p.brand)addSpec('Brand',p.brand);
   if(p.equipment_type)addSpec('Equipment Type',p.equipment_type);
   if(p.power_source)addSpec('Power Source',p.power_source);
@@ -905,50 +1135,239 @@ function showProductModal(p){
   if(p.suitable_use)addSpec('Best For',p.suitable_use);
   if(p.operating_width)addSpec('Operating Width',p.operating_width);
   if(p.capacity)addSpec('Capacity',p.capacity);
-  if(p.total_reviews)addSpec('Reviews',p.total_reviews);
+  if(p.location)addSpec('Location',p.location);
   var specs=specRows.join('');
   var body=document.getElementById('prod-modal-body');
+  var ratingRow=p.rating>0?'<div class="prod-rating"><span class="stars">'+starsHTML(p.rating)+'</span>'+(p.total_reviews?'<span>('+(p.total_reviews)+' reviews)</span>':'')+'</div>':'';
   body.innerHTML='<div class="prod-detail">'
-    +'<div class="prod-img-wrap"><img src="'+img+'" alt="'+String(p.name||'').replace(/"/g,'')+'" onerror="this.outerHTML=window.imgFallback()"></div>'
+    +'<div class="prod-img-wrap"><img src="'+img+'" alt="'+esc(p.name||'')+'" onerror="this.outerHTML=window.imgFallback()"></div>'
     +'<div class="prod-info">'
-    +'<h2>'+p.name+'</h2>'
-    +'<div class="prod-brand">'+(p.brand||'')+(seller.shop_name?' · '+seller.shop_name:'')+(p.category&&p.category.name?' · '+p.category.name:'')+'</div>'
-    +'<div class="prod-rating"><span class="stars">'+starsHTML(p.rating||0)+'</span>'+(p.total_reviews?'<span>('+(p.total_reviews)+' reviews)</span>':'')+'</div>'
+    +'<h2>'+esc(p.name)+'</h2>'
+    +'<div class="prod-brand">'+(p.brand||'')+(seller.shop_name?' · '+esc(seller.shop_name):'')+(p.category&&p.category.name?' · '+esc(p.category.name):'')+'</div>'
+    +ratingRow
     +'<div class="is-card-stock"><span class="stock-chip '+stockCls+'"><i class="fas fa-circle" style="font-size:6px"></i> '+stockTxt+'</span></div>'
     +'<div class="prod-price-row"><span class="price">'+fmtPrice(p.price)+'</span>'+(p.mrp?'<span class="mrp">'+fmtPrice(p.mrp)+'</span>':'')+(p.discount?'<span class="disc">-'+p.discount+'% off</span>':'')+'</div>'
-    +(desc?'<div class="prod-desc">'+desc+'</div>':'')
-    +(seller.shop_name?'<div class="prod-seller"><i class="fas fa-store"></i><div class="prod-seller-info"><strong>'+seller.shop_name+'</strong>'+(seller.location||'')+(seller.is_verified?' <i class="fas fa-check-circle" style="color:var(--eq-green)"></i> Verified':'')+'</div></div>':'')
+    +(desc?'<div class="prod-desc">'+esc(desc)+'</div>':'')
+    +(seller.shop_name?'<div class="prod-seller"><i class="fas fa-store"></i><div class="prod-seller-info"><strong>'+esc(seller.shop_name)+'</strong>'+(seller.location||'')+(seller.is_verified?' <i class="fas fa-check-circle" style="color:var(--eq-green)"></i> Verified':'')+'</div></div>':'')
     +(specs?'<div class="prod-specs"><h4>Specifications</h4><dl class="spec-grid">'+specs+'</dl></div>':'')
-    +(p.crops&&p.crops.length?'<div class="prod-crops"><h4 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px">Suitable Crops</h4><div class="chips">'+p.crops.map(function(c){return'<span class="f-chip" style="cursor:default">'+c+'</span>'}).join('')+'</div></div>':'')
+    +(p.crops&&p.crops.length?'<div class="prod-crops"><h4 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px">Suitable Crops</h4><div class="chips">'+p.crops.map(function(c){return'<span class="f-chip" style="cursor:default">'+esc(c)+'</span>'}).join('')+'</div></div>':'')
     +'<div class="prod-qty-row"><label>Quantity</label><div class="qty-controls"><button onclick="prodQty(-1)"><i class="fas fa-minus"></i></button><span id="prod-qty">1</span><button onclick="prodQty(1)"><i class="fas fa-plus"></i></button></div></div>'
     +'<div class="prod-actions">'
     +(inCart?'<button class="is-btn outline" onclick="closeProdModal();showSheet(\'cart-sheet\')"><i class="fas fa-shopping-cart"></i> View in Cart ('+Math.round(inCart.quantity)+')</button>'
       :(p.stock_status!=='out'?'<button class="is-btn primary" onclick="addToCartFromModal(\''+p.product_id+'\')"><i class="fas fa-cart-plus"></i> Add to Cart</button>'
         :'<button class="is-btn primary" disabled>Sold Out</button>'))
-    +(p.stock_status!=='out'?'<button class="is-btn gold" onclick="buyNowFromModal(\''+p.product_id+'\')"><i class="fas fa-bolt"></i> Buy Now</button>':'')
+    +(p.stock_status!=='out'?'<button class="is-btn gold buy-tab" onclick="buyNowFromModal(\''+p.product_id+'\')"><i class="fas fa-bolt"></i> Buy Now</button>':'')
     +'</div></div></div>';
-  document.getElementById('prod-modal').classList.add('open');
+  openModal('prod-modal');
   body._currentProduct=p;
 }
+window.closeBuyModal=function(){closeModal('prod-modal');};
+window.closeProdModal=window.closeBuyModal;
+window.openProductFromCompare=function(id){closeModal('compare-modal');openProduct(id);};
 var _prodQty=1;
 window.prodQty=function(d){var el=document.getElementById('prod-qty');_prodQty=Math.max(1,parseInt(el.textContent)+d);el.textContent=_prodQty};
 window.addToCartFromModal=function(pid){addToCart(pid,_prodQty);_prodQty=1};
 window.buyNowFromModal=function(pid){
   addToCart(pid,_prodQty);
-  setTimeout(function(){closeProdModal();openCheckout()},400);
+  setTimeout(function(){closeModal('prod-modal');openCheckout()},400);
   _prodQty=1;
 };
-function closeProdModal(){document.getElementById('prod-modal').classList.remove('open')}
-window.closeProdModal=closeProdModal;
 
-/* ─── CHECKOUT ─── */
+/* ─── RENT DETAIL + BOOKING ─── */
+window.openRent=function(id,doBook){
+  var e=(R.items||[]).find(function(x){return x.id===id||x.equipment_id===id});
+  if(e){showRentModal(e,doBook);return;}
+  eqReq('GET','/tools-equipment/rentals/'+id).then(function(res){
+    showRentModal(unwrap(res),doBook);
+  }).catch(function(err){toast(err.message||'Rental equipment not found','error')});
+};
+function showRentModal(e,doBook){
+  _curRental=e;
+  _rentBookingDur=Math.max(1,Math.round(e.min_duration_days||1));
+  var img=e.image_url||'';
+  var avail=e.is_available;
+  var specRows=[];
+  function addSpec(label,val){if(val)specRows.push('<dt>'+esc(label)+'</dt><dd>'+esc(val)+'</dd>');}
+  if(e.brand)addSpec('Brand',e.brand);
+  if(e.model)addSpec('Model',e.model);
+  if(e.type)addSpec('Machine Type',e.type);
+  if(e.location)addSpec('Location',e.location);
+  if(e.hourly_rate)addSpec('Hourly Rate',fmtPrice(e.hourly_rate)+'/hr');
+  if(e.deposit_amount)addSpec('Security Deposit',fmtPrice(e.deposit_amount));
+  if(e.min_duration_days>1)addSpec('Minimum Duration',e.min_duration_days+' days');
+  var specs=specRows.join('');
+  var body=document.getElementById('rent-modal-body');
+  var terms=e.rental_terms;
+  var termsHTML=terms?('<p class="bk-terms"><i class="fas fa-check-circle"></i>'+esc(terms)+'</p>'):'';
+  body.innerHTML='<div class="prod-detail">'
+    +'<div class="prod-img-wrap"><img src="'+img+'" alt="'+esc(e.name||'')+'" onerror="this.outerHTML=window.imgFallback()"></div>'
+    +'<div class="prod-info">'
+    +'<h2>'+esc(e.name)+'</h2>'
+    +'<div class="prod-brand">'+(e.brand?esc(e.brand)+' · ':'')+(e.type?esc(e.type):'')+(e.category_name?' · '+esc(e.category_name):'')+'</div>'
+    +'<div class="is-card-stock"><span class="stock-chip '+(avail?'in':'out')+'"><i class="fas fa-circle" style="font-size:6px"></i> '+(avail?'Available for rent':'Currently unavailable')+'</span></div>'
+    +'<div class="prod-price-row"><span class="price">'+fmtPrice(e.daily_rate)+'</span><span class="mrp" style="text-decoration:none"> / day</span>'+(e.deposit_amount?'<span class="disc" style="color:var(--eq-green)">Deposit '+fmtPrice(e.deposit_amount)+'</span>':'')+'</div>'
+    +(e.description?'<div class="prod-desc">'+esc(e.description)+'</div>':'')
+    +(specs?'<div class="prod-specs"><h4>Specifications</h4><dl class="spec-grid">'+specs+'</dl></div>':'')
+    +(avail?'<div class="prod-specs"><h4>Rental Request</h4>'
+      +'<div class="booking-box">'
+      +'<div class="bk-row"><label>Booking date</label><input type="date" id="bk-date" min="'+todayISO()+'"></div>'
+      +'<div class="bk-row"><label>Duration</label><div class="qty-controls"><button onclick="bkDur(-1)"><i class="fas fa-minus"></i></button><span id="bk-dur">'+_rentBookingDur+'</span><button onclick="bkDur(1)"><i class="fas fa-plus"></i></button></div><span class="rent-min-days"><i class="fas fa-calendar-days"></i> Min '+Math.round(e.min_duration_days||1)+' day'+(e.min_duration_days>1?'s':'')+'</span></div>'
+      +'<div class="bk-totals">'
+      +'<div class="bk-line"><span>Daily rate</span><span>'+fmtPrice(e.daily_rate)+'</span></div>'
+      +'<div class="bk-line"><span>Duration</span><span id="bk-days-label">'+_rentBookingDur+' day'+( _rentBookingDur>1?'s':'')+'</span></div>'
+      +'<div class="bk-line"><span>Security deposit</span><span>'+(e.deposit_amount?fmtPrice(e.deposit_amount)+' (refundable)':'—')+'</span></div>'
+      +'<div class="bk-line bk-grand"><span>Rental cost ('+_rentBookingDur+' day'+( _rentBookingDur>1?'s':'')+')</span><span id="bk-total">'+fmtPrice((e.daily_rate||0)*_rentBookingDur)+'</span></div>'
+      +'</div>'
+      +'<button class="is-btn primary cta-rent" id="bk-submit" onclick="submitRental()"><i class="fas fa-paper-plane"></i> Submit Rental Request</button>'
+      +termsHTML
+      +'<p class="bk-note">Submitting a rental request does not confirm a booking - the provider will review and confirm your request.</p>'
+      +'</div></div>':'<div class="prod-actions"><button class="is-btn primary" disabled>Currently Unavailable</button></div>')
+    +'</div></div>';
+  openModal('rent-modal');
+  var dte=document.getElementById('bk-date'); if(dte) dte.value=todayISO();
+}
+function todayISO(){
+  var d=new Date();var m=('0'+(d.getMonth()+1)).slice(-2);var day=('0'+d.getDate()).slice(-2);
+  return d.getFullYear()+'-'+m+'-'+day;
+}
+window.closeRentModal=function(){_curRental=null;closeModal('rent-modal');};
+window.bkDur=function(d){
+  if(!_curRental) return;
+  var min=Math.max(1,Math.round(_curRental.min_duration_days||1));
+  _rentBookingDur=Math.max(min,_rentBookingDur+d);
+  var el=document.getElementById('bk-dur');if(el)el.textContent=_rentBookingDur;
+  var lbl=document.getElementById('bk-days-label');if(lbl)lbl.textContent=_rentBookingDur+' day'+(_rentBookingDur>1?'s':'');
+  var tot=document.getElementById('bk-total');if(tot)tot.textContent=fmtPrice((_curRental.daily_rate||0)*_rentBookingDur);
+};
+window.submitRental=function(){
+  if(!_curRental) return;
+  var dur=_rentBookingDur;
+  var dte=document.getElementById('bk-date');
+  var booking_date=dte&&dte.value?dte.value:todayISO();
+  var btn=document.getElementById('bk-submit');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Submitting...';}
+  eqReq('POST','/tools-equipment/rentals/book',{equipment_id:_curRental.equipment_id,booking_date:booking_date,duration_days:dur}).then(function(res){
+    var d=unwrap(res);
+    renderRentalSuccess(d);
+    loadBookings();
+  }).catch(function(err){
+    toast(err.message||'Failed to submit rental request','error');
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane"></i> Submit Rental Request';}
+  });
+};
+function renderRentalSuccess(d){
+  var body=document.getElementById('rent-modal-body');
+  body.innerHTML='<div class="success-icon"><i class="fas fa-paper-plane"></i></div>'
+    +'<div class="success-title">Rental Request Submitted</div>'
+    +'<div class="success-sub">Request ID: '+esc(d.booking_id||'N/A')+'<br>'+esc(d.equipment_name||'')+' • '+esc(d.duration_days)+' day(s) • '+fmtPrice(d.total_cost)+'</div>'
+    +'<div class="is-card-stock" style="text-align:center"><span class="st-chip requested"><i class="fas fa-hourglass-half"></i> Status: Requested</span></div>'
+    +(d.deposit?'<p class="bk-note" style="text-align:center">A refundable security deposit of '+fmtPrice(d.deposit)+' applies.</p>':'')
+    +'<div class="success-actions" style="margin-top:14px"><button class="is-btn primary cta-rent" style="width:auto" onclick="closeRentModal()">Continue Browsing</button><button class="is-btn outline" style="width:auto" onclick="closeRentModal();openOrdersSheet(\'rent\')">View My Rental Requests</button></div>';
+}
+
+/* ─── ORDERS & RENTAL REQUESTS ─── */
+function loadOrders(){
+  eqReq('GET','/orders?limit=100').then(function(res){
+    var d=unwrap(res);S.orders=d&&d.items?d.items:[];
+    renderOrdersSheet();
+  }).catch(function(){});
+}
+function loadBookings(){
+  eqReq('GET','/tools-equipment/rentals/my-bookings').then(function(res){
+    var d=unwrap(res);S.bookings=d&&d.items?d.items:[];
+    renderOrdersSheet();
+    var active=S.bookings.filter(function(b){return b.status==='requested'||b.status==='confirmed'}).length;
+    document.getElementById('orders-badge').textContent=active||'';
+  }).catch(function(){});
+}
+window.loadBookings=loadBookings;
+function openOrdersSheet(tab){
+  if(tab) S.ordersTab=tab;
+  renderOrdersSheet();
+  loadOrders();loadBookings();
+  showSheet('orders-sheet');
+}
+window.openOrdersSheet=openOrdersSheet;
+function renderOrdersSheet(){
+  var body=document.getElementById('orders-sheet-body');
+  document.getElementById('otab-buy').classList.toggle('active',S.ordersTab==='buy');
+  document.getElementById('otab-rent').classList.toggle('active',S.ordersTab==='rent');
+  if(S.ordersTab==='rent'){renderRentalRequests();return;}
+  renderBuyOrders();
+}
+function statusChip(s){
+  var label=esc(s||'pending');
+  var cls=String(label).replace(/\s+/g,'').toLowerCase();
+  if(['requested','pending'].indexOf(cls)>-1) cls='st-chip requested'; else cls='st-chip '+cls;
+  return '<span class="'+cls+'">'+label+'</span>';
+}
+function renderBuyOrders(){
+  var body=document.getElementById('orders-sheet-body');
+  if(!S.orders.length){body.innerHTML='<div class="ord-empty"><i class="fas fa-bag-shopping"></i><p>No purchase orders yet. Add equipment to your cart and place an order.</p></div>';return;}
+  body.innerHTML='<div class="ord-row" style="cursor:default"><span style="font-size:12px;color:var(--text-muted)">'+(S.orders.length)+' order'+(S.orders.length>1?'s':'')+'</span></div>'+S.orders.map(function(o){
+    var d=new Date(o.created_at);var dateStr=d?d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'';
+    var open=o.order_id===_curOrder?' style="display:block"':' style="display:none"';
+    return '<div class="ord-row" onclick="toggleOrderDetail(\''+o.order_id+'\')">'
+      +'<div class="ord-thumb"><i class="fas fa-bag-shopping"></i></div>'
+      +'<div class="ord-info"><div class="ord-title">'+esc(o.order_id)+'</div><div class="ord-sub">'+dateStr+(o.payment_status?' • '+esc(o.payment_status):'')+'</div></div>'
+      +'<div><span style="margin-right:8px">'+statusChip(o.status)+'</span></div>'
+      +'<div class="ord-amt">'+fmtPrice(o.total_amount)+'</div>'
+      +'</div>'
+      +'<div class="ord-detail" id="od-'+o.order_id+'"'+open+'></div>';
+  }).join('');
+}
+window.toggleOrderDetail=function(orderId){
+  _curOrder = (_curOrder===orderId)?null:orderId;
+  if(_curOrder!==orderId) orderId=null;
+  renderBuyOrders();
+  if(_curOrder){
+    var box=document.getElementById('od-'+_curOrder);
+    box.innerHTML='<div style="text-align:center;padding:10px"><i class="fas fa-spinner fa-spin" style="color:var(--text-muted)"></i></div>';
+    eqReq('GET','/orders/'+_curOrder).then(function(res){
+      var d=unwrap(res);
+      box.innerHTML=(d.delivery_name?'<div class="od-line"><span>Deliver to</span><strong>'+esc(d.delivery_name)+'</strong></div>':'')
+        +(d.delivery_address?'<div class="od-line"><span>Address</span><strong>'+esc(d.delivery_address)+'</strong></div>':'')
+        +(d.delivery_phone?'<div class="od-line"><span>Phone</span><strong>'+esc(d.delivery_phone)+'</strong></div>':'')
+        +(d.payment_method?'<div class="od-line"><span>Payment</span><strong>'+esc(d.payment_method)+'</strong></div>':'')
+        +'<hr style="border:none;border-top:1px dashed var(--border-light);margin:6px 0">'
+        +(d.items||[]).map(function(it){return'<div class="od-line"><span style="flex:1">'+esc(it.product_name)+' × '+it.quantity+'</span><strong>'+fmtPrice(it.total_price)+'</strong></div>'}).join('')
+        +'<div class="od-line"><span>Total</span><strong>'+fmtPrice(d.total_amount)+'</strong></div>';
+    }).catch(function(){box.innerHTML='';});
+  }
+};
+function renderRentalRequests(){
+  var body=document.getElementById('orders-sheet-body');
+  if(!S.bookings.length){body.innerHTML='<div class="ord-empty"><i class="fas fa-hand-holding-hand"></i><p>No rental requests yet. Browse the Rent section and request equipment.</p></div>';return;}
+  body.innerHTML=S.bookings.map(function(b){
+    var min=Math.round(b.min_duration_days||1);
+    var cancellable=(b.status==='requested'||b.status==='confirmed');
+    return '<div class="ord-row" style="cursor:default">'
+      +'<div class="ord-thumb">'+(b.image_url?'<img class="cart-item-img" src="'+b.image_url+'" onerror="this.style.display=\'none\'">':'<i class="fas fa-tractor"></i>')+'</div>'
+      +'<div class="ord-info"><div class="ord-title">'+esc(b.equipment_name)+'</div><div class="ord-sub">'+esc(b.booking_id)+' • '+esc(b.booking_date||'')+' • '+Math.round(b.duration_days)+' day'+(b.duration_days>1?'s':'')+((b.location)?' • '+esc(b.location):'')+'</div></div>'
+      +'<div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">'
+      +statusChip(b.status)
+      +'<span class="ord-amt">'+fmtPrice(b.total_cost)+'</span>'
+      +(cancellable?'<button class="ord-cancel" onclick="cancelBooking(\''+b.booking_id+'\')"><i class="fas fa-xmark"></i> Cancel</button>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+window.cancelBooking=function(bookingId){
+  if(!window.confirm('Cancel this rental request?')) return;
+  eqReq('PATCH','/tools-equipment/rentals/bookings/'+bookingId).then(function(){
+    toast('Rental request cancelled','info');
+    loadBookings();
+  }).catch(function(err){toast(err.message||'Failed to cancel','error')});
+};
+
+/* ─── CHECKOUT (buy) ─── */
 function openCheckout(){
   var items=S.cart&&S.cart.items?S.cart.items:[];
   if(!items.length){toast('Your cart is empty','info');return;}
   var body=document.getElementById('checkout-modal-body');
   var linesHTML=items.map(function(it){
     var p=it.product||{};
-    return '<div class="checkout-line"><span class="cl-name">'+p.name+'</span><span class="cl-qty">×'+Math.round(it.quantity)+'</span><span class="cl-price">'+fmtPrice(it.subtotal)+'</span></div>';
+    return '<div class="checkout-line"><span class="cl-name">'+esc(p.name)+'</span><span class="cl-qty">×'+Math.round(it.quantity)+'</span><span class="cl-price">'+fmtPrice(it.subtotal)+'</span></div>';
   }).join('');
   body.innerHTML='<h3 style="margin-bottom:16px;font-size:18px;font-weight:800"><i class="fas fa-credit-card" style="color:var(--eq-green);margin-right:8px"></i> Checkout</h3>'
     +'<div class="checkout-lines">'+linesHTML+'</div>'
@@ -957,11 +1376,11 @@ function openCheckout(){
     +'<input id="ck-name" placeholder="Delivery Name" value="'+(profile.full_name||'')+'">'
     +'<input id="ck-phone" placeholder="Delivery Phone" value="'+(profile.phone_number||'')+'">'
     +'<textarea id="ck-address" placeholder="Delivery Address (Village / District / State / Pincode)"></textarea>'
-    +'<select id="ck-method"><option value="cod">Cash on Delivery</option></select>'
+    +'<select id="ck-method"><option value="cod">Cash on Delivery</option><option value="online">Online Payment</option></select>'
     +'<textarea id="ck-notes" placeholder="Order notes (optional)"></textarea>'
     +'</div>'
     +'<button class="is-btn primary" id="ck-submit"><i class="fas fa-check"></i> Place Order</button>';
-  document.getElementById('checkout-modal').classList.add('open');
+  openModal('checkout-modal');
   document.getElementById('ck-submit').addEventListener('click',submitOrder);
 }
 window.openCheckout=openCheckout;
@@ -978,21 +1397,21 @@ function submitOrder(){
   };
   eqReq('POST','/orders',payload).then(function(res){
     var d=unwrap(res);
-    document.getElementById('checkout-modal').classList.remove('open');
-    showSuccess(d);
+    closeModal('checkout-modal');
+    showOrderSuccess(d);
     S.cart={items:[]};document.getElementById('cart-badge').textContent='';renderCartSheet();loadCart();loadProducts();
   }).catch(function(err){
     toast(err.message||'Failed to place order','error');
     el.disabled=false;el.innerHTML='<i class="fas fa-check"></i> Place Order';
   });
 }
-function showSuccess(d){
+function showOrderSuccess(d){
   var body=document.getElementById('success-modal-body');
   body.innerHTML='<div class="success-icon"><i class="fas fa-check"></i></div>'
     +'<div class="success-title">Order Placed Successfully!</div>'
-    +'<div class="success-sub">Order ID: '+(d.order_id||d.id||'N/A')+'<br>Total: '+fmtPrice(d.total_amount)+'</div>'
-    +'<div class="success-actions"><a href="my-orders.html" class="is-btn primary" style="text-decoration:none"><i class="fas fa-box"></i> View My Orders</a><button class="is-btn outline" onclick="document.getElementById(\'success-modal\').classList.remove(\'open\')">Continue Shopping</button></div>';
-  document.getElementById('success-modal').classList.add('open');
+    +'<div class="success-sub">Order ID: '+esc(d.order_id||d.id||'N/A')+'<br>Total: '+fmtPrice(d.total_amount)+'</div>'
+    +'<div class="success-actions"><button class="is-btn primary" style="width:auto" onclick="closeModal(\'success-modal\')">Continue Shopping</button><button class="is-btn outline" style="width:auto" onclick="closeModal(\'success-modal\');hideSheet();openOrdersSheet(\'buy\')">View My Orders</button></div>';
+  openModal('success-modal');
 }
 
 /* ─── AUTH / PROFILE ─── */
@@ -1002,6 +1421,11 @@ function loadProfile(){
 
 /* ─── EVENTS ─── */
 function bindEvents(){
+  // mode tabs
+  document.getElementById('mode-tabs').addEventListener('click',function(e){
+    var t=e.target.closest('.mode-tab');if(!t)return;switchMode(t.getAttribute('data-mode'));
+  });
+
   // search
   var searchInput=document.getElementById('store-search');
   var searchWrap=document.getElementById('store-search-wrap');
@@ -1009,37 +1433,54 @@ function bindEvents(){
   searchInput.addEventListener('input',function(){
     searchWrap.classList.toggle('has-val',!!searchInput.value);
     clearTimeout(searchTimer);
-    searchTimer=setTimeout(function(){S.search=searchInput.value.trim();S.page=1;loadProducts()},350);
+    searchTimer=setTimeout(function(){
+      current().search=searchInput.value.trim();
+      current().page=1;loadList();
+    },350);
   });
-  document.getElementById('clear-search').addEventListener('click',function(){searchInput.value='';searchWrap.classList.remove('has-val');S.search='';S.page=1;loadProducts();renderAppliedFilters()});
+  document.getElementById('clear-search').addEventListener('click',function(){
+    searchInput.value='';searchWrap.classList.remove('has-val');
+    current().search='';current().page=1;loadList();renderAppliedFilters();
+  });
 
   // sort
   document.getElementById('sort-select').addEventListener('change',function(){
-    var v=this.value.split('|');S.sortBy=v[0]||'relevance';S.sortOrder=v[1]||'asc';S.page=1;loadProducts();
+    var v=this.value.split('|');current().sortBy=v[0]||'created_at';current().sortOrder=v[1]||'desc';current().page=1;loadList();
   });
 
   // category pills
   document.getElementById('store-cats').addEventListener('click',function(e){
     var pill=e.target.closest('.is-pill');if(!pill)return;
-    S.catId=pill.getAttribute('data-cat')||'';S.page=1;loadProducts();renderCats();renderFilterGroups();
+    var key=pill.getAttribute('data-cat')||'';
+    if(S.mode==='rent'){R.cat=key;} else {B.catId=key;}
+    current().page=1;loadList();renderCats();renderFilterGroups();
   });
 
-  // desktop filter panel: chip toggle + apply/reset
+  // desktop filter panel (buy)
   var fPanel=document.getElementById('filter-panel');
   fPanel.addEventListener('click',function(e){
     var chip=e.target.closest('.f-chip');if(!chip)return;
     chip.classList.toggle('active');
   });
-  document.getElementById('f-apply').addEventListener('click',function(){applyFiltersFromPanel()});
+  document.getElementById('f-apply').addEventListener('click',function(){
+    var chips=collectChips(document.getElementById('filter-panel'));
+    B.catId=chips.cat||'';B.powerSource=chips.power||'';B.suitableUse=chips.use||'';
+    B.brand=chips.brand||'';B.location=chips.location||'';B.sellerId=chips.seller||'';B.crop=chips.crop||'';B.minRating=chips.rating;
+    B.inStock=document.getElementById('f-stock').checked;
+    var minEl=document.getElementById('f-min');var maxEl=document.getElementById('f-max');
+    B.minPrice=minEl&&minEl.value?Number(minEl.value):null;
+    B.maxPrice=maxEl&&maxEl.value?Number(maxEl.value):null;
+    B.page=1;loadProducts();renderCats();renderAppliedFilters();
+  });
   document.getElementById('f-reset').addEventListener('click',function(){resetAllFilters()});
 
-  // filter sheet
+  // filter sheet (open + apply + reset)
   document.getElementById('filter-mobile-btn').addEventListener('click',function(){
     document.getElementById('filter-sheet-body').innerHTML=sheetFilterHTML();
     showSheet('filter-sheet');
   });
   document.getElementById('filter-sheet-close').addEventListener('click',hideSheet);
-  document.getElementById('sheet-apply').addEventListener('click',function(){applyFiltersFromPanel('sheet')});
+  document.getElementById('sheet-apply').addEventListener('click',applyFiltersFromSheet);
   document.getElementById('sheet-reset').addEventListener('click',function(){resetAllFilters();document.getElementById('filter-sheet-body').innerHTML=sheetFilterHTML();});
   document.getElementById('filter-sheet-body').addEventListener('click',function(e){
     var chip=e.target.closest('.f-chip');if(!chip)return;
@@ -1054,6 +1495,12 @@ function bindEvents(){
   document.getElementById('cart-sheet-close').addEventListener('click',hideSheet);
   document.getElementById('checkout-trigger').addEventListener('click',function(){hideSheet();openCheckout()});
 
+  // orders
+  document.getElementById('orders-trigger').addEventListener('click',function(){openOrdersSheet(S.ordersTab||'buy');});
+  document.getElementById('orders-sheet-close').addEventListener('click',hideSheet);
+  document.getElementById('otab-buy').addEventListener('click',function(){S.ordersTab='buy';renderOrdersSheet();});
+  document.getElementById('otab-rent').addEventListener('click',function(){S.ordersTab='rent';renderOrdersSheet();});
+
   // wishlist
   document.getElementById('wishlist-trigger').addEventListener('click',function(){showSheet('wk-sheet')});
   document.getElementById('wk-sheet-close').addEventListener('click',hideSheet);
@@ -1062,26 +1509,35 @@ function bindEvents(){
   document.getElementById('cb-open').addEventListener('click',openCompareModal);
 
   // modals close
-  document.getElementById('prod-modal-close').addEventListener('click',closeProdModal);
-  document.getElementById('prod-modal').addEventListener('click',function(e){if(e.target===this)closeProdModal()});
+  document.getElementById('prod-modal-close').addEventListener('click',closeBuyModal);
+  document.getElementById('prod-modal').addEventListener('click',function(e){if(e.target===this)closeBuyModal()});
+  document.getElementById('rent-modal-close').addEventListener('click',closeRentModal);
+  document.getElementById('rent-modal').addEventListener('click',function(e){if(e.target===this)closeRentModal()});
   document.getElementById('compare-modal-close').addEventListener('click',closeCompareModal);
   document.getElementById('compare-modal').addEventListener('click',function(e){if(e.target===this)e.target.classList.remove('open')});
-  document.getElementById('checkout-modal-close').addEventListener('click',function(){document.getElementById('checkout-modal').classList.remove('open')});
-  document.getElementById('checkout-modal').addEventListener('click',function(e){if(e.target===this)e.target.classList.remove('open')});
-  document.getElementById('success-modal').addEventListener('click',function(e){if(e.target===this)e.target.classList.remove('open')});
+  document.getElementById('checkout-modal-close').addEventListener('click',function(){closeModal('checkout-modal')});
+  document.getElementById('checkout-modal').addEventListener('click',function(e){if(e.target===this)closeModal('checkout-modal')});
+  document.getElementById('success-modal').addEventListener('click',function(e){if(e.target===this)closeModal('success-modal')});
 }
 
 function resetAllFilters(){
-  S.search='';S.catId='';S.powerSource='';S.suitableUse='';S.brand='';S.sellerId='';S.crop='';
-  S.minPrice=null;S.maxPrice=null;S.inStock=false;S.minRating=null;
+  if(S.mode==='rent'){
+    R.cat='';R.location='';R.minRate=null;R.maxRate=null;R.avail=true;R.search='';
+  } else {
+    B.catId='';B.powerSource='';B.suitableUse='';B.brand='';B.location='';B.sellerId='';B.crop='';
+    B.minPrice=null;B.maxPrice=null;B.inStock=false;B.minRating=null;B.search='';
+  }
   document.getElementById('store-search').value='';document.getElementById('store-search-wrap').classList.remove('has-val');
-  S.page=1;loadProducts();renderCats();renderAppliedFilters();renderFilterGroups();
+  current().page=1;loadList();renderCats();renderAppliedFilters();renderFilterGroups();
 }
 
 /* ─── BOOT ─── */
 function boot(){
   if(!isAuthed()){window.location.href='login.html';return;}
-  bindEvents();loadProfile();loadCategories();loadFiltersData();loadProducts();loadRecommended();loadRecent();loadCart();loadWishlist();renderCompareBar();
+  setSortOptions();
+  applyModeUI();
+  bindEvents();loadProfile();loadCategories();loadFiltersData();loadList();
+  loadRecommended();loadRecent();loadCart();loadWishlist();loadBookings();
 }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 window.imgFallback=imgFallback;

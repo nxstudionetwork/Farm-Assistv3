@@ -77,6 +77,7 @@ TYPE_KEYWORDS = [
     ("chaff cutter", "cutting-machines"),
     ("set cutter", "cutting-machines"),
     ("crop cutter", "cutting-machines"),
+    ("cutting machine", "cutting-machines"),
     ("cutter", "cutting-machines"),
     ("seeder", "seeders"),
     ("seed drill", "seeders"),
