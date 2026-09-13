@@ -44,6 +44,11 @@
   var stViewed = {};
 
   var searchActive = false;
+  var searchSeq = 0;
+  var meLoaded = false;
+  var spWheelLock = false;
+  var shortsPage = 1;
+  var shortsGone = false;
   var moreMenuEl = null;
 
   function $(id) { return document.getElementById(id); }
@@ -418,7 +423,8 @@
       '</div></article>';
   }
 
-  function bindPostContainer(container, items) {
+  function bindPostContainer(container, items, opts) {
+    opts = opts || {};
     items.forEach(function (p) { cachePost(p); });
     container.querySelectorAll('[data-farmer]').forEach(function (el) {
       el.addEventListener('click', function () { openFarmer(el.getAttribute('data-farmer')); });
@@ -437,10 +443,7 @@
     });
     container.querySelectorAll('[data-comment]').forEach(function (el) {
       el.addEventListener('click', function () {
-        var id = el.getAttribute('data-comment');
-        var item = postFromCache(id);
-        if (item && item.content_type === 'short') openSp(0, [item]);
-        else openDetail(id);
+        openContent(postFromCache(el.getAttribute('data-comment')), opts.savedList);
       });
     });
     container.querySelectorAll('[data-share]').forEach(function (el) {
@@ -448,13 +451,24 @@
     });
     container.querySelectorAll('[data-open-post]').forEach(function (el) {
       el.addEventListener('click', function () {
-        var id = el.getAttribute('data-open-post');
-        var item = postFromCache(id);
-        if (item && item.content_type === 'short') openSp(0, [item]);
-        else openDetail(id);
+        openContent(postFromCache(el.getAttribute('data-open-post')), opts.savedList);
       });
     });
     hashCaption(container, '');
+  }
+
+  function openContent(item, savedList) {
+    if (!item) return;
+    if (item.content_type === 'short') {
+      if (savedList && savedList.length) {
+        for (var i = 0; i < savedList.length; i++) {
+          if (savedList[i].id === item.id) { openSp(i, savedList); return; }
+        }
+      }
+      openSp(0, [item]);
+    } else {
+      openDetail(item.id);
+    }
   }
 
   function cachePost(p) {
@@ -685,15 +699,29 @@
 
   function addDetailComment() {
     var input = $('fbDetailCommentInput');
+    var btn = $('fbDetailCommentBtn');
     var val = input.value.trim();
     if (!activeDetail || !val) return;
     if (!guard('Please login to comment')) return;
+    if (btn && btn.disabled) return;
+    setBtnBusy(btn, true, 'fa-paper-plane', 'fa-spinner fa-spin');
     FB.comment(activeDetail, { content: val }).then(function (data) {
       input.value = '';
       patchCounts(activeDetail, 'comments', (postFromCache(activeDetail) ? postFromCache(activeDetail).comments_count : 0) + 1);
       toast('Comment added');
       openDetail(activeDetail);
-    }).catch(apiErr);
+    }).catch(apiErr).then(function () {
+      setBtnBusy(btn, false, 'fa-paper-plane', 'fa-spinner fa-spin');
+    });
+  }
+
+  function setBtnBusy(btn, busy, iconClass, spinClass) {
+    if (!btn) return;
+    btn.disabled = busy;
+    btn.classList.toggle('fb-btn-busy', busy);
+    btn.innerHTML = busy
+      ? '<i class="fas ' + spinClass + '"></i>'
+      : '<i class="fas ' + iconClass + '"></i>';
   }
 
   /* ==========================================================================
@@ -784,12 +812,18 @@
 
   function submitReport() {
     if (!reportTargetId) return;
+    var btn = $('fbReportBtn');
     var reason = $('fbReportReason').value;
     var desc = $('fbReportDesc').value.trim();
+    if (!reason) { toast('Please select a report reason', 'warning'); return; }
+    if (btn && btn.disabled) return;
+    if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
     FB.report(reportTargetId, { reason: reason, description: desc || null }).then(function (data) {
       toast((data && data.message) || 'Report submitted', 'success');
       closeModals();
-    }).catch(apiErr);
+    }).catch(apiErr).then(function () {
+      if (btn) btn.innerHTML = '<i class="fas fa-flag"></i> Submit Report';
+    });
   }
 
   /* ==========================================================================
@@ -886,10 +920,12 @@
   function performSearch(q) {
     if (!q) { deactivateSearch(); return; }
     if (!FB) return;
+    var seq = ++searchSeq;
     var target = $('fbHomePosts');
     target.innerHTML = '<div class="fb-skeleton fb-skel-card"></div>';
     addRecent(q);
     FB.search({ q: q, type: 'all', limit: 10 }).then(function (res) {
+      if (seq !== searchSeq) return;
       var html = '';
       var farmers = (res && res.farmers) || [];
       var posts = (res && res.posts) || [];
@@ -945,6 +981,7 @@
         });
       });
     }).catch(function () {
+      if (seq !== searchSeq) return;
       target.innerHTML = emptyHtml('fa-circle-exclamation', 'Search failed', 'Please try again');
     });
   }
@@ -1022,35 +1059,87 @@
   function renderShorts(category) {
     var chipsEl = $('fbShortChips');
     var gridEl = $('fbShortsGrid');
+    shortsPage = 1;
+    shortsGone = false;
     gridEl.innerHTML = emptyHtml('fa-clapperboard', 'Loading shorts...');
     if (category === undefined) category = '';
-    var cats = ['all'].concat(SHORT_CATS.slice(0, 8));
-    chipsEl.innerHTML = cats.map(function (c) {
-      return '<button class="fb-chip' + ((category || 'all') === c ? ' active' : '') + '" data-short-cat="' + esc(c) + '">' + esc(c === 'all' ? 'All' : c) + '</button>';
-    }).join('');
-    chipsEl.querySelectorAll('[data-short-cat]').forEach(function (b) {
-      b.addEventListener('click', function () { renderShorts(b.getAttribute('data-short-cat')); });
-    });
-    var params = { limit: 20, page: 1 };
-    var req;
-    if (category && category !== 'all') {
-      params.category = category;
-      params.sort = 'recommended';
-      req = FB.shorts(params);
+    renderShortChips(chipsEl, category);
+    fetchShorts(gridEl, category, true);
+  }
+
+  function renderShortChips(chipsEl, category) {
+    var render = function (cats) {
+      var list = ['all'].concat(cats.slice(0, 8));
+      chipsEl.innerHTML = list.map(function (c) {
+        return '<button class="fb-chip' + ((category || 'all') === c ? ' active' : '') + '" data-short-cat="' + esc(c) + '">' + esc(c === 'all' ? 'All' : c) + '</button>';
+      }).join('');
+      chipsEl.querySelectorAll('[data-short-cat]').forEach(function (b) {
+        b.addEventListener('click', function () { renderShorts(b.getAttribute('data-short-cat')); });
+      });
+    };
+    if (FB && FB.shortCategories) {
+      FB.shortCategories().then(function (data) {
+        var cats = (data && data.categories) || [];
+        render(cats.length ? cats : SHORT_CATS);
+      }).catch(function () { render(SHORT_CATS); });
     } else {
-      req = FB.recommendedShorts(params);
+      render(SHORT_CATS);
     }
-    req.then(function (data) {
+  }
+
+  function fetchShorts(gridEl, category, fresh) {
+    var params = { limit: 20, page: shortsPage };
+    if (category && category !== 'all') params.category = category;
+    FB.recommendedShorts(params).then(function (data) {
+      if (fresh && $('fbShortsGrid') !== gridEl) return;
       var items = (data && data.items) || [];
-      shortsOrig = items.slice();
-      if (!items.length) {
-        gridEl.innerHTML = emptyHtml('fa-clapperboard', 'No shorts yet', 'Create a short from the Post tab and select the Short type');
-        return;
+      if (fresh) {
+        shortsOrig = items.slice();
+        if (!items.length) {
+          gridEl.innerHTML = emptyHtml('fa-clapperboard', 'No shorts yet', 'Create a short from the Post tab and select the Short type');
+          return;
+        }
+        gridEl.innerHTML = items.map(function (s) { return shortCardHtml(s); }).join('');
+        bindShortGrid(gridEl, items);
+      } else {
+        if (!items.length) {
+          shortsGone = true;
+          var mo = gridEl.querySelector('.fb-load-more');
+          if (mo) mo.remove();
+          return;
+        }
+        gridEl.insertAdjacentHTML('beforeend', items.map(function (s) { return shortCardHtml(s); }).join(''));
+        bindShortGrid(gridEl, items);
       }
-      gridEl.innerHTML = items.map(function (s) { return shortCardHtml(s); }).join('');
-      bindShortGrid(gridEl, items);
+      var more = gridEl.querySelector('.fb-load-more');
+      if (items.length >= 20 && !shortsGone) {
+        if (!more) {
+          more = document.createElement('button');
+          more.className = 'fb-load-more btn';
+          more.textContent = 'Load more';
+          more.style.margin = '16px auto';
+          more.addEventListener('click', function () {
+            if (more.disabled) return;
+            shortsPage += 1;
+            more.disabled = true;
+            more.textContent = 'Loading...';
+            fetchShorts(gridEl, category, false);
+          });
+          gridEl.appendChild(more);
+        } else {
+          more.disabled = false;
+          more.textContent = 'Load more';
+        }
+      } else if (more) {
+        more.remove();
+      }
     }).catch(function () {
-      gridEl.innerHTML = emptyHtml('fa-circle-exclamation', 'Could not load shorts');
+      if (fresh) {
+        gridEl.innerHTML = emptyHtml('fa-circle-exclamation', 'Could not load shorts');
+      } else {
+        var mb = gridEl.querySelector('.fb-load-more');
+        if (mb) { mb.disabled = false; mb.textContent = 'Load more'; }
+      }
     });
   }
 
@@ -1285,6 +1374,28 @@
       }, 6000);
     }
     startProgress();
+    preloadAdjacent();
+  }
+
+  function preloadAdjacent() {
+    var stage = $('fbSpStage');
+    if (!stage || !shorts.length) return;
+    for (var i = 0; i < shorts.length; i++) {
+      var slide = stage.children[i];
+      if (!slide) continue;
+      var v = slide.querySelector('video');
+      if (!v) continue;
+      var dist = Math.abs(i - spIdx);
+      if (dist <= 1) {
+        if (v.getAttribute('preload') !== 'auto') {
+          v.setAttribute('preload', 'auto');
+          if (dist === 1 && v.readyState === 0) v.load();
+        }
+      } else if (v.getAttribute('preload') !== 'none') {
+        v.setAttribute('preload', 'none');
+        if (i !== spIdx) v.pause();
+      }
+    }
   }
 
   function playCurrentVideo() {
@@ -1442,7 +1553,7 @@
     var panel = $('fbSpCommentsPanel');
     panel.style.display = 'block';
     spCommentsOpen = true;
-    $('fbSpCommentTitle').textContent = 'Comments (' + fmtNum(s.comments_count) + ')';
+    $('fbSpCommentTitle').textContent = 'Comments';
     $('fbSpCommentsList').innerHTML = '<div style="color:var(--text-muted);font-size:12.5px;padding:8px;">Loading...</div>';
     FB.comments(s.id).then(function (data) {
       var list = (data && data.items) || [];
@@ -1463,16 +1574,21 @@
   function addSpComment() {
     var s = currentShort();
     var input = $('fbSpCommentInput');
+    var btn = $('fbSpCommentBtn');
     var val = input.value.trim();
     if (!s || !val) return;
     if (!guard('Please login to comment')) return;
+    if (btn && btn.disabled) return;
+    if (btn) btn.disabled = true;
     FB.comment(s.id, { content: val }).then(function () {
-input.value = '';
+      input.value = '';
       s.comments_count = (s.comments_count || 0) + 1;
       $('fbSpCommentTitle').textContent = 'Comments';
       openSpComments();
       toast('Comment added');
-    }).catch(apiErr);
+    }).catch(apiErr).then(function () {
+      if (btn) btn.disabled = false;
+    });
   }
 
   /* ==========================================================================
@@ -1937,6 +2053,8 @@ input.value = '';
       renderSelfTab(tabName, contentEl, p);
       var editBtn = $('fbSelfEditBtn');
       if (editBtn) editBtn.addEventListener('click', function () { openEditProfile(); });
+      var postBtn = $('fbSelfPostBtn');
+      if (postBtn) postBtn.addEventListener('click', function () { switchView('post'); });
     }).catch(function () {
       profileEl.innerHTML = emptyHtml('fa-circle-exclamation', 'Could not load your profile', 'Please check your connection');
     });
@@ -1983,11 +2101,12 @@ input.value = '';
     }
     el.innerHTML = '<div class="fb-skeleton" style="height:200px;"></div>';
     if (tab === 'saved') {
-      FB.saved({ limit: 12, page: 1 }).then(function (data) {
+      FB.saved({ limit: 50, page: 1 }).then(function (data) {
         var items = (data && data.items) || [];
         if (!items.length) { el.innerHTML = emptyHtml('fa-bookmark', 'No saved posts yet', 'Tap the bookmark icon on posts you like'); return; }
+        var savedList = items.filter(function (x) { return x.content_type === 'short'; });
         el.innerHTML = items.map(postCardHtml).join('');
-        bindPostContainer(el, items);
+        bindPostContainer(el, items, { savedList: savedList });
       }).catch(function () { el.innerHTML = emptyHtml('fa-circle-exclamation', 'Could not load saved posts'); });
       return;
     }
@@ -2014,8 +2133,13 @@ input.value = '';
 
   function saveProfile() {
     if (!guard('Please login')) return;
+    var btn = $('fbEditSave');
+    var bio = $('fbEditBio').value.trim();
+    if (bio.length > 300) { toast('Bio must be 300 characters or fewer', 'warning'); return; }
+    if (btn && btn.disabled) return;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; }
     var data = {
-      bio: $('fbEditBio').value.trim(),
+      bio: bio,
       farm_location: $('fbEditLocation').value.trim(),
       farming_type: $('fbEditFarmingType').value,
       profile_image: $('fbEditAvatarUrl').value.trim() || null
@@ -2024,7 +2148,9 @@ input.value = '';
       toast('Profile updated');
       closeModals();
       renderSelf(lastSelfTab);
-    }).catch(apiErr);
+    }).catch(apiErr).then(function () {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Save Changes'; }
+    });
   }
 
   /* ==========================================================================
@@ -2250,6 +2376,14 @@ input.value = '';
       if (spScrollDebounce) clearTimeout(spScrollDebounce);
       spScrollDebounce = setTimeout(function () { activateSp(true); }, 100);
     }, { passive: true });
+    stage.addEventListener('wheel', function (e) {
+      if (Math.abs(e.deltaY) < 8) return;
+      e.preventDefault();
+      if (spWheelLock) return;
+      spWheelLock = true;
+      setTimeout(function () { spWheelLock = false; }, 300);
+      if (e.deltaY > 0) nextSp(); else prevSp();
+    }, { passive: false });
     $('fbSpClose').addEventListener('click', stopSp);
     $('fbSpHome').addEventListener('click', function () { stopSp(); switchView('home'); });
     $('fbSpNext').addEventListener('click', nextSp);
@@ -2289,6 +2423,8 @@ input.value = '';
       }
       if (e.key === 'ArrowDown' && $('fbShortsPlayer').classList.contains('open')) { e.preventDefault(); nextSp(); }
       if (e.key === 'ArrowUp' && $('fbShortsPlayer').classList.contains('open')) { e.preventDefault(); prevSp(); }
+      if ((e.key === 'ArrowRight') && $('fbShortsPlayer').classList.contains('open')) { e.preventDefault(); nextSp(); }
+      if (e.key === 'ArrowLeft' && $('fbShortsPlayer').classList.contains('open')) { e.preventDefault(); prevSp(); }
       if ((e.key === ' ' || e.key === 'Spacebar') && $('fbShortsPlayer').classList.contains('open')) { e.preventDefault(); toggleSpPause(); }
       if (e.key === 'ArrowRight' && $('fbStoriesPlayer').classList.contains('open')) forwardSt();
       if (e.key === 'ArrowLeft' && $('fbStoriesPlayer').classList.contains('open')) backSt();

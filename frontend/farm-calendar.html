@@ -7,20 +7,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    .cal-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-    .cal-toolbar .search-wrap{flex:1;min-width:200px;position:relative}
-    .cal-toolbar .search-wrap input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--border-light);border-radius:8px;font-size:13px;background:var(--bg-card-soft);color:var(--text-primary);box-sizing:border-box}
-    .cal-toolbar .search-wrap i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px}
-    .cal-toolbar button{background:var(--bg-card-soft);border:1px solid var(--border-light);padding:9px 14px;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.2s;display:flex;align-items:center;gap:6px;white-space:nowrap}
-    .cal-toolbar button:hover{background:var(--soft-green);color:var(--primary-green)}
-    .cal-toolbar button.active-filter{background:var(--primary-green);color:white;border-color:var(--primary-green)}
-    .cal-toolbar button.active-filter:hover{color:white}
-    .filter-panel{display:none;background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:10px;padding:14px;margin-bottom:14px}
-    .filter-panel.open{display:block}
-    .filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-    .filter-row label{font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px}
-    .filter-row select,.filter-row input{padding:7px 10px;border:1px solid var(--border-light);border-radius:6px;font-size:12px;background:white;color:var(--text-primary);min-width:120px;max-width:100%}
-    .filter-actions{display:flex;gap:8px;justify-content:flex-end}
     .cal-error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#dc2626;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .cal-error button{margin-left:auto}
     .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -89,6 +75,7 @@
     .event-type-badge.insurance{background:rgba(239,68,68,.1);color:#dc2626}
     .event-type-badge.crop_activity{background:rgba(34,197,94,.1);color:#16a34a}
     .event-type-badge.farm_activity{background:rgba(34,197,94,.1);color:#16a34a}
+    .event-type-badge.emergency{background:rgba(239,68,68,.12);color:#dc2626}
     .event-type-badge.learning{background:rgba(139,92,246,.1);color:#7c3aed}
     .event-type-badge.manual{background:rgba(107,114,128,.1);color:#6b7280}
     .event-type-badge.weather{background:rgba(59,130,246,.1);color:#2563eb}
@@ -100,8 +87,6 @@
       .week-grid{grid-template-columns:1fr;gap:6px}
       .week-col{padding:8px;min-height:auto}
       .week-col-header{text-align:left;padding:8px 4px 4px}
-      .cal-toolbar{flex-direction:column;align-items:stretch}
-      .cal-toolbar .search-wrap{min-width:100%}
     }
   </style>
 </head>
@@ -116,32 +101,6 @@
         <button class="btn-primary" onclick="showAddEventModal()"><i class="fas fa-plus"></i> Add Event</button>
       </div>
     </section>
-
-    <!-- Toolbar: search + filter -->
-    <div class="cal-toolbar">
-      <div class="search-wrap">
-        <i class="fas fa-search"></i>
-        <input type="text" id="cal-search" placeholder="Search events..." oninput="onSearchInput(this.value)">
-      </div>
-      <button id="filter-toggle" onclick="toggleFilterPanel()"><i class="fas fa-filter"></i> Filter</button>
-    </div>
-
-    <!-- Filter Panel (one icon opens it) -->
-    <div class="filter-panel" id="filter-panel">
-      <div class="filter-row">
-        <div><label>Event Type</label><select id="f-type" onchange="applyFilters()"><option value="">All Types</option></select></div>
-        <div><label>Status</label><select id="f-status" onchange="applyFilters()"><option value="">All Statuses</option></select></div>
-        <div><label>Priority</label><select id="f-priority" onchange="applyFilters()"><option value="">All Priorities</option></select></div>
-      </div>
-      <div class="filter-row">
-        <div><label>Farm</label><select id="f-farm" onchange="onFarmFilterChange()"><option value="">All Farms</option></select></div>
-        <div><label>Plot</label><select id="f-plot" onchange="applyFilters()"><option value="">All Plots</option></select></div>
-        <div><label>Crop</label><select id="f-crop" onchange="applyFilters()"><option value="">All Crops</option></select></div>
-      </div>
-      <div class="filter-actions">
-        <button class="btn-secondary btn-sm" onclick="clearFilters()">Clear Filters</button>
-      </div>
-    </div>
 
     <!-- View Tabs -->
     <div class="filter-tabs" role="tablist" aria-label="Calendar views">
@@ -312,8 +271,6 @@
     var currentView = 'month';
     var selectedDate = new Date();
     var currentWeekStart = getWeekStart(new Date());
-    var searchQuery = '';
-    var filterState = { type: '', status: '', priority: '', farm_id: '', plot_id: '', crop_name: '' };
     var filterOptions = {};
     var EVENT_CACHE = {};
 
@@ -325,7 +282,6 @@
       });
     }
     var editingEventId = null;
-    var _loadDebounce = null;
 
     /* ============================
        HELPERS
@@ -354,6 +310,7 @@
       crop_activity:   { icon: 'fa-seedling', color: '#16a34a', label: 'Farm Activity' },
       farm_activity:   { icon: 'fa-trowel', color: '#16a34a', label: 'Farm Activity' },
       learning:        { icon: 'fa-graduation-cap', color: '#7c3aed', label: 'Learning' },
+      emergency:       { icon: 'fa-truck-medical', color: '#dc2626', label: 'Emergency' },
       document:        { icon: 'fa-file-lines', color: '#6b7280', label: 'Document' },
       weather:         { icon: 'fa-cloud-sun', color: '#2563eb', label: 'Weather' },
       manual:          { icon: 'fa-calendar-plus', color: '#6b7280', label: 'Manual' }
@@ -375,13 +332,6 @@
         end_date: formatDate(endOfRange),
         limit: 200
       };
-      if (filterState.type) params.event_type = filterState.type;
-      if (filterState.status) params.status = filterState.status;
-      if (filterState.priority) params.priority = filterState.priority;
-      if (filterState.farm_id) params.farm_id = filterState.farm_id;
-      if (filterState.plot_id) params.plot_id = filterState.plot_id;
-      if (filterState.crop_name) params.crop_name = filterState.crop_name;
-      if (searchQuery) params.search = searchQuery;
 
       if (!window.API || !API.Calendar) {
         allEvents = [];
@@ -436,109 +386,13 @@
         if (!res) return;
         filterOptions = res;
         populateFormSelects();
-        populateFilterPanel();
       }).catch(function () {});
-    }
-
-    /* ---- Filter panel population ---- */
-
-    function populateFilterPanel() {
-      populateSimpleSelect('f-type', filterOptions.event_types || [], function (v) {
-        return v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ');
-      });
-      populateSimpleSelect('f-status', filterOptions.statuses || [], function (v) {
-        return v.charAt(0).toUpperCase() + v.slice(1);
-      });
-      populateSimpleSelect('f-priority', filterOptions.priorities || [], function (v) {
-        return v.charAt(0).toUpperCase() + v.slice(1);
-      });
-      populateFarmSelect('f-farm', filterOptions.farms || [], 'All Farms');
-      populatePlotSelect('f-plot', []);
-      populateSimpleSelect('f-crop', filterOptions.crop_names || [], function (v) { return v; });
-      if (filterState.farm_id) onFarmFilterChange();
-    }
-
-    function populateSimpleSelect(id, items, labelFn) {
-      var sel = document.getElementById(id);
-      if (!sel) return;
-      var val = sel.value;
-      sel.innerHTML = '<option value="">All</option>';
-      items.forEach(function (item) {
-        var o = document.createElement('option');
-        o.value = typeof item === 'string' ? item : item;
-        o.textContent = labelFn(item);
-        sel.appendChild(o);
-      });
-      sel.value = val;
-    }
-
-    function populateFarmSelect(id, farms, firstLabel) {
-      var sel = document.getElementById(id);
-      if (!sel) return;
-      var val = sel.value;
-      sel.innerHTML = '<option value="">' + (firstLabel || 'All Farms') + '</option>';
-      farms.forEach(function (f) {
-        var o = document.createElement('option');
-        o.value = f.id;
-        o.textContent = f.name;
-        sel.appendChild(o);
-      });
-      sel.value = val;
-    }
-
-    function populatePlotSelect(id, plots) {
-      var sel = document.getElementById(id);
-      if (!sel) return;
-      var val = sel.value;
-      sel.innerHTML = '<option value="">All Plots</option>';
-      plots.forEach(function (p) {
-        var o = document.createElement('option');
-        o.value = p.id;
-        o.textContent = p.name;
-        sel.appendChild(o);
-      });
-      sel.value = val;
     }
 
     function plotsForFarm(farmId) {
       var all = filterOptions.plots || [];
       if (!farmId) return all;
       return all.filter(function (p) { return p.farm_id === farmId; });
-    }
-
-    function onFarmFilterChange() {
-      populatePlotSelect('f-plot', plotsForFarm(document.getElementById('f-farm').value));
-      applyFilters();
-    }
-
-    function toggleFilterPanel() {
-      var panel = document.getElementById('filter-panel');
-      var btn = document.getElementById('filter-toggle');
-      panel.classList.toggle('open');
-      btn.classList.toggle('active-filter', panel.classList.contains('open'));
-    }
-
-    function applyFilters() {
-      filterState.type = document.getElementById('f-type').value;
-      filterState.status = document.getElementById('f-status').value;
-      filterState.priority = document.getElementById('f-priority').value;
-      filterState.farm_id = document.getElementById('f-farm').value;
-      filterState.plot_id = document.getElementById('f-plot').value;
-      filterState.crop_name = document.getElementById('f-crop').value;
-      loadCalendarEvents();
-    }
-
-    function clearFilters() {
-      filterState = { type: '', status: '', priority: '', farm_id: '', plot_id: '', crop_name: '' };
-      document.getElementById('f-type').value = '';
-      document.getElementById('f-status').value = '';
-      document.getElementById('f-priority').value = '';
-      document.getElementById('f-farm').value = '';
-      populatePlotSelect('f-plot', []);
-      document.getElementById('f-crop').value = '';
-      searchQuery = '';
-      document.getElementById('cal-search').value = '';
-      loadCalendarEvents();
     }
 
     function populateFormSelects() {
@@ -580,17 +434,6 @@
         plotSel.appendChild(o);
       });
       plotSel.value = current;
-    }
-
-    /* ============================
-       SEARCH
-       ============================ */
-    function onSearchInput(val) {
-      clearTimeout(_loadDebounce);
-      _loadDebounce = setTimeout(function () {
-        searchQuery = val.trim();
-        loadCalendarEvents();
-      }, 300);
     }
 
     /* ============================

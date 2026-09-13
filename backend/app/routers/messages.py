@@ -454,6 +454,19 @@ def list_messages(
     messages = q.order_by(Message.created_at.desc()).limit(limit + 1).all()
     has_more = len(messages) > limit
     messages = messages[:limit]
+
+    # Real delivery receipts: when the recipient fetches messages, inbound
+    # messages abandon "sent" and become "delivered". "read" is set only when
+    # the recipient opens the conversation (see mark_as_read).
+    delivered_changed = False
+    for m in messages:
+        if m.sender_id != current_user.id and m.status == "sent":
+            m.status = "delivered"
+            m.delivered_at = m.delivered_at or datetime.utcnow()
+            delivered_changed = True
+    if delivered_changed:
+        db.commit()
+
     items = [_message_to_dict(db, m) for m in reversed(messages)]
     return {
         "status": "success",

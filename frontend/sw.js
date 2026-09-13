@@ -50,7 +50,6 @@ var STATIC_PATHS = [
   '/monitoring.html',
   '/insurance.html',
   '/schemes.html',
-  '/sensors-settings.html',
   '/documents.html',
   '/command-center.html',
   '/emergency.html',

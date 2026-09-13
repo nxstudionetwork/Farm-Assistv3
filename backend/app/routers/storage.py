@@ -52,7 +52,7 @@ def _authorize_storage_access(file_path: str, current_user: User, db: Session) -
         raise HTTPException(status_code=400, detail="Invalid file path")
     top = parts[0].lower()
 
-    if top == "documents":
+    if top in ("documents", "loan-documents"):
         raise HTTPException(status_code=404, detail="File not found")
 
     if top == "messages":

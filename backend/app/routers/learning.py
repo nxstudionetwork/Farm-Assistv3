@@ -7,7 +7,7 @@ from sqlalchemy import func
 
 from app.database.connection import get_db
 from app.utils.auth import get_current_user, generate_id
-from app.models.user import User
+from app.models.user import User, FarmerProfile
 from app.models.learning import (
     Course, CourseLesson, CourseEnrollment, LessonProgress, LearningQuestion,
 )
@@ -33,23 +33,32 @@ class QuizSubmitRequest(BaseModel):
     answers: list[QuizAnswerItem] = Field(default_factory=list)
 
 
-def serialize_course(c, db=None, user_id=None):
+def serialize_course(c, db=None, user_id=None, lesson_counts=None, enrollment_map=None, brief=False):
     enrolled = False
     enrollment_id = None
     if user_id and db:
-        e = db.query(CourseEnrollment).filter(
-            CourseEnrollment.user_id == user_id,
-            CourseEnrollment.course_id == c.id
-        ).first()
-        if e:
-            enrolled = True
-            enrollment_id = e.enrollment_id
+        if enrollment_map is not None:
+            eid = enrollment_map.get(c.id)
+            if eid:
+                enrolled = True
+                enrollment_id = eid
+        else:
+            e = db.query(CourseEnrollment).filter(
+                CourseEnrollment.user_id == user_id,
+                CourseEnrollment.course_id == c.id
+            ).first()
+            if e:
+                enrolled = True
+                enrollment_id = e.enrollment_id
 
-    lessons_count = db.query(CourseLesson).filter(
-        CourseLesson.course_id == c.id, CourseLesson.is_published == True
-    ).count() if db else c.total_lessons or 0
+    if lesson_counts is not None:
+        lessons_count = lesson_counts.get(c.id, c.total_lessons or 0)
+    else:
+        lessons_count = db.query(CourseLesson).filter(
+            CourseLesson.course_id == c.id, CourseLesson.is_published == True
+        ).count() if db else c.total_lessons or 0
 
-    return {
+    result = {
         "id": c.id,
         "course_id": c.course_id,
         "title": c.title,
@@ -60,12 +69,19 @@ def serialize_course(c, db=None, user_id=None):
         "language": c.language,
         "instructor": c.instructor,
         "image_url": c.image_url,
+        "video_available": bool(c.video_url and c.video_url.strip()),
         "total_lessons": lessons_count,
         "is_published": c.is_published,
         "enrolled": enrolled,
         "enrollment_id": enrollment_id,
         "created_at": str(c.created_at) if c.created_at else None,
     }
+    if not brief:
+        result["video_url"] = c.video_url
+        result["core_content"] = c.core_content
+        result["tools_materials"] = c.tools_materials
+        result["safety_tips"] = c.safety_tips
+    return result
 
 
 def serialize_lesson(l):
@@ -83,6 +99,11 @@ def serialize_lesson(l):
 
 def serialize_enrollment(e, db=None):
     course_title = ""
+    course_public_id = None
+    course_category = None
+    course_level = None
+    course_image = None
+    video_available = False
     total_lessons = 0
     completed_lessons = 0
     current_lesson = None
@@ -90,6 +111,11 @@ def serialize_enrollment(e, db=None):
 
     if e.course:
         course_title = e.course.title
+        course_public_id = e.course.course_id
+        course_category = e.course.category
+        course_level = e.course.level
+        course_image = e.course.image_url
+        video_available = bool(e.course.video_url and e.course.video_url.strip())
         total_lessons = db.query(CourseLesson).filter(
             CourseLesson.course_id == e.course_id,
             CourseLesson.is_published == True
@@ -111,7 +137,12 @@ def serialize_enrollment(e, db=None):
         "id": e.id,
         "enrollment_id": e.enrollment_id,
         "course_id": e.course_id,
+        "course_public_id": course_public_id,
         "course_title": course_title,
+        "course_category": course_category,
+        "course_level": course_level,
+        "course_image": course_image,
+        "video_available": video_available,
         "status": e.status,
         "progress_percentage": round(e.progress_percentage or 0, 1),
         "current_lesson_id": current_lesson,
@@ -147,9 +178,34 @@ def list_courses(
         q = q.filter(Course.level == level)
 
     courses = q.order_by(Course.created_at.desc()).all()
+
+    # Batch the per-course lookups so the whole list costs a constant number
+    # of queries instead of 2 per course (avoids N+1 lag on ~250 courses).
+    lesson_counts = dict(
+        db.query(CourseLesson.course_id, func.count())
+        .filter(CourseLesson.is_published == True)
+        .group_by(CourseLesson.course_id)
+        .all()
+    )
+    course_ids = [c.id for c in courses]
+    enrollment_map = {}
+    if course_ids:
+        enrollment_map = {
+            row[0]: row[1]
+            for row in db.query(CourseEnrollment.course_id, CourseEnrollment.enrollment_id)
+            .filter(
+                CourseEnrollment.user_id == current_user.id,
+                CourseEnrollment.course_id.in_(course_ids),
+            )
+            .all()
+        }
+
     return {
         "status": "success",
-        "data": [serialize_course(c, db, current_user.id) for c in courses],
+        "data": [
+            serialize_course(c, db, current_user.id, lesson_counts, enrollment_map, brief=True)
+            for c in courses
+        ],
     }
 
 
@@ -184,12 +240,35 @@ def get_course(
             ).all()
         ]
 
+    # Small-test questions for the course (attached to the course's tutorial
+    # lessons / core content). Simplifies to a single short test per course.
+    questions = db.query(LearningQuestion).filter(
+        LearningQuestion.course_id == c.id
+    ).order_by(LearningQuestion.order_index).all()
+    if not questions:
+        # fall back to any questions attached to the course's lessons
+        q2 = db.query(LearningQuestion).filter(
+            LearningQuestion.tutorial_id.in_([l.id for l in lessons]) if lessons else False
+        ).order_by(LearningQuestion.order_index).all()
+        if q2:
+            questions = q2
+
     return {
         "status": "success",
         "data": {
             **serialize_course(c, db, current_user.id),
             "lessons": [serialize_lesson(l) for l in lessons],
             "completed_lesson_ids": completed_ids,
+            "questions": [
+                {
+                    "question_id": q.question_id or q.id,
+                    "id": q.id,
+                    "question": q.question,
+                    "options": [q.option_1, q.option_2, q.option_3, q.option_4],
+                    "correct_answer": q.correct_answer,
+                    "explanation": q.explanation,
+                } for q in questions
+            ],
             "enrollment": serialize_enrollment(enrollment, db) if enrollment else None,
         },
     }
@@ -815,24 +894,70 @@ def learning_progress(
     continue_learning.sort(key=lambda x: x["progress_percentage"], reverse=True)
 
     enrolled_ids = {e.course_id for e in enrollments}
+
+    # --- Preference-based recommendations ---
+    # Score unpublished courses by how well they match the farmer's declared
+    # crops and the categories they already engage with. Everything is driven
+    # by real farmer profile data (no fake/arbitrary signals).
+    preferred_crops = []
+    profile = db.query(FarmerProfile).filter(
+        FarmerProfile.user_id == current_user.id
+    ).first()
+    if profile and profile.preferred_crops:
+        preferred_crops = [
+            c.strip().lower() for c in profile.preferred_crops.split(",") if c.strip()
+        ]
+
+    category_weights = {}
+    for e in enrollments:
+        cat_course = db.query(Course).filter(Course.id == e.course_id).first()
+        if cat_course and cat_course.category:
+            category_weights[cat_course.category] = (
+                category_weights.get(cat_course.category, 0) + 1
+            )
+
+    def _rec_score(course):
+        score = 0
+        if preferred_crops:
+            hay = ((course.title or "") + " " + (course.description or "")).lower()
+            for crop in preferred_crops:
+                if crop and crop in hay:
+                    score += 2
+                    break
+        if course.category in category_weights:
+            score += category_weights[course.category]
+        return score
+
+    # Fetch in random order first, then stable-sort by score so equally-scored
+    # candidates still vary between calls.
+    candidates = [
+        c for c in db.query(Course).filter(Course.is_published == True).order_by(
+            func.random()
+        ).limit(60).all()
+        if c.id not in enrolled_ids
+    ]
+    candidates.sort(key=_rec_score, reverse=True)
+
+    # Single batched count for every published lesson (avoids N+1 in the loop).
+    lesson_counts = dict(
+        db.query(CourseLesson.course_id, func.count())
+        .filter(CourseLesson.is_published == True)
+        .group_by(CourseLesson.course_id)
+        .all()
+    )
+
     recommended = []
-    for c in db.query(Course).filter(Course.is_published == True).order_by(
-        func.random()
-    ).limit(20).all():
-        if c.id in enrolled_ids:
-            continue
-        if len(recommended) >= 4:
-            break
+    for c in candidates[:4]:
         recommended.append({
             "course_id": c.course_id,
             "title": c.title,
             "category": c.category,
             "level": c.level,
             "instructor": c.instructor,
-            "total_tutorials": db.query(CourseLesson).filter(
-                CourseLesson.course_id == c.id,
-                CourseLesson.is_published == True
-            ).count(),
+            "image_url": c.image_url,
+            "video_available": bool(c.video_url and c.video_url.strip()),
+            "duration_weeks": c.duration_weeks,
+            "total_tutorials": lesson_counts.get(c.id, 0),
         })
 
     completed_courses = db.query(CourseEnrollment).filter(

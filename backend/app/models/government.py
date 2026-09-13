@@ -91,6 +91,14 @@ class SchemeDocument(Base):
 
 
 class InsurancePolicy(Base):
+    """A farmer's insurance policy (reused as the ``farmer_policies`` table).
+
+    The Insurance page's policy lifecycle is built on this existing table so the
+    project has a single policy store: applications link to products, and when an
+    application is submitted a ``pending_verification`` policy is created here.
+    Columns below marked "insurance" power the full product-based insurance flow.
+    """
+
     __tablename__ = "insurance_policies"
 
     id = Column(String(36), primary_key=True, default=gen_uuid)
@@ -108,12 +116,29 @@ class InsurancePolicy(Base):
     details = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # ---- insurance product-driven fields (additive) ----
+    product_id = Column(String(36), ForeignKey("insurance_products.id"), nullable=True)
+    application_id = Column(String(36), ForeignKey("insurance_applications.id"), nullable=True)
+    insured_item = Column(String(300), nullable=True)         # crop / livestock / asset summary
+    sum_insured = Column(Float, nullable=True)                # coverage amount (alias of coverage_amount)
+    premium_paid = Column(Float, nullable=True)               # total premium paid so far
+    premium_due = Column(Float, nullable=True)                # pending premium amount
+    premium_due_date = Column(String(10), nullable=True)      # next premium due date
+    renewal_date = Column(String(10), nullable=True)          # next renewal date
+    renewal_count = Column(Integer, default=0)
+    policy_holder_name = Column(String(200), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
     user = relationship("User", back_populates="insurance_policies")
     farm = relationship("Farm", back_populates="insurance_policies")
     claims = relationship("InsuranceClaim", back_populates="policy")
+    product = relationship("InsuranceProduct", foreign_keys=[product_id])
+    payments = relationship("InsurancePayment", back_populates="policy")
 
 
 class InsuranceClaim(Base):
+    """A farmer's insurance claim (extended for the full claims lifecycle)."""
+
     __tablename__ = "insurance_claims"
 
     id = Column(String(36), primary_key=True, default=gen_uuid)
@@ -129,6 +154,40 @@ class InsuranceClaim(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # ---- insurance claim lifecycle fields (additive) ----
+    claim_number = Column(String(20), unique=True, index=True)
+    incident_date = Column(String(10), nullable=True)         # date of the covered incident
+    incident_location = Column(String(300), nullable=True)    # farm / block / village
+    estimated_loss = Column(Float, nullable=True)             # farmer-estimated loss amount
+    description = Column(Text, nullable=True)                 # alias for damage_description
+    assessment_amount = Column(Float, nullable=True)          # insurer-assessed amount (when available)
+    settled_at = Column(String(10), nullable=True)
+
     user = relationship("User", back_populates="insurance_claims")
     policy = relationship("InsurancePolicy", back_populates="claims")
     farm = relationship("Farm", back_populates="insurance_claims")
+    documents_rel = relationship(
+        "InsuranceClaimDocument",
+        back_populates="claim",
+        cascade="all, delete-orphan",
+    )
+
+
+class SchemeSyncLog(Base):
+    """Audit log of government-scheme fetch/verification attempts.
+
+    Powers honest freshness labels on the schemes page ("Live", "Verified",
+    "Last updated", or "Unavailable"). A row is only ever written when the
+    backend actually attempts a contact with a configured official source --
+    never fabricated.
+    """
+    __tablename__ = "scheme_sync_logs"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    status = Column(String(20), nullable=False, index=True)  # success | failed | not_configured | cached
+    trigger = Column(String(20), default="api")              # api | manual
+    source = Column(String(200), nullable=True)
+    records_fetched = Column(Integer, default=0)
+    records_stored = Column(Integer, default=0)
+    message = Column(String(500), nullable=True)
+    synced_at = Column(DateTime, default=datetime.utcnow, index=True)

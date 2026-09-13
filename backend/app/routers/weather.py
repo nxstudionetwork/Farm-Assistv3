@@ -216,7 +216,7 @@ def get_forecast(
                 params={
                     "latitude": latitude,
                     "longitude": longitude,
-                    "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,wind_direction_10m_max,sunrise,sunset",
+                    "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,sunrise,sunset",
                     "current": "temperature_2m",
                     "forecast_days": 14,
                     "timezone": "auto",
@@ -242,7 +242,7 @@ def get_forecast(
             "precipitation": daily.get("precipitation_sum", [])[i] if i < len(daily.get("precipitation_sum", [])) else None,
             "precipitation_probability": daily.get("precipitation_probability_max", [])[i] if i < len(daily.get("precipitation_probability_max", [])) else None,
             "wind_speed": daily.get("wind_speed_10m_max", [])[i] if i < len(daily.get("wind_speed_10m_max", [])) else None,
-            "wind_direction": _wind_direction(daily.get("wind_direction_10m_max", [])[i] if i < len(daily.get("wind_direction_10m_max", [])) else None),
+            "wind_direction": None,
             "weather_code": wc,
             "weather_condition": _weather_condition(wc),
             "description": _weather_condition(wc),

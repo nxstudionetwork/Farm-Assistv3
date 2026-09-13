@@ -208,6 +208,7 @@ class EquipmentMetadata(Base):
     suitable_use = Column(String(100), nullable=True, index=True)
     operating_width = Column(String(50), nullable=True)
     capacity = Column(String(50), nullable=True)
+    location = Column(String(200), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     product = relationship("Product", back_populates="equipment_metadata")
@@ -339,6 +340,30 @@ class MarketplaceEnquiry(Base):
 
     listing = relationship("MarketplaceListing", back_populates="enquiries")
     buyer = relationship("User", foreign_keys=[buyer_user_id])
+
+
+class MarketplaceBuyerRecommendation(Base):
+    """A seller recommends a potential buyer (persisted per seller-buyer pair).
+
+    The "Potential Buyers" strip on the seller dashboard lets farmers promote
+    buyers they trust. Storing the pair (seller, buyer) makes the
+    recommendation durable and toggleable without any messaging side-effects.
+    """
+
+    __tablename__ = "marketplace_buyer_recommendations"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    recommendation_id = Column(String(20), unique=True, index=True)
+    seller_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    buyer_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    seller = relationship("User", foreign_keys=[seller_id])
+    buyer = relationship("User", foreign_keys=[buyer_id])
+
+    __table_args__ = (
+        UniqueConstraint("seller_id", "buyer_id", name="uq_marketplace_buyer_recommendation_seller_buyer"),
+    )
 
 
 class MarketplaceSale(Base):

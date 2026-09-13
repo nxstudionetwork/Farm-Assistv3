@@ -31,7 +31,6 @@
     { type: 'item', label: 'Weather', icon: 'fa-cloud-sun', href: 'weather.html' },
     { type: 'item', label: 'Farm Map', icon: 'fa-map-location-dot', href: 'map.html' },
     { type: 'item', label: 'Sensors', icon: 'fa-microchip', href: 'sensors.html' },
-    { type: 'item', label: 'Sensor Settings', icon: 'fa-sliders-h', href: 'sensors-settings.html' },
     { type: 'item', label: 'Livestock', icon: 'fa-cow', href: 'livestock.html' },
     { type: 'item', label: 'Documents', icon: 'fa-folder-open', href: 'documents.html' },
     { type: 'separator' },

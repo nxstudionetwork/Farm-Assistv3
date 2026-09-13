@@ -13,6 +13,7 @@ from app.models.government import (
     InsurancePolicy, InsuranceClaim,
 )
 from app.services.notification_service import create_scheme_notification
+from app.services import scheme_sync_service as scheme_sync
 
 router = APIRouter(prefix="/api/v1", tags=["Government & Insurance"])
 
@@ -107,7 +108,17 @@ def list_schemes(
                 )
             )
         if state:
-            q = q.filter(GovernmentScheme.state.ilike(f"%{state}%"))
+            # Show central/all-India schemes in every state, plus state-specific matches.
+            from sqlalchemy import func as _func
+            q = q.filter(
+                or_(
+                    GovernmentScheme.state.ilike(f"%{state}%"),
+                    GovernmentScheme.state.is_(None),
+                    GovernmentScheme.state == "",
+                    GovernmentScheme.state.ilike("%all india%"),
+                    GovernmentScheme.state.ilike("%national%"),
+                )
+            )
         if category:
             base = category.lower()
             if base in ("central", "central schemes"):
@@ -205,8 +216,34 @@ def list_categories(db: Session = Depends(get_db), current_user: User = Depends(
         GovernmentScheme.status == "active"
     ).group_by(GovernmentScheme.category).all()
     counts = {k: v for k, v in rows if k}
-    fixed = [{"name": c, "has_schemes": bool(counts.get(c))} for c in SCHEME_CATEGORIES if counts.get(c)]
-    return {"status": "success", "data": {"categories": fixed}}
+    central = (
+        db.query(func.count(GovernmentScheme.id))
+        .filter(GovernmentScheme.level == "central", GovernmentScheme.status == "active")
+        .scalar()
+        or 0
+    )
+    state = (
+        db.query(func.count(GovernmentScheme.id))
+        .filter(GovernmentScheme.level == "state", GovernmentScheme.status == "active")
+        .scalar()
+        or 0
+    )
+
+    cats = []
+    # Prefer the curated display order for categories that actually exist.
+    for name in SCHEME_CATEGORIES:
+        if counts.get(name):
+            cats.append({"name": name, "count": counts[name], "has_schemes": True})
+    # Any real categories not in the curated list still get a chip.
+    extra = sorted(((c, v) for c, v in counts.items() if c not in SCHEME_CATEGORIES), key=lambda kv: -kv[1])
+    for name, cnt in extra:
+        cats.append({"name": name, "count": cnt, "has_schemes": True})
+    if central:
+        cats.append({"name": "Central Schemes", "count": central, "has_schemes": True, "level": "central"})
+    if state:
+        cats.append({"name": "State Schemes", "count": state, "has_schemes": True, "level": "state"})
+
+    return {"status": "success", "data": {"categories": cats}}
 
 
 @router.get("/government-schemes/saved")
@@ -311,6 +348,30 @@ def _find_scheme(db: Session, scheme_id: str):
     if not scheme:
         scheme = db.query(GovernmentScheme).filter(GovernmentScheme.scheme_id == scheme_id).first()
     return scheme
+
+
+@router.get("/government-schemes/states")
+def scheme_states(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Distinct states (with live scheme counts) for the filter panel."""
+    return {"status": "success", "data": {"states": scheme_sync.list_states(db)}}
+
+
+@router.get("/government-schemes/sync")
+def scheme_sync_status(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Freshness metadata only — never hits the network."""
+    return {"status": "success", "data": scheme_sync.scheme_freshness(db)}
+
+
+@router.post("/government-schemes/sync")
+def run_scheme_sync(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Trigger a verification pass against the configured official sources.
+
+    Throttled server-side; callers get an explicit, honest result and nothing
+    is fabricated when a source is unreachable/not configured.
+    """
+    report = scheme_sync.sync_from_sources(db, trigger="manual", force=True)
+    report["freshness"] = scheme_sync.scheme_freshness(db)
+    return {"status": "success", "data": report}
 
 
 @router.get("/government-schemes/{scheme_id}")

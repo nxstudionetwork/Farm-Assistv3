@@ -46,12 +46,35 @@ CATEGORIES = {
     "Farming Comedy", "Quick Knowledge", "Educational", "Expert Shorts",
 }
 CONTENT_TYPES = {"post", "short"}
+SHORT_CATEGORIES = [
+    "Farmer Techniques", "Farmer Tricks", "Farming Scenes", "Farmer Life",
+    "Farming Comedy", "Quick Knowledge", "Educational", "Expert Shorts",
+]
 IMAGE_EXTS = {"jpg", "jpeg", "png", "gif", "webp"}
 VIDEO_EXTS = {"mp4", "webm", "mov", "m4v"}
 IMAGE_MAX_MB = 10
 VIDEO_MAX_MB = 60
 
 HASHTAG_RE = re.compile(r"#(\w+)")
+
+
+def _sniff_media_kind(content: bytes) -> str:
+    """Best-effort content sniffing so extensions cannot smuggle non-media bytes."""
+    if len(content) < 12:
+        return "unknown"
+    if content[:3] == b"\xff\xd8\xff":
+        return "image"  # JPEG
+    if content[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image"  # PNG
+    if content[:6] in (b"GIF87a", b"GIF89a"):
+        return "image"  # GIF
+    if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return "image"  # WEBP
+    if content[4:8] == b"ftyp":
+        return "video"  # MP4 / MOV / M4V
+    if content[:4] == b"\x1a\x45\xdf\xa3":
+        return "video"  # WEBM / Matroska
+    return "unknown"
 
 
 # ---------------------------------------------------------------------------
@@ -215,13 +238,28 @@ def _sync_hashtags(db: Session, post: FarmBuzzPost, tags: List[str]) -> None:
         tag = raw.strip().lstrip("#").lower()
         if tag and re.match(r"^[a-z0-9_]+$", tag):
             normalized.add(tag)
-    for tag in normalized:
-        row = db.query(FarmBuzzHashtag).filter(FarmBuzzHashtag.tag == tag).first()
-        if row:
-            row.post_count = (row.post_count or 0) + 1
-        else:
-            db.add(FarmBuzzHashtag(tag=tag, post_count=1))
     post.hashtags = sorted(normalized)
+    _recount_hashtags(db)
+
+
+def _recount_hashtags(db: Session) -> None:
+    """Rebuild FarmBuzzHashtag counts from active posts to avoid drift on edit."""
+    db.flush()  # autoflush is disabled; persist pending hashtag changes first
+    counts: dict = {}
+    rows = db.query(FarmBuzzPost.hashtags).filter(FarmBuzzPost.is_active == True).all()
+    for (tags,) in rows:
+        for tag in tags or []:
+            counts[tag] = counts.get(tag, 0) + 1
+    all_tags = db.query(FarmBuzzHashtag).all()
+    existing = {row.tag for row in all_tags}
+    for row in all_tags:
+        if row.tag in counts:
+            row.post_count = counts[row.tag]
+        else:
+            db.delete(row)
+    for tag, n in counts.items():
+        if tag not in existing and n > 0:
+            db.add(FarmBuzzHashtag(tag=tag, post_count=n))
 
 
 def _comment_to_dict(db: Session, comment: FarmBuzzComment, current_user: Optional[User] = None) -> dict:
@@ -329,7 +367,7 @@ def _profile_dict(db: Session, user: User, current_user: Optional[User] = None) 
         db.query(FarmBuzzPost)
         .filter(FarmBuzzPost.user_id == user.id, FarmBuzzPost.is_active == True)
         .order_by(FarmBuzzPost.created_at.desc())
-        .limit(12)
+        .limit(30)
         .all()
     )
     recent = [p for p in recent if _can_view_post(db, p, current_user)]
@@ -509,6 +547,25 @@ def recommended_shorts(
     return get_feed("short", page, limit, category, None, None, "recommended", db, current_user)
 
 
+@router.get("/shorts/categories")
+def short_categories(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Distinct Shorts categories actually present in the database (stable order)."""
+    distinct = [
+        row[0]
+        for row in db.query(FarmBuzzPost.category)
+        .filter(FarmBuzzPost.is_active == True, FarmBuzzPost.content_type == "short")
+        .distinct()
+        .all()
+        if row[0]
+    ]
+    ordered = [c for c in SHORT_CATEGORIES if c in set(distinct)]
+    ordered.extend(sorted(c for c in distinct if c not in ordered))
+    return {"status": "success", "data": {"categories": ordered}}
+
+
 class InteractionEvent(BaseModel):
     event_type: str = "watch"
     watch_duration_ms: Optional[int] = 0
@@ -594,6 +651,13 @@ def create_post(
         raise HTTPException(status_code=400, detail=f"category must be one of {sorted(CATEGORIES)}")
     if not payload.caption and not payload.title and not payload.media_url:
         raise HTTPException(status_code=400, detail="Add a caption, title or media to post")
+    media_type = (payload.media_type or "text").lower()
+    if media_type not in {"image", "video", "text"}:
+        raise HTTPException(status_code=400, detail="media_type must be image, video or text")
+    if media_type != "text" and not payload.media_url:
+        raise HTTPException(status_code=400, detail="media_url is required for image/video posts")
+    if payload.media_url and not str(payload.media_url).startswith("/api/v1/farmbuzz/media/"):
+        raise HTTPException(status_code=400, detail="media_url must come from a FarmBuzz upload")
 
     post_id = generate_id("FA-BZ", db, FarmBuzzPost)
     post = FarmBuzzPost(
@@ -603,7 +667,7 @@ def create_post(
         title=payload.title,
         caption=payload.caption,
         media_url=payload.media_url,
-        media_type=payload.media_type,
+        media_type=media_type,
         thumbnail_url=payload.thumbnail_url,
         location=payload.location,
         crop=payload.crop,
@@ -654,6 +718,8 @@ def update_post(
             raise HTTPException(status_code=400, detail="Invalid category")
         post.category = payload.category
     if payload.visibility is not None:
+        if payload.visibility not in {"public", "followers", "private"}:
+            raise HTTPException(status_code=400, detail="visibility must be public, followers or private")
         post.visibility = payload.visibility
     if payload.hashtags is not None:
         _sync_hashtags(db, post, payload.hashtags)
@@ -674,6 +740,7 @@ def delete_post(
     if post.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only delete your own posts")
     post.is_active = False
+    _recount_hashtags(db)
     db.commit()
     return {"status": "success", "data": {"post_id": post.post_id, "message": "Post deleted"}}
 
@@ -1396,6 +1463,14 @@ async def upload_media(
             status_code=400,
             detail=f"File too large. Max {IMAGE_MAX_MB if kind == 'image' else VIDEO_MAX_MB}MB for {kind}s",
         )
+    sniffed = _sniff_media_kind(content)
+    if sniffed == "unknown":
+        raise HTTPException(status_code=400, detail="File content is not a recognised image or video")
+    if sniffed != kind:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File content does not match requested kind '{kind}' (detected '{sniffed}')",
+        )
 
     storage_root = Path(settings.STORAGE_LOCAL_PATH).resolve()
     year_month = datetime.utcnow().strftime("%Y/%m")
@@ -1427,5 +1502,5 @@ def serve_media(file_path: str):
     if not str(full_path).startswith(str(storage_root) + os.sep):
         raise HTTPException(status_code=400, detail="Invalid file path")
     if full_path.exists() and full_path.is_file():
-        return FileResponse(full_path)
+        return FileResponse(full_path, headers={"Cache-Control": "public, max-age=604800"})
     raise HTTPException(status_code=404, detail="File not found")

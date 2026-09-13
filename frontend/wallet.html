@@ -6,7 +6,6 @@
   <title>Digital Wallet - Farm Assist</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     :root {
       --w-primary: #1B5E3F;
@@ -1626,8 +1625,18 @@
     var html5QrCode = null;
 
     function $(id) { return document.getElementById(id); }
-    function show(id) { var el = $(id); if(el) el.style.display = ''; }
-    function hide(id) { var el = $(id); if(el) el.style.display = 'none'; }
+    function show(id) {
+      var el = $(id);
+      if (!el) return;
+      el.style.display = '';
+      if (el.classList.contains('full-view')) el.classList.add('active');
+    }
+    function hide(id) {
+      var el = $(id);
+      if (!el) return;
+      el.style.display = 'none';
+      el.classList.remove('active');
+    }
     function view(id) {
       ['w-loading','w-setup-view','w-dashboard-view','v-send','v-add','v-receive','v-scan','v-txns','v-bank','v-requests','v-security','v-finance','v-income','v-expense','v-reports'].forEach(function(v){hide(v)});
       show(id);
@@ -1691,7 +1700,7 @@
       this.disabled = true;
       this.textContent = 'Setting up...';
       W.setup({ wallet_pin: p1, confirm_pin: p2 }).then(function(res) {
-        walletData = res.data;
+        walletData = res;
         toast('Wallet set up successfully!', 'success');
         view('w-dashboard-view');
         loadSummary();
@@ -2055,7 +2064,7 @@
         $('btn-send-confirm').disabled = false;
         $('btn-send-confirm').textContent = 'Confirm & Send';
 
-        lastConfirmedTxn = res.data ? res.data.transaction : null;
+        lastConfirmedTxn = res && res.transaction ? res.transaction : null;
 
         $('send-step4').style.display = 'none';
         $('send-step5').style.display = '';
@@ -2160,30 +2169,55 @@
     // ==========================================
     // SCAN & PAY FLOW
     // ==========================================
+    var qrLibraryPromise = null;
+
+    function loadQrLibrary() {
+      if (typeof window.Html5Qrcode !== 'undefined') return Promise.resolve();
+      if (qrLibraryPromise) return qrLibraryPromise;
+
+      qrLibraryPromise = new Promise(function(resolve, reject) {
+        var script = document.createElement('script');
+        script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        script.async = true;
+        script.onload = function() {
+          if (typeof window.Html5Qrcode === 'undefined') {
+            reject(new Error('QR scanner library did not load'));
+            return;
+          }
+          resolve();
+        };
+        script.onerror = function() {
+          reject(new Error('QR scanner library could not be loaded'));
+        };
+        document.head.appendChild(script);
+      });
+      return qrLibraryPromise;
+    }
+
     function startScanner() {
       hideErr('scan-err');
-      if (typeof window.Html5Qrcode === 'undefined') {
-        showErr('scan-err', 'QR scanner is loading. You can also upload a QR image.');
-        return;
-      }
-      try {
-        if (!html5QrCode) {
-          html5QrCode = new window.Html5Qrcode('qr-reader-wallet');
+      loadQrLibrary().then(function() {
+        try {
+          if (!html5QrCode) {
+            html5QrCode = new window.Html5Qrcode('qr-reader-wallet');
+          }
+          html5QrCode.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: { width: 220, height: 220 } },
+            function(decodedText) {
+              handleScanSuccess(decodedText);
+            },
+            function() {}
+          ).catch(function(err) {
+            console.warn('Camera error:', err);
+            showErr('scan-err', 'Camera access unavailable. Please upload a QR image or enter Farmer ID directly.');
+          });
+        } catch(e) {
+          showErr('scan-err', 'Could not initialize scanner.');
         }
-        html5QrCode.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
-          function(decodedText) {
-            handleScanSuccess(decodedText);
-          },
-          function() {}
-        ).catch(function(err) {
-          console.warn('Camera error:', err);
-          showErr('scan-err', 'Camera access unavailable. Please upload a QR image or enter Farmer ID directly.');
-        });
-      } catch(e) {
-        showErr('scan-err', 'Could not initialize scanner.');
-      }
+      }).catch(function() {
+        showErr('scan-err', 'QR scanner could not load. You can upload a QR image or enter Farmer ID directly.');
+      });
     }
 
     function stopScanner() {
@@ -2220,14 +2254,16 @@
     $('scan-file-input').addEventListener('change', function() {
       if (this.files && this.files[0]) {
         var file = this.files[0];
-        if (typeof window.Html5Qrcode !== 'undefined') {
+        loadQrLibrary().then(function() {
           var scanner = new window.Html5Qrcode('qr-reader-wallet');
           scanner.scanFile(file, true).then(function(decodedText) {
             handleScanSuccess(decodedText);
           }).catch(function() {
             showErr('scan-err', 'No valid QR code found in uploaded image');
           });
-        }
+        }).catch(function() {
+          showErr('scan-err', 'QR scanner could not load. Please enter Farmer ID directly.');
+        });
       }
     });
 
@@ -2444,7 +2480,7 @@
     // ==========================================
     function loadSecurity() {
       W.securityInfo().then(function(res) {
-        var d = res.data || {};
+        var d = res || {};
         $('sec-info').innerHTML = '<div class="form-card" style="padding:14px;margin-bottom:12px;">' +
           '<div class="review-row"><span class="rr-label">Wallet PIN Status</span><span class="rr-val" style="color:#059669;"><i class="fas fa-check-circle"></i> ' + (d.pin_set ? 'Configured & Active' : 'Not Set') + '</span></div>' +
           '<div class="review-row"><span class="rr-label">Wallet Status</span><span class="rr-val">' + (d.wallet_active ? 'Active' : 'Inactive') + '</span></div>' +

@@ -213,12 +213,6 @@
     .text-size-opt span { display: block; font-weight: 600; color: var(--text-primary, #1a1a1a); }
     .text-size-opt .text-size-label { font-size: 10px; color: var(--text-muted, #888); margin-top: 3px; }
 
-    /* ---- Sensor status ---- */
-    .sensor-status-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; }
-    .sensor-status-pill.online { background: #E8F5E9; color: #2D8659; }
-    .sensor-status-pill.offline { background: #FFEBEE; color: #C62828; }
-    .sensor-status-pill.warning { background: #FFF8E1; color: #F57F17; }
-
     /* ---- Storage bar ---- */
     .storage-bar-wrap { padding: 10px 20px 16px; background: white; }
     .storage-bar-track { height: 8px; background: #F0F0F0; border-radius: 4px; overflow: hidden; }
@@ -346,14 +340,6 @@
     .loading-row .skeleton-line { height: 14px; border-radius: 6px; margin-bottom: 6px; }
     .loading-row .skeleton-line.short { width: 55%; }
     .loading-row .skeleton-line.long { width: 85%; }
-
-    /* Sensor type icon */
-    .sensor-type-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-    .sensor-row { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border-light, #F0F0F0); background: white; }
-    .sensor-row:last-child { border-bottom: none; }
-    .sensor-row-info { flex: 1; min-width: 0; }
-    .sensor-row-name { font-size: 14px; font-weight: 500; color: var(--text-primary, #1a1a1a); }
-    .sensor-row-meta { font-size: 12px; color: var(--text-muted, #888); margin-top: 2px; }
 
     /* Stat card grid */
     .stat-cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 20px; }
@@ -781,55 +767,6 @@
       <div class="settings-card-body">
         <div id="recent-activity-container">
           <div class="loading-row"><div class="skeleton skeleton-line long"></div><div class="skeleton skeleton-line short"></div></div>
-        </div>
-      </div>
-    </section>
-    <div class="settings-back-bottom" onclick="navigateBack()"><i class="fas fa-arrow-left"></i> Back to Settings</div>
-  </div>
-</div>
-
-
-<!-- ==================================================
-     SUB-PAGE: SENSOR SETTINGS
-================================================== -->
-<div class="settings-sub-page" id="sub-sensor-settings">
-  <div class="settings-sub-header">
-    <button class="back-btn" onclick="navigateBack()"><i class="fas fa-arrow-left"></i> Settings</button>
-    <h2>Sensor Settings</h2>
-  </div>
-  <div class="settings-sub-body">
-    <div class="stat-cards-row" style="margin-top:16px;">
-      <div class="stat-card">
-        <div class="stat-card-value" id="sensor-total-count">—</div>
-        <div class="stat-card-label">Total Sensors</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-value" id="sensor-active-count" style="color:#2D8659;">—</div>
-        <div class="stat-card-label">Active</div>
-      </div>
-    </div>
-    <section class="card-premium" style="padding:0;">
-      <div class="settings-section-title"><i class="fas fa-satellite-dish"></i> Sensor Overview</div>
-      <div class="settings-card-body">
-        <div id="sensor-settings-list">
-          <div class="loading-row"><div class="skeleton skeleton-line long"></div><div class="skeleton skeleton-line short"></div></div>
-          <div class="loading-row"><div class="skeleton skeleton-line long"></div><div class="skeleton skeleton-line short"></div></div>
-        </div>
-      </div>
-    </section>
-    <div class="info-box warning-box">
-      <i class="fas fa-triangle-exclamation"></i>
-      <span>Sensor pairing and detailed configuration are managed from the Sensors dashboard.</span>
-    </div>
-    <section class="card-premium" style="padding:0;">
-      <div class="settings-card-body">
-        <div class="settings-row" style="cursor:pointer;" onclick="window.location.href='sensors.html'">
-          <div class="settings-row-left"><i class="fas fa-satellite-dish"></i><div><div class="settings-title">Go to Sensors Dashboard</div><div class="settings-subtitle">View live readings, manage sensor pairing</div></div></div>
-          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
-        </div>
-        <div class="settings-row" style="cursor:pointer;" onclick="window.location.href='sensors-settings.html'">
-          <div class="settings-row-left"><i class="fas fa-sliders"></i><div><div class="settings-title">Advanced Sensor Configuration</div><div class="settings-subtitle">Thresholds, alerts and reading intervals</div></div></div>
-          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
         </div>
       </div>
     </section>
@@ -1387,7 +1324,6 @@
     // Load data for specific pages when opened
     if (page === 'sessions') { loadSessions(); loadRecentActivity(); }
     if (page === 'security-main') { loadSecuritySessions(); }
-    if (page === 'sensor-settings') { loadSensorSettings(); }
     if (page === 'connected-devices') { loadConnectedDevicesFromAPI(); }
     if (page === 'datastorage') { loadDataStats(); }
     if (page === 'support') { loadMyTickets(); }
@@ -1803,59 +1739,6 @@
     });
     updateLastSyncTime();
     computeCacheInfo();
-  }
-
-  /* ======================================================
-     SENSOR SETTINGS
-  ====================================================== */
-  function loadSensorSettings() {
-    var list = document.getElementById('sensor-settings-list');
-    var totalEl = document.getElementById('sensor-total-count');
-    var activeEl = document.getElementById('sensor-active-count');
-    if (!list) return;
-    if (typeof API === 'undefined' || !API.Sensor) {
-      list.innerHTML = '<div class="empty-state"><i class="fas fa-satellite-dish"></i><p>Sensor data unavailable</p></div>';
-      if (totalEl) totalEl.textContent = '—';
-      if (activeEl) activeEl.textContent = '—';
-      return;
-    }
-    list.innerHTML = '<div class="loading-row"><div class="skeleton skeleton-line long"></div><div class="skeleton skeleton-line short"></div></div>';
-    API.Sensor.list().then(function(resp) {
-      var sensors = [];
-      if (resp) sensors = Array.isArray(resp) ? resp : (Array.isArray(resp.data) ? resp.data : []);
-      if (totalEl) totalEl.textContent = sensors.length;
-      var activeCount = sensors.filter(function(s){ return s.is_active !== false; }).length;
-      if (activeEl) activeEl.textContent = activeCount;
-      if (!sensors.length) {
-        list.innerHTML = '<div class="empty-state"><i class="fas fa-satellite-dish"></i><p>No sensors registered yet.<br>Visit the Sensors dashboard to add sensors.</p></div>';
-        return;
-      }
-      var html = '';
-      for (var i = 0; i < sensors.length; i++) {
-        var s = sensors[i];
-        var meta = sensorTypeMap[s.sensor_type] || { icon: 'fa-microchip', label: s.sensor_type || 'Sensor', color: 'icon-gray' };
-        var battPct = s.battery_level !== null && s.battery_level !== undefined ? Math.round(s.battery_level) + '%' : '';
-        var statusPill = s.is_active !== false
-          ? '<span class="sensor-status-pill online"><i class="fas fa-circle" style="font-size:7px;"></i> Active</span>'
-          : '<span class="sensor-status-pill offline"><i class="fas fa-circle" style="font-size:7px;"></i> Offline</span>';
-        if (s.battery_level !== null && s.battery_level !== undefined && s.battery_level < 20) {
-          statusPill = '<span class="sensor-status-pill warning"><i class="fas fa-battery-quarter"></i> Low Battery</span>';
-        }
-        html += '<div class="sensor-row">' +
-          '<div class="sensor-type-icon ' + meta.color + '"><i class="fas ' + meta.icon + '"></i></div>' +
-          '<div class="sensor-row-info">' +
-          '<div class="sensor-row-name">' + settingsEscape(s.sensor_name || meta.label) + '</div>' +
-          '<div class="sensor-row-meta">' + settingsEscape(s.sensor_id || '') + (s.location ? ' · ' + settingsEscape(s.location) : '') + (battPct ? ' · ' + battPct + ' battery' : '') + '</div>' +
-          '</div>' +
-          statusPill +
-          '</div>';
-      }
-      list.innerHTML = html;
-    }).catch(function() {
-      list.innerHTML = '<div class="empty-state"><i class="fas fa-wifi-slash"></i><p>Unable to load sensor data. Check your connection.</p></div>';
-      if (totalEl) totalEl.textContent = '—';
-      if (activeEl) activeEl.textContent = '—';
-    });
   }
 
   /* ======================================================
@@ -2504,7 +2387,6 @@
     {
       label: 'Farm & Devices',
       items: [
-        { page: 'sensor-settings', icon: 'fa-satellite-dish', color: 'icon-teal', title: 'Sensor Settings', subtitle: 'Soil, temperature and water sensors' },
         { page: 'connected-devices', icon: 'fa-microchip', color: 'icon-green', title: 'Connected Devices', subtitle: 'Farm-connected IoT devices' }
       ]
     },
@@ -2564,7 +2446,7 @@
       'account-settings':1,'phone-email':1,'account-plan':1,
       language:1,appearance:1,accessibility:1,
       notifications:1,'security-main':1,privacy:1,sessions:1,
-      'sensor-settings':1,'connected-devices':1,
+      'connected-devices':1,
       datastorage:1,support:1,about:1,terms:1,
       ai:1,actions:1
     };

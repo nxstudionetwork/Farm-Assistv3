@@ -132,6 +132,7 @@ def get_technique(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    seed_techniques(db)
     t = db.query(Technique).filter(
         (Technique.technique_id == technique_id) | (Technique.id == technique_id)
     ).first()
@@ -189,6 +190,7 @@ def bookmark_technique(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    seed_techniques(db)
     t = db.query(Technique).filter(
         (Technique.technique_id == technique_id) | (Technique.id == technique_id)
     ).first()
@@ -219,6 +221,7 @@ def list_bookmarks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    seed_techniques(db)
     bookmarks = db.query(TechniqueBookmark).filter(
         TechniqueBookmark.user_id == current_user.id
     ).order_by(TechniqueBookmark.created_at.desc()).all()

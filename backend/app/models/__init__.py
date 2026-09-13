@@ -15,7 +15,7 @@ from app.models.marketplace import (
     ProductCategory, Seller, Product, MarketplaceCart, MarketplaceCartItem, MarketplaceWishlist, MarketplaceOrder, OrderItem,
     Payment, DeliveryTracking, EquipmentMetadata, FarmerRecentlyViewed,
     MarketplaceCategory, MarketplaceListing, MarketplaceListingImage,
-    MarketplaceEnquiry, MarketplaceSale,
+    MarketplaceEnquiry, MarketplaceSale, MarketplaceBuyerRecommendation,
 )
 from app.models.government import (
     GovernmentScheme, SchemeApplication, SchemeDocument,
@@ -77,7 +77,7 @@ __all__ = [
     "ProductCategory", "Seller", "Product", "MarketplaceCart", "MarketplaceCartItem", "MarketplaceWishlist", "MarketplaceOrder", "OrderItem",
     "Payment", "DeliveryTracking", "EquipmentMetadata", "FarmerRecentlyViewed",
     "MarketplaceCategory", "MarketplaceListing", "MarketplaceListingImage",
-    "MarketplaceEnquiry", "MarketplaceSale",
+    "MarketplaceEnquiry", "MarketplaceSale", "MarketplaceBuyerRecommendation",
     "GovernmentScheme", "SchemeApplication", "SchemeDocument",
     "InsurancePolicy", "InsuranceClaim", "SchemeSyncLog",
     "InsuranceProduct", "SavedInsurance", "InsuranceApplication",

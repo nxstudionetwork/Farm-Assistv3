@@ -22,13 +22,7 @@
     .cm-btn.outline{background:#fff;color:var(--cm-green);border:1px solid var(--cm-border);}
     .cm-btn.outline:hover{background:var(--cm-bg);}
     .cm-btn i{font-size:13px;}
-    .cm-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--cm-border);border-radius:10px;padding:8px 12px;flex:1;min-width:200px;}
-    .cm-search i{color:var(--cm-muted);font-size:13px;}
-    .cm-search input{border:none;outline:none;flex:1;font-size:12px;background:transparent;}
-    .cat-scroll{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-    .cat-scroll::-webkit-scrollbar{display:none;}
-    .cat-chip{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1px solid var(--cm-border);background:#fff;font-size:11px;cursor:pointer;transition:all .2s;color:var(--cm-muted);}
-    .cat-chip.active{background:var(--cm-green);color:#fff;border-color:var(--cm-green);}
+    .cm-section-title{font-size:13px;font-weight:700;color:var(--cm-dark);margin:16px 0 10px;display:flex;align-items:center;gap:8px;}
     .cm-section-title{font-size:13px;font-weight:700;color:var(--cm-dark);margin:16px 0 10px;display:flex;align-items:center;gap:8px;}
     .cm-section-title i{color:var(--cm-green);}
     .cm-section-title .count{margin-left:auto;font-size:11px;color:var(--cm-muted);font-weight:400;}
@@ -50,6 +44,8 @@
     .post-author-info .name{font-size:13px;font-weight:700;color:var(--cm-dark);display:flex;align-items:center;gap:5px;}
     .post-author-info .name .badge{font-size:9px;background:#fff3cd;color:#856404;border-radius:8px;padding:1px 6px;font-weight:600;}
     .post-author-info .meta{font-size:10px;color:var(--cm-muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .post-community-link{color:var(--cm-green);cursor:pointer;font-weight:600;}
+    .post-community-link:hover{text-decoration:underline;}
     .post-more{position:relative;}
     .post-more-btn{background:none;border:none;color:var(--cm-muted);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:6px;}
     .post-more-btn:hover{background:var(--cm-bg);}
@@ -137,9 +133,10 @@
     .tab{flex-shrink:0;padding:8px 16px;border-radius:10px;background:#fff;border:1px solid var(--cm-border);font-size:12px;font-weight:600;color:var(--cm-muted);cursor:pointer;display:flex;align-items:center;gap:6px;}
     .tab.active{background:var(--cm-green);color:#fff;border-color:var(--cm-green);}
     .tab i{font-size:13px;}
-    .dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:flex-end;justify-content:center;}
+    .dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3100;display:none;align-items:flex-end;justify-content:center;overscroll-behavior:contain;}
     .dialog-overlay.active{display:flex;}
-    .dialog{background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:20px;animation:slideUp .3s ease;}
+    body.modal-open{overflow:hidden;}
+    .dialog{background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:calc(100vh - 24px);overflow-y:auto;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch;overscroll-behavior:contain;animation:slideUp .3s ease;}
     @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
     .dialog-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
     .dialog-head h3{font-size:16px;color:var(--cm-dark);margin:0;}
@@ -173,8 +170,82 @@
     .gd-meta{font-size:11px;color:var(--cm-muted);}
     .gd-desc{font-size:12px;color:#444;line-height:1.5;margin-bottom:12px;}
     .gd-actions{display:flex;gap:8px;flex-wrap:wrap;}
-    @media (min-width:600px){.dialog-overlay{align-items:center;}.dialog{border-radius:18px;}}
-    @media (max-width:480px){.cm-header h1{font-size:17px;}.post-actions{gap:2px;}.p-act{padding:6px 6px;font-size:10px;}}
+    /* --- Search bar --- */
+    .search-wrap{position:relative;flex:1;min-width:200px;}
+    .cm-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--cm-border);border-radius:24px;padding:9px 14px;flex:1;min-width:0;box-shadow:0 1px 2px rgba(27,67,50,.05);transition:border-color .2s, box-shadow .2s;}
+    .cm-search:focus-within{border-color:var(--cm-green);box-shadow:0 0 0 3px rgba(46,125,50,.12);}
+    .cm-search .fa-search{font-size:12px;}
+    .cm-search input{border:none;outline:none;flex:1;font-size:12px;background:transparent;color:var(--cm-dark);}
+    .cm-search input::placeholder{color:var(--cm-muted);}
+    .search-drop{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid var(--cm-border);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.14);z-index:60;overflow:hidden;display:none;}
+    .search-drop.show{display:block;}
+    .search-drop .sd-hint{font-size:10px;font-weight:700;color:var(--cm-muted);text-transform:uppercase;letter-spacing:.5px;padding:10px 14px 4px;}
+    .search-drop .sd-item{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px;color:var(--cm-dark);cursor:pointer;border:none;background:none;width:100%;text-align:left;}
+    .search-drop .sd-item i{width:16px;color:var(--cm-muted);font-size:12px;}
+    .search-drop .sd-item:hover{background:var(--cm-bg);}
+    .search-drop .sd-item.sd-loading{cursor:default;color:var(--cm-muted);}
+    .search-drop .sd-item.sd-loading i{color:var(--cm-green);}
+    .search-drop .sd-error{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:12px;color:#c62828;}
+    .search-drop .sd-error i{color:#c62828;width:16px;}
+    .search-drop .sd-clear-hint{font-size:11px;color:var(--cm-muted);padding:8px 14px 12px;}
+    .search-clear{background:none;border:none;color:var(--cm-muted);cursor:pointer;font-size:12px;padding:2px 4px;display:none;}
+    .search-clear.show{display:inline-flex;}
+    /* --- Feed toolbar (sort) --- */
+    .feed-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:2px 0 6px;}
+    .sort-wrap{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--cm-border);border-radius:10px;padding:6px 10px;}
+    .sort-wrap i{font-size:12px;color:var(--cm-muted);}
+    .sort-wrap select{border:none;outline:none;background:transparent;font-size:12px;font-weight:600;color:var(--cm-dark);cursor:pointer;}
+    /* --- Trending rail --- */
+    .trending-rail{background:#fff;border:1px solid var(--cm-border);border-radius:14px;padding:12px 14px;margin-bottom:14px;}
+    .trending-rail .tr-title{font-size:12px;font-weight:700;color:var(--cm-dark);display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+    .trending-rail .tr-title i{color:#e65100;}
+    .trending-rail .tr-title .flame{color:#e65100;}
+    .trending-list{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;}
+    .trending-list::-webkit-scrollbar{display:none;}
+    .trending-chip{flex-shrink:0;max-width:230px;padding:7px 12px;border:1px solid var(--cm-border);border-radius:20px;font-size:11px;color:var(--cm-dark);background:var(--cm-bg);cursor:pointer;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;transition:all .2s;}
+    .trending-chip:hover{border-color:var(--cm-green);background:#fff;}
+    .trending-chip .tc-rank{color:#e65100;font-weight:700;font-size:11px;}
+    .trending-chip .tc-text{overflow:hidden;text-overflow:ellipsis;}
+    /* --- Communities view (tabs) --- */
+    #communitiesView{display:none;}
+    #communitiesView.show{display:block;}
+    .comm-tabs{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;}
+    .comm-tabs::-webkit-scrollbar{display:none;}
+    .comm-tab{flex-shrink:0;padding:8px 14px;border-radius:20px;background:#fff;border:1px solid var(--cm-border);font-size:12px;font-weight:600;color:var(--cm-muted);cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;}
+    .comm-tab.active{background:var(--cm-green);color:#fff;border-color:var(--cm-green);}
+    .comm-tab i{font-size:12px;}
+    .comm-sub-hint{font-size:11px;color:var(--cm-muted);margin-bottom:10px;}
+    .groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
+    .groups-list{display:flex;flex-direction:column;gap:8px;}
+    .group-row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--cm-border);border-radius:12px;padding:12px;cursor:pointer;transition:all .2s;}
+    .group-row:hover{border-color:var(--cm-green);box-shadow:0 4px 12px rgba(27,67,50,.08);}
+    .group-row .gr-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;flex-shrink:0;}
+    .group-row .gr-info{flex:1;min-width:0;}
+    .group-row .gr-name{font-size:13px;font-weight:700;color:var(--cm-dark);line-height:1.25;}
+    .group-row .gr-desc{font-size:11px;color:var(--cm-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .group-row .gr-meta{font-size:10px;color:var(--cm-muted);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap;}
+    .group-row .gr-meta i{width:11px;font-size:10px;}
+    .group-row .gr-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+    .group-row .gr-actions .cm-btn{white-space:nowrap;justify-content:center;}
+    .group-row .gr-actions .cm-btn.outline{border-color:#cde3d8;}
+    .g-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--cm-green);}
+    .ma-heading{font-size:13px;font-weight:700;color:var(--cm-dark);margin:8px 0 10px;display:flex;align-items:center;gap:8px;}
+    .ma-heading i{color:var(--cm-green);}
+    .ma-heading .count{margin-left:auto;font-size:11px;color:var(--cm-muted);font-weight:400;}
+    .groups-row{display:flex;gap:10px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none;}
+    .group-card{flex-shrink:0;width:220px;background:#fff;border:1px solid var(--cm-border);border-radius:12px;padding:12px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;}
+    .group-card:hover{border-color:var(--cm-green);box-shadow:0 4px 12px rgba(27,67,50,.1);}
+    .group-card .g-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;margin-bottom:8px;}
+    .group-card .g-name{font-size:13px;font-weight:700;color:var(--cm-dark);line-height:1.2;}
+    .group-card .g-cat{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--cm-green);margin-top:3px;}
+    .group-card .g-desc{font-size:11px;color:var(--cm-muted);margin-top:5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1;}
+    .group-card .g-meta{font-size:10px;color:var(--cm-muted);margin-top:8px;display:flex;gap:10px;}
+    .group-card .g-actions{display:flex;gap:6px;margin-top:8px;}
+    .group-card .g-actions .cm-btn{flex:1;justify-content:center;}
+    .comm-loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--cm-muted);font-size:12px;}
+    .no-result-hint{text-align:center;padding:8px 0 18px;font-size:12px;color:var(--cm-muted);}
+    @media (min-width:600px){.dialog-overlay{align-items:center;}.dialog{border-radius:18px;}.groups-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}}
+    @media (max-width:480px){.cm-header h1{font-size:17px;}.post-actions{gap:2px;}.p-act{padding:6px 6px;font-size:10px;}.group-card{width:190px;}.groups-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}}
   </style>
 </head>
 <body>
@@ -188,9 +259,13 @@
       <div class="sub">Connect with farmers, share knowledge and grow together.</div>
     </div>
     <div class="cm-actions">
-      <div class="cm-search">
-        <i class="fas fa-search"></i>
-        <input type="text" id="globalSearch" placeholder="Search discussions, farmers, topics..." autocomplete="off">
+      <div class="search-wrap">
+        <div class="cm-search">
+          <i class="fas fa-search"></i>
+          <input type="text" id="globalSearch" placeholder="Search discussions, groups, farmers, topics..." autocomplete="off">
+          <button type="button" class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="Clear search"><i class="fas fa-times-circle"></i></button>
+        </div>
+        <div class="search-drop" id="searchDrop"></div>
       </div>
       <button class="cm-btn primary" onclick="openCreatePost()"><i class="fas fa-plus"></i> Create Post</button>
     </div>
@@ -204,32 +279,31 @@
     <div class="tab" data-tab="my" onclick="switchTab('my')"><i class="fas fa-user"></i> My Activity</div>
   </div>
 
-  <!-- Category chips -->
-  <div class="cat-scroll" id="catChips"></div>
-
-  <!-- My Communities -->
-  <div id="myCommunitiesSection" style="display:none;">
-    <div class="cm-section-title"><i class="fas fa-users"></i> My Communities <span class="count" id="myGroupsCount"></span></div>
-    <div id="myGroupsList" class="my-groups-grid"></div>
-    <div id="myGroupsEmpty" class="empty-state" style="display:none;">
-      <i class="far fa-users"></i>
-      <h3>No communities joined yet</h3>
-      <p>Join communities to connect with other farmers.</p>
-      <button class="cm-btn primary" onclick="switchTab('communities')">Explore Communities</button>
+  <!-- Feed toolbar (sort) -->
+  <div class="feed-toolbar" id="feedToolbar" style="display:none;">
+    <div class="sort-wrap">
+      <i class="fas fa-sort-amount-down-alt"></i>
+      <select id="feedSort" onchange="setFeedSort(this)">
+        <option value="latest">Latest</option>
+        <option value="popular">Most Popular</option>
+        <option value="most_discussed">Most Discussed</option>
+        <option value="trending">Trending</option>
+        <option value="active">Recently Active</option>
+      </select>
     </div>
   </div>
 
-  <!-- All Communities -->
-  <div id="allCommunitiesSection" style="display:none;">
-    <div class="cm-section-title"><i class="fas fa-compass"></i> All Communities <span class="count" id="allGroupsCount"></span></div>
-    <div id="allGroupsList" class="groups-row"></div>
+  <!-- Trending rail -->
+  <div id="trendingStrip" style="display:none;"></div>
+
+  <!-- My Activity: Groups I'm In -->
+  <div id="myGroupsSection" style="display:none;"></div>
+
+  <!-- Communities view (tabs) -->
+  <div id="communitiesView">
+    <div class="comm-tabs" id="commTabs"></div>
+    <div id="commContent"></div>
   </div>
-
-  <!-- Community detail -->
-  <div id="groupDetail" class="group-detail"></div>
-
-  <!-- My Activity stats -->
-  <div class="activity-stats" id="activityStats" style="display:none;"></div>
 
   <!-- Feed skeleton -->
   <div id="feedSkeleton" style="display:none;">
@@ -361,7 +435,11 @@ var state = {
   hasMore: false,
   loading: false,
   searchTerm: '',
-  activityStats: null,
+  feedSort: 'latest',
+  commTab: 'joined',
+  commCategory: 'all',
+  trending: [],
+  groupSearch: '',
   activityPage: 1,
   activityHasMore: false,
   replyTo: {}
@@ -434,35 +512,15 @@ function showError(msg) {
 
 // ----------------------------- Avatar image helper -----------------------------
 // ----------------------------- Category chips -----------------------------
-function renderCategories() {
-  var chips = state.categories.length ? state.categories : ['All'];
-  var html = '';
-  chips.forEach(function(c) {
-    var val = c;
-    var active = state.currentCategory === val || (val === 'All' && state.currentCategory === 'all');
-    html += '<div class="cat-chip' + (active ? ' active' : '') + '" data-cat="' + esc(val) + '" onclick="filterCategory(this)">' + esc(c) + '</div>';
-  });
-  document.getElementById('catChips').innerHTML = html;
-}
-
-window.filterCategory = function(el) {
-  var cat = el ? el.getAttribute('data-cat') : 'All';
-  state.currentCategory = cat === 'All' ? 'all' : cat;
-  state.page = 1; state.hasMore = false; state.posts = [];
-  renderCategories();
-  if (state.currentTab === 'communities' && !state.currentGroupId) loadAllGroups();
-  else if (state.currentTab === 'feed') loadFeed();
-};
-
 // ----------------------------- Tabs -----------------------------
 window.switchTab = function(tab) {
   state.currentTab = tab;
   document.querySelectorAll('.tab').forEach(function(t) { t.classList.toggle('active', t.getAttribute('data-tab') === tab); });
   showSkeleton(false);
-  document.getElementById('myCommunitiesSection').style.display = 'none';
-  document.getElementById('allCommunitiesSection').style.display = 'none';
-  document.getElementById('activityStats').style.display = 'none';
-  document.getElementById('groupDetail').className = 'group-detail';
+  document.getElementById('myGroupsSection').style.display = 'none';
+  document.getElementById('feedToolbar').style.display = tab === 'feed' ? 'flex' : 'none';
+  document.getElementById('trendingStrip').style.display = 'none';
+  document.getElementById('communitiesView').classList.toggle('show', tab === 'communities');
   state.currentGroupId = null;
   state.replyTo = {};
   document.getElementById('loadMoreWrap').style.display = 'none';
@@ -472,7 +530,8 @@ window.switchTab = function(tab) {
     loadFeed();
   } else if (tab === 'communities') {
     document.getElementById('feed').innerHTML = '';
-    loadAllGroups();
+    renderCommTabs();
+    loadCommunities();
   } else if (tab === 'saved') {
     loadSaved();
   } else if (tab === 'my') {
@@ -484,18 +543,19 @@ window.switchTab = function(tab) {
 function loadFeed() {
   if (state.loading) return;
   state.loading = true;
-  document.getElementById('activityStats').style.display = 'none';
+  document.getElementById('communitiesView').classList.remove('show');
   if (state.page === 1) { showSkeleton(true); document.getElementById('feed').innerHTML = ''; }
   var params = { page: state.page, limit: 10, category: state.currentCategory === 'all' ? 'all' : state.currentCategory };
   if (state.searchTerm) params.search = state.searchTerm;
   if (state.currentGroupId) params.community_id = state.currentGroupId;
+  if (state.feedSort) params.sort = state.feedSort;
 
   window.API.Community.feed(params).then(function(res) {
     var data = res || {};
     var items = (data.items) || [];
     state.loading = false;
     showSkeleton(false);
-    if (state.page === 1) state.posts = [];
+    if (state.page === 1) { state.posts = []; loadTrending(); }
     state.posts = state.posts.concat(items);
     state.hasMore = data.total > state.posts.length;
     state.page++;
@@ -503,9 +563,39 @@ function loadFeed() {
   })['catch'](function(e) {
     state.loading = false;
     showSkeleton(false);
-    if (state.page === 1) showError('Unable to connect to Community.');
+    if (state.page === 1) { document.getElementById('trendingStrip').style.display = 'none'; showError('Unable to connect to Community.'); }
     else showToast('Unable to load more posts.', 'error');
   });
+}
+
+window.setFeedSort = function(sel) {
+  state.feedSort = (sel && sel.value) || 'latest';
+  state.page = 1; state.hasMore = false; state.posts = [];
+  document.getElementById('trendingStrip').style.display = 'none';
+  loadFeed();
+};
+
+function shouldShowTrending() {
+  return state.currentTab === 'feed' && state.page <= 2 && !state.currentGroupId &&
+    !state.searchTerm && (state.currentCategory === 'all');
+}
+
+function loadTrending() {
+  var strip = document.getElementById('trendingStrip');
+  if (!shouldShowTrending()) { strip.style.display = 'none'; strip.innerHTML = ''; return; }
+  window.API.Community.feed({ page: 1, limit: 5, sort: 'trending' }).then(function(res) {
+    var items = (res && res.items) || [];
+    if (!items.length) { strip.style.display = 'none'; strip.innerHTML = ''; return; }
+    var html = '<div class="trending-rail"><div class="tr-title"><i class="fas fa-fire"></i> Trending discussions</div><div class="trending-list">';
+    items.forEach(function(p, i) {
+      var label = p.title || (p.content || '').replace(/\s+/g, ' ').trim();
+      if (label.length > 60) label = label.slice(0, 60).replace(/[^\s]*$/, '') + '...';
+      html += '<button class="trending-chip" onclick="openDeepLinkedPost(\'' + esc(p.id) + '\')"><span class="tc-rank">#' + (i + 1) + '</span><span class="tc-text">' + esc(label) + '</span></button>';
+    });
+    html += '</div></div>';
+    strip.innerHTML = html;
+    strip.style.display = 'block';
+  })['catch'](function() { strip.style.display = 'none'; strip.innerHTML = ''; });
 }
 
 function renderFeed() {
@@ -559,7 +649,7 @@ function buildPostCard(p) {
       '<div class="post-author-info">' +
         '<div class="name">' + esc(p.author_name || 'Farmer') + (p.author && p.author.is_verified ? '<span class="badge"><i class="fas fa-check-circle"></i> Verified</span>' : '') + '</div>' +
         '<div class="meta"><span>' + esc(p.category || 'General') + '</span>' +
-          (p.community_name ? '<span><i class="fas fa-users"></i> ' + esc(p.community_name) + '</span>' : '') +
+          (p.community_name ? '<span class="post-community-link" onclick="event.stopPropagation();openGroup(\'' + esc(p.community_id) + '\')"><i class="fas fa-users"></i> ' + esc(p.community_name) + '</span>' : '') +
           '<span>&middot; ' + timeAgo(p.created_at) + '</span></div>' +
       '</div>' +
       '<div class="post-more"><button class="post-more-btn" onclick="event.stopPropagation();toggleMoreMenu(this)"><i class="fas fa-ellipsis-h"></i></button>' +
@@ -938,19 +1028,123 @@ window.loadMore = function() {
   else loadFeed();
 };
 
-document.getElementById('globalSearch').addEventListener('input', function(e) {
+// ----------------------------- Search -----------------------------
+var searchInput = document.getElementById('globalSearch');
+var searchDrop = document.getElementById('searchDrop');
+var searchClear = document.getElementById('searchClear');
+
+function searchRecents() {
+  try {
+    var raw = JSON.parse(localStorage.getItem('fa-community-recents') || '[]');
+    return Array.isArray(raw) ? raw.filter(Boolean).slice(0, 6) : [];
+  } catch (e) { return []; }
+}
+
+function saveSearchRecent(term) {
+  term = String(term || '').trim();
+  if (!term) return;
+  var recents = searchRecents().filter(function(r) { return r.toLowerCase() !== term.toLowerCase(); });
+  recents.unshift(term);
+  localStorage.setItem('fa-community-recents', JSON.stringify(recents.slice(0, 6)));
+}
+
+function runSearch(term) {
+  state.searchTerm = term;
+  searchClear.classList.toggle('show', !!state.searchTerm);
+  searchDrop.classList.remove('show');
+  if (state.currentTab === 'communities' && !state.currentGroupId) {
+    loadCommunities();
+  } else if (state.currentTab === 'feed') {
+    state.page = 1; state.hasMore = false; state.posts = [];
+    document.getElementById('trendingStrip').style.display = 'none';
+    loadFeed();
+  }
+}
+
+function renderSearchDrop(term) {
+  var html = '';
+  var recents = searchRecents();
+  if (!term) {
+    if (recents.length) {
+      html += '<div class="sd-hint">Recent searches</div>';
+      recents.forEach(function(r) {
+        html += '<button class="sd-item" onclick="runSearch(\'' + esc(r.replace(/'/g, '\\\'')) + '\');searchInput.value=\'' + esc(r.replace(/'/g, '\\\'')) + '\';searchClear.classList.add(\'show\')"><i class="fas fa-history"></i> ' + esc(r) + '</button>';
+      });
+    } else {
+      html += '<div class="sd-clear-hint">Search discussions, farmers, topics or community groups.</div>';
+    }
+    searchDrop.innerHTML = html;
+    return;
+  }
+  html += '<div class="sd-hint">Recent searches</div>';
+  var shown = 0;
+  recents.forEach(function(r) {
+    if (r.toLowerCase().indexOf(term.toLowerCase()) === 0 && shown < 3) {
+      shown++;
+      html += '<button class="sd-item" onclick="runSearch(\'' + esc(r.replace(/'/g, '\\\'')) + '\');searchInput.value=\'' + esc(r.replace(/'/g, '\\\'')) + '\';searchClear.classList.add(\'show\')"><i class="fas fa-history"></i> ' + esc(r) + '</button>';
+    }
+  });
+  html += '<div class="sd-hint">Search</div>' +
+    '<button class="sd-item" data-q="' + esc(term) + '" onclick="searchDropPick(this)"><i class="fas fa-search"></i> <span style="font-weight:600;">"</span>' + esc(term) + '<span style="font-weight:600;">"</span> in the community</button>' +
+    '<div class="sd-item sd-loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+  searchDrop.innerHTML = html;
+}
+
+window.searchDropPick = function(btn) {
+  var q = btn.getAttribute('data-q');
+  saveSearchRecent(q);
+  searchInput.value = q;
+  runSearch(q);
+}
+
+searchInput.addEventListener('input', function(e) {
   var term = e.target.value.trim();
+  searchClear.classList.toggle('show', e.target.value.length > 0);
+  renderSearchDrop(term);
+  searchDrop.classList.add('show');
   clearTimeout(window.__cmSearchTimer);
   window.__cmSearchTimer = setTimeout(function() {
     state.searchTerm = term;
+    if (!term) { searchDrop.classList.remove('show'); return; }
     if (state.currentTab === 'communities' && !state.currentGroupId) {
-      loadAllGroups();
+      searchDrop.classList.remove('show');
+      loadCommunities();
     } else if (state.currentTab === 'feed') {
+      searchDrop.classList.remove('show');
       state.page = 1; state.hasMore = false; state.posts = [];
+      document.getElementById('trendingStrip').style.display = 'none';
       loadFeed();
+    } else {
+      searchDrop.classList.remove('show');
     }
   }, 400);
 });
+
+searchInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    var term = e.target.value.trim();
+    saveSearchRecent(term);
+    runSearch(term);
+  }
+});
+
+searchInput.addEventListener('focus', function() { renderSearchDrop(searchInput.value.trim()); searchDrop.classList.add('show'); });
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-wrap')) searchDrop.classList.remove('show');
+});
+
+window.clearSearch = function() {
+  searchInput.value = '';
+  state.searchTerm = '';
+  searchClear.classList.remove('show');
+  searchDrop.classList.remove('show');
+  if (state.currentTab === 'communities' && !state.currentGroupId) loadCommunities();
+  else if (state.currentTab === 'feed') {
+    state.page = 1; state.hasMore = false; state.posts = [];
+    document.getElementById('trendingStrip').style.display = 'none';
+    loadFeed();
+  }
+};
 
 // ----------------------------- Create / Edit Post -----------------------------
 function populateCategorySelect() {
@@ -972,6 +1166,11 @@ function populateCommunitySelect() {
   sel.innerHTML = html;
 }
 
+/* Body lock for modal overlays */
+var _modalCount = 0;
+function lockBody() { _modalCount++; document.body.classList.add('modal-open'); }
+function unlockBody() { _modalCount = Math.max(0, _modalCount - 1); if (!_modalCount) document.body.classList.remove('modal-open'); }
+
 window.openCreatePost = function() {
   populateCategorySelect();
   populateCommunitySelect();
@@ -986,10 +1185,12 @@ window.openCreatePost = function() {
   document.getElementById('postImage').value = '';
   document.getElementById('imageHint').textContent = '';
   document.getElementById('createPostOverlay').classList.add('active');
+  lockBody();
 };
 
 window.closeCreatePost = function() {
   document.getElementById('createPostOverlay').classList.remove('active');
+  unlockBody();
 };
 
 window.editPost = function(postId) {
@@ -1013,6 +1214,7 @@ window.editPost = function(postId) {
   document.getElementById('postImage').value = '';
   document.getElementById('imageHint').textContent = post.image_url ? 'Existing image will be kept.' : '';
   document.getElementById('createPostOverlay').classList.add('active');
+  lockBody();
 };
 
 function refreshCurrentView() {
@@ -1121,7 +1323,6 @@ function resetSubmitBtn(editId, btn) {
 // ----------------------------- Saved -----------------------------
 function loadSaved() {
   showSkeleton(true);
-  document.getElementById('activityStats').style.display = 'none';
   document.getElementById('feed').innerHTML = '';
   document.getElementById('loadMoreWrap').style.display = 'none';
   window.API.Community.listSaved({ page: 1, limit: 50 }).then(function(res) {
@@ -1129,10 +1330,10 @@ function loadSaved() {
     var items = (res && res.items) ? res.items : [];
     state.savedPosts = items;
     if (!items.length) {
-      showEmpty('No saved discussions', 'Save useful discussions to find them here later.', false);
+      showEmpty('No saved posts yet.', 'Tap the bookmark icon on any post to save it here.', false);
       return;
     }
-    var html = '';
+    var html = '<div class="ma-heading"><i class="fas fa-bookmark"></i> Saved Posts <span class="count">' + items.length + '</span></div>';
     items.forEach(function(p) { html += buildPostCard(p); });
     document.getElementById('feed').innerHTML = html;
   })['catch'](function() {
@@ -1142,50 +1343,100 @@ function loadSaved() {
 }
 
 // ----------------------------- Communities -----------------------------
-function loadAllGroups() {
-  showSkeleton(true);
-  document.getElementById('activityStats').style.display = 'none';
-  document.getElementById('feed').innerHTML = '';
-  document.getElementById('loadMoreWrap').style.display = 'none';
-  document.getElementById('allCommunitiesSection').style.display = 'block';
-  var params = { page: 1, limit: 100 };
-  if (state.searchTerm) params.search = state.searchTerm;
-  if (state.currentCategory !== 'all') params.category = state.currentCategory;
+var COMM_TABS = [
+  { id: 'joined',  label: 'Joined',  icon: 'fa-user-check' },
+  { id: 'explore', label: 'Explore', icon: 'fa-compass' }
+];
 
-  window.API.Community.listGroups(params).then(function(res) {
-    showSkeleton(false);
-    state.groups = (res && res.items) ? res.items : [];
-    document.getElementById('allGroupsCount').textContent = '(' + state.groups.length + ')';
-    renderAllGroups();
+function renderCommTabs() {
+  var html = '';
+  COMM_TABS.forEach(function(t) {
+    html += '<button class="comm-tab' + (state.commTab === t.id ? ' active' : '') + '" onclick="setCommTab(\'' + t.id + '\')"><i class="fas ' + t.icon + '"></i> ' + t.label + '</button>';
+  });
+  document.getElementById('commTabs').innerHTML = html;
+}
+
+window.setCommTab = function(tab) {
+  state.commTab = tab;
+  renderCommTabs();
+  loadCommunities();
+};
+
+function commSourcePromise() {
+  if (state.searchTerm) {
+    return window.API.Community.listGroups({ search: state.searchTerm, limit: 100 });
+  }
+  if (state.commTab === 'joined') {
+    return window.API.Community.myGroups();
+  }
+  return window.API.Community.listGroups({ sort: 'popular', limit: 60 });
+}
+
+function loadCommunities() {
+  var content = document.getElementById('commContent');
+  if (state.searchTerm) {
+    content.innerHTML = '<div class="no-result-hint" id="commSearchHint">Results for &ldquo;' + esc(state.searchTerm) + '&rdquo;</div><div class="comm-loading"><i class="fas fa-spinner fa-spin"></i> Searching communities...</div>';
+  } else {
+    content.innerHTML = '<div class="comm-loading"><i class="fas fa-spinner fa-spin"></i> Loading communities...</div>';
+  }
+  commSourcePromise().then(function(res) {
+    var items = (res && (res.items || res)) || [];
+    if (!Array.isArray(items) && typeof items === 'object') items = [items];
+    state.groups = items;
+    renderCommGroups();
   })['catch'](function() {
-    showSkeleton(false);
-    showError('Unable to connect to Community.');
+    content.innerHTML = '<div class="error-state"><i class="fas fa-plug"></i><p>Unable to load communities.</p><button class="cm-btn outline" onclick="loadCommunities()"><i class="fas fa-redo"></i> Retry</button></div>';
   });
 }
 
-function renderAllGroups() {
-  var list = document.getElementById('allGroupsList');
+function groupCommunityId(g) { return g.community_id || g.id || ''; }
+
+function buildGroupRow(g, colors, idx) {
+  var color = g.color || colors[idx % colors.length];
+  var icon = g.icon || 'fa-users';
+  var joined = !!g.is_joined;
+  var cid = groupCommunityId(g);
+  var statusHtml = joined
+    ? '<span class="g-status joined"><i class="fas fa-user-check"></i> Joined</span>'
+    : '<button class="cm-btn outline" onclick="event.stopPropagation();joinGroup(\'' + esc(cid) + '\', this)"><i class="fas fa-plus"></i> Join</button>';
+  return '<div class="group-row" onclick="openGroup(\'' + esc(cid) + '\')">' +
+    '<div class="gr-icon" style="background:' + esc(color) + '"><i class="fas ' + esc(icon) + '"></i></div>' +
+    '<div class="gr-info">' +
+      '<div class="gr-name">' + esc(g.name) + '</div>' +
+      (g.description ? '<div class="gr-desc">' + esc(g.description) + '</div>' : '') +
+      '<div class="gr-meta">' +
+        '<span><i class="fas fa-users"></i> ' + (g.member_count || 0) + ' members</span>' +
+        (g.post_count ? '<span><i class="fas fa-comments"></i> ' + g.post_count + '</span>' : '') +
+        (g.last_active ? '<span><i class="fas fa-clock"></i> ' + timeAgo(g.last_active) + '</span>' : '') +
+      '</div>' +
+    '</div>' +
+    '<div class="gr-actions">' + statusHtml +
+      '<button class="cm-btn primary" onclick="event.stopPropagation();openGroup(\'' + esc(cid) + '\')">Open</button>' +
+    '</div>' +
+  '</div>';
+}
+
+var COMM_COLORS = ['#2e7d32','#558b2f','#f57c00','#d81b60','#6a1b9a','#00695c','#1565c0','#8b6f47','#c62828','#4a148c','#7c3aed','#e65100'];
+
+function renderCommGroups() {
+  var content = document.getElementById('commContent');
+  if (state.searchTerm) {
+    var hint = document.getElementById('commSearchHint');
+    if (hint) hint.innerHTML = 'Results for &ldquo;' + esc(state.searchTerm) + '&rdquo; &middot; ' + state.groups.length + ' communit' + (state.groups.length === 1 ? 'y' : 'ies');
+  }
   if (!state.groups.length) {
-    list.innerHTML = state.searchTerm
-      ? '<div class="empty-state"><i class="fas fa-search"></i><h3>No communities found</h3><p>No community matches &ldquo;' + esc(state.searchTerm) + '&rdquo;. Try a different search.</p></div>'
-      : '<div class="empty-state"><i class="fas fa-users"></i><h3>No communities available</h3><p>Check back later.</p></div>';
+    if (state.searchTerm) {
+      content.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><h3>No communities found</h3><p>No community matches &ldquo;' + esc(state.searchTerm) + '&rdquo;. Try a different search.</p></div>';
+    } else if (state.commTab === 'joined') {
+      content.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><h3>You haven&#39;t joined any community yet</h3><p>Open a community from Explore and press Join.</p><button class="cm-btn primary" onclick="setCommTab(\'explore\')"><i class="fas fa-compass"></i> Explore Communities</button></div>';
+    } else {
+      content.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><h3>No communities available</h3><p>Check back later for new communities.</p></div>';
+    }
     return;
   }
   var html = '';
-  var colors = ['#2e7d32','#558b2f','#f57c00','#d81b60','#6a1b9a','#00695c','#1565c0','#8b6f47','#c62828','#4a148c','#7c3aed','#e65100'];
-  state.groups.forEach(function(g, idx) {
-    var color = g.color || colors[idx % colors.length];
-    var icon = g.icon || 'fa-users';
-    html += '<div class="group-card" onclick="openGroup(\'' + esc(g.id) + '\')">' +
-      '<div class="g-icon" style="background:' + esc(color) + '"><i class="fas ' + esc(icon) + '"></i></div>' +
-      '<div class="g-name">' + esc(g.name) + '</div>' +
-      '<div class="g-meta">' + (g.member_count || 0) + ' members</div>' +
-      '<div class="g-actions">' + (g.is_joined ?
-        '<button class="cm-btn outline" style="width:100%;justify-content:center;" onclick="event.stopPropagation();leaveGroup(\'' + esc(g.id) + '\')">Joined</button>' :
-        '<button class="cm-btn primary" style="width:100%;justify-content:center;" onclick="event.stopPropagation();joinGroup(\'' + esc(g.id) + '\')">Join</button>') +
-      '</div></div>';
-  });
-  list.innerHTML = html;
+  state.groups.forEach(function(g, idx) { html += buildGroupRow(g, COMM_COLORS, idx); });
+  content.innerHTML = (state.searchTerm ? '<div class="no-result-hint" id="commSearchHint"></div>' : '') + '<div class="groups-list">' + html + '</div>';
 }
 
 function loadMyGroups(opts) {
@@ -1195,15 +1446,14 @@ function loadMyGroups(opts) {
     document.getElementById('feed').innerHTML = '';
     document.getElementById('loadMoreWrap').style.display = 'none';
   }
-  document.getElementById('myCommunitiesSection').style.display = 'block';
   window.API.Community.myGroups().then(function(res) {
     if (!silent) showSkeleton(false);
     state.myGroups = (res && res.items) ? res.items : [];
     renderMyGroups();
   })['catch'](function() {
     if (silent) {
-      document.getElementById('myGroupsList').innerHTML = '';
-      document.getElementById('myGroupsEmpty').style.display = 'none';
+      var box = document.getElementById('myGroupsSection');
+      if (box) box.style.display = 'none';
       return;
     }
     showSkeleton(false);
@@ -1212,48 +1462,21 @@ function loadMyGroups(opts) {
 }
 
 function renderMyGroups() {
-  document.getElementById('myGroupsCount').textContent = '(' + state.myGroups.length + ')';
-  var list = document.getElementById('myGroupsList');
-  var empty = document.getElementById('myGroupsEmpty');
-  if (!state.myGroups.length) {
-    list.innerHTML = '';
-    empty.style.display = 'block';
-    return;
+  var box = document.getElementById('myGroupsSection');
+  if (!box) return;
+  var html = '<div class="ma-heading"><i class="fas fa-users"></i> Groups I&#39;m In <span class="count">' + state.myGroups.length + '</span></div>';
+  if (state.myGroups.length) {
+    var rows = '';
+    state.myGroups.forEach(function(g, idx) { rows += buildGroupRow(g, COMM_COLORS, idx); });
+    html += '<div class="groups-list">' + rows + '</div>';
+  } else {
+    html += '<div class="empty-state"><i class="fas fa-users"></i><h3>You haven&#39;t joined any community yet</h3><p>Open a community from Explore and press Join.</p><button class="cm-btn primary" onclick="switchTab(\'communities\')"><i class="fas fa-compass"></i> Explore Communities</button></div>';
   }
-  empty.style.display = 'none';
-  var html = '';
-  var colors = ['#2e7d32','#558b2f','#f57c00','#d81b60','#6a1b9a','#00695c','#1565c0','#8b6f47','#c62828','#4a148c'];
-  state.myGroups.forEach(function(g, idx) {
-    var color = g.color || colors[idx % colors.length];
-    var icon = g.icon || 'fa-users';
-    html += '<div class="my-group-item" onclick="openGroup(\'' + esc(g.id) + '\')">' +
-      '<div class="m-icon" style="background:' + esc(color) + '"><i class="fas ' + esc(icon) + '"></i></div>' +
-      '<div><div class="m-name">' + esc(g.name) + '</div><div class="m-meta">' + (g.member_count || 0) + ' members</div></div>' +
-    '</div>';
-  });
-  list.innerHTML = html;
+  box.innerHTML = html;
+  box.style.display = 'block';
 }
 
 // ----------------------------- My Activity -----------------------------
-function renderActivityStats(s) {
-  var box = document.getElementById('activityStats');
-  if (!s) { box.innerHTML = ''; box.style.display = 'none'; return; }
-  var cards = [
-    ['Posts', s.posts],
-    ['Questions', s.questions],
-    ['Answers', s.answers_given],
-    ['Comments', s.comments_given],
-    ['Likes received', s.likes_received],
-    ['Best answers', s.best_answers_received],
-    ['Saved', s.saved_posts],
-    ['Communities', s.communities_joined]
-  ];
-  box.innerHTML = cards.map(function(c) {
-    return '<div class="stat-card"><div class="v">' + (c[1] || 0) + '</div><div class="l">' + esc(c[0]) + '</div></div>';
-  }).join('');
-  box.style.display = 'grid';
-}
-
 function loadMyActivity(append) {
   if (state.loading) return;
   state.loading = true;
@@ -1272,7 +1495,6 @@ function loadMyActivity(append) {
     showSkeleton(false);
     var data = res || {};
     var items = data.items || [];
-    renderActivityStats(data.stats || null);
     state.posts = append ? state.posts.concat(items) : items;
     state.activityHasMore = (data.total || 0) > state.posts.length;
     state.activityPage++;
@@ -1280,7 +1502,6 @@ function loadMyActivity(append) {
   })['catch'](function() {
     state.loading = false;
     showSkeleton(false);
-    renderActivityStats(null);
     if (append) showToast('Unable to load more activity.', 'error');
     else showError('Unable to connect to Community.');
   });
@@ -1288,11 +1509,11 @@ function loadMyActivity(append) {
 
 function renderMyActivity() {
   if (!state.posts.length) {
-    showEmpty('No activity yet', 'Your posts, questions and answers will appear here.', true);
+    showEmpty('No posts made yet', 'Create a post and it will appear here.', true);
     document.getElementById('loadMoreWrap').style.display = 'none';
     return;
   }
-  var html = '<div class="cm-section-title"><i class="fas fa-user"></i> My Posts <span class="count">' + state.posts.length + '</span></div>';
+  var html = '<div class="ma-heading"><i class="fas fa-file-lines"></i> Posts I Made <span class="count">' + state.posts.length + '</span></div>';
   state.posts.forEach(function(p) { html += buildPostCard(p); });
   document.getElementById('feed').innerHTML = html;
   document.getElementById('loadMoreWrap').style.display = state.activityHasMore ? 'block' : 'none';
@@ -1308,9 +1529,8 @@ function errMsg(e, fallback) {
 
 function refreshGroupViews() {
   if (state.currentGroupId) { openGroup(state.currentGroupId); return; }
-  var allVisible = document.getElementById('allCommunitiesSection').style.display !== 'none';
-  if (allVisible) loadAllGroups();
-  else loadMyGroups({ silent: true });
+  if (state.currentTab === 'communities') { loadCommunities(); return; }
+  loadMyGroups({ silent: true });
 }
 
 window.joinGroup = function(groupId) {
@@ -1327,47 +1547,10 @@ window.leaveGroup = function(groupId) {
   })['catch'](function(e) { showToast(errMsg(e, 'Unable to leave community.'), 'error'); });
 };
 
+// The dedicated, chromeless group conversation page owns the detailed view now.
 window.openGroup = function(groupId) {
-  state.currentGroupId = groupId;
-  document.getElementById('allCommunitiesSection').style.display = 'none';
-  document.getElementById('myCommunitiesSection').style.display = 'none';
-  var detail = document.getElementById('groupDetail');
-  detail.className = 'group-detail show';
-  detail.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="color:var(--cm-green);"></i></div>';
-  // Load group info + feed
-  window.API.Community.getGroup(groupId).then(function(g) {
-    var colors = ['#2e7d32','#558b2f','#f57c00','#d81b60','#6a1b9a','#00695c','#1565c0','#8b6f47','#c62828','#4a148c'];
-    var color = g.color || '#2e7d32';
-    var icon = g.icon || 'fa-users';
-    detail.innerHTML = '<div class="gd-head">' +
-      '<button class="gd-back" onclick="closeGroup()"><i class="fas fa-arrow-left"></i></button>' +
-      '<div class="gd-icon" style="background:' + esc(color) + '"><i class="fas ' + esc(icon) + '"></i></div>' +
-      '<div><div class="gd-name">' + esc(g.name) + '</div><div class="gd-meta"><i class="fas fa-users"></i> ' + (g.member_count || 0) + ' members</div></div>' +
-      '</div>' +
-      '<div class="gd-desc">' + esc(g.description || '') + '</div>' +
-      '<div class="gd-actions">' +
-        (g.is_joined ?
-          '<button class="cm-btn outline" onclick="leaveGroupFromDetail(\'' + esc(g.id) + '\')">Joined</button>' :
-          '<button class="cm-btn primary" onclick="joinGroupFromDetail(\'' + esc(g.id) + '\')"><i class="fas fa-plus"></i> Join</button>') +
-        '<button class="cm-btn primary" onclick="openCreatePost()"><i class="fas fa-plus"></i> Create Post</button>' +
-      '</div>';
-    // Load feed with this community
-    state.page = 1; state.hasMore = false; state.posts = [];
-    loadFeed();
-  })['catch'](function() {
-    detail.innerHTML = '<div class="gd-head"><button class="gd-back" onclick="closeGroup()"><i class="fas fa-arrow-left"></i></button><div class="gd-name">Community</div></div><div class="error-state"><p>Unable to load community.</p></div>';
-  });
-};
-
-window.joinGroupFromDetail = function(groupId) {
-  window.API.Community.joinGroup(groupId).then(function() { openGroup(groupId); showToast('Joined community!', 'success'); })['catch'](function(){ showToast('Unable to join.', 'error'); });
-};
-window.leaveGroupFromDetail = function(groupId) {
-  window.API.Community.leaveGroup(groupId).then(function() { openGroup(groupId); showToast('Left community', 'info'); })['catch'](function(){ showToast('Unable to leave.', 'error'); });
-};
-window.closeGroup = function() {
-  state.currentGroupId = null;
-  switchTab('communities');
+  if (!groupId) return;
+  window.location.href = 'group.html?id=' + encodeURIComponent(groupId);
 };
 
 // ----------------------------- Report -----------------------------
@@ -1377,9 +1560,11 @@ window.openReport = function(targetId, type) {
   document.getElementById('reportDescription').value = '';
   document.querySelectorAll('input[name="reportReason"]').forEach(function(r) { r.checked = false; });
   document.getElementById('reportOverlay').classList.add('active');
+  lockBody();
 };
 window.closeReport = function() {
   document.getElementById('reportOverlay').classList.remove('active');
+  unlockBody();
 };
 window.submitReport = function() {
   var reason = null;
@@ -1405,6 +1590,7 @@ window.openFarmerProfile = function(el, farmerId) {
   el = el || this;
   showProfileLoading();
   document.getElementById('profileOverlay').classList.add('active');
+  lockBody();
   window.API.Community.getFarmerProfile(farmerId).then(function(p) {
     renderProfile(p, farmerId);
   })['catch'](function() {
@@ -1477,6 +1663,7 @@ window.toggleFollow = function(farmerId) {
 
 window.closeProfile = function() {
   document.getElementById('profileOverlay').classList.remove('active');
+  unlockBody();
 };
 
 // ----------------------------- Message farmer -----------------------------
@@ -1543,9 +1730,8 @@ window.initPage = function() {
   // Load categories + groups, then load feed
   window.API.Community.categories().then(function(cats) {
     state.categories = (cats && cats.length) ? cats : ['All'];
-    renderCategories();
     populateCategorySelect();
-  })['catch'](function() { state.categories = ['All']; renderCategories(); });
+  })['catch'](function() { state.categories = ['All']; populateCategorySelect(); });
 
   window.API.Community.listGroups({ page: 1, limit: 100 }).then(function(res) {
     state.groups = (res && res.items) ? res.items : [];

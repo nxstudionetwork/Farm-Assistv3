@@ -370,6 +370,7 @@ def _post_dict(db: Session, p: CommunityPost, current_user: User) -> dict:
         "is_liked": is_liked,
         "is_saved": is_saved,
         "is_owner": p.user_id == current_user.id,
+        "is_demo": bool(getattr(p, "is_demo", False)),
         "created_at": str(p.created_at) if p.created_at else None,
         "author": _public_user(db, author),
         "author_name": author.full_name if author else "Farmer",
@@ -454,6 +455,7 @@ def _posts_payload(db: Session, posts, current_user: User) -> list:
             "is_liked": p.id in liked_ids,
             "is_saved": p.id in saved_ids,
             "is_owner": p.user_id == current_user.id,
+            "is_demo": bool(getattr(p, "is_demo", False)),
             "created_at": str(p.created_at) if p.created_at else None,
             "author": public_user(author),
             "author_name": author.full_name if author else "Farmer",
@@ -549,10 +551,15 @@ def community_feed(
     search: Optional[str] = None,
     category: Optional[str] = None,
     community_id: Optional[str] = None,
+    sort: Optional[str] = Query("latest"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Paginated community feed with optional search + category filter."""
+    """Paginated community feed with optional search + category filter + sort.
+
+    ``sort`` accepts: latest, popular (engagement), most_discussed,
+    trending (recency-weighted engagement) or active (recently updated).
+    """
     q = db.query(CommunityPost).filter(CommunityPost.is_active == True)
     if search:
         term = f"%{search.strip()}%"
@@ -573,13 +580,35 @@ def community_feed(
         else:
             return {"status": "success", "data": {"total": 0, "page": page, "limit": limit, "total_pages": 0, "items": []}}
 
-    total = q.count()
-    items = (
-        q.order_by(CommunityPost.created_at.desc(), CommunityPost.id.desc())
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .all()
+    sort_key = (sort or "latest").strip().lower()
+    engagement = (
+        CommunityPost.likes_count
+        + CommunityPost.comments_count
+        + CommunityPost.shares_count
+        + CommunityPost.saves_count
     )
+    if sort_key in ("popular", "hottest"):
+        q = q.order_by(engagement.desc(), CommunityPost.created_at.desc(), CommunityPost.id.desc())
+    elif sort_key in ("most_discussed", "discussed"):
+        q = q.order_by(
+            CommunityPost.comments_count.desc(),
+            engagement.desc(),
+            CommunityPost.created_at.desc(),
+            CommunityPost.id.desc(),
+        )
+    elif sort_key == "trending":
+        # Recency-weighted engagement so fresh, lively discussions surface.
+        recency = 1.0 / (
+            1.0 + (func.julianday(func.now()) - func.julianday(CommunityPost.created_at))
+        )
+        q = q.order_by((engagement * recency).desc(), CommunityPost.created_at.desc(), CommunityPost.id.desc())
+    elif sort_key == "active":
+        q = q.order_by(CommunityPost.updated_at.desc(), CommunityPost.created_at.desc(), CommunityPost.id.desc())
+    else:
+        q = q.order_by(CommunityPost.created_at.desc(), CommunityPost.id.desc())
+
+    total = q.count()
+    items = q.offset((page - 1) * limit).limit(limit).all()
 
     return {
         "status": "success",
@@ -588,6 +617,7 @@ def community_feed(
             "page": page,
             "limit": limit,
             "total_pages": (total + limit - 1) // limit,
+            "sort": sort_key,
             "items": _posts_payload(db, items, current_user),
         },
     }
@@ -1142,9 +1172,16 @@ def list_groups(
     limit: int = Query(50, ge=1, le=100),
     category: Optional[str] = None,
     search: Optional[str] = None,
+    sort: Optional[str] = Query("name"),
+    joined: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Community groups with search, category filter and sorting.
+
+    ``sort`` accepts: name, popular (most members), newest or recent (most
+    recently active). ``joined=true`` filters to groups the farmer has joined.
+    """
     q = db.query(CommunityGroup)
     if category and category.lower() != "all":
         q = q.filter(CommunityGroup.category == _normalize_category(category))
@@ -1152,20 +1189,41 @@ def list_groups(
         term = f"%{search}%"
         q = q.filter(CommunityGroup.name.ilike(term) | CommunityGroup.description.ilike(term))
 
-    total = q.count()
-    groups = q.order_by(CommunityGroup.name.asc()).offset((page - 1) * limit).limit(limit).all()
-
     joined_ids = {
         m.community_id for m in db.query(CommunityGroupMember).filter(
             CommunityGroupMember.user_id == current_user.id
         ).all()
     }
+    if joined is True:
+        if not joined_ids:
+            return {"status": "success", "data": {"total": 0, "page": page, "limit": limit, "items": []}}
+        q = q.filter(CommunityGroup.id.in_(joined_ids))
+
+    total = q.count()
+    groups = q.order_by(CommunityGroup.name.asc()).offset((page - 1) * limit).limit(limit).all()
+
+    group_ids = [g.id for g in groups]
+    member_counts = dict(
+        db.query(CommunityGroupMember.community_id, func.count(CommunityGroupMember.id))
+        .filter(CommunityGroupMember.community_id.in_(group_ids))
+        .group_by(CommunityGroupMember.community_id)
+        .all()
+    ) if group_ids else {}
+    post_counts = dict(
+        db.query(CommunityPost.community_id, func.count(CommunityPost.id))
+        .filter(CommunityPost.community_id.in_(group_ids), CommunityPost.is_active == True)
+        .group_by(CommunityPost.community_id)
+        .all()
+    ) if group_ids else {}
+    last_activity = dict(
+        db.query(CommunityPost.community_id, func.max(CommunityPost.created_at))
+        .filter(CommunityPost.community_id.in_(group_ids), CommunityPost.is_active == True)
+        .group_by(CommunityPost.community_id)
+        .all()
+    ) if group_ids else {}
 
     result = []
     for g in groups:
-        member_count = db.query(CommunityGroupMember).filter(
-            CommunityGroupMember.community_id == g.id
-        ).count()
         result.append({
             "id": g.id,
             "community_id": g.community_id,
@@ -1174,11 +1232,24 @@ def list_groups(
             "category": g.category or DEFAULT_CATEGORY,
             "icon": g.icon,
             "color": g.color,
-            "member_count": member_count,
+            "member_count": member_counts.get(g.id, 0),
+            "post_count": post_counts.get(g.id, 0),
+            "last_active": str(last_activity.get(g.id)) if last_activity.get(g.id) else None,
             "is_joined": g.id in joined_ids,
+            "is_demo": bool(getattr(g, "is_demo", False)),
         })
 
-    return {"status": "success", "data": {"total": total, "page": page, "limit": limit, "items": result}}
+    sort_key = (sort or "name").strip().lower()
+    if sort_key in ("popular", "members"):
+        result.sort(key=lambda g: (-g["member_count"], g["name"].lower()))
+    elif sort_key in ("recent", "active", "newest", "recently_active"):
+        result.sort(key=lambda g: (g["last_active"] or ""), reverse=True)
+    elif sort_key == "discussed":
+        result.sort(key=lambda g: (-g["post_count"], g["name"].lower()))
+    else:
+        result.sort(key=lambda g: g["name"].lower())
+
+    return {"status": "success", "data": {"total": total, "page": page, "limit": limit, "sort": sort_key, "items": result}}
 
 
 @router.get("/communities/groups/{group_id}")
@@ -1211,6 +1282,7 @@ def get_group(
             "color": group.color,
             "member_count": member_count,
             "is_joined": is_joined,
+            "is_demo": bool(getattr(group, "is_demo", False)),
             "created_at": str(group.created_at) if group.created_at else None,
         },
     }

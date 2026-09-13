@@ -33,6 +33,7 @@ class CommunityPost(Base):
     shares_count = Column(Integer, default=0)
     saves_count = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
+    is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -58,6 +59,7 @@ class CommunityComment(Base):
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     parent_comment_id = Column(String(36), ForeignKey("community_comments.id"), nullable=True)
     content = Column(Text, nullable=False)
+    is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     post = relationship("CommunityPost", back_populates="comments")
@@ -77,6 +79,7 @@ class CommunityLike(Base):
     id = Column(String(36), primary_key=True, default=gen_uuid)
     post_id = Column(String(36), ForeignKey("community_posts.id"), nullable=False)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     post = relationship("CommunityPost", back_populates="likes")
@@ -94,6 +97,7 @@ class CommunitySave(Base):
     id = Column(String(36), primary_key=True, default=gen_uuid)
     post_id = Column(String(36), ForeignKey("community_posts.id"), nullable=False)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     post = relationship("CommunityPost", back_populates="saves")
@@ -111,6 +115,7 @@ class CommunityAnswer(Base):
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
     is_best_answer = Column(Boolean, default=False)
+    is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -130,6 +135,7 @@ class CommunityGroup(Base):
     category = Column(String(60), default="General", index=True)
     icon = Column(String(50), nullable=True)
     color = Column(String(30), nullable=True)
+    is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     posts = relationship("CommunityPost", back_populates="community")

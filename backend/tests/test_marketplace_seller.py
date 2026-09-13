@@ -12,8 +12,8 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.database.connection import Base, SessionLocal, engine
 from app.database.seed_marketplace import seed_marketplace_categories
-from app.models.marketplace import MarketplaceCategory
-from app.models.user import User
+from app.models.marketplace import MarketplaceCategory, MarketplaceEnquiry
+from app.models.user import User, FarmerProfile
 from app.utils.auth import create_access_token, hash_password
 
 
@@ -286,5 +286,104 @@ def test_hard_delete_without_sales():
 
         zero = client.get("/api/v1/marketplace/listings", headers=auth(owner)).json()["data"]
         assert zero["total"] == 0
+    finally:
+        session.close()
+
+
+def test_buyers_strip_matches_enquiry_senders_and_crop_preferences():
+    session = SessionLocal()
+    try:
+        owner = make_user(session, 20)
+        listing = create_listing(session, owner)
+
+        enquirer = make_user(session, 21, full_name="Enquirer Buyer")
+        session.add(MarketplaceEnquiry(
+            listing_id=listing["id"],
+            buyer_user_id=enquirer.id,
+            buyer_phone="9900011221",
+            buyer_name="Enquirer Buyer",
+            message="I want to buy rice",
+            status="new",
+        ))
+
+        pref_user = make_user(session, 22, full_name="Pref Buyer")
+        session.add(FarmerProfile(
+            user_id=pref_user.id,
+            farmer_id=f"FA-PRF-{22:08d}",
+            preferred_crops="rice, paddy",
+        ))
+        session.commit()
+
+        res = client.get("/api/v1/marketplace/buyers", headers=auth(owner))
+        assert res.status_code == 200
+        data = res.json()["data"]
+        assert data["total"] == 2
+
+        by_id = {it["id"]: it for it in data["items"]}
+        assert enquirer.id in by_id and pref_user.id in by_id
+
+        enq = by_id[enquirer.id]
+        assert enq["enquiries_count"] == 1
+        assert enq["phone_number"] == "9900011221"
+        assert enq["matched_listings"]["count"] == 1
+        assert enq["location"] is None or isinstance(enq["location"], str)
+
+        pref = by_id[pref_user.id]
+        assert pref["matched_listings"]["count"] == 1
+        assert any("Rice" in p or "rice" in p for p in pref["preferences"])
+
+        stranger = make_user(session, 23)
+        hidden = client.get("/api/v1/marketplace/buyers", headers=auth(stranger))
+        assert hidden.json()["data"]["total"] == 0
+    finally:
+        session.close()
+
+
+def test_buyer_recommend_toggle_and_direct_message():
+    session = SessionLocal()
+    try:
+        owner = make_user(session, 30)
+        listing = create_listing(session, owner)
+        buyer = make_user(session, 31, full_name="Recommendable Buyer")
+        session.add(MarketplaceEnquiry(
+            listing_id=listing["id"],
+            buyer_user_id=buyer.id,
+            buyer_phone="9900011888",
+            buyer_name="Recommendable Buyer",
+            message="Hi, rice available?",
+            status="new",
+        ))
+        session.commit()
+
+        rec = client.post(f"/api/v1/marketplace/buyers/{buyer.id}/recommend", headers=auth(owner), json={"recommended": True})
+        assert rec.status_code == 200
+        rid = rec.json()["data"]["recommendation_id"]
+        assert rid.startswith("FA-BRC-")
+
+        res = client.get("/api/v1/marketplace/buyers", headers=auth(owner)).json()["data"]
+        assert res["total"] == 1
+        assert res["items"][0]["is_recommended"] is True
+        assert res["items"][0]["recommendation_id"] == rid
+
+        again = client.post(f"/api/v1/marketplace/buyers/{buyer.id}/recommend", headers=auth(owner), json={"recommended": True})
+        assert again.json()["data"]["recommendation_id"] == rid
+
+        off = client.post(f"/api/v1/marketplace/buyers/{buyer.id}/recommend", headers=auth(owner), json={"recommended": False})
+        assert off.json()["data"]["recommended"] is False
+        after = client.get("/api/v1/marketplace/buyers", headers=auth(owner)).json()["data"]
+        assert after["items"][0]["is_recommended"] is False
+
+        msg = client.post(f"/api/v1/marketplace/buyers/{buyer.id}/message", headers=auth(owner), json={"message": "Hello! Fresh rice available."})
+        assert msg.status_code == 201, msg.text
+        md = msg.json()["data"]
+        assert md["message_id"].startswith("FA-MSG-")
+        assert md["conversation_public_id"].startswith("FA-CNV-")
+
+        convo = client.get(f"/api/v1/messages/conversations/{md['conversation_public_id']}/messages", headers=auth(owner))
+        assert convo.status_code == 200
+        assert any(m["message_id"] == md["message_id"] for m in convo.json()["data"]["messages"])
+
+        self_msg = client.post(f"/api/v1/marketplace/buyers/{owner.id}/message", headers=auth(owner), json={"message": "hi"})
+        assert self_msg.status_code == 400
     finally:
         session.close()

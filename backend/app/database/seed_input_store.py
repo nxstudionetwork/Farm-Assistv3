@@ -5,15 +5,23 @@ Standalone script - run it once on a fresh or existing database::
     python -B -m app.database.seed_input_store
 
 It is safe to re-run (idempotent). It creates the Input Store product
-categories and a realistic catalogue of agricultural inputs (25+ products per
-category). Every row lands in the SAME marketplace ``products`` table - existing
-products are *upgraded in place* (matched by name + category) so the Input Store
-and Marketplace stay one unified catalogue. No frontend mocks; the page only
-ever renders what this database contains.
+categories (the Input Store BUY-side catalogue) and a realistic catalogue of
+agricultural inputs with correct terminology and category-accurate imagery.
 
-Images are stable Unsplash CDN URLs that were verified to resolve and reflect
-real agriculture product categories (seed beds, fertiliser spreading, drip
-irrigation, sprayers, tools, nurseries, greenhouses).
+Domain boundaries
+-----------------
+The ``products`` / ``product_categories`` tables are the Input Store (BUY
+side) catalogue. The farmer SELLING side lives in the separate
+``marketplace_listings`` tables. The Tools & Equipment storefront shares the
+same ``products`` table but is isolated by its own category slugs (see
+``app.equipment_taxonomy``). The Input Store slugs below are chosen to never
+collide with those equipment slugs, and the API in ``app.routers.input_store``
+only ever lists products that belong to this slug whitelist.
+
+Existing catalogue rows are upgraded *in place* (matched by product name) so
+re-runs re-home products into the expanded taxonomy without creating
+duplicates. Images are stable Unsplash CDN URLs that were verified to resolve
+(HHTP 200) and reflect real agriculture product categories.
 """
 
 import os
@@ -39,80 +47,173 @@ from app.models.marketplace import (  # noqa: E402
     ProductCrop,
     Seller,
 )
+from app.equipment_taxonomy import CATEGORY_SLUGS as EQUIPMENT_SLUGS  # noqa: E402
 
 IMG_BASE = "https://images.unsplash.com/{img}?w=640&q=70&auto=format&fit=crop"
 
+# Every photo ID below was verified to resolve (HTTP 200) against the Unsplash
+# CDN. Pools are kept distinct per category so no two unrelated product types
+# share a photo; within a category the pool is rotated so neighbouring cards
+# differ.
 IMAGE_POOL = {
     "seeds": [
-        "photo-1500937386664-56d1dfef3854",
-        "photo-1625246333195-78d9c38ad449",
-        "photo-1500382017468-9049fed747ef",
-        "photo-1542838132-92c53300491e",
-        "photo-1592982537447-7440770cbfc9",
-    ],
-    "fertilizers": [
-        "photo-1506084868230-bb9d95c24759",
-        "photo-1507003211169-0a1dd7228f2d",
-        "photo-1591857177580-dc82b9ac4e1e",
-        "photo-1472162072942-cd5147eb3902",
-    ],
-    "crop-nutrition": [
-        "photo-1560493676-04071c5f467b",
-        "photo-1523348837708-15d4a09cfac2",
-        "photo-1416879595882-3373a0480b5b",
-        "photo-1466692476868-aef1dfb1e735",
-    ],
-    "organic": [
-        "photo-1416879595882-3373a0480b5b",
-        "photo-1560493676-04071c5f467b",
-        "photo-1523348837708-15d4a09cfac2",
-        "photo-1472162072942-cd5147eb3902",
-    ],
-    "crop-protection": [
+        "photo-1585336261022-680e295ce3fe",
         "photo-1500382017468-9049fed747ef",
         "photo-1523741543316-beb7fc7023d8",
-        "photo-1574943320219-553eb213f72d",
+        "photo-1528901166007-3784c7dd3653",
+        "photo-1585647347483-22b66260dfff",
+        "photo-1625246333195-78d9c38ad449",
+    ],
+    "fertilizers": [
+        "photo-1591857177580-dc82b9ac4e1e",
+        "photo-1589923188900-85dae523342b",
+        "photo-1506084868230-bb9d95c24759",
+        "photo-1542838132-92c53300491e",
+    ],
+    "organic-fertilizers": [
+        "photo-1566438480900-0609be27a4be",
+        "photo-1472162072942-cd5147eb3902",
+        "photo-1591857177580-dc82b9ac4e1e",
+        "photo-1506084868230-bb9d95c24759",
+    ],
+    "micronutrients": [
+        "photo-1472162072942-cd5147eb3902",
+        "photo-1492496913980-501348b61469",
+        "photo-1542838132-92c53300491e",
+        "photo-1523348837708-15d4a09cfac2",
+    ],
+    "plant-growth": [
+        "photo-1523348837708-15d4a09cfac2",
+        "photo-1500382017468-9049fed747ef",
+        "photo-1523741543316-beb7fc7023d8",
+        "photo-1492496913980-501348b61469",
+        "photo-1500937386664-56d1dfef3854",
+    ],
+    "soil-conditioners": [
+        "photo-1472162072942-cd5147eb3902",
+        "photo-1566438480900-0609be27a4be",
+        "photo-1506084868230-bb9d95c24759",
+        "photo-1542838132-92c53300491e",
+    ],
+    "bio-fertilizers": [
+        "photo-1472162072942-cd5147eb3902",
+        "photo-1566438480900-0609be27a4be",
+        "photo-1592982537447-7440770cbfc9",
+        "photo-1625246333195-78d9c38ad449",
+    ],
+    "pesticides": [
+        "photo-1470252649378-9c29740c9fa8",
+        "photo-1595246140625-573b715d11dc",
+        "photo-1524260855046-f743b3cdad07",
+        "photo-1560493676-04071c5f467b",
+    ],
+    "insecticides": [
+        "photo-1470252649378-9c29740c9fa8",
+        "photo-1595246140625-573b715d11dc",
+        "photo-1524260855046-f743b3cdad07",
+    ],
+    "fungicides": [
+        "photo-1595246140625-573b715d11dc",
+        "photo-1560493676-04071c5f467b",
+        "photo-1585647347483-22b66260dfff",
+    ],
+    "herbicides": [
+        "photo-1524260855046-f743b3cdad07",
+        "photo-1595246140625-573b715d11dc",
+        "photo-1470252649378-9c29740c9fa8",
+    ],
+    "animal-feed": [
+        "photo-1500595046743-cd271d694d30",
+        "photo-1585647347483-22b66260dfff",
+        "photo-1507003211169-0a1dd7228f2d",
+        "photo-1523741543316-beb7fc7023d8",
+    ],
+    "livestock-supplies": [
+        "photo-1495107334309-fcf20504a5ab",
+        "photo-1545247181-516773cae754",
+        "photo-1586281380349-632531db7ed4",
+        "photo-1574323347407-f5e1ad6d020b",
+        "photo-1592982537447-7440770cbfc9",
     ],
     "irrigation": [
         "photo-1574943320219-553eb213f72d",
-        "photo-1542838132-92c53300491e",
-        "photo-1625246333195-78d9c38ad449",
+        "photo-1492496913980-501348b61469",
+        "photo-1523348837708-15d4a09cfac2",
     ],
-    "sprayers": [
+    "nursery": [
+        "photo-1592982537447-7440770cbfc9",
+        "photo-1509460913899-515f1df34fea",
+        "photo-1625246333195-78d9c38ad449",
+        "photo-1416879595882-3373a0480b5b",
+    ],
+    "consumables": [
+        "photo-1508615039623-a25605d2b022",
+        "photo-1464226184884-fa280b87c399",
+        "photo-1506084868230-bb9d95c24759",
+        "photo-1542838132-92c53300491e",
+    ],
+    "spraying-equipment": [
         "photo-1470252649378-9c29740c9fa8",
-        "photo-1523741543316-beb7fc7023d8",
-        "photo-1500382017468-9049fed747ef",
+        "photo-1595246140625-573b715d11dc",
+        "photo-1524260855046-f743b3cdad07",
+        "photo-1560493676-04071c5f467b",
     ],
     "farm-tools": [
         "photo-1508615039623-a25605d2b022",
-        "photo-1416879595882-3373a0480b5b",
+        "photo-1464226184884-fa280b87c399",
         "photo-1523741543316-beb7fc7023d8",
-    ],
-    "nursery": [
-        "photo-1466692476868-aef1dfb1e735",
-        "photo-1592982537447-7440770cbfc9",
-        "photo-1625246333195-78d9c38ad449",
-    ],
-    "other-inputs": [
-        "photo-1495107334309-fcf20504a5ab",
-        "photo-1609951651556-5334e2706168",
-        "photo-1586281380349-632531db7ed4",
-        "photo-1566438480900-0609be27a4be",
     ],
 }
 
+# (slug, display name, font-awesome icon)
 CATEGORIES = [
-    ("seeds", "Seeds"),
-    ("fertilizers", "Fertilizers"),
-    ("crop-nutrition", "Crop Nutrition"),
-    ("organic", "Organic Inputs"),
-    ("crop-protection", "Crop Protection"),
-    ("irrigation", "Irrigation"),
-    ("sprayers", "Sprayers"),
-    ("farm-tools", "Farm Tools"),
-    ("nursery", "Nursery"),
-    ("other-inputs", "Other Inputs"),
+    ("seeds", "Seeds", "fa-seedling"),
+    ("fertilizers", "Fertilizers", "fa-flask"),
+    ("organic-fertilizers", "Organic Fertilizers", "fa-leaf"),
+    ("micronutrients", "Micronutrients", "fa-cubes"),
+    ("plant-growth", "Plant Growth Products", "fa-arrow-trend-up"),
+    ("soil-conditioners", "Soil Conditioners", "fa-earth-americas"),
+    ("bio-fertilizers", "Bio-fertilizers", "fa-vial"),
+    ("pesticides", "Pesticides", "fa-bug-slash"),
+    ("insecticides", "Insecticides", "fa-bug"),
+    ("fungicides", "Fungicides", "fa-shield-halved"),
+    ("herbicides", "Herbicides", "fa-glass-water"),
+    ("animal-feed", "Animal Feed", "fa-bowl-food"),
+    ("livestock-supplies", "Livestock Supplies", "fa-cow"),
+    ("irrigation", "Irrigation Supplies", "fa-faucet-drip"),
+    ("nursery", "Nursery & Planting Materials", "fa-seedling"),
+    ("consumables", "Farming Consumables", "fa-box"),
+    ("spraying-equipment", "Sprayers", "fa-spray-can"),
+    ("farm-tools", "Farm Tools", "fa-screwdriver-wrench"),
 ]
+
+CATEGORIES_BY_SLUG = {slug: (name, icon) for slug, name, icon in CATEGORIES}
+INPUT_STORE_SLUGS = tuple(slug for slug, _n, _i in CATEGORIES)
+
+#: Coarse product-type label used for the "Product type" filter.
+TYPE_BY_SLUG = {
+    "seeds": "Seed",
+    "fertilizers": "Fertilizer",
+    "organic-fertilizers": "Organic Fertilizer",
+    "micronutrients": "Micronutrient",
+    "plant-growth": "Plant Growth Promoter",
+    "soil-conditioners": "Soil Conditioner",
+    "bio-fertilizers": "Bio-fertilizer",
+    "pesticides": "Pesticide",
+    "insecticides": "Insecticide",
+    "fungicides": "Fungicide",
+    "herbicides": "Herbicide",
+    "animal-feed": "Animal Feed",
+    "livestock-supplies": "Livestock Supply",
+    "irrigation": "Irrigation Supply",
+    "nursery": "Nursery Supply",
+    "consumables": "Farming Consumable",
+    "spraying-equipment": "Sprayer",
+    "farm-tools": "Farm Tool",
+}
+
+#: Default subcategory label when a row has no finer-grained grouping.
+SUB_BY_SLUG = {slug: label for slug, label in TYPE_BY_SLUG.items()}
 
 SELLERS = [
     ("Farm Assist Agro Supplies", "Vijayawada, Andhra Pradesh", True, 4.8),
@@ -129,6 +230,20 @@ SEED_CROPS = [
     "soybean", "turmeric", "sunflower", "vegetables", "pulses",
 ]
 
+SEED_SUBCATEGORY = {
+    "paddy": "Paddy Seeds",
+    "wheat": "Wheat Seeds",
+    "maize": "Maize Seeds",
+    "cotton": "Cotton Seeds",
+    "groundnut": "Groundnut Seeds",
+    "chilli": "Chilli Seeds",
+    "sunflower": "Sunflower Seeds",
+    "turmeric": "Turmeric Seeds",
+    "soybean": "Soybean Seeds",
+    "pulses": "Pulses Seeds",
+    "vegetables": "Vegetable Seeds",
+}
+
 
 def usage(step, units):
     return {
@@ -139,7 +254,8 @@ def usage(step, units):
 
 
 # ---------------------------------------------------------------------------
-# Catalogue.  category -> list of (name, brand, price, mrp|None, unit, pack, stock)
+# Catalogue.  category slug -> list of (name, brand, price, mrp|None, unit,
+# pack, stock, organic|None)
 # ---------------------------------------------------------------------------
 C = {}
 
@@ -201,7 +317,6 @@ add("seeds", [
 ])
 for _x in C["seeds"]:
     _x["crops"] = ["general"]
-# map specific seeds to crops
 _CH_ = {
     "Sona Masuri": ["paddy"], "BPT 5204": ["paddy"], "IR-64": ["paddy"],
     "Swarna": ["paddy"], "Maize": ["maize"], "Corn": ["maize"],
@@ -245,42 +360,13 @@ add("fertilizers", [
     ("Bio Urea (Azotobacter)", "TerraKraft", 320, 370, "kg", "10 kg", 90),
     ("Calcium Ammonium Nitrate", "Nirman Agro", 700, 770, "bag", "50 kg", 55),
     ("NPK 14-35-14 Starter", "AgroZenith", 1250, 1380, "kg", "10 kg", 25),
+    ("NPK 6-12-36 Fruiting Booster", "AgroZenith", 720, 800, "kg", "10 kg", 30),
 ])
 for _x in C["fertilizers"]:
     _x["crops"] = ["general"]
 
-# --- Crop Nutrition -------------------------------------------------------
-add("crop-nutrition", [
-    ("Amino Acid Liquid 40%", "EcoYields", 420, 490, "L", "1 L", 120),
-    ("Seaweed Extract Liquid", "EcoYields", 360, 420, "L", "1 L", 140),
-    ("Humic Acid Granule 98%", "TerraKraft", 210, 250, "kg", "5 kg", 90),
-    ("Fulvic Acid Liquid", "EcoYields", 380, 440, "L", "1 L", 110),
-    ("WP Foliar Booster 19:19:19", "Nirman Agro", 240, 280, "kg", "1 kg", 160),
-    ("Bio Stimulant Root Plus", "TerraKraft", 330, 380, "L", "1 L", 130),
-    ("Potassium Humate Flakes", "TerraKraft", 190, 230, "kg", "5 kg", 70),
-    ("Chitosan Foliar", "EcoYields", 540, 620, "L", "1 L", 50),
-    ("Plant Protein Hydrolysate", "EcoYields", 460, 530, "L", "1 L", 60),
-    ("Multi-Micronutrient Foliar", "AgroZenith", 180, 210, "kg", "1 kg", 200),
-    ("Chelated Zinc EDTA 12%", "AgroZenith", 470, 540, "kg", "5 kg", 45),
-    ("Chelated Iron EDTA 12%", "AgroZenith", 490, 560, "kg", "5 kg", 40),
-    ("Boron 20% Liquid", "AgroZenith", 260, 300, "L", "1 L", 220),
-    ("Calcium Amino Chelate", "EcoYields", 520, 600, "L", "1 L", 55),
-    ("Liquid Silicon 15%", "TerraKraft", 310, 360, "L", "1 L", 80),
-    ("Gibberellic Acid 40% WSG", "TerraKraft", 650, 750, "g", "100 g", 35),
-    ("Triacontanol 0.05% EC", "EcoYields", 240, 280, "L", "1 L", 90),
-    ("NAA 4.5% SL", "AgroZenith", 170, 200, "L", "1 L", 70),
-    ("Cytokinin 0.01% SP", "TerraKraft", 290, 340, "kg", "100 g", 45),
-    ("Yeast Extract Plant Tonic", "EcoYields", 350, 410, "kg", "1 kg", 65),
-    ("NPK 6-12-36 Fruiting Booster", "AgroZenith", 720, 800, "kg", "10 kg", 30),
-    ("Kelp Hydrolysate", "EcoYields", 480, 550, "L", "1 L", 58),
-    ("Salicylic Acid Foliar", "TerraKraft", 320, 370, "L", "1 L", 48),
-    ("Yucca Saponin Surfactant", "EcoYields", 410, 480, "L", "1 L", 52),
-])
-for _x in C["crop-nutrition"]:
-    _x["crops"] = ["general"]
-
-# --- Organic Inputs -------------------------------------------------------
-add("organic", [
+# --- Organic Fertilizers --------------------------------------------------
+add("organic-fertilizers", [
     ("Vermicompost (Haritha)", "Haritha Organics", 420, 500, "bag", "50 kg", 200, True),
     ("Neem Cake Powder", "Haritha Organics", 260, 310, "kg", "10 kg", 150, True),
     ("Pure Cow Dung Manure", "Jeevan Bio", 180, 220, "bag", "10 kg", 300, True),
@@ -289,17 +375,15 @@ add("organic", [
     ("Fish Amino Acid", "EcoYields", 280, 330, "L", "1 L", 100, True),
     ("Panchagavya Concentrate", "Jeevan Bio", 190, 230, "L", "1 L", 140, True),
     ("Jeevamrutham Booster", "Jeevan Bio", 150, 180, "L", "1 L", 160, True),
-    ("Beejamrutham Seed Treat", "Jeevan Bio", 120, 150, "kg", "1 kg", 180, True),
-    ("Neem Oil 10000 ppm", "Sakthi Biolabs", 320, 380, "L", "1 L", 220, True),
-    ("Karanj Oil (Pongamia)", "Sakthi Biolabs", 250, 300, "L", "1 L", 120, True),
     ("Castor Cake Powder", "Haritha Organics", 340, 400, "kg", "25 kg", 90, True),
     ("Groundnut Cake", "Haritha Organics", 420, 490, "kg", "25 kg", 80, True),
-    ("Bone Meal Powder", "TerraKraft", 310, 360, "kg", "25 kg", 110, True),
-    ("Rock Phosphate Powder", "TerraKraft", 220, 260, "kg", "25 kg", 95, True),
-    ("Wood Ash / Plant Ash", "Haritha Organics", 140, 170, "kg", "10 kg", 130, True),
     ("Bio Compost", "Haritha Organics", 250, 290, "bag", "25 kg", 170, True),
-    ("Dhaincha Green Manure Seeds", "KrishiBandhu", 160, 190, "kg", "5 kg", 140, True),
-    ("Biochar Soil Amendment", "TerraKraft", 380, 440, "kg", "5 kg", 60, True),
+])
+for _x in C["organic-fertilizers"]:
+    _x["crops"] = ["general"]
+
+# --- Bio-fertilizers ------------------------------------------------------
+add("bio-fertilizers", [
     ("Rhizobium Cultures", "Sakthi Biolabs", 130, 160, "pack", "200 g", 300, True),
     ("Azotobacter Biofertilizer", "Sakthi Biolabs", 150, 180, "pack", "200 g", 280, True),
     ("PSB Phosphate Bacteria", "Sakthi Biolabs", 140, 170, "pack", "200 g", 260, True),
@@ -307,12 +391,77 @@ add("organic", [
     ("Trichoderma Viride", "Sakthi Biolabs", 120, 150, "pack", "250 g", 320, True),
     ("Beauveria Bassiana", "Sakthi Biolabs", 260, 310, "pack", "500 g", 110, True),
     ("Bacillus Subtilis Bio-Fungicide", "Sakthi Biolabs", 230, 280, "pack", "500 g", 130, True),
+    ("Beejamrutham Seed Treat", "Jeevan Bio", 120, 150, "kg", "1 kg", 180, True),
 ])
-for _x in C["organic"]:
+for _x in C["bio-fertilizers"]:
     _x["crops"] = ["general"]
 
-# --- Crop Protection ------------------------------------------------------
-add("crop-protection", [
+# --- Micronutrients -------------------------------------------------------
+add("micronutrients", [
+    ("Micronutrient Mixture 5kg", "AgroZenith", 260, 300, "kg", "5 kg", 80),
+    ("Multi-Micronutrient Foliar", "AgroZenith", 180, 210, "kg", "1 kg", 200),
+    ("Chelated Zinc EDTA 12%", "AgroZenith", 470, 540, "kg", "5 kg", 45),
+    ("Chelated Iron EDTA 12%", "AgroZenith", 490, 560, "kg", "5 kg", 40),
+    ("Boron 20% Granule", "AgroZenith", 290, 330, "kg", "5 kg", 50),
+    ("Boron 20% Liquid", "AgroZenith", 260, 300, "L", "1 L", 220),
+    ("Cheleated Manganese 12%", "AgroZenith", 440, 500, "kg", "5 kg", 35),
+    ("Magnesium Sulphate 9.8%", "AgroZenith", 380, 430, "kg", "25 kg", 55),
+])
+for _x in C["micronutrients"]:
+    _x["crops"] = ["general"]
+
+# --- Plant Growth Products -------------------------------------------------
+add("plant-growth", [
+    ("Amino Acid Liquid 40%", "EcoYields", 420, 490, "L", "1 L", 120),
+    ("Seaweed Extract Liquid", "EcoYields", 360, 420, "L", "1 L", 140),
+    ("Fulvic Acid Liquid", "EcoYields", 380, 440, "L", "1 L", 110),
+    ("WP Foliar Booster 19:19:19", "Nirman Agro", 240, 280, "kg", "1 kg", 160),
+    ("Bio Stimulant Root Plus", "TerraKraft", 330, 380, "L", "1 L", 130),
+    ("Chitosan Foliar", "EcoYields", 540, 620, "L", "1 L", 50),
+    ("Plant Protein Hydrolysate", "EcoYields", 460, 530, "L", "1 L", 60),
+    ("Calcium Amino Chelate", "EcoYields", 520, 600, "L", "1 L", 55),
+    ("Gibberellic Acid 40% WSG", "TerraKraft", 650, 750, "g", "100 g", 35),
+    ("Triacontanol 0.05% EC", "EcoYields", 240, 280, "L", "1 L", 90),
+    ("NAA 4.5% SL", "AgroZenith", 170, 200, "L", "1 L", 70),
+    ("Cytokinin 0.01% SP", "TerraKraft", 290, 340, "kg", "100 g", 45),
+    ("Yeast Extract Plant Tonic", "EcoYields", 350, 410, "kg", "1 kg", 65),
+    ("Kelp Hydrolysate", "EcoYields", 480, 550, "L", "1 L", 58),
+    ("Salicylic Acid Foliar", "TerraKraft", 320, 370, "L", "1 L", 48),
+    ("Yucca Saponin Surfactant", "EcoYields", 410, 480, "L", "1 L", 52),
+])
+for _x in C["plant-growth"]:
+    _x["crops"] = ["general"]
+
+# --- Soil Conditioners ----------------------------------------------------
+add("soil-conditioners", [
+    ("Humic Acid Granule 98%", "TerraKraft", 210, 250, "kg", "5 kg", 90),
+    ("Potassium Humate Flakes", "TerraKraft", 190, 230, "kg", "5 kg", 70),
+    ("Liquid Silicon 15%", "TerraKraft", 310, 360, "L", "1 L", 80),
+    ("Bone Meal Powder", "TerraKraft", 310, 360, "kg", "25 kg", 110, True),
+    ("Rock Phosphate Powder", "TerraKraft", 220, 260, "kg", "25 kg", 95, True),
+    ("Wood Ash / Plant Ash", "Haritha Organics", 140, 170, "kg", "10 kg", 130, True),
+    ("Dhaincha Green Manure Seeds", "KrishiBandhu", 160, 190, "kg", "5 kg", 140, True),
+    ("Biochar Soil Amendment", "TerraKraft", 380, 440, "kg", "5 kg", 60, True),
+    ("Gypsum Soil Conditioner", "AgroLab", 250, 290, "kg", "25 kg", 120),
+])
+for _x in C["soil-conditioners"]:
+    _x["crops"] = ["general"]
+
+# --- Pesticides (general-purpose, incl. organic formulations) -------------
+add("pesticides", [
+    ("Neem Oil 10000 ppm", "Sakthi Biolabs", 320, 380, "L", "1 L", 220, True),
+    ("Karanj Oil (Pongamia)", "Sakthi Biolabs", 250, 300, "L", "1 L", 120, True),
+    ("Dimethoate 30% EC", "CropShield", 330, 380, "L", "250 ml", 350),
+    ("Chlorpyriphos 20% EC", "CropShield", 420, 480, "L", "500 ml", 300),
+    ("Quinalphos 25% EC", "CropShield", 360, 410, "L", "500 ml", 280),
+    ("Ethion 50% EC", "CropShield", 520, 590, "L", "500 ml", 180),
+    ("Propargite 57% EC", "CropShield", 610, 690, "L", "250 ml", 150),
+])
+for _x in C["pesticides"]:
+    _x["crops"] = ["general"]
+
+# --- Insecticides ---------------------------------------------------------
+add("insecticides", [
     ("Imidacloprid 17.8 SL", "Varuna Agro", 450, 520, "L", "100 ml", 500),
     ("Chlorantraniliprole 18.5 SC", "Varuna Agro", 980, 1120, "L", "250 ml", 200),
     ("Thiamethoxam 25 WG", "Varuna Agro", 340, 400, "pack", "80 g", 420),
@@ -325,6 +474,12 @@ add("crop-protection", [
     ("Novaluron 10 EC", "CropNova", 520, 600, "L", "300 ml", 220),
     ("Indoxacarb 14.5 SC", "CropNova", 760, 860, "L", "200 ml", 180),
     ("Spinetoram 11.7 SC", "CropNova", 1500, 1700, "L", "250 ml", 90),
+])
+for _x in C["insecticides"]:
+    _x["crops"] = ["general"]
+
+# --- Fungicides -----------------------------------------------------------
+add("fungicides", [
     ("Carbendazim 50 WP", "Varuna Agro", 220, 260, "pack", "100 g", 600),
     ("Copper Oxy Chloride 50 WP", "Varuna Agro", 310, 360, "pack", "500 g", 320),
     ("Mancozeb 75 WP", "Varuna Agro", 350, 400, "pack", "500 g", 500),
@@ -334,6 +489,12 @@ add("crop-protection", [
     ("Azoxystrobin 23 SC", "CropNova", 890, 1000, "L", "250 ml", 160),
     ("Metalaxyl + Mancozeb 72 WP", "Varuna Agro", 580, 660, "pack", "500 g", 200),
     ("Sulphur 80 WDG", "Varuna Agro", 240, 280, "pack", "250 g", 420),
+])
+for _x in C["fungicides"]:
+    _x["crops"] = ["general"]
+
+# --- Herbicides -----------------------------------------------------------
+add("herbicides", [
     ("Pendimethalin 30 EC", "CropNova", 320, 370, "L", "1 L", 340),
     ("Bispyribac Sodium 10 SC", "CropNova", 610, 700, "L", "250 ml", 190),
     ("2,4-D Amine Salt 58% SL", "CropNova", 190, 220, "L", "500 ml", 380),
@@ -341,7 +502,63 @@ add("crop-protection", [
     ("Atrazine 50 WP", "CropNova", 230, 270, "pack", "500 g", 260),
     ("Oxyfluorfen 23.5 EC", "CropNova", 560, 650, "L", "500 ml", 150),
 ])
-for _x in C["crop-protection"]:
+for _x in C["herbicides"]:
+    _x["crops"] = ["general"]
+
+# --- Animal Feed ----------------------------------------------------------
+add("animal-feed", [
+    ("Poultry Starter Feed Crumb", "Feedo Agrivet", 1450, 1600, "bag", "50 kg", 120),
+    ("Poultry Layer Mash Feed", "Feedo Agrivet", 1380, 1520, "bag", "50 kg", 110),
+    ("Broiler Finisher Feed Pellets", "Feedo Agrivet", 1550, 1700, "bag", "50 kg", 100),
+    ("Grower Mash for Poultry", "Feedo Agrivet", 1320, 1450, "bag", "50 kg", 130),
+    ("Dairy Cattle Feed Concentrate 18%", "Amrita Animal Feeds", 1150, 1280, "bag", "50 kg", 150),
+    ("Dairy Cattle Feed Concentrate 24%", "Amrita Animal Feeds", 1250, 1390, "bag", "50 kg", 120),
+    ("Calf Starter Feed 20%", "Amrita Animal Feeds", 1420, 1560, "bag", "50 kg", 60),
+    ("Goat & Sheep Feed Pellets", "Amrita Animal Feeds", 1080, 1200, "bag", "50 kg", 140),
+    ("Pig Grower Feed Pellets", "Amrita Animal Feeds", 1290, 1420, "bag", "50 kg", 50),
+    ("Fish Feed Floating Pellets", "AquaVet Feeds", 980, 1100, "bag", "25 kg", 90),
+    ("Fish Feed Slow Sinking 3 mm", "AquaVet Feeds", 1040, 1160, "bag", "25 kg", 80),
+    ("Wheat Bran / Choker 50 kg", "Feedo Agrivet", 620, 690, "bag", "50 kg", 200),
+    ("Rice Bran (De-oiled)", "Feedo Agrivet", 580, 650, "bag", "50 kg", 250),
+    ("Groundnut Oil Cake", "Haritha Organics", 1180, 1300, "bag", "50 kg", 90),
+    ("Sunflower Oil Cake", "Feedo Agrivet", 1250, 1380, "bag", "50 kg", 70),
+    ("Gram Chuni / Besan Chuni", "Feedo Agrivet", 950, 1050, "bag", "50 kg", 100),
+    ("Molasses (Liquid) 200 L Drum", "Amrita Animal Feeds", 1650, 1800, "drum", "200 L", 30),
+    ("Mineral Mixture Powder 25 kg", "VetCare Nutrition", 1450, 1600, "bag", "25 kg", 40),
+    ("Urea Molasses Mineral Block", "VetCare Nutrition", 260, 300, "pc", "2.5 kg", 200),
+    ("Bypass Fat Powder (Rumen-Protected)", "VetCare Nutrition", 2400, 2650, "bag", "25 kg", 25),
+    ("Hydroponic Maize Fodder Kit", "GreenFodder Systems", 890, 980, "kit", "1 kit", 35),
+    ("Cattle Fodder Seeds - Maize Chari", "KrishiBandhu", 180, 220, "pack", "10 kg", 160),
+    ("Alfalfa (Lucerne) Fodder Seeds", "KrishiBandhu", 340, 390, "pack", "5 kg", 120),
+    ("Sorghum Fodder Seeds (SSG 59-3)", "KrishiBandhu", 120, 150, "pack", "4 kg", 180),
+])
+for _x in C["animal-feed"]:
+    _x["crops"] = ["general"]
+
+# --- Livestock Supplies ---------------------------------------------------
+add("livestock-supplies", [
+    ("Rope Halter with Chain (Cattle)", "FarmVet Essentials", 210, 250, "pc", "1 pc", 140),
+    ("Cattle Grooming Brush", "FarmVet Essentials", 260, 300, "pc", "1 pc", 120),
+    ("Hoof Trimming Knife", "FarmVet Essentials", 320, 370, "pc", "1 pc", 80),
+    ("Veterinary First-Aid Kit", "VetCare Nutrition", 1450, 1600, "kit", "1 kit", 35),
+    ("Disposable Syringe 20 ml (100 pcs)", "VetCare Nutrition", 380, 430, "pack", "100 pcs", 90),
+    ("Disposable Syringe 5 ml (100 pcs)", "VetCare Nutrition", 220, 260, "pack", "100 pcs", 120),
+    ("Albendazole Dewormer Bolus", "VetCare Nutrition", 350, 400, "pack", "100 bolus", 60),
+    ("Ectoparasite Wash (Cypermethrin 10%)", "CropShield", 290, 330, "L", "1 L", 180),
+    ("Vitamin AD3E Injection", "VetCare Nutrition", 480, 540, "pack", "100 ml", 95),
+    ("Calcium + Phosphorus Bolus", "VetCare Nutrition", 420, 470, "pack", "100 bolus", 70),
+    ("Calf Milk Feeder Bucket", "FarmVet Essentials", 560, 640, "pc", "12 L", 60),
+    ("Udder Wash (Chlorhexidine 5%)", "VetCare Nutrition", 310, 355, "L", "1 L", 110),
+    ("Phenol Disinfectant 5 L", "VetCare Nutrition", 520, 580, "can", "5 L", 85),
+    ("Drenching Gun (Graduated)", "FarmVet Essentials", 890, 1000, "pc", "1 pc", 40),
+    ("Rumen Magnet (Cow)", "VetCare Nutrition", 650, 730, "pc", "1 pc", 50),
+    ("Ear Tag Applicator + 100 Tags", "FarmVet Essentials", 780, 870, "set", "1 set", 30),
+    ("Cattle Hoof Spray", "VetCare Nutrition", 360, 410, "spray", "500 ml", 75),
+    ("Mastitis Detection Strip", "VetCare Nutrition", 240, 280, "pack", "20 strips", 130),
+    ("Milking Machine Teat Cup Liner Set", "FarmVet Essentials", 460, 520, "set", "1 set", 45),
+    ("Castration Kit (Emasculator)", "FarmVet Essentials", 1320, 1480, "set", "1 set", 20),
+])
+for _x in C["livestock-supplies"]:
     _x["crops"] = ["general"]
 
 # --- Irrigation -----------------------------------------------------------
@@ -374,8 +591,8 @@ add("irrigation", [
 for _x in C["irrigation"]:
     _x["crops"] = ["general"]
 
-# --- Sprayers -------------------------------------------------------------
-add("sprayers", [
+# --- Sprayers (Spraying Equipment) ----------------------------------------
+add("spraying-equipment", [
     ("Knapsack Sprayer 16 L", "SprayTech", 1400, 1650, "pc", "16 L", 90),
     ("Battery Knapsack Sprayer 20 L", "SprayTech", 4200, 4800, "pc", "20 L", 40),
     ("Power Sprayer 12 L", "SprayTech", 3600, 4100, "pc", "12 L", 35),
@@ -401,7 +618,7 @@ add("sprayers", [
     ("Brass Hand Sprayer 2 L", "SprayTech", 450, 520, "pc", "2 L", 90),
     ("Spare Pump Repair Kit", "SprayTech", 130, 150, "set", "1 kit", 340),
 ])
-for _x in C["sprayers"]:
+for _x in C["spraying-equipment"]:
     _x["crops"] = ["general"]
 
 # --- Farm Tools -----------------------------------------------------------
@@ -467,8 +684,8 @@ add("nursery", [
 for _x in C["nursery"]:
     _x["crops"] = ["general"]
 
-# --- Other Inputs ---------------------------------------------------------
-add("other-inputs", [
+# --- Farming Consumables --------------------------------------------------
+add("consumables", [
     ("Soil Testing Kit (Home)", "AgroLab", 290, 340, "kit", "1 kit", 130),
     ("Soil pH Meter Digital", "AgroLab", 390, 450, "pc", "1 pc", 90),
     ("Soil Moisture Meter", "AgroLab", 350, 400, "pc", "1 pc", 110),
@@ -496,32 +713,21 @@ add("other-inputs", [
     ("Plant Tag Pens (Permanent)", "AgroLab", 55, 65, "pack", "10 pcs", 400),
     ("Soil Sampler Auger", "AgroLab", 680, 760, "pc", "1 pc", 38),
 ])
-for _x in C["other-inputs"]:
+for _x in C["consumables"]:
     _x["crops"] = ["general"]
 
 
-def _ensure_category(db, slug, name):
+def _ensure_category(db, slug, name, icon):
     cat = db.query(ProductCategory).filter(ProductCategory.slug == slug).first()
     if cat:
+        if cat.name != name or (cat.icon or None) != icon:
+            cat.name = name
+            cat.icon = icon
         return cat
-    cat = ProductCategory(name=name, slug=slug, icon=_ICON_MAP.get(slug))
+    cat = ProductCategory(name=name, slug=slug, icon=icon)
     db.add(cat)
     db.flush()
     return cat
-
-
-_ICON_MAP = {
-    "seeds": "fa-seedling",
-    "fertilizers": "fa-flask",
-    "crop-nutrition": "fa-droplet",
-    "organic": "fa-leaf",
-    "crop-protection": "fa-shield-halved",
-    "irrigation": "fa-droplet",
-    "sprayers": "fa-spray-can",
-    "farm-tools": "fa-screwdriver-wrench",
-    "nursery": "fa-seedling",
-    "other-inputs": "fa-box",
-}
 
 
 def _ensure_seller(db, owner, shop_name, location, verified, rating):
@@ -545,47 +751,60 @@ def _ensure_seller(db, owner, shop_name, location, verified, rating):
     return seller
 
 
+def _subcategory(slug, row):
+    if slug == "seeds":
+        crops = row.get("crops") or ["general"]
+        for crop in crops:
+            label = SEED_SUBCATEGORY.get(crop)
+            if label:
+                return label
+        return "General Seeds"
+    return SUB_BY_SLUG.get(slug, TYPE_BY_SLUG.get(slug, slug))
+
+
 def _upsert_product(db, category, seller, row, index):
-    existing = (
-        db.query(Product)
-        .filter(Product.category_id == category.id, Product.name == row["name"])
-        .first()
-    )
+    # Match by product name (independent of the old category) so re-classifying
+    # rows across the expanded taxonomy upgrades them in place.
+    existing = db.query(Product).filter(Product.name == row["name"]).first()
     price = row["price"]
+    org = bool(row["organic"])
     base_spec = {
         "pack_size": row["pack"],
         "manufacturer": f"{row['brand']} Pvt Ltd",
-        "certification": "ISI/AgMark" if not row["organic"] else "Organic Certified",
+        "certification": "ISI/AgMark" if not org else "Organic Certified",
         "specifications": {
             "brand": row["brand"],
             "unit": row["unit"],
             "pack_size": row["pack"],
-            "organic": bool(row["organic"]),
+            "organic": org,
         },
     }
     u = usage("Follow label", row["unit"])
+    pool = IMAGE_POOL.get(category.slug) or IMAGE_POOL["consumables"]
     tags = {
-        "organic": bool(row["organic"]),
-        "verified": seller.is_verified,
+        "organic": org,
+        "verified": bool(seller.is_verified),
+        "product_type": TYPE_BY_SLUG.get(category.slug, category.name),
+        "subcategory": _subcategory(category.slug, row),
         **{k: v for k, v in u.items()},
         **base_spec,
     }
+    desc = f"{row['name']} - quality {category.name.lower().replace(' & ', ' and ')} input supplied by {seller.shop_name}."
+    if row.get("crops") and "general" not in row["crops"]:
+        desc = f"{row['name']} - recommended for {', '.join(row['crops'])}. Supplied by {seller.shop_name}."
     data = {
         "category_id": category.id,
         "name": row["name"],
-        "description": (
-            f"{row['name']} - quality {category.name.lower()} input supplied by "
-            f"{seller.shop_name}. Suitable for a wide range of farming needs."
-        ),
+        "description": desc,
         "price": price,
         "original_price": row["mrp"],
         "unit": row["unit"],
         "stock_quantity": row["stock"],
         "min_order_quantity": 1,
-        "image_url": IMG_BASE.format(img=IMAGE_POOL[category.slug][index % len(IMAGE_POOL[category.slug])]),
+        "image_url": IMG_BASE.format(img=pool[index % len(pool)]),
         "images": [
-            IMG_BASE.format(img=IMAGE_POOL[category.slug][(index + 1) % len(IMAGE_POOL[category.slug])]),
-            IMG_BASE.format(img=IMAGE_POOL[category.slug][(index + 2) % len(IMAGE_POOL[category.slug])]),
+            IMG_BASE.format(img=pool[(index + 1) % len(pool)]),
+            IMG_BASE.format(img=pool[(index + 2) % len(pool)]),
         ],
         "brand": row["brand"],
         "rating": round(4.0 + (index % 9) * 0.1, 1),
@@ -611,14 +830,37 @@ def _sync_crops(db, product, crops):
         db.add(ProductCrop(product_id=product.id, crop_name=crop))
 
 
-def seed(db: Session):
-    # idempotently clear catalogue rows not managed by this seed (keeps the 16
-    # original legacy products intact); all catalogue products are re-synced.
-    created = 0
-    for slug, name in CATEGORIES:
-        category = _ensure_category(db, slug, name)
+def _cleanup_orphan_categories(db):
+    """Drop old Input Store category rows that no longer hold active products.
 
-    # Sellers are owned by a demo user so the NOT NULL seller.user_id holds.
+    Equipment category slugs (shared ``products`` table) are never touched.
+    """
+    input_cat_ids = {
+        c.id
+        for c in db.query(ProductCategory)
+        .filter(ProductCategory.slug.in_(INPUT_STORE_SLUGS))
+        .all()
+    }
+    rows = db.query(ProductCategory).all()
+    for cat in rows:
+        if cat.slug in INPUT_STORE_SLUGS or cat.slug in EQUIPMENT_SLUGS:
+            continue
+        count = (
+            db.query(Product)
+            .filter(Product.category_id == cat.id, Product.is_active == True)  # noqa: E712
+            .count()
+        )
+        if count == 0:
+            db.query(Product).filter(Product.category_id == cat.id).update(
+                {"category_id": None}, synchronize_session=False
+            )
+            db.delete(cat)
+
+
+def seed(db: Session):
+    for slug, name, icon in CATEGORIES:
+        _ensure_category(db, slug, name, icon)
+
     owner = db.query(User).filter(User.is_demo == True).first() or db.query(User).first()  # noqa: E712
     if owner is None:
         raise RuntimeError("No user available to own marketplace sellers; create a user first.")
@@ -630,24 +872,30 @@ def seed(db: Session):
     db.flush()
 
     used = 0
-    for slug, _name in CATEGORIES:
+    created = 0
+    for slug, name, icon in CATEGORIES:
+        category = _ensure_category(db, slug, name, icon)
         rows = C.get(slug, [])
         for index, row in enumerate(rows, start=1):
             seller = sellers[used % len(sellers)]
-            product = _upsert_product(db, category=_ensure_category(db, slug, _name), seller=seller, row=row, index=used + 1)
+            product = _upsert_product(db, category, seller, row, used + 1)
             crops = row.get("crops") or ["general"]
             _sync_crops(db, product, crops)
             used += 1
             created += 1
 
+    _cleanup_orphan_categories(db)
+
     db.commit()
-    totals = {
-        slug: db.query(Product).filter(
-            Product.category_id == db.query(ProductCategory).filter(ProductCategory.slug == slug).first().id,
-            Product.is_active == True,
-        ).count()
-        for slug, _n in CATEGORIES
-    }
+    totals = {}
+    for slug, _name, _icon in CATEGORIES:
+        cat = db.query(ProductCategory).filter(ProductCategory.slug == slug).first()
+        count = (
+            db.query(Product)
+            .filter(Product.category_id == cat.id, Product.is_active == True)  # noqa: E712
+            .count()
+        ) if cat else 0
+        totals[slug] = count
     return {"products": created, "categories": len(CATEGORIES), "per_category": totals}
 
 
@@ -660,7 +908,7 @@ def main():
         db.close()
     print(f"Input Store catalogue ready: {result['products']} products in {result['categories']} categories.")
     for slug, count in result["per_category"].items():
-        print(f"  {slug:>16}: {count}")
+        print(f"  {slug:>20}: {count}")
 
 
 if __name__ == "__main__":

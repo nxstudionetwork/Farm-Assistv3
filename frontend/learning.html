@@ -40,7 +40,7 @@
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    .learning-toolbar { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
+    .learning-toolbar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
     .search-wrap { flex: 1; position: relative; }
     .search-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px; }
     .search-input {
@@ -53,96 +53,178 @@
       border-radius: var(--radius-md); padding: 11px 10px; font-size: 12px; outline: none; cursor: pointer;
     }
 
-    .category-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-    .category-chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-light); background: white; color: var(--text-secondary); font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    /* Horizontal scrollable category bar */
+    .category-bar {
+      display: flex; flex-wrap: nowrap; gap: 8px; min-width: 0; overflow-x: auto; overflow-y: hidden;
+      -webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain;
+      margin-bottom: 14px; padding: 4px 2px 10px; scrollbar-width: thin;
+    }
+    .category-bar::-webkit-scrollbar { height: 5px; }
+    .category-bar::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 4px; }
+    .category-chip {
+      flex: 0 0 auto; padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border-light);
+      background: white; color: var(--text-secondary); font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
     .category-chip:hover, .category-chip.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+    .category-chip:focus-visible { outline: 2px solid var(--primary-green); outline-offset: 2px; }
+    .category-chip .chip-count { margin-left: 5px; font-size: 9px; font-weight: 800; background: var(--soft-green); color: var(--primary-green); padding: 1px 6px; border-radius: 10px; }
+    .category-chip.active .chip-count { background: rgba(255,255,255,0.25); color: white; }
 
     .course-card {
       background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg);
-      padding: 16px; cursor: pointer; transition: all 0.25s; display: flex; gap: 14px;
+      padding: 15px; cursor: pointer; transition: all 0.25s;
     }
     .course-card:hover { box-shadow: var(--shadow-md); border-color: var(--medium-green); transform: translateY(-2px); }
     .course-thumbnail {
-      width: 80px; height: 60px; border-radius: 12px; background: var(--soft-green);
-      display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--primary-green);
-      flex-shrink: 0;
+      width: 100%; height: 74px; border-radius: 12px; background: linear-gradient(135deg, var(--soft-green) 0%, #d8f0e3 100%);
+      display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--primary-green);
+      margin-bottom: 12px; overflow: hidden;
     }
-    .course-info { flex: 1; min-width: 0; }
-    .course-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-    .course-instructor { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
-    .course-meta { display: flex; gap: 12px; font-size: 10px; color: var(--text-muted); flex-wrap: wrap; }
+    .course-thumbnail img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .course-title { font-size: 14px; font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .course-instructor { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+    .course-meta { display: flex; gap: 12px; font-size: 10px; color: var(--text-muted); flex-wrap: wrap; margin-bottom: 10px; }
     .course-meta i { color: var(--medium-green); margin-right: 3px; }
-    .course-progress { margin-top: 8px; }
+    .course-progress-wrap { margin-bottom: 12px; }
     .progress-bar { height: 6px; background: var(--bg-card-soft); border-radius: 3px; overflow: hidden; }
     .progress-fill { height: 100%; background: var(--primary-green); border-radius: 3px; transition: width 0.3s; }
-    .course-enroll-btn {
-      width: 36px; height: 36px; border-radius: 10px; background: var(--primary-green); color: white;
-      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;
-      flex-shrink: 0; align-self: center;
-    }
-    .course-enroll-btn:hover { background: var(--medium-green); }
-    .course-enroll-btn.enrolled { background: var(--soft-green); color: var(--primary-green); }
-    .course-enroll-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+    .course-level { font-size: 9px; font-weight: 700; text-transform: capitalize; padding: 2px 8px; border-radius: 10px; background: var(--soft-green); color: var(--primary-green); display: inline-block; }
 
-    .course-level { font-size: 9px; font-weight: 700; text-transform: capitalize; padding: 2px 8px; border-radius: 10px; background: var(--soft-green); color: var(--primary-green); display: inline-block; margin-left: 6px; }
+    /* Short action buttons */
+    .course-actions { display: flex; gap: 8px; }
+    .action-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+      border-radius: var(--radius-md); font-size: 11.5px; font-weight: 700; cursor: pointer;
+      padding: 9px 8px; transition: all 0.2s; text-decoration: none; border: 1px solid var(--border-light);
+    }
+    .action-btn i { font-size: 11px; }
+    .action-btn.primary { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+    .action-btn.primary:hover { background: var(--medium-green); }
+    .action-btn.success { background: var(--success); color: white; border-color: var(--success); }
+    .action-btn.success:hover { opacity: 0.88; }
+    .action-btn.ghost { background: var(--bg-card); color: var(--primary-green); }
+    .action-btn.ghost:hover { border-color: var(--medium-green); }
+    .action-btn[disabled], .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .no-scroll { padding: 4px 2px 2px; }
 
     .empty-courses { text-align: center; padding: 40px 16px; color: var(--text-muted); }
     .empty-courses i { font-size: 40px; opacity: 0.4; margin-bottom: 10px; display: block; }
 
-    .reading-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; }
-    .lesson-item { display: flex; gap: 12px; align-items: center; padding: 14px 14px; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.2s; }
-    .lesson-item:last-child { border-bottom: none; }
-    .lesson-item:hover { background: var(--bg-card-soft); }
-    .lesson-state { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; }
-    .lesson-state.done { background: var(--primary-green); color: white; }
-    .lesson-state.current { background: var(--soft-green); color: var(--primary-green); border: 2px solid var(--primary-green); }
-    .lesson-state.pending { border: 2px solid var(--border-medium); color: var(--text-muted); }
-    .lesson-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-    .lesson-duration { font-size: 11px; color: var(--text-muted); }
-    .lesson-content-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 18px 16px; margin-top: 12px; }
-    .lesson-content-card h3 { font-size: 15px; color: var(--primary-green); margin-bottom: 10px; }
-    .lesson-content-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
-
-    .mark-complete-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius-md); background: var(--primary-green); color: white; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-    .mark-complete-btn:hover { background: var(--medium-green); }
-    .mark-complete-btn.done { background: var(--success); }
-
-    .progress-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .progress-label { font-size: 11px; font-weight: 700; color: var(--primary-green); }
-    .progress-label.completed-course { color: var(--success); }
-
-    .back-link { display: inline-flex; align-items: center; gap: 7px; color: var(--primary-green); font-size: 12px; font-weight: 700; cursor: pointer; background: none; border: none; padding: 6px 0; margin-bottom: 10px; }
-    .back-link:hover { text-decoration: underline; }
-
+    /* ---- Course flow (video -> content -> tools -> test -> complete) ---- */
     .detail-hero { background: linear-gradient(135deg, #0F2E1E 0%, #1B5E3F 60%, #40916C 100%); border-radius: var(--radius-lg); padding: 18px 16px; color: white; margin-bottom: 14px; }
     .detail-hero h3 { color: white; font-size: 18px; margin-bottom: 5px; }
     .detail-hero .detail-sub { font-size: 12px; opacity: 0.85; }
     .detail-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
     .detail-badge { background: rgba(255,255,255,0.15); border-radius: 12px; padding: 4px 10px; font-size: 10px; font-weight: 600; }
 
-    .completion-banner { background: linear-gradient(135deg, #2D8659 0%, #52B788 100%); border-radius: var(--radius-lg); color: white; padding: 22px 18px; text-align: center; margin-bottom: 14px; }
-    .completion-banner i { font-size: 42px; margin-bottom: 8px; display: block; }
+    .flow-steps { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+    .flow-step {
+      flex: 1 0 auto; min-width: 74px; text-align: center; position: relative; cursor: pointer;
+    }
+    .flow-step .fs-dot {
+      width: 30px; height: 30px; border-radius: 50%; margin: 0 auto 5px; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; background: var(--bg-card); border: 2px solid var(--border-medium); color: var(--text-muted); transition: all 0.2s;
+    }
+    .flow-step .fs-label { font-size: 9px; color: var(--text-muted); font-weight: 600; }
+    .flow-step.active .fs-dot { background: var(--primary-green); border-color: var(--primary-green); color: white; }
+    .flow-step.active .fs-label { color: var(--primary-green); }
+    .flow-step.done .fs-dot { background: var(--success); border-color: var(--success); color: white; }
+    .flow-step.done .fs-label { color: var(--success); }
+
+    .flow-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 18px 16px; }
+    .flow-card h3 { font-size: 15px; color: var(--primary-green); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .flow-card p, .flow-card li { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+    .flow-list { list-style: none; padding: 0; margin: 0; }
+    .flow-list li { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border-light); align-items: flex-start; }
+    .flow-list li:last-child { border-bottom: none; }
+    .flow-list li i { color: var(--primary-green); margin-top: 3px; flex-shrink: 0; }
+
+    .video-unavailable {
+      background: var(--bg-card-soft); border: 1px dashed var(--border-medium); border-radius: var(--radius-md);
+      padding: 22px 16px; text-align: center; color: var(--text-muted);
+    }
+    .video-unavailable i { font-size: 34px; display: block; margin-bottom: 8px; color: var(--border-medium); }
+    .video-wrap { border-radius: var(--radius-md); overflow: hidden; background: #000; }
+    .video-wrap video { width: 100%; display: block; aspect-ratio: 16/9; }
+
+    .quiz-question { margin-bottom: 18px; }
+    .quiz-q { font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
+    .quiz-option {
+      display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 1.5px solid var(--border-light);
+      border-radius: var(--radius-md); margin-bottom: 8px; cursor: pointer; font-size: 12.5px; color: var(--text-secondary); transition: all 0.15s; background: white;
+    }
+    .quiz-option:hover { border-color: var(--medium-green); }
+    .quiz-option.selected { border-color: var(--primary-green); background: var(--soft-green); color: var(--text-primary); }
+    .quiz-option .q-letter { width: 22px; height: 22px; border-radius: 50%; background: var(--bg-card); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+    .quiz-option.selected .q-letter { background: var(--primary-green); color: white; }
+
+    .quiz-result { text-align: center; padding: 20px 14px; }
+    .quiz-score { font-size: 40px; font-weight: 800; color: var(--primary-green); }
+    .quiz-score.pass { color: var(--success); }
+    .quiz-score.fail { color: var(--danger, #e5484d); }
+    .result-msg { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+
+    .big-btn { width: 100%; padding: 13px; border: none; border-radius: var(--radius-md); font-size: 13.5px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .big-btn.primary { background: var(--primary-green); color: white; }
+    .big-btn.primary:hover { background: var(--medium-green); }
+    .big-btn.success { background: var(--success); color: white; }
+    .big-btn.success:hover { opacity: 0.9; }
+    .big-btn.ghost { background: var(--bg-card); color: var(--primary-green); border: 1px solid var(--border-light); }
+    .big-btn.ghost:hover { border-color: var(--medium-green); }
+    .big-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+
+    .completion-banner { background: linear-gradient(135deg, #2D8659 0%, #52B788 100%); border-radius: var(--radius-lg); color: white; padding: 26px 18px; text-align: center; margin-bottom: 14px; }
+    .completion-banner i { font-size: 44px; margin-bottom: 8px; display: block; }
     .completion-banner h3 { color: white; font-size: 18px; margin-bottom: 4px; }
     .completion-banner p { font-size: 12px; opacity: 0.9; }
 
-    .lesson-nav { display: flex; gap: 8px; margin-top: 14px; }
-    .lesson-nav button { flex: 1; padding: 11px; border: 1px solid var(--border-light); background: var(--bg-card); color: var(--text-primary); border-radius: var(--radius-md); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-    .lesson-nav button:hover { border-color: var(--medium-green); color: var(--primary-green); }
-    .lesson-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .back-link { display: inline-flex; align-items: center; gap: 7px; color: var(--primary-green); font-size: 12px; font-weight: 700; cursor: pointer; background: none; border: none; padding: 6px 0; margin-bottom: 10px; }
+    .back-link:hover { text-decoration: underline; }
+
+    .reading-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; }
+    .progress-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .progress-label { font-size: 11px; font-weight: 700; color: var(--primary-green); }
+    .progress-label.completed-course { color: var(--success); }
+
+    .complete-badge {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 800;
+      background: var(--success); color: white; padding: 2px 8px; border-radius: 10px; margin-left: 6px;
+    }
+    .learning-group-title {
+      font-size: 12px; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.4px;
+      margin: 18px 4px 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .learning-group-title i { color: var(--primary-green); }
+    .learning-group-title:first-child { margin-top: 4px; }
+
+    .recommend-card {
+      background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 13px;
+      cursor: pointer; transition: all 0.25s; display: flex; gap: 12px; align-items: center; margin-bottom: 10px;
+    }
+    .recommend-card:hover { box-shadow: var(--shadow-md); border-color: var(--medium-green); transform: translateY(-1px); }
+    .recommend-thumb {
+      width: 58px; height: 58px; border-radius: 12px; background: linear-gradient(135deg, var(--soft-green) 0%, #d8f0e3 100%);
+      display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--primary-green); flex-shrink: 0; overflow: hidden;
+    }
+    .recommend-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .recommend-body { flex: 1; min-width: 0; }
+    .recommend-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px; }
+    .recommend-meta { font-size: 10.5px; color: var(--text-muted); }
+
+    .retry-bar { display: flex; flex-direction: column; align-items: center; padding: 30px 16px; color: var(--text-muted); text-align: center; }
+    .retry-bar i { font-size: 34px; opacity: 0.5; margin-bottom: 10px; }
 
     .enroll-hint { font-size: 11px; color: var(--text-muted); text-align: center; padding: 10px; }
-    .enroll-btn-lg { width: 100%; padding: 13px; border: none; border-radius: var(--radius-md); background: var(--primary-green); color: white; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-    .enroll-btn-lg:hover { background: var(--medium-green); }
-    .enroll-btn-lg.enrolled { background: var(--success); }
-    .enroll-btn-lg[disabled] { opacity: 0.6; cursor: not-allowed; }
 
-    .lesson-scroller { max-height: 460px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: var(--radius-lg); background: var(--bg-card); }
+    .spinner-wrap { text-align: center; padding: 50px 16px; color: var(--text-muted); }
 
-    @media (max-width: 480px) {
+    @media (max-width: 520px) {
+      .grid-2 { grid-template-columns: 1fr; }
       .learning-toolbar { flex-direction: column; align-items: stretch; }
       .learning-tab { font-size: 11px; padding: 10px 3px; }
-      .course-card { padding: 13px; gap: 10px; }
-      .course-thumbnail { width: 64px; height: 52px; font-size: 20px; }
+      .course-card { padding: 13px; }
     }
   </style>
 </head>
@@ -152,7 +234,7 @@
 
     <div class="learning-hero">
       <h2><i class="fas fa-graduation-cap" style="margin-right:8px;"></i> Learning Center</h2>
-      <p id="hero-subtitle">Expert-led courses to improve your farming skills and increase yields.</p>
+      <p id="hero-subtitle">Practical, step-by-step farming courses. Learn, test, and complete at your own pace.</p>
       <div class="learning-stats">
         <div class="learning-stat">
           <div class="learning-stat-value" id="stat-enrolled">0</div>
@@ -174,7 +256,7 @@
     </div>
 
     <div class="learning-tabs">
-      <button class="learning-tab active" data-tab="explore"><i class="fas fa-book-open"></i> Explore &amp; Enroll</button>
+      <button class="learning-tab active" data-tab="explore"><i class="fas fa-book-open"></i> Explore</button>
       <button class="learning-tab" data-tab="my"><i class="fas fa-graduation-cap"></i> My Learning <span class="tab-count" id="tab-count-my">0</span></button>
       <button class="learning-tab" data-tab="completed"><i class="fas fa-award"></i> Completed <span class="tab-count" id="tab-count-completed">0</span></button>
     </div>
@@ -186,21 +268,21 @@
           <i class="fas fa-search"></i>
           <input type="text" class="search-input" id="course-search" placeholder="Search courses, topics, experts...">
         </div>
-        <select class="level-select" id="level-filter">
-          <option value="">All Levels</option>
-          <option value="beginner">Beginner</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
       </div>
 
-      <div class="category-chips" id="category-chips">
-        <button class="category-chip active" data-category="all">All Courses</button>
+      <div class="category-bar" id="category-bar"></div>
+
+      <div id="recommended-wrap" style="display:none;">
+        <div class="reading-card" style="padding:14px 12px;margin-bottom:16px;">
+          <h3 style="font-size:15px;margin-bottom:4px;"><i class="fas fa-thumbs-up" style="color: var(--primary-green); margin-right: 8px;"></i> Recommended for You</h3>
+          <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Courses matched to your crops &amp; interests.</p>
+          <div id="recommended-list"></div>
+        </div>
       </div>
 
       <section class="card-premium" style="padding: 15px 12px;">
         <h3 style="font-size: 16px; margin-left: 12px; margin-bottom: 15px;"><i class="fas fa-book-open" style="color: var(--primary-green); margin-right: 8px;"></i> Available Courses <span id="course-count-label" style="float:right;font-size:11px;color:var(--text-muted);"></span></h3>
-        <div id="courses-list-container" class="courses-list" style="display: grid; gap: 12px;"></div>
+        <div id="courses-list-container" class="grid-2" style="padding: 0 6px 6px;"></div>
         <div id="empty-courses" class="empty-courses" style="display:none;">
           <i class="fas fa-book-open"></i>
           <p id="empty-courses-msg">No courses found in this category.</p>
@@ -230,7 +312,7 @@
       </div>
     </section>
 
-    <!-- ===== VIEW: COURSE DETAIL ===== -->
+    <!-- ===== VIEW: COURSE DETAIL / FLOW ===== -->
     <section class="tab-panel" id="panel-course">
       <div style="padding:0 2px;">
         <button class="back-link" id="course-back-link"><i class="fas fa-arrow-left"></i> Back</button>
@@ -254,15 +336,73 @@
       courses: [],
       categories: [],
       enrolledIds: {},
-      myEnrollments: [],
       allEnrollments: [],
       search: '',
       category: 'all',
-      level: '',
       activeTab: 'explore',
-      loading: false,
-      courseDetail: null
+      courseDetail: null,
+      recommended: [],
+      flowState: {
+        step: 0,
+        answers: {},
+        submitted: false,
+        result: null
+      }
     };
+
+    // Spec-friendly, human-readable category names mapped to the stored
+    // backend category values (kept in sync with the seeded categories).
+    var CATEGORY_LABELS = {
+      'Crop Management': 'Crop Management',
+      'Seeds': 'Crop Management',
+      'Pest Control': 'Pest & Disease',
+      'Soil': 'Soil & Fertilizer',
+      'Fertilizers': 'Soil & Fertilizer',
+      'Soil & Fertilizer': 'Soil & Fertilizer',
+      'Soil & Fertility': 'Soil & Fertilizer',
+      'Irrigation': 'Irrigation',
+      'Irrigation & Water': 'Irrigation',
+      'Organic Farming': 'Organic Farming',
+      'Natural Farming': 'Organic Farming',
+      'Livestock': 'Livestock',
+      'Aquaculture': 'Livestock',
+      'Dairy': 'Livestock',
+      'Poultry': 'Livestock',
+      'Equipment': 'Farm Machinery',
+      'Harvesting': 'Harvesting',
+      'Post-Harvest': 'Harvesting',
+      'Food Processing': 'Harvesting',
+      'Finance': 'Market & Business',
+      'Business': 'Market & Business',
+      'Market & Business': 'Market & Business',
+      'Farm Business': 'Market & Business',
+      'Agri Marketing': 'Market & Business',
+      'Government Schemes': 'Government Schemes',
+      'Farm Technology': 'Modern Farming',
+      'Smart Farming': 'Modern Farming',
+      'Precision Agriculture': 'Modern Farming',
+      'Sustainable Farming': 'Modern Farming',
+      'Sustainable Agriculture': 'Modern Farming',
+      'Climate-Smart Agriculture': 'Modern Farming',
+      'Horticulture': 'Crop Management',
+      'Weather': 'Weather'
+    };
+
+    function categoryDisplay(cat) {
+      return CATEGORY_LABELS[cat] || cat || 'General';
+    }
+
+    function categoryKey(cat) {
+      return cat || 'all';
+    }
+
+    var FLOW_STEPS = [
+      { key: 'video', label: 'Video' },
+      { key: 'content', label: 'Core Content' },
+      { key: 'tools', label: 'Tools' },
+      { key: 'test', label: 'Test' },
+      { key: 'complete', label: 'Complete' }
+    ];
 
     function esc(str) {
       if (str === null || str === undefined) return '';
@@ -274,40 +414,75 @@
     function el(id) { return document.getElementById(id); }
     function showToast(msg, type) { if (typeof window.showToast === 'function') window.showToast(msg, type || 'success'); }
 
-    function skeleton() {
-      return '<div class="skeleton-loader" style="height:72px;border-radius:12px;margin-bottom:12px;"></div>' +
-             '<div class="skeleton-loader" style="height:72px;border-radius:12px;margin-bottom:12px;"></div>' +
-             '<div class="skeleton-loader" style="height:72px;border-radius:12px;margin-bottom:12px;"></div>';
+    function skeleton(rows) {
+      rows = rows || 4;
+      var h = '';
+      for (var i = 0; i < rows; i++) {
+        h += '<div class="skeleton-loader" style="height:110px;border-radius:14px;"></div>';
+      }
+      return '<div class="grid-2" style="padding:0 6px;">' + h + '</div>';
     }
 
-    function levelLabel(l) { return l ? esc(l) : 'All levels'; }
+    function retryBar(targetId, msg) {
+      var box = document.createElement('div');
+      box.className = 'retry-bar';
+      box.innerHTML =
+        '<i class="fas fa-exclamation-triangle"></i>' +
+        '<p style="font-size:12.5px;margin-bottom:12px;">' + esc(msg || 'Could not load. Please try again.') + '</p>' +
+        '<button class="action-btn primary" style="flex:none;padding:9px 18px;"><i class="fas fa-sync-alt"></i> Retry</button>';
+      var host = el(targetId);
+      if (host) host.appendChild(box);
+      box.querySelector('button').addEventListener('click', function () { loadAll(); });
+      return box;
+    }
+
+    function levelLabel(l) { return l ? esc(l) : ''; }
     function categoryOf(c) { return c.category || ''; }
 
     /* ---------- Data loading ---------- */
     function loadAll() {
-      if (state.loading) return;
-      state.loading = true;
+      var listEl = el('courses-list-container');
+      var myEl = el('my-learning-list');
+      var recEl = el('recommended-list');
+      var catEl = el('category-bar');
+      if (listEl) listEl.innerHTML = skeleton(4);
+      if (myEl) myEl.innerHTML = '<div class="skeleton-loader" style="height:110px;border-radius:14px;"></div>';
+      if (recEl) recEl.innerHTML = '';
+      if (catEl) catEl.innerHTML = '';
 
-      var explorePromise = LEARNING.listCourses({}).catch(function () { return []; });
-      var myPromise = LEARNING.myLearning('all').catch(function () { return null; });
-      var catPromise = LEARNING.getCategories().catch(function () { return []; });
+      var explorePromise = LEARNING.listCourses({}).catch(function (err) { state.coursesError = err; return []; });
+      var myPromise = LEARNING.myLearning('all').catch(function (err) { state.myError = err; return null; });
+      var catPromise = LEARNING.getCategories().catch(function (err) { state.catError = err; return []; });
+      var recPromise = LEARNING.learningProgress().catch(function (err) { state.recError = err; return null; });
 
-      Promise.all([explorePromise, myPromise, catPromise]).then(function (results) {
+      Promise.all([explorePromise, myPromise, catPromise, recPromise]).then(function (results) {
         state.courses = results[0] || [];
         var myData = results[1];
         state.allEnrollments = (myData && myData.enrollments) || [];
-        state.myEnrollments = (myData && myData.enrollments) || [];
         state.categories = results[2] || [];
+        var progData = results[3];
+        state.recommended = (progData && progData.recommended) || [];
 
         state.enrolledIds = {};
-        state.myEnrollments.forEach(function (e) { state.enrolledIds[e.course_id] = e; });
+        state.allEnrollments.forEach(function (e) {
+          state.enrolledIds[e.course_id] = e;
+          state.enrolledIds[e.course_public_id] = e;
+        });
 
         renderCategories();
         renderCourseGrid();
         renderMyLearning();
         renderCompleted();
         renderStats();
-        state.loading = false;
+        renderRecommended();
+
+        // Top-level load failed completely -> show a retry in the grid.
+        if (results[0] instanceof Array === false || (state.coursesError && state.courses.length === 0)) {
+          if (listEl) { listEl.innerHTML = ''; retryBar('courses-list-container', 'Could not load available courses.'); }
+        }
+        if (myEl && state.myError && state.allEnrollments.length === 0) {
+          myEl.innerHTML = ''; retryBar('my-learning-list', 'Could not load your courses.');
+        }
       });
     }
 
@@ -330,19 +505,36 @@
 
     /* ---------- Categories ---------- */
     function renderCategories() {
-      var container = el('category-chips');
+      var container = el('category-bar');
       if (!container) return;
-      var html = '<button class="category-chip active" data-category="all">All Courses</button>';
-      state.categories.forEach(function (cat) {
-        html += '<button class="category-chip" data-category="' + esc(cat) + '">' + esc(cat) + '</button>';
+
+      // Aggregate raw backend categories into the display labels shown on the bar.
+      var byLabel = {};
+      state.courses.forEach(function (c) {
+        var label = categoryDisplay(categoryOf(c));
+        byLabel[label] = (byLabel[label] || 0) + 1;
       });
+
+      var labels = Object.keys(byLabel).sort(function (a, b) {
+        return byLabel[b] - byLabel[a];
+      });
+
+      var html = '<button class="category-chip active" data-category="all">All <span class="chip-count">' + state.courses.length + '</span></button>';
+      labels.forEach(function (label) {
+        html += '<button class="category-chip" data-category="' + esc(label) + '">' +
+          esc(label) + ' <span class="chip-count">' + byLabel[label] + '</span></button>';
+      });
+
       container.innerHTML = html;
+      var activeCat = state.category || 'all';
+      container.querySelectorAll('.category-chip').forEach(function (chip) {
+        chip.classList.toggle('active', chip.getAttribute('data-category') === activeCat);
+      });
     }
 
     function getFilteredCourses() {
       return state.courses.filter(function (c) {
-        if (state.category !== 'all' && categoryOf(c) !== state.category) return false;
-        if (state.level && (c.level || '').toLowerCase() !== state.level) return false;
+        if (state.category !== 'all' && categoryDisplay(categoryOf(c)) !== state.category) return false;
         if (state.search) {
           var term = state.search.toLowerCase();
           var hay = (c.title + ' ' + (c.description || '') + ' ' + (c.instructor || '') + ' ' + (c.category || '')).toLowerCase();
@@ -350,6 +542,57 @@
         }
         return true;
       });
+    }
+
+    /* ---------- Explore grid with short action buttons ---------- */
+    function courseCardHtml(c) {
+      var enrolled = state.enrolledIds[c.id] || state.enrolledIds[c.course_id];
+      var progress = enrolled ? (enrolled.progress_percentage || 0) : 0;
+      var isDone = enrolled && enrolled.status === 'completed';
+
+      var actions = '';
+      if (!enrolled) {
+        actions = '<button class="action-btn primary" data-enroll="' + esc(c.course_id) + '"><i class="fas fa-plus"></i> Enroll</button>';
+      } else if (isDone) {
+        actions = '<button class="action-btn success" data-open-course="' + esc(c.course_id) + '"><i class="fas fa-check"></i> Completed</button>';
+      } else {
+        actions = '<button class="action-btn primary" data-open-course="' + esc(c.course_id) + '"><i class="fas fa-play"></i> ' + (progress > 0 ? 'Continue' : 'Start') + '</button>';
+      }
+      actions += '<button class="action-btn ghost" data-open-course="' + esc(c.course_id) + '"><i class="fas fa-eye"></i> View</button>';
+
+      var progHtml = (enrolled && !isDone)
+        ? '<div class="course-progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:' + progress + '%"></div></div></div>'
+        : '';
+
+      return '<div class="course-card" data-open-course="' + esc(c.course_id) + '">' +
+        '<div class="course-thumbnail">' + (c.image_url ? '<img src="' + esc(c.image_url) + '" alt="" loading="lazy">' : '<i class="fas fa-graduation-cap"></i>') + '</div>' +
+        '<div class="course-title">' + esc(c.title) + '<span class="course-level">' + esc(c.level || 'beginner') + '</span></div>' +
+        '<div class="course-instructor"><i class="fas fa-user-tie"></i> ' + esc(c.instructor || 'Farm Assist Experts') + '</div>' +
+        '<div class="course-meta">' +
+          '<span><i class="fas fa-tag"></i>' + esc(c.category || 'General') + '</span>' +
+          '<span><i class="fas fa-list-ol"></i>' + (c.total_lessons || 0) + ' step' + ((c.total_lessons || 0) === 1 ? '' : 's') + '</span>' +
+          (c.duration_weeks ? '<span><i class="fas fa-clock"></i>' + c.duration_weeks + ' wk</span>' : '') +
+        '</div>' +
+        progHtml +
+        '<div class="course-actions">' + actions + '</div>' +
+      '</div>';
+    }
+
+    // Insert a long list of cards in small batches so the browser can paint a
+    // first screen of results immediately instead of locking up while building
+    // the full 250+ node grid at once.
+    function renderChunked(container, parts, batchSize, intervalMs) {
+      batchSize = batchSize || 60;
+      intervalMs = intervalMs || 24;
+      container.innerHTML = '';
+      if (!parts || parts.length === 0) return;
+      var i = 0;
+      (function step() {
+        var end = Math.min(i + batchSize, parts.length);
+        container.insertAdjacentHTML('beforeend', parts.slice(i, end).join(''));
+        i = end;
+        if (i < parts.length) setTimeout(step, intervalMs);
+      })();
     }
 
     function renderCourseGrid() {
@@ -370,63 +613,70 @@
       emptyEl.style.display = 'none';
       countLabel.textContent = filtered.length + ' course' + (filtered.length > 1 ? 's' : '');
 
-      container.innerHTML = filtered.map(function (c) {
-        var enrolled = state.enrolledIds[c.id] || state.enrolledIds[c.course_id];
-        var progress = enrolled ? (enrolled.progress_percentage || 0) : 0;
-        var isDone = enrolled && enrolled.status === 'completed';
-
-        return '<div class="course-card" data-open-course="' + esc(c.course_id) + '">' +
-          '<div class="course-thumbnail"><i class="fas fa-graduation-cap"></i></div>' +
-          '<div class="course-info">' +
-            '<div class="course-title">' + esc(c.title) + '<span class="course-level">' + esc(c.level || 'beginner') + '</span></div>' +
-            '<div class="course-instructor"><i class="fas fa-user-tie"></i> ' + esc(c.instructor || 'Farm Assist Experts') + '</div>' +
-            '<div class="course-meta">' +
-              '<span><i class="fas fa-tag"></i>' + esc(c.category || 'General') + '</span>' +
-              '<span><i class="fas fa-list-ol"></i>' + (c.total_lessons || 0) + ' lessons</span>' +
-              (c.duration_weeks ? '<span><i class="fas fa-clock"></i>' + c.duration_weeks + ' weeks</span>' : '') +
-              '<span><i class="fas fa-globe"></i>' + esc(c.language || 'English') + '</span>' +
-            '</div>' +
-            (enrolled && !isDone ? '<div class="course-progress"><div class="progress-bar"><div class="progress-fill" style="width:' + progress + '%"></div></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + progress + '% complete</div></div>' : '') +
-            (isDone ? '<div class="course-progress"><div class="progress-label completed-course"><i class="fas fa-check-circle"></i> Course Completed</div></div>' : '') +
-          '</div>' +
-          (enrolled
-            ? '<button class="course-enroll-btn enrolled" data-open-course="' + esc(c.course_id) + '" ' + (isDone ? 'disabled' : '') + '><i class="fas ' + (isDone ? 'fa-check' : 'fa-play') + '"></i></button>'
-            : '<button class="course-enroll-btn" data-enroll="' + esc(c.course_id) + '"><i class="fas fa-plus"></i></button>') +
-        '</div>';
-      }).join('');
+      renderChunked(container, filtered.map(courseCardHtml), 60, 24);
     }
 
     /* ---------- My Learning ---------- */
+    function myCard(e, pct, isDone, ctaLabel) {
+      var thumbIcon = isDone ? '<i class="fas fa-award" style="color:var(--success);"></i>' : '<i class="fas fa-book-open"></i>';
+      var badge = isDone ? '<span class="complete-badge"><i class="fas fa-check"></i> Done</span>' : '';
+      var meta = '<div class="course-instructor"><i class="fas fa-tag"></i> ' + esc(categoryDisplay(e.course_category)) + '' +
+        (e.course_level ? ' <span style="opacity:0.6;">&middot;</span> ' + esc(e.course_level) : '') + badge + '</div>';
+      var progressHtml = '';
+      if (!isDone) {
+        var displayPct = Math.round(pct);
+        progressHtml =
+          '<div class="course-progress-wrap">' +
+            '<div class="progress-bar"><div class="progress-fill" style="width:' + displayPct + '%"></div></div>' +
+            '<div class="progress-header" style="margin-top:5px;"><span class="progress-label">' + displayPct + '% complete</span><span style="font-size:10px;color:var(--text-muted);">step ' + Math.min((e.completed_lessons || 0) + 1, e.total_lessons || 1) + ' of ' + (e.total_lessons || 1) + '</span></div>' +
+          '</div>';
+      }
+
+      return '<div class="course-card" data-open-course="' + esc(e.course_id || e.course_public_id) + '">' +
+        '<div class="course-thumbnail' + (isDone ? '" style="background:linear-gradient(135deg,#fff 0%,#e7f6ee 100%);"' : '"') + '>' + thumbIcon + '</div>' +
+        '<div class="course-title">' + esc(e.course_title || 'My Course') + '</div>' +
+        meta +
+        progressHtml +
+        '<div class="course-actions">' +
+          '<button class="action-btn ' + (isDone ? 'success' : 'primary') + '" data-open-course="' + esc(e.course_id || e.course_public_id) + '"><i class="fas fa-' + (isDone ? 'trophy' : 'play') + '"></i> ' + ctaLabel + '</button>' +
+          '<button class="action-btn ghost" data-open-course="' + esc(e.course_id || e.course_public_id) + '"><i class="fas fa-eye"></i> View</button>' +
+        '</div>' +
+      '</div>';
+    }
+
     function renderMyLearning() {
       var container = el('my-learning-list');
       if (!container) return;
-      var inProgress = state.allEnrollments.filter(function (e) { return e.status !== 'completed'; });
 
-      if (inProgress.length === 0) {
+      var all = state.allEnrollments;
+      var inProgress = all.filter(function (e) { return e.status !== 'completed' && (e.progress_percentage || 0) > 0; });
+      var saved = all.filter(function (e) { return e.status !== 'completed' && (e.progress_percentage || 0) <= 0; });
+      var completed = all.filter(function (e) { return e.status === 'completed'; });
+
+      if (all.length === 0) {
         container.innerHTML =
           '<div class="empty-courses" style="padding:30px 16px;">' +
             '<i class="fas fa-graduation-cap"></i>' +
-            '<p>You haven\'t enrolled in any courses yet. <strong>Explore Courses</strong> and start learning today!</p>' +
-            '<button class="btn-primary" style="margin-top:14px;" onclick="window.__learnExplore()">Explore Courses</button>' +
+            '<p>You haven\'t added any courses yet. Use the <strong>+ Enroll</strong> button on any course to save it here.</p>' +
+            '<button class="big-btn primary" style="max-width:220px;margin:14px auto 0;" onclick="window.__learnExplore()">Explore Courses</button>' +
           '</div>';
         return;
       }
 
-      container.innerHTML = inProgress.map(function (e) {
-        var progress = e.progress_percentage || 0;
-        var pct = Math.min(progress, 100);
-        return '<div class="course-card" data-open-course="' + esc(e.course_id) + '">' +
-          '<div class="course-thumbnail"><i class="fas fa-book-open"></i></div>' +
-          '<div class="course-info">' +
-            '<div class="course-title">' + esc(e.course_title || 'My Course') + '</div>' +
-            '<div class="course-instructor">' + (e.completed_lessons || 0) + ' of ' + (e.total_lessons || 0) + ' lessons completed' + '</div>' +
-            '<div class="course-progress"><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
-              '<div class="progress-header" style="margin-top:4px;"><span class="progress-label">' + pct + '% complete</span><span style="font-size:10px;color:var(--text-muted);">' + (e.current_lesson_title ? 'Up next: ' + esc(e.current_lesson_title) : '') + '</span></div>' +
-            '</div>' +
-          '</div>' +
-          '<button class="course-enroll-btn enrolled" data-open-course="' + esc(e.course_id) + '"><i class="fas fa-play"></i></button>' +
-        '</div>';
-      }).join('');
+      var html = '';
+      if (inProgress.length) {
+        html += '<div class="learning-group-title"><i class="fas fa-circle-play"></i> In Progress (' + inProgress.length + ')</div><div class="grid-2" style="padding:0 6px;">' +
+          inProgress.map(function (e) { return myCard(e, e.progress_percentage || 0, false, 'Continue'); }).join('') + '</div>';
+      }
+      if (saved.length) {
+        html += '<div class="learning-group-title"><i class="fas fa-bookmark"></i> Saved (' + saved.length + ')</div><div class="grid-2" style="padding:0 6px;">' +
+          saved.map(function (e) { return myCard(e, 0, false, 'Start'); }).join('') + '</div>';
+      }
+      if (completed.length) {
+        html += '<div class="learning-group-title"><i class="fas fa-award"></i> Completed (' + completed.length + ')</div><div class="grid-2" style="padding:0 6px;">' +
+          completed.map(function (e) { return myCard(e, 100, true, 'Completed'); }).join('') + '</div>';
+      }
+      container.innerHTML = html;
     }
 
     /* ---------- Completed ---------- */
@@ -439,37 +689,33 @@
         container.innerHTML =
           '<div class="empty-courses" style="padding:30px 16px;">' +
             '<i class="fas fa-award"></i>' +
-            '<p>No completed courses yet. Enroll today and complete all lessons to finish a course!</p>' +
-            '<button class="btn-primary" style="margin-top:14px;" onclick="window.__learnExplore()">Explore Courses</button>' +
+            '<p>No completed courses yet. Enroll today and complete all steps to finish a course!</p>' +
+            '<button class="big-btn primary" style="max-width:220px;margin:14px auto 0;" onclick="window.__learnExplore()">Explore Courses</button>' +
           '</div>';
         return;
       }
 
       container.innerHTML = completed.map(function (e) {
-        return '<div style="background:white;border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:18px 16px;margin-bottom:12px;">' +
-          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">' +
-            '<div style="width:44px;height:44px;border-radius:12px;background:var(--soft-green);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;"><i class="fas fa-award"></i></div>' +
-            '<div>' +
-              '<div style="font-size:14px;font-weight:700;color:var(--text-primary);">' + esc(e.course_title || 'Completed Course') + '</div>' +
-              '<div style="font-size:11px;color:var(--text-muted);"><i class="fas fa-check-circle" style="color:var(--success);"></i> Completed ' + (e.completed_at ? new Date(e.completed_at).toLocaleDateString() : '') + '</div>' +
-            '</div>' +
+        return '<div class="course-card" data-open-course="' + esc(e.course_id) + '">' +
+          '<div class="course-thumbnail" style="background:linear-gradient(135deg,#fff 0%,#e7f6ee 100%);color:var(--success);"><i class="fas fa-award"></i></div>' +
+          '<div class="course-title">' + esc(e.course_title || 'Completed Course') + '</div>' +
+          '<div class="course-instructor"><i class="fas fa-check-circle" style="color:var(--success);"></i> Completed ' + (e.completed_at ? new Date(e.completed_at).toLocaleDateString() : '') + '</div>' +
+          '<div class="course-actions">' +
+            '<button class="action-btn ghost" data-open-course="' + esc(e.course_id) + '"><i class="fas fa-eye"></i> View Course</button>' +
+            '<button class="action-btn success" data-open-course="' + esc(e.course_id) + '"><i class="fas fa-trophy"></i> Completed</button>' +
           '</div>' +
-          '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">' + (e.completed_lessons || 0) + '/' + (e.total_lessons || 0) + ' lessons completed</div>' +
-          '<button class="btn-secondary" style="width:100%;padding:10px;border-radius:var(--radius-md);font-size:12px;" data-open-course="' + esc(e.course_id) + '"><i class="fas fa-eye"></i> View Course</button>' +
         '</div>';
       }).join('');
     }
 
-    /* ---------- Course Detail / Learning View ---------- */
+    /* ---------- Course Detail / Flow ---------- */
     function openCourse(courseId) {
-      document.querySelectorAll('.tab-panel').forEach(function (p) {
-        if (p.id === 'panel-course') { p.classList.add('active'); p.style.display = 'block'; }
-        else { p.classList.remove('active'); p.style.display = 'none'; }
-      });
-
+      switchToTab('course');
       var container = el('course-detail-container');
       container.innerHTML = skeleton();
       window.scrollTo(0, 0);
+
+      state.flowState = { step: 0, answers: {}, submitted: false, result: null };
 
       LEARNING.getCourse(courseId).then(function (data) {
         state.courseDetail = data;
@@ -477,28 +723,44 @@
       }).catch(function () {
         container.innerHTML =
           '<div class="empty-courses"><i class="fas fa-exclamation-triangle"></i><p>This course could not be loaded. Please try again.</p>' +
-          '<button class="btn-primary" style="margin-top:12px;" onclick="window.__learnBack()">Go Back</button></div>';
+          '<button class="big-btn primary" style="max-width:200px;margin:14px auto 0;" onclick="window.__learnBack()">Go Back</button></div>';
       });
+    }
+
+    function stripNewlines(html) {
+      return html.split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean).join('\n');
+    }
+
+    function contentList(raw) {
+      if (!raw) return '<p style="color:var(--text-muted);">Details coming soon.</p>';
+      var lines = stripNewlines(raw).split('\n');
+      var items = lines.map(function (l) {
+        var clean = esc(l);
+        if (/^- /i.test(clean)) clean = clean.replace(/^- /i, '');
+        return '<li><i class="fas fa-check-circle"></i><span>' + clean + '</span></li>';
+      }).join('');
+      return '<ul class="flow-list">' + items + '</ul>';
     }
 
     function renderCourseDetail(data) {
       var container = el('course-detail-container');
       var c = data;
-      var lessons = c.lessons || [];
       var enrollment = c.enrollment;
       var completedIds = c.completed_lesson_ids || [];
-
-      var progress = enrollment ? (enrollment.progress_percentage || 0) : 0;
+      var lessons = c.lessons || [];
       var isComplete = enrollment && enrollment.status === 'completed';
+      var firstLesson = lessons[0];
+      var tutorialDone = firstLesson && (completedIds.indexOf(firstLesson.id) !== -1 || completedIds.indexOf(firstLesson.lesson_id) !== -1);
+      var progress = enrollment ? (enrollment.progress_percentage || 0) : 0;
+      var questions = c.questions || [];
 
       var html = '';
 
       if (isComplete) {
         html += '<div class="completion-banner">' +
           '<i class="fas fa-trophy"></i>' +
-          '<h3>Congratulations!</h3>' +
-          '<p>You have completed "' + esc(c.title) + '" — all ' + lessons.length + ' lessons finished.</p>' +
-          '<div style="margin-top:12px;font-size:12px;"><i class="fas fa-award"></i> Course Completed</div>' +
+          '<h3>Congratulations, Course Completed!</h3>' +
+          '<p>You finished "' + esc(c.title) + '". Great work, farmer!</p>' +
         '</div>';
       }
 
@@ -509,161 +771,285 @@
         '<div class="detail-badges">' +
           '<span class="detail-badge"><i class="fas fa-tag"></i> ' + esc(c.category || 'General') + '</span>' +
           '<span class="detail-badge"><i class="fas fa-signal"></i> ' + esc(c.level || 'beginner') + '</span>' +
-          '<span class="detail-badge"><i class="fas fa-list-ol"></i> ' + lessons.length + ' lessons</span>' +
+          '<span class="detail-badge"><i class="fas fa-list-ol"></i> ' + lessons.length + ' step' + (lessons.length === 1 ? '' : 's') + '</span>' +
+          '<span class="detail-badge"><i class="fas fa-question-circle"></i> ' + questions.length + ' test question' + (questions.length === 1 ? '' : 's') + '</span>' +
           (c.duration_weeks ? '<span class="detail-badge"><i class="fas fa-clock"></i> ' + c.duration_weeks + ' weeks</span>' : '') +
-          '<span class="detail-badge"><i class="fas fa-globe"></i> ' + esc(c.language || 'English') + '</span>' +
         '</div>' +
       '</div>';
 
       if (enrollment && !isComplete) {
-        html += '<div class="progress-header"><span class="progress-label">' + progress + '% complete</span><span style="font-size:11px;color:var(--text-muted);">' + (enrollment.completed_lessons || 0) + '/' + lessons.length + ' lessons</span></div>' +
-          '<div class="progress-bar" style="margin-bottom:6px;"><div class="progress-fill" style="width:' + Math.min(progress,100) + '%"></div></div>';
+        html += '<div class="progress-header"><span class="progress-label">' + progress + '% complete</span><span style="font-size:11px;color:var(--text-muted);">' + (enrollment.completed_lessons || 0) + '/' + lessons.length + ' steps</span></div>' +
+          '<div class="progress-bar" style="margin-bottom:14px;"><div class="progress-fill" style="width:' + Math.min(progress,100) + '%"></div></div>';
       }
 
-      if (enrollment) {
-        html += '<div class="lesson-scroller" style="margin-top:10px;">';
-        lessons.forEach(function (ls, i) {
-          var done = completedIds.indexOf(ls.id) !== -1 || completedIds.indexOf(ls.lesson_id) !== -1;
-          var isCurrent = enrollment && enrollment.current_lesson_id && (enrollment.current_lesson_id === ls.id);
-          var stateCls = done ? 'done' : (isCurrent ? 'current' : 'pending');
-          var iconCls = done ? 'fa-check' : (String(i + 1));
-          html += '<div class="lesson-item" data-lesson="' + i + '">' +
-            '<div class="lesson-state ' + stateCls + '"><i class="fas ' + iconCls + '"></i></div>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div class="lesson-title">' + esc(ls.title) + '</div>' +
-              '<div class="lesson-duration"><i class="fas fa-clock" style="color:var(--medium-green);margin-right:3px;"></i>' + (ls.duration_minutes || 0) + ' min</div>' +
-            '</div>' +
-            (done ? '<div style="font-size:10px;color:var(--success);font-weight:700;">Done</div>' : '') +
-          '</div>';
+      // Not enrolled: show outline + enroll CTA
+      if (!enrollment) {
+        html += '<div class="flow-card" style="margin-bottom:14px;">' +
+          '<h3><i class="fas fa-list-ol"></i> What you will learn</h3>' +
+          '<ul class="flow-list">' +
+            '<li><i class="fas fa-video"></i><span>Watch a short tutorial video</span></li>' +
+            '<li><i class="fas fa-list-check"></i><span>Read core field steps for this topic</span></li>' +
+            '<li><i class="fas fa-toolbox"></i><span>See the tools &amp; materials you need</span></li>' +
+            '<li><i class="fas fa-circle-check"></i><span>Take a small test to check understanding</span></li>' +
+            '<li><i class="fas fa-trophy"></i><span>Complete the course and earn your certificate</span></li>' +
+          '</ul>' +
+        '</div>';
+        html += '<div style="margin-top:14px;"><button class="big-btn primary" id="course-enroll-lg"><i class="fas fa-plus"></i> Enroll in this Course</button></div>';
+        html += '<div class="enroll-hint">Enroll to start the video, content, tools and test.</div>';
+        container.innerHTML = html;
+
+        var enrollBtn = el('course-enroll-lg');
+        if (enrollBtn) enrollBtn.addEventListener('click', function () { enrollCourse(c.course_id, true); });
+        return;
+      }
+
+      // Enrolled / completed: show flow steps navigation
+      // Resume: jump straight to "Complete" if done; otherwise start at step 0
+      // so the farmer can move through any remaining steps.
+      if (isComplete) {
+        state.flowState.step = FLOW_STEPS.length - 1; // complete
+      }
+
+      html += renderFlowStepper();
+      html += '<div id="flow-content"></div>';
+
+      container.innerHTML = html;
+      bindFlowStepper();
+      renderFlowStep();
+    }
+
+    function renderFlowStepper() {
+      var html = '<div class="flow-steps" id="flow-steps">';
+      FLOW_STEPS.forEach(function (s, i) {
+        var active = state.flowState.step === i ? 'active' : '';
+        var done = i < state.flowState.step ? 'done' : '';
+        var icon = '<i class="fas fa-check"></i>';
+        if (s.key === 'video') icon = '<i class="fas fa-video"></i>';
+        else if (s.key === 'content') icon = '<i class="fas fa-book-open"></i>';
+        else if (s.key === 'tools') icon = '<i class="fas fa-toolbox"></i>';
+        else if (s.key === 'test') icon = '<i class="fas fa-question-circle"></i>';
+        else if (s.key === 'complete') icon = '<i class="fas fa-trophy"></i>';
+        html += '<div class="flow-step ' + active + ' ' + done + '" data-step="' + i + '">' +
+          '<div class="fs-dot">' + icon + '</div>' +
+          '<div class="fs-label">' + s.label + '</div>' +
+        '</div>';
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function bindFlowStepper() {
+      var steps = el('flow-steps');
+      if (!steps) return;
+      steps.querySelectorAll('.flow-step').forEach(function (fs) {
+        fs.addEventListener('click', function () {
+          var i = parseInt(fs.getAttribute('data-step'), 10);
+          if (i <= state.flowState.step) goToStep(i);
         });
-        html += '</div>';
-      } else {
-        html += '<div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:14px;">' +
-          '<div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px;"><i class="fas fa-list-ol" style="color:var(--primary-green);margin-right:6px;"></i> Course Outline</div>' +
-          lessons.map(function (ls, i) {
-            return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:12.5px;color:var(--text-secondary);">' +
-              '<span class="lesson-state pending">' + (i + 1) + '</span>' +
-              '<div style="flex:1;min-width:0;">' + esc(ls.title) + '</div>' +
-              '<span style="font-size:10px;color:var(--text-muted);flex-shrink:0;">' + (ls.duration_minutes || 0) + ' min</span>' +
-            '</div>';
-          }).join('') +
-        '</div>';
-      }
+      });
+    }
 
-      if (enrollment) {
-        html += '<div style="margin-top:14px;">' +
-          '<button class="enroll-btn-lg enrolled" id="lesson-continue-btn"><i class="fas fa-play"></i> ' + (progress > 0 ? 'Continue Learning' : 'Start Learning') + '</button>' +
-        '</div>';
-      } else {
-        html += '<div style="margin-top:14px;">' +
-          '<button class="enroll-btn-lg" id="course-enroll-lg"><i class="fas fa-plus"></i> Enroll in this Course</button>' +
-        '</div>';
+    function goToStep(i) {
+      state.flowState.step = i;
+      state.flowState.submitted = false;
+      state.flowState.result = null;
+      var steps = el('flow-steps');
+      if (steps) {
+        steps.querySelectorAll('.flow-step').forEach(function (fs) {
+          var si = parseInt(fs.getAttribute('data-step'), 10);
+          fs.classList.toggle('active', si === i);
+          fs.classList.toggle('done', si < i);
+        });
       }
+      renderFlowStep();
+    }
 
-      html += '<div class="enroll-hint">' + (lessons.length === 0 ? 'This course has no published lessons yet.' : 'Complete all lessons to finish this course.') + '</div>';
+    function renderFlowStep() {
+      var c = state.courseDetail;
+      var container = el('flow-content');
+      if (!container) return;
+      var s = FLOW_STEPS[state.flowState.step];
+      var html = '';
+
+      if (s.key === 'video') {
+        html += '<div class="flow-card">' +
+          '<h3><i class="fas fa-video"></i>' + (c.video_available ? 'Watch the Tutorial Video' : 'Tutorial Video') + '</h3>' +
+          (c.video_available
+            ? '<div class="video-wrap"><video controls playsinline poster="' + esc(c.image_url || '') + '"><source src="' + esc(c.video_url) + '" type="video/mp4">Your browser does not support video playback.</video></div>'
+            : '<div class="video-unavailable"><i class="fas fa-video-slash"></i><div style="font-weight:700;color:var(--text-secondary);">Video Unavailable</div><p style="margin-top:6px;">There is no video for this course yet. Read the core content on the next step.</p></div>') +
+        '</div>';
+        html += '<div style="margin-top:14px;"><button class="big-btn primary" id="flow-next"><i class="fas fa-arrow-right"></i> ' + (state.flowState.step + 1 >= FLOW_STEPS.length ? 'Finish' : 'Next: Core Content') + '</button></div>';
+      }
+      else if (s.key === 'content') {
+        html += '<div class="flow-card">' +
+          '<h3><i class="fas fa-book-open"></i>Core Content / Field Steps</h3>' +
+          contentList(c.core_content || c.description || '') +
+        '</div>';
+        html += '<div style="margin-top:14px;"><button class="big-btn primary" id="flow-next"><i class="fas fa-arrow-right"></i> Next: Tools &amp; Materials</button></div>';
+      }
+      else if (s.key === 'tools') {
+        html += '<div class="flow-card" style="margin-bottom:12px;">' +
+          '<h3><i class="fas fa-toolbox"></i>Tools &amp; Materials</h3>' +
+          contentList(c.tools_materials || 'No special tools required.') +
+        '</div>';
+        html += (c.safety_tips ? '<div class="flow-card" style="margin-bottom:12px;border-color:#f3d9a4;background:#fffaf0;">' +
+          '<h3 style="color:#b7791f;"><i class="fas fa-shield-halved"></i>Safety Tips</h3>' +
+          contentList(c.safety_tips) +
+        '</div>' : '');
+        html += '<div style="margin-top:14px;"><button class="big-btn primary" id="flow-next"><i class="fas fa-arrow-right"></i> Take the Test</button></div>';
+      }
+      else if (s.key === 'test') {
+        html += renderQuiz();
+      }
+      else if (s.key === 'complete') {
+        html += renderComplete();
+      }
 
       container.innerHTML = html;
 
-      // lesson item clicks -> open lesson content
-      container.querySelectorAll('.lesson-item').forEach(function (item) {
-        item.addEventListener('click', function () {
-          var idx = parseInt(item.getAttribute('data-lesson'), 10);
-          var ls = lessons[idx];
-          if (!ls) return;
-          openLessonContent(idx);
-        });
-      });
+      var nextBtn = el('flow-next');
+      if (nextBtn) nextBtn.addEventListener('click', function () { goToStep(state.flowState.step + 1); });
 
-      var continueBtn = el('lesson-continue-btn');
-      if (continueBtn) continueBtn.addEventListener('click', function () {
-        if (!enrollment || enrollment.status === 'completed') return;
-        var resumeIdx = 0;
-        lessons.forEach(function (ls, i) {
-          var done = completedIds.indexOf(ls.id) !== -1 || completedIds.indexOf(ls.lesson_id) !== -1;
-          if (!done && resumeIdx === 0) resumeIdx = i;
-        });
-        openLessonContent(resumeIdx);
-      });
-
-      var enrollBtn = el('course-enroll-lg');
-      if (enrollBtn) enrollBtn.addEventListener('click', function () {
-        enrollCourse(c.course_id);
-      });
+      var submitBtn = el('quiz-submit');
+      if (submitBtn) submitBtn.addEventListener('click', submitQuiz);
     }
 
-    function openLessonContent(idx) {
+    function renderQuiz() {
       var c = state.courseDetail;
-      if (!c) return;
-      var lessons = c.lessons || [];
-      if (!lessons[idx]) return;
-      var ls = lessons[idx];
-      var completedIds = c.completed_lesson_ids || [];
-      var isDone = completedIds.indexOf(ls.id) !== -1 || completedIds.indexOf(ls.lesson_id) !== -1;
+      var questions = c.questions || [];
+      if (questions.length === 0) {
+        return '<div class="flow-card"><h3><i class="fas fa-question-circle"></i>Small Test</h3>' +
+          '<p style="color:var(--text-muted);">No test questions are available for this course yet.</p></div>' +
+          '<div style="margin-top:14px;"><button class="big-btn success" id="flow-complete"><i class="fas fa-check"></i> Complete Course</button></div>';
+      }
 
-      var container = el('course-detail-container');
-      container.innerHTML =
-        '<button class="back-link" id="lesson-back-link"><i class="fas fa-arrow-left"></i> ' + esc(c.title) + '</button>' +
-        '<div class="lesson-content-card">' +
-          '<h3><i class="fas fa-book-open" style="margin-right:6px;"></i>' + esc(ls.title) + '</h3>' +
-          '<p>' + esc(ls.content || ls.description || 'This lesson is available in the full course.') + '</p>' +
-        '</div>' +
-        '<div style="margin-top:14px;" class="lesson-nav">' +
-          '<button id="lesson-prev" ' + (idx === 0 ? 'disabled' : '') + '><i class="fas fa-arrow-left"></i> Previous</button>' +
-          '<button id="lesson-complete" class="' + (isDone ? 'mark-complete-btn done' : '') + '" ' + (isDone ? 'disabled' : '') + '>' + (isDone ? '<i class="fas fa-check"></i> Completed' : '<i class="fas fa-check"></i> Mark Lesson Complete') + '</button>' +
-          '<button id="lesson-next" ' + (idx === lessons.length - 1 ? 'disabled' : '') + '>Next <i class="fas fa-arrow-right"></i></button>' +
+      if (state.flowState.submitted && state.flowState.result) {
+        var r = state.flowState.result;
+        var passCls = r.passed ? 'pass' : 'fail';
+        return '<div class="flow-card">' +
+          '<div class="quiz-result">' +
+            '<div class="quiz-score ' + passCls + '">' + r.score + '%</div>' +
+            '<div class="result-msg">You answered <strong>' + r.correct + ' of ' + r.total + '</strong> correctly. ' +
+              (r.passed ? 'You passed! Your course is now complete.' : 'Score 60% or more to pass. Review the content and try again.') + '</div>' +
+          '</div>' +
+          '<div style="margin-top:14px;">' +
+            (r.passed
+              ? '<button class="big-btn success" id="flow-complete"><i class="fas fa-trophy"></i> Course Complete</button>'
+              : '<button class="big-btn primary" id="quiz-retry"><i class="fas fa-redo"></i> Try Again</button>') +
+          '</div>' +
         '</div>';
-
-      function back() { renderCourseDetail(c); }
-      function open(i) {
-        if (i >= 0 && i < lessons.length) openLessonContent(i);
       }
 
-      el('lesson-back-link').addEventListener('click', back);
-      el('lesson-prev').addEventListener('click', function () { open(idx - 1); });
-      el('lesson-next').addEventListener('click', function () { open(idx + 1); });
-
-      var completeBtn = el('lesson-complete');
-      if (completeBtn && !isDone) {
-        completeBtn.addEventListener('click', function () {
-          completeBtn.disabled = true;
-          completeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-          var enrollment = c.enrollment;
-          if (!enrollment) { back(); return; }
-          LEARNING.completeLesson(enrollment.enrollment_id, ls.lesson_id || ls.id).then(function (enr) {
-            c.enrollment = enr;
-            c.completed_lesson_ids = (c.completed_lesson_ids || []).concat([ls.id]);
-            showToast('Lesson completed!', 'success');
-            if (enr.status === 'completed') {
-              showToast('Congratulations! Course completed!', 'success');
-            }
-            // refresh my-learning global state
-            return LEARNING.myLearning('all').then(function (m) {
-              state.allEnrollments = m.enrollments || [];
-              state.myEnrollments = state.allEnrollments;
-              renderMyLearning();
-              renderCompleted();
-              renderStats();
-            }).then(function () {
-              back();
-            });
-          }).catch(function () {
-            completeBtn.disabled = false;
-            completeBtn.innerHTML = '<i class="fas fa-check"></i> Mark Lesson Complete';
-            showToast('Could not complete the lesson. Please try again.', 'warning');
-          });
-        });
-      }
+      var html = '<div class="flow-card"><h3><i class="fas fa-question-circle"></i>Small Test (' + questions.length + ')</h3>' +
+        '<p style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px;">Answer all questions. You need at least 60% to pass and complete the course.</p>';
+      questions.forEach(function (q, qi) {
+        var opts = q.options || [];
+        html += '<div class="quiz-question">' +
+          '<div class="quiz-q">' + (qi + 1) + '. ' + esc(q.question) + '</div>' +
+          opts.map(function (o, oi) {
+            var selected = state.flowState.answers[q.question_id] === oi;
+            return '<div class="quiz-option ' + (selected ? 'selected' : '') + '" data-q="' + esc(q.question_id) + '" data-opt="' + oi + '">' +
+              '<div class="q-letter">' + String.fromCharCode(65 + oi) + '</div><div>' + esc(o) + '</div></div>';
+          }).join('') +
+        '</div>';
+      });
+      html += '<button class="big-btn primary" id="quiz-submit"><i class="fas fa-paper-plane"></i> Submit Test</button></div>';
+      return html;
     }
 
-    function enrollCourse(courseId) {
+    function submitQuiz() {
+      var c = state.courseDetail;
+      var questions = c.questions || [];
+      var answers = [];
+      questions.forEach(function (q) {
+        var a = state.flowState.answers[q.question_id];
+        if (a !== undefined) answers.push({ question_id: q.question_id, answer_index: a });
+      });
+
+      if (answers.length < questions.length) {
+        showToast('Please answer all questions before submitting.', 'warning');
+        return;
+      }
+
+      var btn = el('quiz-submit');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Grading...'; }
+
+      var firstLesson = (c.lessons || [])[0];
+      var tutorialId = firstLesson ? (firstLesson.lesson_id || firstLesson.id) : null;
+
+      Promise.resolve()
+        .then(function () { return LEARNING.startTutorial(tutorialId); })
+        .then(function () { return LEARNING.submitQuiz(tutorialId, answers); })
+        .then(function (result) {
+          state.flowState.submitted = true;
+          state.flowState.result = result;
+          // update course detail with latest completion state
+          return LEARNING.getCourse(c.course_id).then(function (fresh) {
+            state.courseDetail = fresh;
+            refreshGlobal();
+          }).then(function () {
+            renderFlowStep();
+            if (result.passed) showToast('Test passed! Course complete.', 'success');
+          });
+        })
+        .catch(function () {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Test'; }
+          showToast('Could not submit the test. Please try again.', 'warning');
+        });
+    }
+
+    function renderComplete() {
+      var c = state.courseDetail;
+      var enrollment = c.enrollment;
+      var isComplete = enrollment && enrollment.status === 'completed';
+      var completedIds = c.completed_lesson_ids || [];
+      var firstLesson = (c.lessons || [])[0];
+      var tutorialDone = firstLesson && (completedIds.indexOf(firstLesson.id) !== -1 || completedIds.indexOf(firstLesson.lesson_id) !== -1);
+
+      if (isComplete) {
+        return '<div class="completion-banner">' +
+          '<i class="fas fa-award"></i>' +
+          '<h3>Course Completed!</h3>' +
+          '<p>"' + esc(c.title) + '" is marked as done. Well done!</p>' +
+          '<div style="margin-top:12px;"><button class="action-btn success" style="flex:none;padding:10px 18px;" onclick="window.__learnBack()"><i class="fas fa-check"></i> Back to My Learning</button></div>' +
+        '</div>';
+      }
+
+      if (tutorialDone) {
+        // content done, just await completion refresh
+        return '<div class="flow-card"><h3><i class="fas fa-award"></i>Almost There</h3>' +
+          '<p style="color:var(--text-muted);">Your learning steps are complete. Tap below to finish this course.</p></div>' +
+          '<div style="margin-top:14px;"><button class="big-btn success" id="flow-complete"><i class="fas fa-check"></i> Complete Course</button></div>';
+      }
+
+      return '<div class="flow-card"><h3><i class="fas fa-award"></i>Complete Your Course</h3>' +
+        '<p style="color:var(--text-muted);">Go through the steps and finish to mark this course as completed.</p></div>' +
+        '<div style="margin-top:14px;"><button class="big-btn primary" id="flow-start"><i class="fas fa-play"></i> Start from Beginning</button></div>';
+    }
+
+    /* ---------- Enroll ---------- */
+    function enrollCourse(courseId, goFlow) {
       var btn = el('course-enroll-lg');
       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enrolling...'; }
       LEARNING.enroll(courseId).then(function (enr) {
-        showToast('Enrolled successfully!', 'success');
-        state.allEnrollments.push(enr);
-        state.enrolledIds[enr.course_id] = enr;
-        loadAll();
-        setTimeout(function () { openCourse(courseId); }, 250);
+        // Update the local view immediately so the "+" state flips to Start/Continue.
+        return LEARNING.myLearning('all').then(function (m) {
+          state.allEnrollments = m.enrollments || [];
+          state.enrolledIds = {};
+          state.allEnrollments.forEach(function (e) {
+            state.enrolledIds[e.course_id] = e;
+            if (e.course_public_id) state.enrolledIds[e.course_public_id] = e;
+          });
+          if (state.courseDetail && state.courseDetail.course_id === courseId) {
+            state.courseDetail.enrollment = state.enrolledIds[courseId];
+          }
+          renderCourseGrid();
+          renderMyLearning();
+          renderCompleted();
+          renderStats();
+          showToast('Course added to My Learning!', 'success');
+          if (goFlow) openCourse(courseId);
+        });
       }).catch(function (err) {
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Enroll in this Course'; }
         showToast(err && err.detail ? err.detail : 'Enrollment failed. Please try again.', 'warning');
@@ -672,20 +1058,17 @@
 
     /* ---------- Event binding ---------- */
     function bindEvents() {
-      // tabs
       document.querySelectorAll('.learning-tab').forEach(function (tab) {
         tab.addEventListener('click', function () {
-          var t = tab.getAttribute('data-tab');
-          switchToTab(t);
+          switchToTab(tab.getAttribute('data-tab'));
         });
       });
 
-      // delegates for dynamically-rendered cards
       document.addEventListener('click', function (e) {
         var enrollBtn = e.target.closest('[data-enroll]');
         if (enrollBtn) {
           e.stopPropagation();
-          enrollCourse(enrollBtn.getAttribute('data-enroll'));
+          enrollCourse(enrollBtn.getAttribute('data-enroll'), false);
           return;
         }
         var openBtn = e.target.closest('[data-open-course]');
@@ -698,23 +1081,47 @@
           window.__learnBack();
           return;
         }
+        var quizOpt = e.target.closest('.quiz-option');
+        if (quizOpt && state.flowState.step >= 0 && FLOW_STEPS[state.flowState.step].key === 'test') {
+          var qid = quizOpt.getAttribute('data-q');
+          var opt = parseInt(quizOpt.getAttribute('data-opt'), 10);
+          state.flowState.answers[qid] = opt;
+          quizOpt.parentNode.querySelectorAll('.quiz-option[data-q="' + qid + '"]').forEach(function (o) { o.classList.remove('selected'); });
+          quizOpt.classList.add('selected');
+          return;
+        }
+        var completeBtn = e.target.closest('#flow-complete');
+        if (completeBtn) {
+          completeCourse();
+          return;
+        }
+        var retryBtn = e.target.closest('#quiz-retry');
+        if (retryBtn) {
+          state.flowState.submitted = false;
+          state.flowState.result = null;
+          state.flowState.answers = {};
+          renderFlowStep();
+          return;
+        }
+        var startBtn = e.target.closest('#flow-start');
+        if (startBtn) {
+          goToStep(0);
+          return;
+        }
       });
 
-      // search
       var searchInput = el('course-search');
+      var searchTimer = null;
       searchInput.addEventListener('input', function () {
-        state.search = searchInput.value.trim();
-        renderCourseGrid();
+        var term = searchInput.value.trim();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+          state.search = term;
+          renderCourseGrid();
+        }, 180);
       });
 
-      // level
-      el('level-filter').addEventListener('change', function () {
-        state.level = this.value;
-        renderCourseGrid();
-      });
-
-      // category chips (delegated)
-      el('category-chips').addEventListener('click', function (e) {
+      el('category-bar').addEventListener('click', function (e) {
         var chip = e.target.closest('.category-chip');
         if (!chip) return;
         document.querySelectorAll('.category-chip').forEach(function (c) { c.classList.remove('active'); });
@@ -737,7 +1144,107 @@
       });
     }
 
-    // Public helpers for inline onclick
+    function refreshGlobal() {
+      LEARNING.myLearning('all').then(function (m) {
+        state.allEnrollments = m.enrollments || [];
+        state.enrolledIds = {};
+        state.allEnrollments.forEach(function (e) {
+          state.enrolledIds[e.course_id] = e;
+          if (e.course_public_id) state.enrolledIds[e.course_public_id] = e;
+        });
+        renderMyLearning();
+        renderCompleted();
+        renderStats();
+      }).catch(function () {});
+    }
+
+    /* ---------- Recommended ---------- */
+    function renderRecommended() {
+      var rec = state.recommended || [];
+      var wrap = el('recommended-wrap');
+      var listEl = el('recommended-list');
+      if (!wrap || !listEl) return;
+
+      if (rec.length === 0) {
+        wrap.style.display = 'none';
+        return;
+      }
+      wrap.style.display = 'block';
+      listEl.innerHTML = ''; // clear skeleton
+
+      rec.forEach(function (r) {
+        var card = document.createElement('div');
+        card.className = 'recommend-card';
+        card.setAttribute('data-open-course', esc(r.course_id));
+        card.innerHTML =
+          '<div class="recommend-thumb">' + (r.image_url ? '<img src="' + esc(r.image_url) + '" alt="" loading="lazy">' : '<i class="fas fa-graduation-cap"></i>') + '</div>' +
+          '<div class="recommend-body">' +
+            '<div class="recommend-title">' + esc(r.title || '') + '</div>' +
+            '<div class="recommend-meta"><i class="fas fa-tag"></i> ' + esc(categoryDisplay(r.category)) +
+            (r.level ? ' &middot; ' + esc(r.level) : '') +
+            ' &middot; ' + (r.total_tutorials || 0) + ' step' + ((r.total_tutorials || 0) === 1 ? '' : 's') + '</div>' +
+          '</div>';
+        listEl.appendChild(card);
+      });
+    }
+
+    /* ---------- Complete course ---------- */
+    function completeCourse() {
+      var c = state.courseDetail;
+      var enrollment = c.enrollment;
+      if (!enrollment) return;
+      var completedIds = c.completed_lesson_ids || [];
+      var lessons = c.lessons || [];
+
+      var remaining = lessons.filter(function (ls) {
+        return completedIds.indexOf(ls.id) === -1 && completedIds.indexOf(ls.lesson_id) === -1;
+      });
+
+      var btn = el('flow-complete');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Completing...'; }
+
+      // If nothing remains, just refresh the course state.
+      if (remaining.length === 0) {
+        LEARNING.getCourse(c.course_id).then(function (fresh) {
+          state.courseDetail = fresh;
+          state.flowState.step = FLOW_STEPS.length - 1;
+          refreshGlobal();
+          renderFlowStep();
+          showToast('Course completed! Well done.', 'success');
+        }).catch(function () {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Complete Course'; }
+        });
+        return;
+      }
+
+      var chain = Promise.resolve();
+      remaining.forEach(function (ls) {
+        var tid = ls.lesson_id || ls.id;
+        chain = chain
+          .then(function () {
+            return LEARNING.completeTutorial(tid).catch(function () { return null; });
+          })
+          .then(function () {
+            return LEARNING.completeLesson(enrollment.enrollment_id, tid).catch(function () { return null; });
+          });
+      });
+
+      chain
+        .then(function () { return LEARNING.getCourse(c.course_id); })
+        .then(function (fresh) {
+          state.courseDetail = fresh;
+          state.flowState.step = FLOW_STEPS.length - 1;
+          refreshGlobal();
+          renderFlowStep();
+          showToast('Course completed! Well done.', 'success');
+        })
+        .catch(function () {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Complete Course'; }
+          showToast('Could not complete the course. Please try again.', 'warning');
+        });
+    }
+
+    // Public helpers
     window.__learnExplore = function () { switchToTab('explore'); window.scrollTo(0, 0); };
     window.__learnBack = function () {
       var c = state.courseDetail;

@@ -26,6 +26,7 @@ from app.models.calendar import CalendarEvent
 from app.models.farm import Farm, FarmPlot, gen_uuid
 from app.models.crop import Crop, CropCycle, CropTask, FarmJournal
 from app.models.notification import Notification
+from app.models.emergency import EmergencyReport
 
 client = TestClient(app)
 
@@ -545,6 +546,33 @@ def test_farm_journal_synced_as_farm_activity(db):
     assert ev["status"] == "completed"
     assert ev["plot_name"] == "Plot A"
     assert ev["farm_name"] == "Journal Farm"
+
+
+def test_emergency_report_synced_as_emergency_event(db):
+    farmer = _mk_user(db, "9030000020", "cal20@farm.com", 20)
+    report = EmergencyReport(
+        id=gen_uuid(), reference_id="ER-2001", farmer_id=farmer.id,
+        emergency_type="Pest outbreak", urgency="high",
+        location="Sector 7", contact_phone="9888777666",
+        reference_name="Farmer 20", status="submitted",
+        created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
+    )
+    db.add(report)
+    db.commit()
+
+    token = _login("9030000020", "cal20@farm.com")
+    h = _auth(token)
+
+    client.post("/api/v1/calendar/sync", headers=h)
+    r = client.get("/api/v1/calendar/events?event_type=emergency", headers=h)
+    items = r.json()["data"]["items"]
+    assert len(items) >= 1
+    ev = items[0]
+    assert ev["title"] == "SOS - Pest outbreak"
+    assert ev["status"] == "scheduled"
+    assert ev["priority"] == "high"
+    assert ev["source_page"] == "emergency.html?report=ER-2001"
+    assert ev["event_type"] == "emergency"
 
 
 def test_plot_filter_and_filters_include_plots(db):

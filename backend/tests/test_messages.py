@@ -135,6 +135,48 @@ def test_send_and_read_messages(db):
     assert r_unauth.status_code == 403
 
 
+def test_delivered_then_read_status_flow(db):
+    user_a = create_user(db, "FA-AS-00000001", "Farmer Ramesh", "9876543210", "ramesh@farm.com")
+    user_b = create_user(db, "FA-AS-00000002", "Farmer Suresh", "9123456780", "suresh@farm.com")
+    headers_a = {"Authorization": f"Bearer {get_token(user_a)}"}
+    headers_b = {"Authorization": f"Bearer {get_token(user_b)}"}
+
+    r = client.post("/api/v1/messages/conversations", headers=headers_a, json={"farmer_id": "FA-AS-00000002"})
+    conv_id = r.json()["data"]["id"]
+
+    # Farmer A sends -> status is "sent" in the send response
+    r = client.post(f"/api/v1/messages/conversations/{conv_id}/messages", headers=headers_a, json={
+        "content": "Check the paddy field status",
+        "message_type": "text"
+    })
+    assert r.status_code == 201
+    assert r.json()["data"]["status"] == "sent"
+    msg_id = r.json()["data"]["id"]
+    assert r.json()["data"]["delivered_at"] is None
+
+    # Farmer A (sender) listing does NOT advance the status
+    r = client.get(f"/api/v1/messages/conversations/{conv_id}/messages", headers=headers_a)
+    assert r.json()["data"]["messages"][0]["status"] == "sent"
+
+    # Farmer B (recipient) lists -> delivered + delivered_at set
+    r = client.get(f"/api/v1/messages/conversations/{conv_id}/messages", headers=headers_b)
+    m = r.json()["data"]["messages"][0]
+    assert m["status"] == "delivered"
+    assert m["delivered_at"] is not None
+
+    # Farmer B opens conversation -> read + read_at set
+    r = client.put(f"/api/v1/messages/conversations/{conv_id}/read", headers=headers_b)
+    assert r.status_code == 200
+    r = client.get(f"/api/v1/messages/conversations/{conv_id}/messages", headers=headers_b)
+    m = r.json()["data"]["messages"][0]
+    assert m["status"] == "read"
+    assert m["read_at"] is not None
+
+    # Sender sees delivered/read regardless of listing order
+    r = client.get(f"/api/v1/messages/conversations/{conv_id}/messages", headers=headers_a)
+    assert r.json()["data"]["messages"][0]["status"] == "read"
+
+
 def test_user_search(db):
     user_a = create_user(db, "FA-AS-00000001", "Farmer Ramesh", "9876543210", "ramesh@farm.com")
     user_b = create_user(db, "FA-AS-00000002", "Farmer Suresh", "9123456780", "suresh@farm.com")

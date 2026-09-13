@@ -2,865 +2,1648 @@
 <html lang="en" data-theme="light" data-page="workers">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Farm Assist - Workers You Can Hire</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <meta name="api-base-url" content="http://localhost:8000/api/v1">
+  <script>
+    window._API_BASE_URL = 'http://localhost:8000/api/v1';
+  </script>
+  <title>Farm Assist - Workers</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    :root { --av-gap: 12px; --av-radius: 12px; }
-    .page-header { margin-bottom: 16px; }
-    .page-header h1 { font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
-    .page-header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
-    .breadcrumb { font-size: 12px; margin-bottom: 12px; }
-    .breadcrumb a { color: var(--text-muted); }
-    .breadcrumb .bc-sep { color: var(--text-muted); margin: 0 6px; }
-    .breadcrumb .bc-current { color: var(--primary-green); font-weight: 600; }
-    .search-bar { position: relative; margin-bottom: 12px; }
-    .search-bar input { width: 100%; padding: 12px 16px 12px 40px; border: 1px solid var(--border-light); border-radius: var(--av-radius); font-size: 14px; outline: none; background: white; }
-    .search-bar input:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(27,94,63,0.08); }
-    .search-bar i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-    .filter-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
-    .filter-tabs::-webkit-scrollbar { display: none; }
-    .filter-tab { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-light); background: white; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .filter-tab.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
-    .filter-tab i { margin-right: 4px; }
-    .toolbar-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-    .toolbar-row .form-select { flex: 1; min-width: 140px; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 13px; background: white; color: var(--text-primary); }
-    .icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-light); background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 14px; color: var(--text-muted); flex-shrink: 0; }
-    .icon-btn:hover { border-color: var(--medium-green); color: var(--primary-green); background: var(--soft-green); }
-    .icon-btn.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
-    .sort-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .sort-row select { padding: 6px 10px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 12px; background: white; }
-    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--av-gap); }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--av-gap); }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--av-gap); }
-    @media (max-width: 640px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
-    @media (min-width: 641px) and (max-width: 900px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } .grid-4 { grid-template-columns: repeat(2, 1fr); } }
-    .card-premium { background: white; border-radius: var(--av-radius); padding: 16px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-light); transition: all 0.25s; }
-    .card-premium:hover { box-shadow: var(--shadow-md); border-color: var(--medium-green); }
-    .feature-card { background: white; border-radius: var(--av-radius); padding: 16px; border: 1px solid var(--border-light); transition: all 0.25s; }
-    .feature-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-    .price-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--border-light); border-radius: var(--radius-md); margin-bottom: 8px; transition: all 0.2s; }
-    .price-card:hover { border-color: var(--medium-green); background: var(--bg-card-soft); }
-    .btn-primary { background: linear-gradient(135deg, #0F2E1E, #1B5E3F); color: white; border: none; padding: 10px 20px; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; justify-content: center; box-shadow: 0 2px 10px rgba(15,46,30,0.18); }
-    .btn-primary:hover { filter: brightness(1.12); transform: translateY(-1px); box-shadow: var(--shadow-md); }
-    .btn-secondary { background: var(--bg-card-soft); color: var(--text-primary); border: 1px solid var(--border-light); padding: 10px 20px; border-radius: var(--radius-sm); font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
-    .btn-secondary:hover { border-color: var(--medium-green); color: var(--primary-green); }
-    .btn-sm { padding: 6px 14px; font-size: 11px; border-radius: var(--radius-sm); }
-    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; }
-    .badge.avail-available { background: rgba(76,175,80,0.12); color: #2e7d32; }
-    .badge.avail-today { background: rgba(33,150,243,0.12); color: #1565c0; }
-    .badge.avail-tomorrow { background: rgba(255,152,0,0.12); color: #e65100; }
-    .badge.avail-week { background: rgba(156,39,176,0.12); color: #7b1fa2; }
-    .form-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; transition: border-color 0.2s; }
-    .form-input:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
-    .form-select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; transition: border-color 0.2s; }
-    .form-select:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
-    .form-textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); background: white; color: var(--text-primary); font-size: 13px; transition: border-color 0.2s; resize: vertical; font-family: inherit; }
-    .form-textarea:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
-    .modal-backdrop.active { display: flex; }
-    .modal-box { background: white; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 24px; position: relative; }
-    .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); z-index: 1; }
-    .worker-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: 700; flex-shrink: 0; }
-    .worker-avatar-lg { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 700; flex-shrink: 0; }
-    .worker-name { font-size: 15px; font-weight: 700; }
-    .worker-rating { display: flex; align-items: center; gap: 2px; font-size: 12px; }
-    .worker-rating i { color: #FFB300; font-size: 11px; }
-    .worker-rating .star-empty { color: #ddd; }
-    .worker-price { font-size: 17px; font-weight: 800; color: var(--primary-green); }
-    .worker-price small { font-size: 11px; font-weight: 500; color: var(--text-muted); }
-    .worker-actions { display: flex; gap: 6px; margin-top: 10px; }
-    .worker-actions .btn-primary, .worker-actions .btn-secondary { padding: 7px 12px; font-size: 11px; border-radius: 8px; flex: 1; }
-    .avail-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-    .avail-available .avail-dot { background: #4CAF50; }
-    .avail-today .avail-dot { background: #2196F3; }
-    .avail-tomorrow .avail-dot { background: #FF9800; }
-    .avail-week .avail-dot { background: #9C27B0; }
-    .booking-summary { background: rgba(27,94,63,0.04); border: 1px solid rgba(27,94,63,0.15); border-radius: 12px; padding: 16px; margin: 16px 0; }
-    .booking-summary .line { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid rgba(27,94,63,0.08); }
-    .booking-summary .line:last-child { border-bottom: none; }
-    .booking-summary .total { font-size: 18px; font-weight: 800; color: var(--primary-green); padding-top: 8px; border-top: 2px solid var(--primary-green); margin-top: 4px; }
-    .profile-section { margin-bottom: 14px; }
-    .profile-section h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text-primary); }
-    .profile-history-item { padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; }
-    .profile-history-item:last-child { border-bottom: none; }
-    .profile-history-item .farm { font-weight: 600; }
-    .profile-review-item { padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; }
-    .profile-review-item:last-child { border-bottom: none; }
-    .profile-review-item .reviewer { font-weight: 600; color: var(--text-primary); }
-    .profile-review-item .review-text { color: var(--text-secondary); margin-top: 2px; }
-    .map-placeholder { height: 120px; background: linear-gradient(135deg, #D8F3DC, #B7E4C7); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary-green); font-size: 13px; font-weight: 600; }
-    .map-placeholder i { font-size: 24px; margin-right: 8px; }
-    .toast-wrapper { position: fixed; top: 72px; right: 16px; z-index: 2200; display: flex; flex-direction: column; gap: 8px; max-width: 340px; }
-    .toast-msg { background: white; border-left: 4px solid var(--primary-green); padding: 12px 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); color: var(--text-primary); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateX(40px); transition: all 0.3s; }
-    .toast-msg.show { opacity: 1; transform: translateX(0); }
-    .toast-msg.hide { opacity: 0; transform: translateX(40px); }
-    .toast-msg.success { border-left-color: #2D6A4F; }
-    .toast-msg.danger { border-left-color: #D63031; }
-    .toast-msg.warning { border-left-color: #E9B640; }
-    .toast-msg.info { border-left-color: #40916C; }
-    @media (max-width: 640px) { .modal-box { padding: 18px; } }
-    .star-btn { cursor: pointer; transition: color 0.2s; }
-    .star-btn:hover { color: #FFB300; }
-    .star-btn.active { color: #FFB300; }
+    :root {
+      --wrk: var(--primary-green);
+      --wrk-dark: var(--forest-800);
+      --wrk-soft: var(--soft-green);
+      --wrk-bg: rgba(45,134,89,0.08);
+    }
+    body { background: var(--bg-app); -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .page-container { max-width: 1120px; }
+
+    /* ---------- Header ---------- */
+    .wrk-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .wrk-header h1 { font-size: 22px; color: var(--wrk); display: flex; align-items: center; gap: 10px; }
+    .wrk-header p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .wrk-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .wrk-action { position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 11px; border: 1px solid var(--border-light); background: #fff; color: var(--text-primary); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; box-shadow: var(--shadow-sm); }
+    .wrk-action:hover { border-color: var(--wrk); color: var(--wrk); }
+    .wrk-action .fa-filter-count { font-size: 10px; background: var(--wrk); color: white; border-radius: 20px; padding: 0 5px; height: 15px; line-height: 15px; min-width: 15px; text-align: center; }
+    .wrk-action.active { background: var(--wrk); color: #fff; border-color: var(--wrk); }
+    .wrk-count-badge { position: absolute; top: -7px; right: -7px; background: #D63031; color: #fff; font-size: 10px; font-weight: 800; border-radius: 20px; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 2px solid var(--bg-app); }
+
+    /* ---------- Search ---------- */
+    .wrk-search { display: flex; align-items: center; gap: 8px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px; padding: 0 14px; margin-bottom: 12px; transition: border-color .2s; }
+    .wrk-search:focus-within { border-color: var(--wrk); box-shadow: 0 0 0 3px rgba(15,118,110,0.08); }
+    .wrk-search i { color: var(--text-muted); font-size: 13px; }
+    .wrk-search input { flex: 1; border: none; outline: none; padding: 11px 0; font-size: 13px; background: transparent; color: var(--text-primary); }
+    .wrk-search .wrk-search-clear { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 4px; }
+
+    /* ---------- Explore / Bookings switcher (header) ---------- */
+    .wrk-seg { display: inline-flex; align-items: center; gap: 4px; padding: 4px; background: rgba(15,118,110,0.07); border-radius: 12px; }
+    .wrk-tab { position: relative; padding: 8px 14px; font-size: 12px; font-weight: 700; border-radius: 9px; cursor: pointer; transition: all .2s; background: transparent; color: var(--text-secondary); border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+    .wrk-tab:hover:not(.active) { color: var(--wrk); }
+    .wrk-tab.active { background: var(--wrk); color: #fff; box-shadow: 0 2px 8px rgba(15,118,110,.25); }
+    .wrk-tab .wrk-count-badge { position: static; min-width: 17px; height: 17px; font-size: 10px; border: none; }
+
+    /* ---------- Filters panel ---------- */
+    .wrk-filter-sheet { display: none; background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
+    .wrk-filter-sheet.open { display: block; animation: wrkFade .2s ease; }
+    @keyframes wrkFade { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    .wrk-filter-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .wrk-filter-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .4px; display: block; }
+    .wrk-select { width: 100%; padding: 9px 10px; border: 1px solid var(--border-medium); border-radius: 9px; background: #fff; color: var(--text-primary); font-size: 12px; outline: none; }
+    .wrk-select:focus { border-color: var(--wrk); }
+    .wrk-toggle { display: flex; align-items: center; gap: 9px; padding: 9px 0; cursor: pointer; font-size: 12.5px; color: var(--text-primary); font-weight: 500; }
+    .wrk-toggle input { width: 16px; height: 16px; accent-color: var(--wrk); }
+    .wrk-filter-actions { display: flex; gap: 10px; margin-top: 14px; }
+    .wrk-filter-actions .wrk-btn { flex: 1; }
+    @media (max-width: 680px) {
+      .wrk-filter-grid { grid-template-columns: 1fr; }
+      .wrk-filter-sheet { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; border-radius: 16px 16px 0 0; max-height: 78vh; overflow-y: auto; z-index: 1500; box-shadow: 0 -6px 24px rgba(15,46,30,.18); }
+    }
+
+    /* ---------- Sort / result bar ---------- */
+    .wrk-sort { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .wrk-result-count { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .wrk-sort select { padding: 7px 10px; border: 1px solid var(--border-light); border-radius: 9px; background: #fff; font-size: 12px; color: var(--text-primary); }
+
+    /* ---------- Worker grid ---------- */
+    .wrk-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    @media (max-width: 1000px) { .wrk-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 820px) { .wrk-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .wrk-grid { grid-template-columns: 1fr; } }
+
+    .wrk-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-md); overflow: hidden; display: flex; flex-direction: column; transition: transform .2s, box-shadow .2s, border-color .2s; box-shadow: var(--shadow-sm); }
+    .wrk-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--medium-green); }
+    .wrk-card-head { display: flex; align-items: center; gap: 12px; padding: 14px 14px 4px; position: relative; }
+    .wrk-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 17px; flex-shrink: 0; position: relative; }
+    .wrk-avatar .wrk-verified { position: absolute; bottom: -2px; right: -3px; width: 18px; height: 18px; border-radius: 50%; background: #16A34A; color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+    .wrk-card-name { font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+    .wrk-card-skill { font-size: 11.5px; color: var(--wrk-dark); font-weight: 600; margin-top: 2px; }
+    .wrk-card-meta { display: flex; align-items: center; gap: 10px; padding: 8px 14px 0; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; }
+    .wrk-card-meta span { display: inline-flex; align-items: center; gap: 4px; }
+    .wrk-rating { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-primary); font-weight: 700; }
+    .wrk-rating i { color: #F5A623; font-size: 11px; }
+    .wrk-card-foot { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--border-light); margin-top: 12px; }
+    .wrk-avail { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 3px 9px; border-radius: 20px; }
+    .wrk-avail.on { background: #DCFCE7; color: #166534; }
+    .wrk-avail.off { background: #FEE2E2; color: #B91C1C; }
+    .wrk-rate { font-size: 14px; font-weight: 800; color: var(--wrk); }
+    .wrk-rate small { font-size: 10px; font-weight: 500; color: var(--text-muted); }
+    .wrk-bio { font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; padding: 8px 14px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 32px; }
+    .wrk-card-actions { display: flex; gap: 8px; padding: 0 14px 14px; }
+    .wrk-btn { flex: 1; padding: 9px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: all .2s; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+    .wrk-btn:disabled { opacity: .5; cursor: default; }
+    .wrk-btn-primary { background: var(--wrk); color: #fff; }
+    .wrk-btn-primary:hover { background: var(--wrk-dark); }
+    .wrk-btn-ghost { background: transparent; color: var(--wrk); border: 1px solid var(--wrk-soft); }
+    .wrk-btn-ghost:hover { background: var(--wrk-soft); }
+    .wrk-btn-subtle { background: var(--wrk-bg); color: var(--wrk-dark); }
+    .wrk-btn-danger { background: #FEE2E2; color: #B91C1C; }
+
+    /* ---------- Skeleton ---------- */
+    .wrk-skel { background: linear-gradient(90deg, #eef2ef 25%, #f7faf7 50%, #eef2ef 75%); background-size: 200% 100%; animation: skel 1.4s infinite; border-radius: var(--radius-md); height: 240px; }
+    @keyframes skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ---------- Empty / error ---------- */
+    .wrk-empty { text-align: center; padding: 56px 18px; color: var(--text-muted); grid-column: 1 / -1; }
+    .wrk-empty i { font-size: 40px; margin-bottom: 12px; color: var(--border-medium); display: block; }
+    .wrk-empty h3 { font-size: 15px; color: var(--text-primary); margin-bottom: 6px; }
+    .wrk-empty p { font-size: 12.5px; }
+
+    /* ---------- Pagination ---------- */
+    .wrk-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 18px 0 8px; }
+    .wrk-page-btn { padding: 8px 16px; border: 1px solid var(--border-light); border-radius: 10px; background: #fff; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .2s; }
+    .wrk-page-btn:hover:not(:disabled) { border-color: var(--wrk); color: var(--wrk); }
+    .wrk-page-btn:disabled { opacity: .45; cursor: default; }
+    .wrk-page-info { font-size: 11px; color: var(--text-muted); }
+
+    /* ---------- Bookings list ---------- */
+    .wrk-bookings { display: flex; flex-direction: column; gap: 12px; }
+    .wrk-booking-card { background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; box-shadow: var(--shadow-sm); }
+    .wrk-booking-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--wrk-bg); color: var(--wrk); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+    .wrk-booking-info { flex: 1; min-width: 220px; }
+    .wrk-booking-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .wrk-booking-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.55; }
+    .wrk-booking-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .wrk-booking-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .wrk-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+    .wrk-badge.pending { background: #FEF3C7; color: #92400E; }
+    .wrk-badge.confirmed { background: #DCFCE7; color: #166534; }
+    .wrk-badge.in_progress { background: #DBEAFE; color: #1E40AF; }
+    .wrk-badge.completed { background: #E2E8F0; color: #334155; }
+    .wrk-badge.cancelled, .wrk-badge.rejected { background: #F3F4F6; color: #6B7280; }
+    .wrk-badge.paid { background: #DCFCE7; color: #166534; }
+    .wrk-badge.unpaid, .wrk-badge.refunded { background: #FEF3C7; color: #92400E; }
+
+    /* ---------- Booking status chips ---------- */
+    .wrk-bk-chipbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 14px; }
+    .wrk-bk-chip { padding: 7px 14px; border-radius: 20px; background: #fff; border: 1px solid var(--border-light); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .2s; }
+    .wrk-bk-chip:hover { border-color: var(--wrk); color: var(--wrk); }
+    .wrk-bk-chip.active { background: var(--wrk); border-color: var(--wrk); color: #fff; }
+
+    .wrk-pin-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.55; }
+    .wrk-pin-hint a { color: var(--wrk); text-decoration: none; font-weight: 600; }
+
+    /* ---------- Modal ---------- */
+    .wrk-modal { position: fixed; inset: 0; background: rgba(15,46,30,.55); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 16px; }
+    .wrk-modal.open { display: flex; }
+    .wrk-modal-box { background: #fff; border-radius: 16px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; position: relative; animation: wrkFade .2s ease; }
+    .wrk-modal-box.wide { max-width: 640px; }
+    .wrk-modal-close { position: absolute; top: 12px; right: 12px; background: var(--bg-card-soft, #f3f5f4); border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; cursor: pointer; color: var(--text-secondary); z-index: 5; }
+    .wrk-modal-head { padding: 18px 20px 6px; border-bottom: 1px solid var(--border-light); }
+    .wrk-modal-head h3 { font-size: 16px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .wrk-modal-body { padding: 16px 20px 22px; }
+
+    /* ---------- Worker detail ---------- */
+    .wrk-detail-top { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .wrk-avatar-lg { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 26px; flex-shrink: 0; position: relative; }
+    .wrk-avatar-lg .wrk-verified { position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; border-radius: 50%; background: #16A34A; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+    .wrk-detail-name { font-size: 19px; font-weight: 800; color: var(--text-primary); }
+    .wrk-chip { display: inline-block; padding: 4px 11px; border-radius: 8px; background: var(--wrk-bg); color: var(--wrk-dark); font-size: 11px; font-weight: 600; }
+    .wrk-meta-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; font-size: 12px; color: var(--text-muted); }
+    .wrk-meta-row span { display: inline-flex; align-items: center; gap: 5px; }
+    .wrk-section { margin-bottom: 16px; }
+    .wrk-section h4 { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .wrk-section h4 i { color: var(--wrk); }
+    .wrk-skills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .wrk-rate-box { display: flex; gap: 10px; flex-wrap: wrap; }
+    .wrk-rate-box .wrk-rate-pill { flex: 1; min-width: 120px; background: var(--bg-card-soft, #f3f5f4); border-radius: 10px; padding: 10px 12px; text-align: center; }
+    .wrk-rate-pill b { display: block; font-size: 15px; color: var(--wrk); }
+    .wrk-rate-pill span { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+    .wrk-history { display: flex; flex-direction: column; }
+    .wrk-history-item { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; }
+    .wrk-history-item:last-child { border-bottom: none; }
+    .wrk-history-item .h-w { color: var(--text-primary); font-weight: 600; }
+    .wrk-history-item .h-m { color: var(--text-muted); }
+    .wrk-review-item { padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+    .wrk-review-item:last-child { border-bottom: none; }
+    .wrk-review-item .r-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+    .wrk-review-item .r-name { font-weight: 700; color: var(--text-primary); }
+    .wrk-review-item .r-stars { color: #F5A623; font-size: 11px; }
+    .wrk-review-item .r-text { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+    .wrk-avail-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    .wrk-avail-table th, .wrk-avail-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-light); text-align: left; }
+    .wrk-avail-table th { color: var(--text-muted); font-weight: 700; }
+
+    /* ---------- Booking wizard ---------- */
+    .wrk-steps { display: flex; gap: 4px; margin-bottom: 16px; }
+    .wrk-step { flex: 1; text-align: center; }
+    .wrk-step .wrk-step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--border-light); color: var(--text-muted); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 4px; transition: all .2s; }
+    .wrk-step .wrk-step-label { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+    .wrk-step.done .wrk-step-num { background: var(--wrk); color: #fff; }
+    .wrk-step.active .wrk-step-num { background: var(--wrk); color: #fff; box-shadow: 0 0 0 3px var(--wrk-soft); }
+    .wrk-step.active .wrk-step-label { color: var(--wrk-dark); }
+    .wrk-field { margin-bottom: 13px; }
+    .wrk-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 5px; }
+    .wrk-input, .wrk-input select { width: 100%; padding: 10px 12px; border: 1px solid var(--border-medium); border-radius: 9px; background: #fff; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color .2s; font-family: inherit; }
+    .wrk-input:focus { border-color: var(--wrk); box-shadow: 0 0 0 3px rgba(15,118,110,0.08); }
+    .wrk-row { display: flex; gap: 10px; }
+    .wrk-row .wrk-field { flex: 1; }
+    .wrk-summary { background: var(--wrk-bg); border: 1px solid rgba(15,118,110,0.15); border-radius: 12px; padding: 14px; margin: 10px 0 16px; }
+    .wrk-summary .line { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12.5px; border-bottom: 1px solid rgba(15,118,110,0.1); }
+    .wrk-summary .line:last-child { border-bottom: none; }
+    .wrk-summary .total { font-size: 17px; font-weight: 800; color: var(--wrk); padding-top: 8px; border-top: 2px solid var(--wrk); margin-top: 4px; }
+    .wrk-wizard-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .wrk-wizard-actions .wrk-btn { flex: 1; }
+    .wrk-balance { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+    .wrk-balance b { color: var(--wrk); }
+
+    /* ---------- Toast ---------- */
+    .wrk-toasts { position: fixed; top: 74px; right: 16px; z-index: 2500; display: flex; flex-direction: column; gap: 8px; max-width: 340px; }
+    .wrk-toast { background: #fff; border-left: 4px solid var(--wrk); padding: 12px 15px; border-radius: 12px; box-shadow: var(--shadow-lg); color: var(--text-primary); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateX(40px); transition: all .3s; }
+    .wrk-toast.show { opacity: 1; transform: none; }
+    .wrk-toast.success { border-left-color: #166534; }
+    .wrk-toast.error { border-left-color: #D63031; }
+    .wrk-toast.warning { border-left-color: #D97706; }
+    .wrk-toast i { font-size: 15px; }
+
+    .wrk-btn-full { width: 100%; }
   </style>
 </head>
 <body>
+<main class="page-container">
 
-<main class="page-container" style="padding-top:var(--topbar-height);padding-bottom:calc(var(--bottomnav-height)+24px);">
-
-
-  <div class="page-header">
-    <h1><i class="fas fa-hard-hat" style="color:var(--primary-green);"></i> Workers You Can Hire</h1>
-    <p>Find and hire skilled workers for harvesting, planting, irrigation, spraying, and other farm activities.</p>
+  <!-- Header -->
+  <div class="wrk-header">
+    <div>
+      <h1><i class="fas fa-users"></i> Workers</h1>
+      <p>Find trusted agricultural workers for your farm.</p>
+    </div>
+    <div class="wrk-header-actions">
+      <div class="wrk-seg" id="wrkTypeSeg">
+        <button class="wrk-tab active" data-tab="explore" onclick="WorkersApp.switchTab('explore')">Explore Workers</button>
+        <button class="wrk-tab" data-tab="bookings" onclick="WorkersApp.switchTab('bookings')">My Bookings <span class="wrk-count-badge" id="wrkBookedCount" style="display:none;">0</span></button>
+      </div>
+      <button class="wrk-action" id="wrkFilterToggle" onclick="WorkersApp.toggleFilters()">
+        <i class="fas fa-sliders-h"></i> Filters <span class="fa-filter-count" id="wrkFilterCount" style="display:none;"></span>
+      </button>
+    </div>
   </div>
 
-  <div class="search-bar">
+  <!-- Search -->
+  <div class="wrk-search">
     <i class="fas fa-search"></i>
-    <input type="text" id="searchInput" placeholder="Search workers by name or skill..." oninput="applyFilters()">
+    <input type="text" id="wrkSearch" placeholder="Search workers, skills or services..." autocomplete="off">
+    <button class="wrk-search-clear" id="wrkSearchClear" style="display:none;" onclick="WorkersApp.clearSearch()"><i class="fas fa-times"></i></button>
   </div>
 
-  <div class="toolbar-row">
-    <select class="form-select" id="workTypeFilter" onchange="applyFilters()">
-      <option value="all">All Work Types</option>
-      <option value="Harvesting">Harvesting</option>
-      <option value="Planting">Planting</option>
-      <option value="Seeding">Seeding</option>
-      <option value="Weeding">Weeding</option>
-      <option value="Irrigation">Irrigation</option>
-      <option value="Spraying">Spraying</option>
-      <option value="General Farm Work">General Farm Work</option>
-    </select>
-    <button class="icon-btn" id="starredFilterBtn" onclick="toggleStarredFilter()" title="Starred Workers">
-      <i class="fas fa-star"></i>
-    </button>
-    <button class="icon-btn" id="bookedFilterBtn" onclick="toggleBookedFilter()" title="Booked Workers">
-      <i class="fas fa-calendar-check"></i>
-    </button>
+  <!-- Filters -->
+  <div class="wrk-filter-sheet" id="wrkFilterSheet">
+    <div class="wrk-filter-grid">
+      <div>
+        <label class="wrk-filter-label">Work Type</label>
+        <select class="wrk-select" id="fltWorkType"><option value="">All Work Types</option></select>
+      </div>
+      <div>
+        <label class="wrk-filter-label">Skill</label>
+        <select class="wrk-select" id="fltSkill"><option value="">All Skills</option></select>
+      </div>
+      <div>
+        <label class="wrk-filter-label">Location (District)</label>
+        <select class="wrk-select" id="fltLocation"><option value="">All Locations</option></select>
+      </div>
+      <div>
+        <label class="wrk-filter-label">Experience</label>
+        <select class="wrk-select" id="fltExp">
+          <option value="">Any Experience</option>
+          <option value="2">2+ years</option>
+          <option value="4">4+ years</option>
+          <option value="6">6+ years</option>
+          <option value="8">8+ years</option>
+          <option value="10">10+ years</option>
+        </select>
+      </div>
+      <div>
+        <label class="wrk-filter-label">Rating</label>
+        <select class="wrk-select" id="fltRating">
+          <option value="">Any Rating</option>
+          <option value="4">4.0+</option>
+          <option value="4.5">4.5+</option>
+        </select>
+      </div>
+      <div>
+        <label class="wrk-filter-label">Availability</label>
+        <label class="wrk-toggle"><input type="checkbox" id="fltAvail"> Available now / today</label>
+      </div>
+    </div>
+    <div class="wrk-filter-actions">
+      <button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.clearFilters()">Clear</button>
+      <button class="wrk-btn wrk-btn-primary" onclick="WorkersApp.applyFilters()">Apply</button>
+    </div>
   </div>
 
-  <div class="sort-row">
-    <span id="resultCount" style="font-size:13px;font-weight:600;color:var(--text-secondary);">12 workers found</span>
-    <select id="sortSelect" onchange="applyFilters()">
-      <option value="nearest">Nearest</option>
-      <option value="price-low">Lowest Price</option>
-      <option value="highest-rated">Highest Rated</option>
-      <option value="available-now">Available Now</option>
-    </select>
+  <!-- Explore pane -->
+  <div id="wrkExplorePane">
+    <div class="wrk-sort">
+      <span class="wrk-result-count" id="wrkResultCount">Loading workers...</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:11px;color:var(--text-muted);font-weight:600;">Sort:</label>
+        <select id="wrkSort" onchange="WorkersApp.onSortChange()">
+          <option value="rating-desc">Top Rated</option>
+          <option value="experience-desc">Most Experienced</option>
+          <option value="rate-asc">Lowest Rate</option>
+          <option value="rate-desc">Highest Rate</option>
+          <option value="available">Available First</option>
+        </select>
+      </div>
+    </div>
+    <div class="wrk-grid" id="wrkWorkerGrid"></div>
+    <div class="wrk-pagination" id="wrkPagination"></div>
   </div>
 
-  <div class="grid-2" id="workerGrid"></div>
+  <!-- Bookings pane -->
+  <div id="wrkBookingsPane" style="display:none;">
+    <div class="wrk-bk-chipbar" id="wrkBkChips" style="display:none;"></div>
+    <div class="wrk-bookings" id="wrkBookingsList"></div>
+    <div class="wrk-pagination" id="wrkBookingsPagination"></div>
+  </div>
 
 </main>
 
-<div class="modal-backdrop" id="detailModal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeDetailModal()"><i class="fas fa-times"></i></button>
-    <div id="detailContent"></div>
+<!-- Worker detail modal -->
+<div class="wrk-modal" id="wrkDetailModal">
+  <div class="wrk-modal-box">
+    <button class="wrk-modal-close" onclick="WorkersApp.closeDetail()"><i class="fas fa-times"></i></button>
+    <div class="wrk-modal-head"><h3><i class="fas fa-user-tie"></i> Worker Profile</h3></div>
+    <div class="wrk-modal-body" id="wrkDetailContent"></div>
   </div>
 </div>
 
-<div class="modal-backdrop" id="bookingModal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeBookingModal()"><i class="fas fa-times"></i></button>
-    <div id="bookingContent"></div>
+<!-- Booking wizard modal -->
+<div class="wrk-modal" id="wrkBookingModal">
+  <div class="wrk-modal-box wide">
+    <button class="wrk-modal-close" onclick="WorkersApp.closeBooking()"><i class="fas fa-times"></i></button>
+    <div class="wrk-modal-head">
+      <h3><i class="fas fa-calendar-check"></i> Book Worker</h3>
+      <div class="wrk-steps" id="wrkSteps"></div>
+    </div>
+    <div class="wrk-modal-body" id="wrkBookingContent"></div>
   </div>
 </div>
 
-<div class="modal-backdrop" id="messageModal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeMessageModal()"><i class="fas fa-times"></i></button>
-    <h3 style="font-size:17px;font-weight:800;margin-bottom:4px;"><i class="fas fa-comment"></i> Send Message</h3>
-    <p id="messageWorkerName" style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;"></p>
-    <div class="form-group" style="margin-bottom:14px;">
-      <label class="form-label">Subject</label>
-      <input type="text" class="form-input" id="messageSubject" placeholder="e.g. Availability for next week...">
-    </div>
-    <div class="form-group" style="margin-bottom:14px;">
-      <label class="form-label">Your Message</label>
-      <textarea class="form-textarea" id="messageBody" rows="4" placeholder="Write your message here..."></textarea>
-    </div>
-    <button class="btn-primary u-full" onclick="sendMessage()"><i class="fas fa-paper-plane"></i> Send Message</button>
+<!-- Booking detail modal -->
+<div class="wrk-modal" id="wrkBDetailModal">
+  <div class="wrk-modal-box">
+    <button class="wrk-modal-close" onclick="WorkersApp.closeBDetail()"><i class="fas fa-times"></i></button>
+    <div class="wrk-modal-head"><h3><i class="fas fa-file-invoice"></i> Booking Details</h3></div>
+    <div class="wrk-modal-body" id="wrkBDetailContent"></div>
   </div>
 </div>
+
+<!-- Review modal -->
+<div class="wrk-modal" id="wrkReviewModal">
+  <div class="wrk-modal-box">
+    <button class="wrk-modal-close" onclick="WorkersApp.closeReview()"><i class="fas fa-times"></i></button>
+    <div class="wrk-modal-head"><h3><i class="fas fa-star"></i> Review Worker</h3></div>
+    <div class="wrk-modal-body">
+      <div id="wrkReviewWorker" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;"></div>
+      <div class="wrk-field">
+        <label>Your Rating</label>
+        <div id="wrkReviewStars" style="display:flex;gap:8px;font-size:28px;color:#F5A623;cursor:pointer;">
+          <i data-v="1" class="far fa-star"></i><i data-v="2" class="far fa-star"></i><i data-v="3" class="far fa-star"></i><i data-v="4" class="far fa-star"></i><i data-v="5" class="far fa-star"></i>
+        </div>
+      </div>
+      <div class="wrk-field">
+        <label>Comment <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+        <textarea class="wrk-input" id="wrkReviewComment" rows="3" placeholder="How was the work?"></textarea>
+      </div>
+      <button class="wrk-btn wrk-btn-primary wrk-btn-full" id="wrkReviewSubmit" onclick="WorkersApp.submitReview()"><i class="fas fa-paper-plane"></i> Submit Review</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrk-toasts" id="wrkToasts"></div>
 
 <script src="js/services.js"></script>
 <script src="js/userStore.js"></script>
-<script src="js/mockData.js"></script>
 <script src="assets/js/navigation.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
-var workers = [
-  {
-    id: 1, name: "Mahesh Yadav", skills: ["Rice Harvesting", "Wheat Cutting", "Threshing", "Manual Labor"],
-    experience: 8, location: "Nashik, Maharashtra", distance: 3,
-    rating: 4.8, reviews: 94, hourly: 120,
-    availability: "Available", color: "#1B5E3F",
-    bio: "Experienced harvest worker with 8 years in rice and wheat fields. Known for efficiency and reliability.",
-    history: [
-      { farm: "Sharma Farms, Nashik", work: "Rice Harvesting", duration: "2 weeks", year: "2025" },
-      { farm: "Patel Agriculture, Pune", work: "Wheat Cutting", duration: "1 week", year: "2025" },
-      { farm: "Desai Estate, Nashik", work: "Threshing", duration: "3 days", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Ramesh P.", text: "Very hardworking and completed the harvest on time.", rating: 5 },
-      { reviewer: "Suresh V.", text: "Skilled worker, knows the job well.", rating: 5 }
-    ],
-    languages: ["Hindi", "Marathi"]
-  },
-  {
-    id: 2, name: "Suresh Kumar", skills: ["Tractor Driving", "Ploughing", "Tillage", "Machine Repair"],
-    experience: 12, location: "Indore, Madhya Pradesh", distance: 5,
-    rating: 4.6, reviews: 156, hourly: 500,
-    availability: "Tomorrow", color: "#5D4037",
-    bio: "Expert tractor operator with 12 years of experience handling all types of farm machinery and equipment.",
-    history: [
-      { farm: "Gupta Agro, Indore", work: "Tractor Ploughing", duration: "5 days", year: "2025" },
-      { farm: "Verma Farms, Bhopal", work: "Land Preparation", duration: "1 week", year: "2025" },
-      { farm: "Raj Farm House, Indore", work: "Tillage Work", duration: "3 days", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Amit G.", text: "Excellent tractor operator. Completed ploughing quickly.", rating: 5 },
-      { reviewer: "Vikas V.", text: "Professional and punctual.", rating: 4 }
-    ],
-    languages: ["Hindi", "English"]
-  },
-  {
-    id: 3, name: "Priya Devi", skills: ["Drip Irrigation", "Sprinkler Setup", "Canal Work", "Water Management"],
-    experience: 6, location: "Lucknow, Uttar Pradesh", distance: 2,
-    rating: 4.9, reviews: 127, hourly: 150,
-    availability: "Available", color: "#2D8659",
-    bio: "Irrigation specialist with expertise in modern drip systems and traditional canal management for rice fields.",
-    history: [
-      { farm: "Yadav Farms, Lucknow", work: "Drip Irrigation Setup", duration: "4 days", year: "2025" },
-      { farm: "Singh Estate, Kanpur", work: "Sprinkler Installation", duration: "2 days", year: "2025" },
-      { farm: "Devi Agro, Lucknow", work: "Canal Maintenance", duration: "1 week", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Anita S.", text: "Set up our entire drip system. Very knowledgeable.", rating: 5 },
-      { reviewer: "Rajesh Y.", text: "Great work on the sprinkler installation.", rating: 5 }
-    ],
-    languages: ["Hindi", "English"]
-  },
-  {
-    id: 4, name: "Ramesh Singh", skills: ["Pesticide Spraying", "Fertilizer Application", "Drone Spraying", "Safety Protocols"],
-    experience: 5, location: "Jaipur, Rajasthan", distance: 8,
-    rating: 4.3, reviews: 62, hourly: 200,
-    availability: "This Week", color: "#E65100",
-    bio: "Certified crop spraying professional experienced with both manual and drone-based spraying techniques.",
-    history: [
-      { farm: "Singh Agro, Jaipur", work: "Pesticide Spraying", duration: "3 days", year: "2025" },
-      { farm: "Meena Farms, Ajmer", work: "Fertilizer Application", duration: "2 days", year: "2025" },
-      { farm: "Rajput Estate, Jaipur", work: "Drone Spraying", duration: "1 day", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Meena K.", text: "Good spraying work. Crop looks healthy now.", rating: 4 },
-      { reviewer: "Rajput S.", text: "Knowledgeable about pesticides.", rating: 4 }
-    ],
-    languages: ["Hindi", "Rajasthani"]
-  },
-  {
-    id: 5, name: "Gurbachan Lal", skills: ["Harvester Operation", "Thresher", "Baler", "Maintenance"],
-    experience: 15, location: "Amritsar, Punjab", distance: 4,
-    rating: 4.7, reviews: 203, hourly: 300,
-    availability: "Today", color: "#283593",
-    bio: "Veteran equipment operator with 15 years running combine harvesters, threshers, and balers across Punjab.",
-    history: [
-      { farm: "Kaur Farms, Amritsar", work: "Combine Harvesting", duration: "2 weeks", year: "2025" },
-      { farm: "Gill Estate, Ludhiana", work: "Baling Work", duration: "5 days", year: "2025" },
-      { farm: "Singh Agro, Jalandhar", work: "Thresher Operation", duration: "1 week", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Kaur J.", text: "Very experienced operator. Handled the combine well.", rating: 5 },
-      { reviewer: "Gill M.", text: "Reliable and skilled. Will hire again.", rating: 5 }
-    ],
-    languages: ["Punjabi", "Hindi"]
-  },
-  {
-    id: 6, name: "Meera Bai", skills: ["Team Management", "Rice Harvesting", "Quality Control", "Labor Coordination"],
-    experience: 10, location: "Raipur, Chhattisgarh", distance: 6,
-    rating: 4.5, reviews: 89, hourly: 180,
-    availability: "Available", color: "#7B1FA2",
-    bio: "Experienced team lead managing a crew of 8-10 harvest workers. Specializes in quality rice harvesting.",
-    history: [
-      { farm: "Wardha Farms, Raipur", work: "Team Harvesting", duration: "3 weeks", year: "2025" },
-      { farm: "Agarwal Agro, Bilaspur", work: "Quality Supervision", duration: "1 week", year: "2025" },
-      { farm: "Patel Estate, Raipur", work: "Labor Coordination", duration: "2 weeks", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Wardha R.", text: "Managed the team very well. Great output.", rating: 5 },
-      { reviewer: "Agarwal P.", text: "Good supervisor. Quality improved.", rating: 4 }
-    ],
-    languages: ["Hindi", "Chhattisgarhi"]
-  },
-  {
-    id: 7, name: "Arjun Patel", skills: ["Cattle Care", "Milking", "Fodder Management", "Animal Health"],
-    experience: 7, location: "Anand, Gujarat", distance: 3,
-    rating: 4.4, reviews: 73, hourly: 160,
-    availability: "Tomorrow", color: "#4E342E",
-    bio: "Dedicated livestock worker experienced in dairy cattle care, milking operations, and basic animal health.",
-    history: [
-      { farm: "Patel Dairy, Anand", work: "Cattle Care", duration: "6 months", year: "2025" },
-      { farm: "Gujarat Milk Farm", work: "Milking Operations", duration: "3 months", year: "2025" },
-      { farm: "Mehta Dairy, Vadodara", work: "Fodder Management", duration: "2 months", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Patel D.", text: "Good with cows. Milking was done properly.", rating: 5 },
-      { reviewer: "Mehta K.", text: "Hardworking and honest.", rating: 4 }
-    ],
-    languages: ["Gujarati", "Hindi"]
-  },
-  {
-    id: 8, name: "Sunil Sharma", skills: ["Tractor", "Rotavator", "Seed Drill", "GPS Guided Systems"],
-    experience: 9, location: "Karnal, Haryana", distance: 7,
-    rating: 4.8, reviews: 118, hourly: 250,
-    availability: "Available", color: "#0D47A1",
-    bio: "Modern farm equipment specialist experienced with GPS-guided tractors and precision farming tools.",
-    history: [
-      { farm: "Sharma Agro, Karnal", work: "Precision Planting", duration: "1 week", year: "2025" },
-      { farm: "Haryana Farms, Panipat", work: "Rotavator Operation", duration: "4 days", year: "2025" },
-      { farm: "Singh Estate, Ambala", work: "Seed Drill Setup", duration: "3 days", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Sharma A.", text: "Precision planting was excellent. Seeds sprouted well.", rating: 5 },
-      { reviewer: "Verma R.", text: "Knows GPS equipment very well.", rating: 5 }
-    ],
-    languages: ["Hindi", "English"]
-  },
-  {
-    id: 9, name: "Anita Kumari", skills: ["Vegetable Planting", "Nursery Management", "Transplanting", "Bed Preparation"],
-    experience: 4, location: "Patna, Bihar", distance: 9,
-    rating: 4.2, reviews: 45, hourly: 100,
-    availability: "This Week", color: "#00897B",
-    bio: "Skilled planting worker with expertise in vegetable nursery management and transplanting.",
-    history: [
-      { farm: "Kumar Farms, Patna", work: "Vegetable Planting", duration: "1 week", year: "2025" },
-      { farm: "Devi Agro, Muzaffarpur", work: "Nursery Management", duration: "5 days", year: "2025" },
-      { farm: "Singh Estate, Patna", work: "Bed Preparation", duration: "3 days", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Kumar S.", text: "Good planting work. Saplings are doing well.", rating: 4 },
-      { reviewer: "Devi M.", text: "Knows nursery work well.", rating: 4 }
-    ],
-    languages: ["Hindi", "Bhojpuri"]
-  },
-  {
-    id: 10, name: "Vikram Singh", skills: ["General Farm Labor", "Fencing", "Clearing", "Loading"],
-    experience: 6, location: "Kanpur, Uttar Pradesh", distance: 5,
-    rating: 4.6, reviews: 81, hourly: 130,
-    availability: "Available", color: "#6A1B9A",
-    bio: "Reliable general farm worker skilled in fencing, clearing, loading, and all types of manual farm labor.",
-    history: [
-      { farm: "Singh Agro, Kanpur", work: "General Labor", duration: "2 weeks", year: "2025" },
-      { farm: "Verma Farms, Lucknow", work: "Fencing", duration: "1 week", year: "2025" },
-      { farm: "Patel Estate, Kanpur", work: "Loading & Transport", duration: "4 days", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Verma R.", text: "Very strong worker. Got the fencing done fast.", rating: 5 },
-      { reviewer: "Patel A.", text: "Reliable and hardworking.", rating: 4 }
-    ],
-    languages: ["Hindi"]
-  },
-  {
-    id: 11, name: "Lakshmi Bai", skills: ["Weeding", "Hoeing", "Mulching", "Soil Preparation"],
-    experience: 5, location: "Hyderabad, Telangana", distance: 4,
-    rating: 4.5, reviews: 58, hourly: 110,
-    availability: "Today", color: "#AD1457",
-    bio: "Expert weeding specialist with years of experience in manual and mechanical weed control for various crops.",
-    history: [
-      { farm: "Reddy Farms, Hyderabad", work: "Weeding", duration: "1 week", year: "2025" },
-      { farm: "Rao Estate, Medak", work: "Mulching", duration: "4 days", year: "2025" },
-      { farm: "Naidu Agro, Hyderabad", work: "Soil Preparation", duration: "3 days", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Reddy K.", text: "Excellent weeding work. Fields are clean.", rating: 5 },
-      { reviewer: "Naidu S.", text: "Very thorough in her work.", rating: 4 }
-    ],
-    languages: ["Telugu", "Hindi"]
-  },
-  {
-    id: 12, name: "Deepak Verma", skills: ["Seed Selection", "Sowing", "Seed Treatment", "Row Planting"],
-    experience: 8, location: "Bhopal, Madhya Pradesh", distance: 6,
-    rating: 4.7, reviews: 94, hourly: 140,
-    availability: "Tomorrow", color: "#2E7D32",
-    bio: "Seeding expert with deep knowledge of seed treatment, proper sowing techniques, and row planting methods.",
-    history: [
-      { farm: "Verma Agro, Bhopal", work: "Seed Sowing", duration: "1 week", year: "2025" },
-      { farm: "Patel Farms, Indore", work: "Seed Treatment", duration: "3 days", year: "2025" },
-      { farm: "Sharma Estate, Bhopal", work: "Row Planting", duration: "5 days", year: "2024" }
-    ],
-    reviews: [
-      { reviewer: "Patel S.", text: "Seeds germinated very well after his treatment.", rating: 5 },
-      { reviewer: "Sharma R.", text: "Very knowledgeable about seeding techniques.", rating: 5 }
-    ],
-    languages: ["Hindi", "English"]
+(function () {
+  'use strict';
+
+  var PAGE_SIZE = 60;
+  var searchTimer = null;
+  var catalog = { page: 1, totalPages: 1, total: 0, items: [], loading: false };
+  var bookings = { page: 1, totalPages: 1, total: 0, items: [], loading: false, filter: 'all' };
+  var filtersData = null;
+  var activeFilters = {};
+  var filterCount = 0;
+  var currentWorker = null;   // full worker being detailed/booked
+  var currentBookingList = [];// bookings currently rendered
+  var editMode = 'explore';
+  var reviewCtx = null;       // { workerId, workerName, bookingId }
+  var farmNameMap = {};       // farmIdKey -> human farm name (booking step 1)
+  var plotNameMap = {};       // plotId -> human plot name (booking step 1)
+
+  var AVAIL_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var WORK_TYPES = ['Harvesting', 'Planting', 'Seeding', 'Weeding', 'Irrigation', 'Spraying', 'General Farm Work'];
+
+  // ---------- Utilities ----------
+  function $(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
   }
-];
 
-var currentWorker = null;
-var currentDetailWorker = null;
-var currentBookedWorkerId = null;
-var currentFilter = "all";
-var starredFilterActive = false;
-var bookedFilterActive = false;
-var starredWorkers = [];
-var bookedWorkers = [];
-
-function loadStarred() {
-  try {
-    starredWorkers = JSON.parse(localStorage.getItem("fa-starred-workers") || "[]");
-  } catch (e) {
-    starredWorkers = [];
+  function errMsg(err, fb) {
+    if (err && typeof err.detail === 'string' && err.detail) return err.detail;
+    if (err && err.data && typeof err.data.detail === 'string' && err.data.detail) return err.data.detail;
+    if (err && typeof err.message === 'string' && err.message) return err.message;
+    return fb || 'Something went wrong. Please try again.';
   }
-}
 
-function loadBookedWorkers() {
-  try {
-    var bookings = JSON.parse(localStorage.getItem("fa-worker-bookings") || "[]");
-    bookedWorkers = bookings.map(function(b) { return b.workerId; });
-  } catch (e) {
-    bookedWorkers = [];
+  function toast(msg, type) {
+    type = type || 'success';
+    var wrap = $('wrkToasts');
+    if (!wrap) return;
+    var el = document.createElement('div');
+    el.className = 'wrk-toast ' + type;
+    var icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle' };
+    el.innerHTML = '<i class="fas ' + (icons[type] || icons.success) + '"></i><span></span>';
+    el.querySelector('span').textContent = msg;
+    wrap.appendChild(el);
+    requestAnimationFrame(function () { el.classList.add('show'); });
+    setTimeout(function () {
+      el.classList.remove('show');
+      setTimeout(function () { el.remove(); }, 300);
+    }, 3600);
   }
-}
 
-function saveStarred() {
-  localStorage.setItem("fa-starred-workers", JSON.stringify(starredWorkers));
-}
-
-function getInitials(name) {
-  var parts = (name || "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-}
-
-function getStarsHTML(rating) {
-  var html = "";
-  var full = Math.floor(rating);
-  var half = rating - full >= 0.5 ? 1 : 0;
-  var empty = 5 - full - half;
-  for (var i = 0; i < full; i++) {
-    html += '<i class="fas fa-star"></i>';
+  function initials(name) {
+    var parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
-  if (half) {
-    html += '<i class="fas fa-star-half-alt"></i>';
-  }
-  for (var i = 0; i < empty; i++) {
-    html += '<i class="far fa-star" style="color:#ddd;"></i>';
-  }
-  return html;
-}
 
-function getAvailClass(avail) {
-  var map = { "Available": "avail-available", "Today": "avail-today", "Tomorrow": "avail-tomorrow", "This Week": "avail-week" };
-  return map[avail] || "avail-available";
-}
-
-function getWorkType(skills) {
-  var s = skills.join(" ").toLowerCase();
-  if (s.indexOf("harvest") !== -1 || s.indexOf("thresh") !== -1) return "Harvesting";
-  if (s.indexOf("tractor") !== -1 || s.indexOf("plough") !== -1 || s.indexOf("tillage") !== -1) return "Planting";
-  if (s.indexOf("seed") !== -1 || s.indexOf("sow") !== -1) return "Seeding";
-  if (s.indexOf("weed") !== -1 || s.indexOf("hoe") !== -1 || s.indexOf("mulch") !== -1) return "Weeding";
-  if (s.indexOf("irrigat") !== -1 || s.indexOf("drip") !== -1 || s.indexOf("sprinkler") !== -1 || s.indexOf("canal") !== -1 || s.indexOf("water") !== -1) return "Irrigation";
-  if (s.indexOf("spray") !== -1 || s.indexOf("pesticide") !== -1 || s.indexOf("fertiliz") !== -1 || s.indexOf("drone") !== -1) return "Spraying";
-  if (s.indexOf("cattle") !== -1 || s.indexOf("milk") !== -1 || s.indexOf("livestock") !== -1 || s.indexOf("animal") !== -1 || s.indexOf("fodder") !== -1) return "General Farm Work";
-  if (s.indexOf("fenc") !== -1 || s.indexOf("clear") !== -1 || s.indexOf("load") !== -1 || s.indexOf("general") !== -1 || s.indexOf("labor") !== -1) return "General Farm Work";
-  if (s.indexOf("plant") !== -1 || s.indexOf("nursery") !== -1 || s.indexOf("transplant") !== -1 || s.indexOf("bed") !== -1) return "Planting";
-  if (s.indexOf("harvester") !== -1 || s.indexOf("baler") !== -1 || s.indexOf("maintenance") !== -1 || s.indexOf("rotavator") !== -1) return "Harvesting";
-  if (s.indexOf("team") !== -1 || s.indexOf("quality") !== -1 || s.indexOf("coordination") !== -1) return "Harvesting";
-  if (s.indexOf("gps") !== -1) return "Planting";
-  return "General Farm Work";
-}
-
-function renderWorkers(list) {
-  var grid = document.getElementById("workerGrid");
-  document.getElementById("resultCount").textContent = list.length + " worker" + (list.length !== 1 ? "s" : "") + " found";
-  if (list.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--text-muted);"><i class="fas fa-search" style="font-size:32px;margin-bottom:8px;display:block;"></i>No workers found matching your criteria.</div>';
-    return;
+  var AVATAR_COLORS = ['#1B5E3F', '#2D6A4F', '#5D4037', '#6A994E', '#0F766E', '#4E342E', '#3E7C59', '#7B4A3A'];
+  function avatarColor(id) {
+    var h = 0;
+    var s = String(id || '');
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return AVATAR_COLORS[h % AVATAR_COLORS.length];
   }
-  var html = "";
-  for (var i = 0; i < list.length; i++) {
-    var w = list[i];
-    var initials = getInitials(w.name);
-    var stars = getStarsHTML(w.rating);
-    var availClass = getAvailClass(w.availability);
-    var skillsStr = w.skills.join(", ");
-    var isStarred = starredWorkers.indexOf(w.id) !== -1;
-    var starIcon = isStarred ? "fas" : "far";
-    html += '<div class="card-premium worker-card">';
-    html += '<div style="display:flex;gap:10px;align-items:flex-start;">';
-    html += '<div class="worker-avatar" style="background:' + w.color + ';">' + initials + '</div>';
-    html += '<div style="flex:1;min-width:0;">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;">';
-    html += '<div class="worker-name">' + w.name + '</div>';
-    html += '<span class="star-btn ' + (isStarred ? "active" : "") + '" onclick="event.stopPropagation();toggleStar(' + w.id + ')" title="Star this worker"><i class="' + starIcon + ' fa-star"></i></span>';
-    html += '</div>';
-    html += '<div style="font-size:11px;color:var(--text-secondary);margin:2px 0;">' + skillsStr + '</div>';
-    html += '<div class="worker-rating" style="margin:4px 0;">' + stars + ' <span style="margin-left:4px;">' + w.rating + '</span> <span style="color:var(--text-muted);font-weight:400;font-size:11px;">(' + w.reviews + ' reviews)</span></div>';
-    html += '<div style="display:flex;gap:8px;font-size:11px;color:var(--text-muted);flex-wrap:wrap;">';
-    html += '<span><i class="fas fa-briefcase"></i> ' + w.experience + ' yr' + (w.experience !== 1 ? "s" : "") + '</span>';
-    html += '<span><i class="fas fa-map-marker-alt"></i> ' + w.location + '</span>';
-    html += '</div>';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">';
-    html += '<span class="badge ' + availClass + '"><span class="avail-dot"></span> ' + w.availability + '</span>';
-    html += '<span class="worker-price">\u20B9' + w.hourly + '<small>/hr</small></span>';
-    html += '</div>';
-    html += '<div class="worker-actions">';
-    html += '<button class="btn-secondary btn-sm" onclick="event.stopPropagation();openDetailModal(' + w.id + ')"><i class="fas fa-eye"></i> View</button>';
-    html += '<button class="btn-secondary btn-sm" onclick="event.stopPropagation();openMessageModal(' + w.id + ')"><i class="fas fa-comment"></i> Message</button>';
-    html += '<button class="btn-primary btn-sm" onclick="event.stopPropagation();openBookingModal(' + w.id + ')"><i class="fas fa-calendar-check"></i> Book</button>';
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-  }
-  grid.innerHTML = html;
-}
 
-function applyFilters() {
-  var search = document.getElementById("searchInput").value.toLowerCase().trim();
-  var sort = document.getElementById("sortSelect").value;
-  var workType = document.getElementById("workTypeFilter").value;
-  var filtered = [];
-  for (var i = 0; i < workers.length; i++) {
-    var w = workers[i];
-    if (starredFilterActive) {
-      if (starredWorkers.indexOf(w.id) === -1) continue;
+  function skillStr(skills) {
+    if (!skills) return '';
+    if (typeof skills === 'string') {
+      try { skills = JSON.parse(skills); } catch (e) { return skills; }
     }
-    if (bookedFilterActive) {
-      if (bookedWorkers.indexOf(w.id) === -1) continue;
+    if (!Array.isArray(skills)) return '';
+    return skills.join(', ');
+  }
+
+  function firstSkill(skills) {
+    if (!skills) return '';
+    if (typeof skills === 'string') {
+      try { skills = JSON.parse(skills); } catch (e) { return skills.split(',')[0] || ''; }
     }
-    if (workType !== "all") {
-      var wt = getWorkType(w.skills);
-      if (wt !== workType) continue;
+    return Array.isArray(skills) && skills.length ? skills[0] : '';
+  }
+
+  function parseRate(worker) {
+    var daily = parseFloat(worker.daily_rate);
+    var hourly = parseFloat(worker.hourly_rate);
+    if (daily > 0) return { type: 'day', value: daily };
+    if (hourly > 0) return { type: 'hr', value: hourly };
+    return null;
+  }
+
+  function moneys(n) {
+    if (n == null) return '\u20b90';
+    return '\u20b9' + Number(n).toLocaleString('en-IN');
+  }
+
+  function starsHTML(rating) {
+    var r = Number(rating) || 0;
+    if (r <= 0) return '<span style="font-size:10px;color:var(--text-muted);font-weight:600;">New</span>';
+    var html = '';
+    for (var i = 1; i <= 5; i++) {
+      if (r >= i - 0.25) html += '<i class="fas fa-star"></i>';
+      else if (r >= i - 0.75) html += '<i class="fas fa-star-half-alt"></i>';
+      else html += '<i class="far fa-star" style="opacity:.4;"></i>';
     }
-    if (search) {
-      var haystack = (w.name + " " + w.skills.join(" ") + " " + w.location).toLowerCase();
-      if (haystack.indexOf(search) === -1) continue;
+    return html;
+  }
+
+  function availabilityLabel(worker) {
+    return worker && worker.is_available ? 'Available' : 'Unavailable';
+  }
+
+  function timeClamp(h) {
+    return Math.round((h || 0) * 4) / 4;
+  }
+
+  function costFor(worker, startTime, endTime, days) {
+    var r = parseRate(worker);
+    if (!r) return 0;
+    var daysN = Math.max(1, parseInt(days, 10) || 1);
+    if (r.type === 'day') return r.value * daysN;
+    var sh = timeClamp(startTime);
+    var eh = timeClamp(endTime);
+    var hours = Math.max(0, eh - sh);
+    return r.value * hours * daysN;
+  }
+
+  function loadDistrictsFromFilters() {
+    var set = {};
+    var d = filtersData;
+    if (d && Array.isArray(d.locations)) {
+      d.locations.forEach(function (loc) {
+        var parts = String(loc).split(',').map(function (p) { return p.trim(); });
+        if (parts.length > 1 && parts[1]) set[parts[1]] = true;
+      });
     }
-    filtered.push(w);
+    return Object.keys(set).sort();
   }
-  if (sort === "price-low") {
-    filtered.sort(function(a, b) { return a.hourly - b.hourly; });
-  } else if (sort === "highest-rated") {
-    filtered.sort(function(a, b) { return b.rating - a.rating; });
-  } else if (sort === "nearest") {
-    filtered.sort(function(a, b) { return a.distance - b.distance; });
-  } else if (sort === "available-now") {
-    var order = { "Available": 0, "Today": 1, "Tomorrow": 2, "This Week": 3 };
-    filtered.sort(function(a, b) { return (order[a.availability] || 99) - (order[b.availability] || 99); });
-  }
-  renderWorkers(filtered);
-}
 
-function toggleStar(id) {
-  var idx = starredWorkers.indexOf(id);
-  if (idx === -1) {
-    starredWorkers.push(id);
-  } else {
-    starredWorkers.splice(idx, 1);
+  // ---------- Auth / API ----------
+  function isAuthed() {
+    return !!(window.UserStore && UserStore.isLoggedIn());
   }
-  saveStarred();
-  applyFilters();
-}
 
-function toggleStarredFilter() {
-  starredFilterActive = !starredFilterActive;
-  document.getElementById("starredFilterBtn").classList.toggle("active", starredFilterActive);
-  applyFilters();
-}
+  function notFound() {
+    toast('Please log in to view workers.', 'warning');
+    window.location.href = 'index.html';
+  }
 
-function toggleBookedFilter() {
-  bookedFilterActive = !bookedFilterActive;
-  document.getElementById("bookedFilterBtn").classList.toggle("active", bookedFilterActive);
-  if (bookedFilterActive) {
-    loadBookedWorkers();
-  }
-  applyFilters();
-}
+  // ---------- Catalog loading (server-side search + filters) ----------
+  function paramsFromState(page) {
+    var p = {
+      page: page || catalog.page,
+      limit: PAGE_SIZE,
+      sort_by: 'rating',
+      sort_order: 'desc'
+    };
+    var sort = ($('wrkSort') || {}).value || 'rating-desc';
+    if (sort === 'rating-desc') { p.sort_by = 'rating'; p.sort_order = 'desc'; }
+    else if (sort === 'experience-desc') { p.sort_by = 'experience_years'; p.sort_order = 'desc'; }
+    else if (sort === 'rate-asc') { p.sort_by = 'daily_rate'; p.sort_order = 'asc'; }
+    else if (sort === 'rate-desc') { p.sort_by = 'daily_rate'; p.sort_order = 'desc'; }
+    else if (sort === 'available') { p.sort_by = 'is_available'; }
 
-function openDetailModal(id) {
-  var w = null;
-  for (var i = 0; i < workers.length; i++) {
-    if (workers[i].id === id) { w = workers[i]; break; }
+    var q = ($('wrkSearch') || {}).value || '';
+    if (q && q.trim()) p.search = q.trim();
+    if (activeFilters.work_type) p.work_type = activeFilters.work_type;
+    if (activeFilters.skill) p.skill = activeFilters.skill;
+    if (activeFilters.location) p.district = activeFilters.location;
+    if (activeFilters.exp) p.min_experience = activeFilters.exp;
+    if (activeFilters.rating) p.min_rating = activeFilters.rating;
+    if (activeFilters.avail) p.is_available = true;
+    return p;
   }
-  if (!w) return;
-  currentDetailWorker = w;
-  var initials = getInitials(w.name);
-  var stars = getStarsHTML(w.rating);
-  var skillsStr = w.skills.join(", ");
-  var historyHtml = "";
-  for (var i = 0; i < w.history.length; i++) {
-    var h = w.history[i];
-    historyHtml += '<div class="profile-history-item"><span class="farm">' + h.farm + '</span><br><span style="color:var(--text-muted);font-size:11px;">' + h.work + ' \u00B7 ' + h.duration + ' \u00B7 ' + h.year + '</span></div>';
-  }
-  var reviewsHtml = "";
-  for (var i = 0; i < w.reviews.length; i++) {
-    var r = w.reviews[i];
-    var rStars = getStarsHTML(r.rating);
-    reviewsHtml += '<div class="profile-review-item"><span class="reviewer">' + r.reviewer + '</span> <span style="color:#FFB300;font-size:11px;">' + rStars + '</span><div class="review-text">' + r.text + '</div></div>';
-  }
-  var langsHtml = w.languages.join(", ");
-  var html = '';
-  html += '<div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;">';
-  html += '<div class="worker-avatar-lg" style="background:' + w.color + ';">' + initials + '</div>';
-  html += '<div><div style="font-size:18px;font-weight:800;">' + w.name + '</div>';
-  html += '<div class="worker-rating" style="margin-top:4px;">' + stars + ' <span>' + w.rating + '</span> <span style="color:var(--text-muted);font-weight:400;">(' + w.reviews + ' reviews)</span></div></div></div>';
-  html += '<div class="profile-section"><h4><i class="fas fa-info-circle"></i> About</h4><p style="font-size:13px;color:var(--text-secondary);">' + w.bio + '</p></div>';
-  html += '<div class="profile-section"><h4><i class="fas fa-cogs"></i> Skills</h4><p style="font-size:13px;color:var(--text-secondary);">' + skillsStr + '</p></div>';
-  html += '<div class="profile-section"><h4><i class="fas fa-briefcase"></i> Work History</h4>' + historyHtml + '</div>';
-  html += '<div class="profile-section"><h4><i class="fas fa-star"></i> Reviews</h4>' + reviewsHtml + '</div>';
-  html += '<div class="profile-section"><h4><i class="fas fa-language"></i> Languages</h4><p style="font-size:13px;color:var(--text-secondary);">' + langsHtml + '</p></div>';
-  html += '<div class="profile-section"><h4><i class="fas fa-map-marker-alt"></i> Location</h4><div class="map-placeholder"><i class="fas fa-map"></i> ' + w.location + '</div></div>';
-  html += '<div style="display:flex;gap:10px;margin-top:16px;">';
-  html += '<button class="btn-primary" style="flex:1;" onclick="closeDetailModal();openBookingModal(' + w.id + ')"><i class="fas fa-calendar-check"></i> Book Now</button>';
-  html += '<button class="btn-secondary" style="flex:1;" onclick="closeDetailModal();openMessageModal(' + w.id + ')"><i class="fas fa-comment"></i> Message</button></div>';
-  document.getElementById("detailContent").innerHTML = html;
-  document.getElementById("detailModal").classList.add("active");
-}
 
-function closeDetailModal() {
-  document.getElementById("detailModal").classList.remove("active");
-}
-
-function openBookingModal(id) {
-  var w = null;
-  for (var i = 0; i < workers.length; i++) {
-    if (workers[i].id === id) { w = workers[i]; break; }
+  function renderSkeletons() {
+    var grid = $('wrkWorkerGrid');
+    var html = '';
+    for (var i = 0; i < 12; i++) html += '<div class="wrk-skel"></div>';
+    grid.innerHTML = html;
+    $('wrkResultCount').textContent = 'Finding workers...';
   }
-  if (!w) return;
-  currentWorker = w;
-  currentBookedWorkerId = id;
-  var initials = getInitials(w.name);
-  var today = new Date().toISOString().split("T")[0];
-  var html = '';
-  html += '<h3 style="font-size:17px;font-weight:800;margin-bottom:4px;"><i class="fas fa-calendar-check" style="color:var(--primary-green);"></i> Book Worker</h3>';
-  html += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;margin-top:12px;">';
-  html += '<div class="worker-avatar" style="background:' + w.color + ';width:44px;height:44px;font-size:16px;">' + initials + '</div>';
-  html += '<div><div style="font-weight:700;">' + w.name + '</div><div style="font-size:12px;color:var(--text-muted);">\u20B9' + w.hourly + '/hr</div></div></div>';
-  html += '<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Select Date</label><input type="date" class="form-input" id="bookingDate" value="' + today + '"></div>';
-  html += '<div style="display:flex;gap:10px;margin-bottom:12px;">';
-  html += '<div class="form-group" style="flex:1;margin-bottom:0;"><label class="form-label">Start Time</label><select class="form-select" id="bookingStartTime" onchange="calcBookingCost()"><option value="">Select...</option>';
-  var times = ["6:00 AM","7:00 AM","8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM"];
-  for (var i = 0; i < times.length; i++) {
-    html += '<option value="' + times[i] + '">' + times[i] + '</option>';
-  }
-  html += '</select></div>';
-  html += '<div class="form-group" style="flex:1;margin-bottom:0;"><label class="form-label">End Time</label><select class="form-select" id="bookingEndTime" onchange="calcBookingCost()"><option value="">Select...</option>';
-  for (var i = 0; i < times.length; i++) {
-    html += '<option value="' + times[i] + '">' + times[i] + '</option>';
-  }
-  html += '</select></div></div>';
-  html += '<div id="bookingCostSummary" class="booking-summary">';
-  html += '<div class="line"><span>Hours</span><span id="calcHours">0</span></div>';
-  html += '<div class="line"><span>Hourly Rate</span><span>\u20B9' + w.hourly + '</span></div>';
-  html += '<div class="line"><span>Subtotal</span><span id="calcSubtotal">\u20B90</span></div>';
-  html += '<div class="line"><span>GST (18%)</span><span id="calcGST">\u20B90</span></div>';
-  html += '<div class="line total"><span>Total Amount</span><span id="calcTotal">\u20B90</span></div>';
-  html += '</div>';
-  html += '<button class="btn-primary u-full" onclick="confirmBooking()"><i class="fas fa-check"></i> Confirm Booking</button>';
-  document.getElementById("bookingContent").innerHTML = html;
-  document.getElementById("bookingModal").classList.add("active");
-}
 
-function closeBookingModal() {
-  document.getElementById("bookingModal").classList.remove("active");
-}
-
-function timeToHours(t) {
-  if (!t) return 0;
-  var parts = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!parts) return 0;
-  var h = parseInt(parts[1], 10);
-  var m = parseInt(parts[2], 10);
-  var ampm = parts[3].toUpperCase();
-  if (ampm === "PM" && h !== 12) h += 12;
-  if (ampm === "AM" && h === 12) h = 0;
-  return h + m / 60;
-}
-
-function calcBookingCost() {
-  var startStr = document.getElementById("bookingStartTime").value;
-  var endStr = document.getElementById("bookingEndTime").value;
-  if (!startStr || !endStr || !currentWorker) return;
-  var startH = timeToHours(startStr);
-  var endH = timeToHours(endStr);
-  var hours = endH - startH;
-  if (hours <= 0) {
-    document.getElementById("calcHours").textContent = "0";
-    document.getElementById("calcSubtotal").textContent = "\u20B90";
-    document.getElementById("calcGST").textContent = "\u20B90";
-    document.getElementById("calcTotal").textContent = "\u20B90";
-    return;
+  function renderEmpty(title, sub, ctaText, ctaFn) {
+    var grid = $('wrkWorkerGrid');
+    grid.innerHTML =
+      '<div class="wrk-empty"><i class="fas fa-tractor"></i><h3>' + esc(title) + '</h3><p>' + esc(sub || '') + '</p>' +
+      (ctaText ? '<div style="margin-top:14px;"><button class="wrk-btn wrk-btn-primary" style="max-width:220px;margin:0 auto;" onclick="' + ctaFn + '">' + esc(ctaText) + '</button></div>' : '') +
+      '</div>';
   }
-  var subtotal = hours * currentWorker.hourly;
-  var gst = subtotal * 0.18;
-  var total = subtotal + gst;
-  document.getElementById("calcHours").textContent = hours.toFixed(1);
-  document.getElementById("calcSubtotal").textContent = "\u20B9" + Math.round(subtotal).toLocaleString();
-  document.getElementById("calcGST").textContent = "\u20B9" + Math.round(gst).toLocaleString();
-  document.getElementById("calcTotal").textContent = "\u20B9" + Math.round(total).toLocaleString();
-}
 
-function confirmBooking() {
-  if (!currentWorker) return;
-  var date = document.getElementById("bookingDate").value;
-  var startTime = document.getElementById("bookingStartTime").value;
-  var endTime = document.getElementById("bookingEndTime").value;
-  var startH = timeToHours(startTime);
-  var endH = timeToHours(endTime);
-  var hours = endH - startH;
-  if (!date || !startTime || !endTime || hours <= 0) {
-    alert("Please select a date, start time, and end time.");
-    return;
+  function renderError(msg) {
+    var grid = $('wrkWorkerGrid');
+    grid.innerHTML =
+      '<div class="wrk-empty"><i class="fas fa-exclamation-triangle"></i><h3>Something went wrong</h3><p>' + esc(msg) + '</p>' +
+      '<div style="margin-top:14px;"><button class="wrk-btn wrk-btn-primary" style="max-width:160px;margin:0 auto;" onclick="WorkersApp.loadWorkers()">Try Again</button></div></div>';
+    $('wrkResultCount').textContent = '';
   }
-  var subtotal = hours * currentWorker.hourly;
-  var gst = subtotal * 0.18;
-  var total = subtotal + gst;
-  var bookingId = "WB-" + Date.now().toString(36).toUpperCase();
+
+  function renderWorkerCard(w) {
+    var r = parseRate(w);
+    var rateHtml = r ? '<span class="wrk-rate">' + moneys(r.value) + '<small>/' + (r.type === 'day' ? 'day' : 'hr') + '</small></span>' : '';
+    var availCls = w.is_available ? 'on' : 'off';
+    var avail = availabilityLabel(w);
+    var loc = [w.village, w.district].filter(Boolean).join(', ');
+    var exp = (w.experience_years != null && w.experience_years > 0) ? w.experience_years + ' yr' + (w.experience_years > 1 ? 's' : '') : null;
+    var showRating = Number(w.rating) > 0;
+    var bookDisabled = !w.is_available ? 'disabled' : '';
+    var bookTitle = !w.is_available ? 'Worker is currently unavailable' : '';
+    return '' +
+      '<div class="wrk-card">' +
+        '<div class="wrk-card-head">' +
+          '<div class="wrk-avatar" style="background:' + avatarColor(w.id) + ';">' + esc(initials(w.full_name)) +
+            (w.is_verified ? '<span class="wrk-verified"><i class="fas fa-check"></i></span>' : '') +
+          '</div>' +
+          '<div style="min-width:0;">' +
+            '<div class="wrk-card-name">' + esc(w.full_name) + '</div>' +
+            '<div class="wrk-card-skill">' + esc(firstSkill(w.skills)) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wrk-card-meta">' +
+          (loc ? '<span><i class="fas fa-map-marker-alt"></i> ' + esc(loc) + '</span>' : '') +
+          (exp ? '<span><i class="fas fa-award"></i> ' + esc(exp) + '</span>' : '') +
+        '</div>' +
+        '<div class="wrk-card-meta">' +
+          (showRating ? '<span class="wrk-rating">' + starsHTML(w.rating) + ' ' + w.rating + ' <span style="color:var(--text-muted);font-weight:400;">(' + (w.total_reviews || 0) + ')</span></span>' : '<span class="wrk-rating">No ratings yet</span>') +
+        '</div>' +
+        (w.bio ? '<div class="wrk-bio">' + esc(w.bio) + '</div>' : '') +
+        '<div class="wrk-card-foot">' +
+          '<span class="wrk-avail ' + availCls + '"><i class="fas fa-circle" style="font-size:7px;"></i> ' + esc(avail) + '</span>' +
+          rateHtml +
+        '</div>' +
+        '<div class="wrk-card-actions">' +
+          '<button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.viewWorker(\'' + esc(w.id) + '\')"><i class="fas fa-eye"></i> View</button>' +
+          '<button class="wrk-btn wrk-btn-primary" onclick="WorkersApp.startBooking(\'' + esc(w.id) + '\')" ' + bookDisabled + ' title="' + bookTitle + '"><i class="fas fa-calendar-check"></i> Book</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function loadWorkers(page) {
+    if (catalog.loading) return;
+    catalog.loading = true;
+    renderSkeletons();
+
+    var p = paramsFromState(page);
+    API.Worker.list(p).then(function (res) {
+      catalog.loading = false;
+      if (!res || !Array.isArray(res.items)) {
+        renderEmpty('No results', 'No workers available for your selected filters.');
+        $('wrkPagination').innerHTML = '';
+        return;
+      }
+      catalog.items = res.items;
+      catalog.total = res.total || 0;
+      catalog.totalPages = res.total_pages || 1;
+      catalog.page = p.page || 1;
+
+      if (!catalog.items.length) {
+        renderEmpty('No workers available', 'No workers available for your selected filters.', 'Clear Filters', 'WorkersApp.clearFilters()');
+        $('wrkResultCount').textContent = '0 workers found';
+      } else {
+        $('wrkWorkerGrid').innerHTML = catalog.items.map(renderWorkerCard).join('');
+        $('wrkResultCount').textContent = catalog.total + ' worker' + (catalog.total === 1 ? '' : 's') + ' found';
+      }
+      renderPagination();
+    }).catch(function (err) {
+      catalog.loading = false;
+      console.error('workers list error', err);
+      if (err && (err.status === 401 || err.status === 403)) { notFound(); return; }
+      renderError('Unable to load workers right now.');
+    });
+  }
+
+  function renderPagination() {
+    var el = $('wrkPagination');
+    if (catalog.totalPages <= 1) { el.innerHTML = ''; return; }
+    el.innerHTML =
+      '<button class="wrk-page-btn" onclick="WorkersApp.goPage(' + (catalog.page - 1) + ')" ' + (catalog.page <= 1 ? 'disabled' : '') + '><i class="fas fa-chevron-left"></i> Prev</button>' +
+      '<span class="wrk-page-info">Page ' + catalog.page + ' of ' + catalog.totalPages + '</span>' +
+      '<button class="wrk-page-btn" onclick="WorkersApp.goPage(' + (catalog.page + 1) + ')" ' + (catalog.page >= catalog.totalPages ? 'disabled' : '') + '>Next <i class="fas fa-chevron-right"></i></button>';
+  }
+
+  // ---------- Filters UI ----------
+  function loadFilters() {
+    API.Worker.getFilters().then(function (res) {
+      filtersData = res;
+      var wtSel = $('fltWorkType');
+      var skillSel = $('fltSkill');
+      var locSel = $('fltLocation');
+      if (Array.isArray(res.work_types) && res.work_types.length) {
+        res.work_types.concat(WORK_TYPES.filter(function (x) { return res.work_types.indexOf(x) === -1; })).forEach(function (wt) {
+          wtSel.insertAdjacentHTML('beforeend', '<option value="' + esc(wt) + '">' + esc(wt) + '</option>');
+        });
+      } else {
+        WORK_TYPES.forEach(function (wt) { wtSel.insertAdjacentHTML('beforeend', '<option value="' + esc(wt) + '">' + esc(wt) + '</option>'); });
+      }
+      if (Array.isArray(res.skills)) {
+        res.skills.forEach(function (s) { skillSel.insertAdjacentHTML('beforeend', '<option value="' + esc(s) + '">' + esc(s) + '</option>'); });
+      }
+      loadDistrictsFromFilters().forEach(function (d) {
+        locSel.insertAdjacentHTML('beforeend', '<option value="' + esc(d) + '">' + esc(d) + '</option>');
+      });
+    }).catch(function (e) {
+      console.error('filters load error', e);
+    });
+  }
+
+  function gatherActiveFilters() {
+    var f = {};
+    var wt = $('fltWorkType').value;
+    var sk = $('fltSkill').value;
+    var lo = $('fltLocation').value;
+    var ex = $('fltExp').value;
+    var rt = $('fltRating').value;
+    var av = $('fltAvail').checked;
+    if (wt) f.work_type = wt;
+    if (sk) f.skill = sk;
+    if (lo) f.location = lo;
+    if (ex) f.exp = ex;
+    if (rt) f.rating = rt;
+    if (av) f.avail = true;
+    return f;
+  }
+
+  function updateFilterCount() {
+    var n = Object.keys(gatherActiveFilters()).length;
+    var el = $('wrkFilterCount');
+    el.style.display = n ? 'inline-block' : 'none';
+    el.textContent = n;
+  }
+
+  // ---------- Worker detail ----------
+  function viewWorker(id) {
+    var modal = $('wrkDetailModal');
+    $('wrkDetailContent').innerHTML =
+      '<div class="wrk-empty" style="padding:40px 0;"><i class="fas fa-spinner fa-spin" style="color:var(--wrk);"></i><h3>Loading worker profile...</h3></div>';
+    modal.classList.add('open');
+    API.Worker.get(id).then(function (w) {
+      currentWorker = w;
+      renderDetail(w);
+    }).catch(function (err) {
+      console.error('worker detail error', err);
+      if (err && (err.status === 401 || err.status === 403)) { modal.classList.remove('open'); notFound(); return; }
+      $('wrkDetailContent').innerHTML =
+        '<div class="wrk-empty"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load profile</h3><p>Please try again.</p>' +
+        '<div style="margin-top:14px;"><button class="wrk-btn wrk-btn-primary" style="max-width:150px;margin:0 auto;" onclick="WorkersApp.viewWorker(\'' + esc(id) + '\')">Try Again</button></div></div>';
+    });
+  }
+
+  function renderDetail(w) {
+    var r = parseRate(w);
+    var loc = [w.village, w.district, w.state].filter(Boolean).join(', ');
+    var showRating = Number(w.rating) > 0;
+    var skills = skillStr(w.skills).split(', ').filter(Boolean);
+    var avail = w.availability || [];
+    var availRows = '';
+    if (avail.length) {
+      availRows = '<table class="wrk-avail-table"><tr><th>Day</th><th>Status</th><th>Hours</th></tr>';
+      for (var d = 0; d < 7; d++) {
+        var row = avail.filter(function (a) { return a.day_of_week === d; })[0];
+        var dayName = AVAIL_DAYS[d];
+        if (row) {
+          var open = row.is_available ? 'Available' : 'Unavailable';
+          var hrs = row.is_available ? (row.start_time + ' - ' + row.end_time) : '—';
+          availRows += '<tr><td>' + dayName + '</td><td>' + open + '</td><td>' + hrs + '</td></tr>';
+        } else {
+          availRows += '<tr><td>' + dayName + '</td><td style="color:var(--text-muted);">Not set</td><td>—</td></tr>';
+        }
+      }
+      availRows += '</table>';
+    }
+
+    var historyHtml = '';
+    if (w.history && w.history.length) {
+      w.history.slice(0, 8).forEach(function (h) {
+        historyHtml += '<div class="wrk-history-item"><span class="h-w">' + esc(h.work_type || 'Farm work') + '</span><span class="h-m">' + esc(h.farm_name || '') + ' &middot; ' + esc(h.booking_date || '') + '</span></div>';
+      });
+    } else {
+      historyHtml = '<div style="font-size:12px;color:var(--text-muted);">No completed jobs recorded yet.</div>';
+    }
+
+    var reviewsHtml = '';
+    var wReviews = w.reviews || [];
+    if (wReviews.length) {
+      wReviews.slice(0, 6).forEach(function (rv) {
+        reviewsHtml += '<div class="wrk-review-item"><div class="r-head"><span class="r-name">' + esc(rv.reviewer_name || 'Farmer') + '</span><span class="r-stars">' + starsHTML(rv.rating) + '</span></div><div class="r-text">' + esc(rv.comment || '') + '</div></div>';
+      });
+    } else {
+      reviewsHtml = '<div style="font-size:12px;color:var(--text-muted);">No reviews yet.</div>';
+    }
+
+    $('wrkDetailContent').innerHTML =
+      '<div class="wrk-detail-top">' +
+        '<div class="wrk-avatar-lg" style="background:' + avatarColor(w.id) + ';">' + esc(initials(w.full_name)) +
+          (w.is_verified ? '<span class="wrk-verified"><i class="fas fa-check"></i></span>' : '') +
+        '</div>' +
+        '<div style="flex:1;min-width:200px;">' +
+          '<div class="wrk-detail-name">' + esc(w.full_name) + (w.is_verified ? ' <span class="wrk-chip" style="background:#DCFCE7;color:#166534;"><i class="fas fa-badge-check"></i> Verified</span>' : '') + '</div>' +
+          '<div class="wrk-meta-row">' +
+            (showRating ? '<span class="wrk-rating" style="color:var(--text-primary);">' + starsHTML(w.rating) + ' ' + w.rating + ' (' + (w.total_reviews || 0) + ')</span>' : '') +
+            '<span><i class="fas fa-map-marker-alt"></i> ' + esc(loc || 'Location not set') + '</span>' +
+            (w.experience_years ? '<span><i class="fas fa-award"></i> ' + esc(w.experience_years) + ' yr' + (w.experience_years > 1 ? 's' : '') + ' experience</span>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="wrk-section"><h4><i class="fas fa-chart-line"></i> Rate</h4><div class="wrk-rate-box">' +
+        (w.daily_rate != null && w.daily_rate > 0 ? '<div class="wrk-rate-pill"><b>' + moneys(w.daily_rate) + '</b><span>Per Day</span></div>' : '') +
+        (w.hourly_rate != null && w.hourly_rate > 0 ? '<div class="wrk-rate-pill"><b>' + moneys(w.hourly_rate) + '</b><span>Per Hour</span></div>' : '') +
+        (!r ? '<div class="wrk-rate-pill"><b>Contact</b><span>Rate on request</span></div>' : '') +
+      '</div></div>' +
+
+      '<div class="wrk-section"><h4><i class="fas fa-cogs"></i> Skills</h4><div class="wrk-skills">' +
+        (skills.length ? skills.map(function (s) { return '<span class="wrk-chip">' + esc(s) + '</span>'; }).join('') : '<span class="wrk-chip">Farm work</span>') +
+      '</div></div>' +
+
+      (w.bio ? '<div class="wrk-section"><h4><i class="fas fa-info-circle"></i> About</h4><p style="font-size:12.5px;color:var(--text-secondary);line-height:1.6;">' + esc(w.bio) + '</p></div>' : '') +
+
+      '<div class="wrk-section"><h4><i class="fas fa-calendar-week"></i> Availability</h4>' +
+        (availRows || '<div style="font-size:12px;color:var(--text-muted);">' + esc(availabilityLabel(w)) + '</div>') +
+      '</div>' +
+
+      '<div class="wrk-section"><h4><i class="fas fa-briefcase"></i> Completed Jobs</h4>' + historyHtml + '</div>' +
+
+      '<div class="wrk-section"><h4><i class="fas fa-star"></i> Reviews</h4>' + reviewsHtml + '</div>' +
+
+      '<div style="display:flex;gap:10px;margin-top:6px;">' +
+        '<button class="wrk-btn wrk-btn-secondary" style="flex:1;padding:11px;background:var(--wrk-bg);color:var(--wrk-dark);border:none;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer;" onclick="WorkersApp.closeDetail()">Close</button>' +
+        '<button class="wrk-btn" style="flex:1;padding:11px;background:var(--wrk);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer;" onclick="WorkersApp.startBooking(\'' + esc(w.id) + '\')"' + (!w.is_available ? ' disabled' : '') + '><i class="fas fa-calendar-check"></i> Book Worker</button>' +
+      '</div>';
+  }
+
+  // ---------- Booking wizard ----------
+  var BSTEP = 1;
   var booking = {
-    id: bookingId,
-    workerId: currentWorker.id,
-    workerName: currentWorker.name,
-    date: date,
-    startTime: startTime,
-    endTime: endTime,
-    hours: hours,
-    hourlyRate: currentWorker.hourly,
-    subtotal: Math.round(subtotal),
-    gst: Math.round(gst),
-    total: Math.round(total),
-    createdAt: new Date().toISOString()
+    worker_id: null,
+    farm_id: null,
+    plot_id: null,
+    work_type: '',
+    booking_date: '',
+    start_time: '',
+    end_time: '',
+    duration_days: 1,
+    hours_per_day: 8,
+    notes: '',
+    wallet_pin: '',
+    walletBalance: null,
+    farm_name: '',
+    plot_name: '',
+    maxStep: 1
   };
-  var localBookings = JSON.parse(localStorage.getItem("fa-worker-bookings") || "[]");
-  localBookings.push(booking);
-  localStorage.setItem("fa-worker-bookings", JSON.stringify(localBookings));
-  closeBookingModal();
-  showToastMsg("Worker Booked Successfully!");
-  loadBookedWorkers();
-  if (bookedFilterActive) applyFilters();
-}
 
-function showToastMsg(msg, type) {
-  type = type || "success";
-  var container = document.getElementById("toast-container");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "toast-container";
-    container.className = "toast-container";
-    document.body.appendChild(container);
+  function resetBookingDraft() {
+    booking = {
+      worker_id: null, farm_id: null, plot_id: null, work_type: '',
+      booking_date: '', start_time: '', end_time: '', duration_days: 1,
+      hours_per_day: 8, notes: '', wallet_pin: '', walletBalance: null,
+      farm_name: '', plot_name: '', maxStep: 1
+    };
+    farmNameMap = {};
+    plotNameMap = {};
   }
-  var toast = document.createElement("div");
-  toast.className = "toast-msg " + type;
-  var icons = { success: "fa-check-circle", danger: "fa-exclamation-circle", warning: "fa-exclamation-triangle", info: "fa-info-circle" };
-  var icon = icons[type] || icons.success;
-  toast.innerHTML = '<i class="fas ' + icon + '"></i><span>' + msg + '</span>';
-  container.appendChild(toast);
-  requestAnimationFrame(function() { toast.classList.add("show"); });
-  setTimeout(function() {
-    toast.classList.remove("show");
-    toast.classList.add("hide");
-    setTimeout(function() { toast.remove(); }, 300);
-  }, 3000);
-}
 
-function openMessageModal(id) {
-  var w = null;
-  for (var i = 0; i < workers.length; i++) {
-    if (workers[i].id === id) { w = workers[i]; break; }
+  function startBooking(id) {
+    // Reopening the wizard for the same worker resumes where you left off,
+    // with everything previously entered pre-filled and editable.
+    if (booking.worker_id && booking.worker_id === id && currentWorker && currentWorker.id === id && (booking.maxStep > 1 || booking.farm_id)) {
+      var m0 = $('wrkBookingModal');
+      m0.classList.add('open');
+      if (booking.maxStep >= 4) renderBookingStep4();
+      else if (booking.maxStep === 3) renderBookingStep3();
+      else if (booking.maxStep === 2) renderBookingStep2();
+      else renderBookingStep1();
+      return;
+    }
+    BSTEP = 1;
+    resetBookingDraft();
+    booking.worker_id = id;
+    if (currentWorker && currentWorker.id === id) {
+      renderBookingStep1();
+    } else {
+      var modal = $('wrkBookingModal');
+      modal.classList.add('open');
+      $('wrkBookingContent').innerHTML = '<div class="wrk-empty"><i class="fas fa-spinner fa-spin" style="color:var(--wrk);"></i><h3>Loading availability...</h3></div>';
+      renderSteps();
+      API.Worker.get(id).then(function (w) {
+        currentWorker = w;
+        booking.worker_id = id;
+        renderBookingStep1();
+      }).catch(function (err) {
+        modal.classList.remove('open');
+        toast('Unable to load the worker. Please try again.', 'error');
+      });
+    }
   }
-  if (!w) return;
-  currentWorker = w;
-  document.getElementById("messageWorkerName").textContent = "To: " + w.name;
-  document.getElementById("messageSubject").value = "";
-  document.getElementById("messageBody").value = "";
-  document.getElementById("messageModal").classList.add("active");
-}
 
-function closeMessageModal() {
-  document.getElementById("messageModal").classList.remove("active");
-}
-
-function sendMessage() {
-  if (!currentWorker) return;
-  var subject = document.getElementById("messageSubject").value.trim();
-  var body = document.getElementById("messageBody").value.trim();
-  if (!subject || !body) {
-    alert("Please enter both a subject and message.");
-    return;
+  function renderSteps() {
+    var labels = ['Farm &amp; Work', 'Date &amp; Time', 'Details', 'Review'];
+    var html = '';
+    for (var i = 1; i <= 4; i++) {
+      var cls = i === BSTEP ? 'active' : (i < BSTEP ? 'done' : '');
+      html += '<div class="wrk-step ' + cls + '"><span class="wrk-step-num">' + (i < BSTEP ? '<i class="fas fa-check"></i>' : i) + '</span><div class="wrk-step-label">' + labels[i - 1] + '</div></div>';
+    }
+    $('wrkSteps').innerHTML = html;
   }
-  var msg = {
-    id: "MSG-" + Date.now().toString(36).toUpperCase(),
-    workerId: currentWorker.id,
-    workerName: currentWorker.name,
-    subject: subject,
-    body: body,
-    sentAt: new Date().toISOString()
-  };
-  var inbox = JSON.parse(localStorage.getItem("fa-worker-messages") || "[]");
-  inbox.push(msg);
-  localStorage.setItem("fa-worker-messages", JSON.stringify(inbox));
-  closeMessageModal();
-  showToastMsg("Message sent to " + currentWorker.name + " successfully!");
-}
 
-document.addEventListener("DOMContentLoaded", function() {
-  document.querySelectorAll(".modal-backdrop").forEach(function(m) {
-    m.addEventListener("click", function(e) {
-      if (e.target === m) m.classList.remove("active");
-    });
-  });
-  loadStarred();
-  loadBookedWorkers();
-  if (window.API && window.API.Worker && window.API.Worker.list) {
-    API.Worker.list().then(function(res) {
-      var items = [];
-      if (res && Array.isArray(res.items)) {
-        items = res.items;
-      } else if (res && Array.isArray(res)) {
-        items = res;
+  function resetBookingContent() {
+    var modal = $('wrkBookingModal');
+    modal.classList.add('open');
+    renderSteps();
+    $('wrkBookingContent').innerHTML = '<div class="wrk-empty" style="padding:30px 0;"><i class="fas fa-spinner fa-spin" style="color:var(--wrk);"></i><h3>Loading...</h3></div>';
+  }
+
+  function workerSummaryLine() {
+    if (!currentWorker) return '';
+    var r = parseRate(currentWorker);
+    return '<div class="wrk-summary"><div class="line"><span>Worker</span><span>' + esc(currentWorker.full_name) + '</span></div>' +
+      (r ? '<div class="line"><span>Rate</span><span>' + moneys(r.value) + '/' + (r.type === 'day' ? 'day' : 'hr') + '</span></div>' : '') +
+      '</div>';
+  }
+
+  function bookingWorkTypeOptions() {
+    var list = WORK_TYPES.slice();
+    if (filtersData && Array.isArray(filtersData.work_types)) {
+      filtersData.work_types.forEach(function (wt) { if (list.indexOf(wt) === -1) list.push(wt); });
+    }
+    return list.map(function (wt) { return '<option value="' + esc(wt) + '">' + esc(wt) + '</option>'; }).join('');
+  }
+
+  function renderBookingStep1() {
+    BSTEP = 1;
+    resetBookingContent();
+    $('wrkBookingContent').innerHTML =
+      workerSummaryLine() +
+      '<div class="wrk-field"><label>Farm</label><select class="wrk-input" id="bFarm" onchange="WorkersApp.onFarmChange()"><option value="">Select farm...</option></select></div>' +
+      '<div class="wrk-field" id="bPlotWrap" style="display:none;"><label>Plot <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label><select class="wrk-input" id="bPlot"></select></div>' +
+      '<div class="wrk-field"><label>Work Type</label><select class="wrk-input" id="bWorkType" onchange="WorkersApp.onWorkTypeChange()">' +
+        bookingWorkTypeOptions() +
+      '</select></div>' +
+      '<div class="wrk-wizard-actions"><button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.closeBooking()">Cancel</button><button class="wrk-btn wrk-btn-primary" onclick="WorkersApp.bookingNext1()">Next <i class="fas fa-chevron-right"></i></button></div>';
+
+    // Load farms
+    API.Farm.list().then(function (farms) {
+      var sel = $('bFarm');
+      var rows = Array.isArray(farms) ? farms : (farms && Array.isArray(farms.items) ? farms.items : []);
+      if (!rows.length) {
+        sel.insertAdjacentHTML('beforeend', '<option value="">No farms found</option>');
+        sel.disabled = true;
+        toast('Add a farm in Farm Management before booking.', 'warning');
+        return;
       }
-      if (items.length > 0) {
-        workers = items.map(mapApiWorker);
-      }
-      applyFilters();
-    }).catch(function() {
-      applyFilters();
-    });
-  } else {
-    applyFilters();
-  }
-});
+      rows.forEach(function (f) {
+        var name = f.farm_name || 'Farm';
+        var key = String(f.farm_id || f.id);
+        farmNameMap[key] = name;
+        var loc = [f.village, f.district, f.state].filter(Boolean).join(', ');
+        sel.insertAdjacentHTML('beforeend', '<option value="' + esc(key) + '">' + esc(name) + (loc ? ' — ' + esc(loc) : '') + '</option>');
+      });
+      var savedPlot = booking.plot_id;
+      if (booking.farm_id) sel.value = booking.farm_id;
+      if (savedPlot) WorkersApp.onFarmChange(savedPlot);
+    }).catch(function () { toast('Unable to load your farms.', 'error'); });
 
-function mapApiWorker(api) {
-  var skills = api.skills || [];
-  if (typeof skills === "string") {
-    try { skills = JSON.parse(skills); } catch (e) { skills = skills.split(",").map(function(s) { return s.trim(); }); }
+    // Pre-select work type = previously saved value, else the worker's first matching skill
+    var savedWork = booking.work_type;
+    if (savedWork) {
+      setTimeout(function () { var s = $('bWorkType'); if (s) s.value = savedWork; }, 0);
+    } else {
+      var first = firstSkill(currentWorker && currentWorker.skills);
+      if (first && WORK_TYPES.indexOf(first) !== -1) {
+        setTimeout(function () { var s = $('bWorkType'); if (s) s.value = first; }, 0);
+      }
+    }
   }
-  var loc = [api.village, api.district, api.state].filter(Boolean).join(", ") || "Unknown";
-  var availOptions = ["Available", "Today", "Tomorrow", "This Week"];
-  return {
-    id: api.id,
-    name: api.full_name || "Unknown Worker",
-    skills: skills,
-    experience: api.experience_years || 0,
-    location: loc,
-    distance: 0,
-    rating: api.rating || 0,
-    reviews: api.total_reviews || 0,
-    hourly: api.hourly_rate || 0,
-    availability: availOptions[Math.floor(Math.random() * availOptions.length)],
-    color: ["#1B5E3F","#5D4037","#E65100","#283593","#7B1FA2","#4E342E","#0D47A1","#00897B","#6A1B9A","#AD1457","#2E7D32"][Math.floor(Math.random() * 11)],
-    bio: api.bio || "Professional farm worker.",
-    history: [],
-    reviews: [],
-    languages: ["Hindi"],
-    _apiId: api.id
+
+  function onFarmChange(preselectPlot) {
+    var fsel = $('bFarm');
+    var fval = fsel.value;
+    var wrap = $('bPlotWrap');
+    var psel = $('bPlot');
+    booking.farm_id = fval || null;
+    booking.farm_name = (fval && farmNameMap[fval]) ? farmNameMap[fval] : (fval || '');
+    booking.plot_id = null;
+    booking.plot_name = '';
+    if (!fval) { wrap.style.display = 'none'; psel.innerHTML = '<option value="">Select plot...</option>'; return; }
+    wrap.style.display = 'block';
+    psel.innerHTML = '<option value="">Loading plots...</option>';
+    API.Farm.getPlots(fval).then(function (plots) {
+      var rows = Array.isArray(plots) ? plots : (plots && Array.isArray(plots.items) ? plots.items : []);
+      if (!rows.length) {
+        wrap.style.display = 'none';
+        psel.innerHTML = '<option value="">No plots</option>';
+        return;
+      }
+      psel.innerHTML = '<option value="">No specific plot</option>';
+      rows.forEach(function (p) {
+        plotNameMap[p.id] = p.plot_name || 'Plot';
+        psel.insertAdjacentHTML('beforeend', '<option value="' + esc(p.id) + '">' + esc(p.plot_name) + (p.area ? ' (' + p.area + ')' : '') + '</option>');
+      });
+      if (preselectPlot) psel.value = preselectPlot;
+    }).catch(function () { wrap.style.display = 'none'; psel.innerHTML = '<option value="">No specific plot</option>'; });
+  }
+
+  function bookingNext1() {
+    var fsel = $('bFarm');
+    var fval = (fsel && fsel.value) || '';
+    if (!fval) { toast('Please select a farm.', 'error'); return; }
+    booking.farm_id = fval;
+    booking.farm_name = (fval && farmNameMap[fval]) ? farmNameMap[fval] : fval;
+    var psel = $('bPlot');
+    booking.plot_id = (psel && psel.value) ? psel.value : null;
+    booking.plot_name = (booking.plot_id && plotNameMap[booking.plot_id]) ? plotNameMap[booking.plot_id] : '';
+    var wsel = $('bWorkType');
+    booking.work_type = (wsel && wsel.value) || '';
+    if (booking.maxStep < 2) booking.maxStep = 2;
+    renderBookingStep2();
+  }
+
+  function localToday() {
+    var d = new Date();
+    var m = ('0' + (d.getMonth() + 1)).slice(-2);
+    var day = ('0' + d.getDate()).slice(-2);
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+
+  function renderBookingStep2() {
+    BSTEP = 2;
+    resetBookingContent();
+
+    function timeOpts(sel) {
+      var html = '';
+      for (var h = 6; h <= 18; h++) {
+        var label = (h > 12 ? (h - 12) + ':00 PM' : h + ':00 AM');
+        var v = (h < 10 ? '0' + h : h) + ':00';
+        html += '<option value="' + v + '"' + (sel === v ? ' selected' : '') + '>' + label + '</option>';
+      }
+      return html;
+    }
+
+    var iso = localToday();
+    var dateVal = (booking.booking_date && booking.booking_date >= iso) ? booking.booking_date : iso;
+
+    $('wrkBookingContent').innerHTML =
+      workerSummaryLine() +
+      '<div class="wrk-field"><label>Date</label><input type="date" class="wrk-input" id="bDate" min="' + iso + '" value="' + dateVal + '" onchange="WorkersApp.onBookingCalc()"></div>' +
+      '<div class="wrk-row">' +
+        '<div class="wrk-field"><label>Start Time</label><select class="wrk-input" id="bStart" onchange="WorkersApp.onBookingCalc()"><option value="">Select...</option>' + timeOpts(booking.start_time) + '</select></div>' +
+        '<div class="wrk-field"><label>End Time</label><select class="wrk-input" id="bEnd" onchange="WorkersApp.onBookingCalc()"><option value="">Select...</option>' + timeOpts(booking.end_time) + '</select></div>' +
+      '</div>' +
+      '<div class="wrk-field"><label>Number of Days</label><select class="wrk-input" id="bDays" onchange="WorkersApp.onBookingCalc()">' +
+        [1, 2, 3, 4, 5, 7, 10].map(function (d) { return '<option value="' + d + '"' + (d === (booking.duration_days || 1) ? ' selected' : '') + '>' + d + ' day' + (d > 1 ? 's' : '') + '</option>'; }).join('') +
+      '</select></div>' +
+      '<div class="wrk-summary" id="bCostBox"><div class="line"><span>Estimated total</span><span>\u20b90</span></div></div>' +
+      '<div class="wrk-wizard-actions"><button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.bookingBack()"><i class="fas fa-chevron-left"></i> Back</button><button class="wrk-btn wrk-btn-primary" onclick="WorkersApp.bookingNext2()">Next <i class="fas fa-chevron-right"></i></button></div>';
+
+    if (booking.start_time && booking.end_time) onBookingCalc();
+  }
+
+  function onWorkTypeChange() {
+    var wsel = $('bWorkType');
+    if (wsel && wsel.value) booking.work_type = wsel.value;
+  }
+
+  function onBookingCalc() {
+    var st = $('bStart').value;
+    var en = $('bEnd').value;
+    var days = parseInt($('bDays').value, 10) || 1;
+    var dt = $('bDate').value;
+    if (dt) booking.booking_date = dt;
+    if (st) booking.start_time = st;
+    if (en) booking.end_time = en;
+    booking.duration_days = days;
+    if (!st || !en) {
+      $('bCostBox').innerHTML = '<div class="line"><span>Estimated total</span><span>\u20b90</span></div>';
+      return;
+    }
+    var sh = parseFloat(st.split(':')[0]);
+    var eh = parseFloat(en.split(':')[0]);
+    var hrs = Math.max(0, eh - sh);
+    var r = parseRate(currentWorker);
+    var cost = costFor(currentWorker, sh, eh, days);
+    var html =
+      '<div class="line"><span>Worker</span><span>' + esc(currentWorker.full_name) + '</span></div>' +
+      (r ? '<div class="line"><span>Rate</span><span>' + moneys(r.value) + '/' + (r.type === 'day' ? 'day' : 'hr') + '</span></div>' : '') +
+      '<div class="line"><span>Duration</span><span>' + days + ' day' + (days > 1 ? 's' : '') + '</span></div>' +
+      (hrs > 0 ? '<div class="line"><span>Hours/day</span><span>' + hrs.toFixed(0) + '</span></div>' : '') +
+      '<div class="line total"><span>Estimated Total</span><span>' + moneys(cost) + '</span></div>';
+    $('bCostBox').innerHTML = html;
+  }
+
+  function bookingNext2() {
+    var dt = $('bDate').value;
+    var st = $('bStart').value;
+    var en = $('bEnd').value;
+    if (!dt) { toast('Please select a date.', 'error'); return; }
+    if (!st || !en) { toast('Please select start and end time.', 'error'); return; }
+    var sh = parseFloat(st.split(':')[0]);
+    var eh = parseFloat(en.split(':')[0]);
+    if (eh <= sh) { toast('End time must be after start time.', 'error'); return; }
+    booking.booking_date = dt;
+    booking.start_time = st;
+    booking.end_time = en;
+    booking.duration_days = parseInt($('bDays').value, 10) || 1;
+    booking.hours_per_day = eh - sh;
+    if (booking.maxStep < 3) booking.maxStep = 3;
+    renderBookingStep3();
+  }
+
+  function renderBookingStep3() {
+    BSTEP = 3;
+    resetBookingContent();
+    $('wrkBookingContent').innerHTML =
+      workerSummaryLine() +
+      '<div class="wrk-field"><label>Work Description <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>' +
+      '<textarea class="wrk-input" id="bNotes" rows="3" placeholder="Describe what work is needed...">' + esc(booking.notes) + '</textarea></div>' +
+      '<div class="wrk-wizard-actions"><button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.bookingBack()"><i class="fas fa-chevron-left"></i> Back</button><button class="wrk-btn wrk-btn-primary" onclick="WorkersApp.bookingNext3()">Review &amp; Confirm <i class="fas fa-chevron-right"></i></button></div>';
+    try { $('wrkBookingContent').querySelector('#bNotes').value = booking.notes || ''; } catch (e) {}
+  }
+
+  function bookingNext3() {
+    var notesEl = $('bNotes');
+    booking.notes = notesEl ? notesEl.value.trim() : booking.notes;
+    if (booking.maxStep < 4) booking.maxStep = 4;
+    renderBookingStep4();
+  }
+
+  function renderBookingStep4() {
+    BSTEP = 4;
+    resetBookingContent();
+
+    var cost = costFor(currentWorker, parseFloat(booking.start_time.split(':')[0]), parseFloat(booking.end_time.split(':')[0]), booking.duration_days);
+    var r = parseRate(currentWorker);
+    var farmName = booking.farm_name || 'Selected farm';
+    var plotName = booking.plot_name || 'Selected plot';
+
+    var walletHtml =
+      '<div class="wrk-field"><label>Wallet PIN <span style="color:var(--text-muted);font-weight:400;">(for payment)</span></label>' +
+      '<input type="password" class="wrk-input" id="bPin" inputmode="numeric" maxlength="6" placeholder="Enter your 6-digit wallet PIN" autocomplete="off">' +
+      '<div class="wrk-pin-hint">Enter the PIN you set in <a href="wallet.html" target="_blank" rel="noopener">Wallet &rarr; Security</a>. If you forgot it, reset it there first &mdash; this is always your own PIN, never a default one.</div></div>';
+
+    $('wrkBookingContent').innerHTML =
+      '<div class="wrk-summary">' +
+        '<div class="line"><span>Worker</span><span>' + esc(currentWorker.full_name) + '</span></div>' +
+        '<div class="line"><span>Farm</span><span>' + esc(farmName) + '</span></div>' +
+        (booking.plot_id ? '<div class="line"><span>Plot</span><span>' + esc(plotName) + '</span></div>' : '') +
+        '<div class="line"><span>Work</span><span>' + esc(booking.work_type) + '</span></div>' +
+        '<div class="line"><span>Date</span><span>' + esc(booking.booking_date) + '</span></div>' +
+        '<div class="line"><span>Time</span><span>' + esc(booking.start_time) + ' - ' + esc(booking.end_time) + '</span></div>' +
+        '<div class="line"><span>Duration</span><span>' + booking.duration_days + ' day' + (booking.duration_days > 1 ? 's' : '') + '</span></div>' +
+        (r ? '<div class="line"><span>Rate</span><span>' + moneys(r.value) + '/' + (r.type === 'day' ? 'day' : 'hr') + '</span></div>' : '') +
+        '<div class="line total"><span>Estimated Total</span><span>' + moneys(cost) + '</span></div>' +
+      '</div>' +
+      (cost > 0 ? walletHtml : '') +
+      '<div class="wrk-wizard-actions"><button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.bookingBack()"><i class="fas fa-chevron-left"></i> Back</button><button class="wrk-btn wrk-btn-primary" id="bConfirmBtn" onclick="WorkersApp.confirmBooking()"><i class="fas fa-check-circle"></i> Confirm Booking</button></div>';
+
+    // Fetch wallet balance
+    API.Wallet.get().then(function (w) {
+      booking.walletBalance = (w && w.balance != null) ? w.balance : null;
+      var pinField = $('bPin');
+      if (pinField) {
+        var balNote = document.createElement('div');
+        balNote.className = 'wrk-balance';
+        balNote.style.marginTop = '6px';
+        balNote.innerHTML = 'Wallet balance: <b>' + moneys(w.balance) + '</b>' + (cost > (w.balance || 0) ? ' <span style="color:#B91C1C;">— insufficient balance</span>' : '');
+        pinField.parentNode.appendChild(balNote);
+      }
+    }).catch(function () {});
+  }
+
+  function confirmBooking() {
+    var cost = costFor(currentWorker, parseFloat(booking.start_time.split(':')[0]), parseFloat(booking.end_time.split(':')[0]), booking.duration_days);
+    var pin = '';
+    var pinEl = $('bPin');
+    if (pinEl) pin = pinEl.value.trim();
+
+    if (cost > 0 && !pin) { toast('Enter your wallet PIN to pay for this booking.', 'error'); return; }
+
+    var btn = $('bConfirmBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating booking...'; }
+
+    var payload = {
+      worker_id: booking.worker_id,
+      farm_id: booking.farm_id,
+      plot_id: booking.plot_id || null,
+      work_type: booking.work_type || 'General Farm Work',
+      booking_date: booking.booking_date,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+      duration_days: booking.duration_days,
+      hours_per_day: booking.hours_per_day,
+      notes: booking.notes,
+      wallet_pin: pin || null
+    };
+
+    API.Worker.book(payload).then(function (res) {
+      closeBooking();
+      resetBookingDraft();
+      var bId = res && res.booking_id;
+      toast('Booking created! ' + (res && res.status === 'confirmed' ? 'Worker booked and payment processed.' : 'Your booking is pending.') + ' Ref: ' + bId, 'success');
+      loadBookings();
+      refreshBookingCount();
+      switchTab('bookings');
+      refreshNotifBadge();
+      addTaskSuggestion(res);
+    }).catch(function (err) {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Booking'; }
+      var msg = errMsg(err, 'Unable to complete the booking right now.');
+      if (typeof msg !== 'string') msg = 'Unable to complete the booking right now.';
+      toast(msg, 'error');
+    });
+  }
+
+  function addTaskSuggestion(res) {
+    // Optional: offer to add to crop tasks if the farmer has an active crop cycle.
+    if (!res || !res.booking_id) return;
+    if (!window.API || !API.Crop || !API.Crop.listCycles || !API.Crop.createTask) return;
+    API.Crop.listCycles().then(function (cycles) {
+      var rows = Array.isArray(cycles) ? cycles : (cycles && Array.isArray(cycles.items) ? cycles.items : []);
+      var active = rows.filter(function (c) { return c && (c.status === 'active' || c.status === 'ongoing'); })[0] || rows[0];
+      if (!active) return;
+      var title = 'Worker: ' + (currentWorker ? currentWorker.full_name : '') + ' — ' + (booking.work_type || 'Farm Work');
+      API.Crop.createTask({
+        crop_cycle_id: active.id,
+        title: title,
+        category: booking.work_type || 'General',
+        due_date: booking.booking_date,
+        status: 'pending',
+        priority: 'medium'
+      }).then(function () {
+        toast('Added to your farm tasks.', 'success');
+      }).catch(function () {});
+    }).catch(function () {});
+  }
+
+  function bookingBack() {
+    if (BSTEP === 2) renderBookingStep1();
+    else if (BSTEP === 3) renderBookingStep2();
+    else if (BSTEP === 4) renderBookingStep3();
+  }
+
+  // ---------- Bookings ----------
+  var BK_GROUPS = [
+    { key: 'booked', label: 'Booked', icon: 'fa-calendar-check', match: function (b) { return ['pending', 'confirmed', 'in_progress'].indexOf(b.status) !== -1; } },
+    { key: 'completed', label: 'Completed', icon: 'fa-check-circle', match: function (b) { return b.status === 'completed'; } },
+    { key: 'cancelled', label: 'Cancelled', icon: 'fa-ban', match: function (b) { return b.status === 'cancelled'; } }
+  ];
+
+  function loadBookings() {
+    if (bookings.loading) return;
+    bookings.loading = true;
+    var list = $('wrkBookingsList');
+    list.innerHTML = '<div class="wrk-skel"></div><div class="wrk-skel"></div>';
+    var p = { page: 1, limit: 100 };
+    API.Worker.listBookings(p).then(function (res) {
+      bookings.loading = false;
+      if (!res || !Array.isArray(res.items)) {
+        bookings.items = [];
+        bookings.total = 0;
+        bookings.totalPages = 1;
+        bookings.filter = 'all';
+        renderBookingsChips();
+        $('wrkBookingsPagination').innerHTML = '';
+        list.innerHTML = '<div class="wrk-empty"><i class="fas fa-clipboard-list"></i><h3>No bookings yet</h3><p>Book a worker to see it here.</p></div>';
+        return;
+      }
+      bookings.items = res.items;
+      bookings.total = res.total || 0;
+      bookings.totalPages = 1;
+      if (bookings.filter !== 'all' && !(bookings.items || []).some(function (b) { return BK_GROUPS.some(function (g) { return g.key === bookings.filter && g.match(b); }); })) {
+        bookings.filter = 'all';
+      }
+      renderBookingsChips();
+      renderBookingsArea();
+      refreshBookingCount();
+    }).catch(function (err) {
+      bookings.loading = false;
+      console.error('bookings load error', err);
+      if (err && (err.status === 401 || err.status === 403)) { notFound(); return; }
+      list.innerHTML = '<div class="wrk-empty"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load bookings</h3><div style="margin-top:14px;"><button class="wrk-btn wrk-btn-primary" style="max-width:150px;margin:0 auto;" onclick="WorkersApp.loadBookings()">Try Again</button></div></div>';
+    });
+  }
+
+  function renderBookingsChips() {
+    var el = $('wrkBkChips');
+    if (!el) return;
+    var all = (bookings.items || []).length;
+    if (!all) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    var html = '<button class="wrk-bk-chip' + (bookings.filter === 'all' ? ' active' : '') + '" onclick="WorkersApp.setBookingsFilter(\'all\')">All (' + all + ')</button>';
+    BK_GROUPS.forEach(function (g) {
+      var count = (bookings.items || []).filter(g.match).length;
+      if (!count) return;
+      html += '<button class="wrk-bk-chip' + (bookings.filter === g.key ? ' active' : '') + '" onclick="WorkersApp.setBookingsFilter(\'' + g.key + '\')"><i class="fas ' + g.icon + '"></i> ' + g.label + ' (' + count + ')</button>';
+    });
+    el.innerHTML = html;
+    el.style.display = 'flex';
+  }
+
+  function setBookingsFilter(key) {
+    if (key !== 'all' && !(bookings.items || []).some(function (b) { return BK_GROUPS.some(function (g) { return g.key === key && g.match(b); }); })) return;
+    bookings.filter = key;
+    renderBookingsChips();
+    renderBookingsArea();
+  }
+
+  function renderBookingsArea() {
+    var list = $('wrkBookingsList');
+    var g = BK_GROUPS.filter(function (x) { return x.key === bookings.filter; })[0];
+    var rows = (bookings.items || []).filter(function (b) { return bookings.filter === 'all' ? true : g.match(b); });
+    if (!rows.length) {
+      var emptyTitle = bookings.filter === 'all' ? 'No bookings yet' : 'No ' + g.label.toLowerCase() + ' bookings';
+      var emptyBody = bookings.filter === 'all'
+        ? '<p>Book a worker to see it here.</p><div style="margin-top:14px;"><button class="wrk-btn wrk-btn-primary" style="max-width:200px;margin:0 auto;" onclick="WorkersApp.switchTab(\'explore\')">Explore Workers</button></div>'
+        : '<p>Bookings in this status will appear here.</p>';
+      list.innerHTML = '<div class="wrk-empty"><i class="fas fa-clipboard-list"></i><h3>' + emptyTitle + '</h3>' + emptyBody + '</div>';
+      $('wrkBookingsPagination').innerHTML = '';
+      return;
+    }
+    list.innerHTML = rows.map(renderBookingCard).join('');
+    renderBookingsPagination();
+  }
+
+  function renderBookingCard(b) {
+    var status = b.status || 'pending';
+    var pay = b.payment_status || 'unpaid';
+    var payCls = pay === 'completed' ? 'paid' : (pay === 'refunded' ? 'refunded' : 'unpaid');
+    var loc = [b.worker_name ? '' : '', b.farm_name ? ' on ' + b.farm_name : ''].join('');
+    var timeStr = '';
+    if (b.booking_date) timeStr += b.booking_date;
+    if (b.start_time && b.end_time) timeStr += ' · ' + b.start_time + '–' + b.end_time;
+    timeStr += (b.duration_days > 1 ? ' · ' + b.duration_days + ' days' : '');
+
+    var actions = '<button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.viewBooking(\'' + esc(b.booking_id) + '\')"><i class="fas fa-eye"></i> View</button>';
+    if (status === 'pending' || status === 'confirmed') {
+      actions += '<button class="wrk-btn wrk-btn-danger" onclick="WorkersApp.cancelBooking(\'' + esc(b.booking_id) + '\')"><i class="fas fa-ban"></i> Cancel</button>';
+    }
+    if (status === 'completed') {
+      actions += '<button class="wrk-btn wrk-btn-subtle" onclick="WorkersApp.openReview(\'' + esc(b.worker_id) + '\',\'' + esc(b.worker_name) + '\',\'' + esc(b.booking_id) + '\')"><i class="fas fa-star"></i> Review</button>';
+    }
+
+    return '' +
+      '<div class="wrk-booking-card">' +
+        '<div class="wrk-booking-icon"><i class="fas fa-user-tie"></i></div>' +
+        '<div class="wrk-booking-info">' +
+          '<div class="wrk-booking-title">' + esc(b.worker_name || 'Worker') + ' <span class="wrk-badge ' + status + '">' + esc(status.replace(/_/g, ' ')) + '</span></div>' +
+          '<div class="wrk-booking-sub">' + esc(b.work_type || 'Farm work') + loc + '</div>' +
+          '<div class="wrk-booking-sub"><i class="fas fa-calendar"></i> ' + esc(timeStr || 'Date TBD') + '</div>' +
+          '<div class="wrk-booking-sub"><span class="wrk-badge ' + payCls + '">Pay: ' + esc(pay) + '</span>' + (b.total_cost != null ? ' <b style="color:var(--wrk);">' + moneys(b.total_cost) + '</b>' : '') + '</div>' +
+          '<div class="wrk-booking-actions">' + actions + '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function renderBookingsPagination() {
+    var el = $('wrkBookingsPagination');
+    if (bookings.totalPages <= 1) { el.innerHTML = ''; return; }
+    el.innerHTML =
+      '<button class="wrk-page-btn" onclick="WorkersApp.goBookingsPage(' + (bookings.page - 1) + ')" ' + (bookings.page <= 1 ? 'disabled' : '') + '><i class="fas fa-chevron-left"></i> Prev</button>' +
+      '<span class="wrk-page-info">Page ' + bookings.page + ' of ' + bookings.totalPages + '</span>' +
+      '<button class="wrk-page-btn" onclick="WorkersApp.goBookingsPage(' + (bookings.page + 1) + ')" ' + (bookings.page >= bookings.totalPages ? 'disabled' : '') + '>Next <i class="fas fa-chevron-right"></i></button>';
+  }
+
+  function refreshBookingCount() {
+    var el = $('wrkBookedCount');
+    if (!el) return;
+    var active = (bookings.items || []).filter(function (b) { return ['pending', 'confirmed', 'in_progress'].indexOf(b.status) !== -1; }).length;
+    if (active > 0) { el.style.display = 'flex'; el.textContent = active; }
+    else el.style.display = 'none';
+  }
+
+  function refreshNotifBadge() {
+    try {
+      if (!(window.UserStore && UserStore.isLoggedIn())) return;
+      var token = localStorage.getItem('fa-auth-token') || '';
+      if (!token) return;
+      fetch('/api/v1/notifications/unread', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.status === 'success' && d.data && typeof d.data.unread_count === 'number' && window.updateBadge) {
+            window.updateBadge(d.data.unread_count);
+          }
+        }).catch(function () {});
+    } catch (e) {}
+  }
+
+  function viewBooking(id) {
+    var modal = $('wrkBDetailModal');
+    $('wrkBDetailContent').innerHTML = '<div class="wrk-empty" style="padding:30px 0;"><i class="fas fa-spinner fa-spin" style="color:var(--wrk);"></i><h3>Loading booking...</h3></div>';
+    modal.classList.add('open');
+    API.Worker.getBooking(id).then(function (b) {
+      renderBookingDetail(b);
+    }).catch(function (err) {
+      modal.classList.remove('open');
+      toast(errMsg(err, 'Unable to load booking details.'), 'error');
+    });
+  }
+
+  function renderBookingDetail(b) {
+    var status = b.status || 'pending';
+    var pay = b.payment_status || 'unpaid';
+    var loc = b.booking_date || '';
+    if (b.start_time && b.end_time) loc += ' · ' + b.start_time + '–' + b.end_time;
+    loc += (b.duration_days > 1 ? ' · ' + b.duration_days + ' days' : '');
+
+    var actions = '';
+    if (status === 'pending' || status === 'confirmed') {
+      actions += '<button class="wrk-btn wrk-btn-danger" style="flex:1;" onclick="WorkersApp.cancelBookingFromDetail(\'' + esc(b.booking_id) + '\')"><i class="fas fa-ban"></i> Cancel Booking</button>';
+    }
+    if (status === 'completed') {
+      actions += '<button class="wrk-btn wrk-btn-primary" style="flex:1;" onclick="WorkersApp.openReview(\'' + esc(b.worker_id) + '\',\'' + esc(b.worker_name) + '\',\'' + esc(b.booking_id) + '\')"><i class="fas fa-star"></i> Review Worker</button>';
+    }
+
+    $('wrkBDetailContent').innerHTML =
+      '<div class="wrk-detail-top">' +
+        '<div class="wrk-avatar-lg" style="background:' + avatarColor(b.worker_id) + ';">' + esc(initials(b.worker_name)) + '</div>' +
+        '<div style="flex:1;min-width:180px;">' +
+          '<div class="wrk-detail-name">' + esc(b.worker_name || 'Worker') + (b.worker_verified ? ' <i class="fas fa-badge-check" style="color:#16A34A;font-size:14px;"></i>' : '') + '</div>' +
+          (b.worker_rating != null && b.worker_rating > 0 ? '<div class="wrk-rating" style="margin-top:4px;">' + starsHTML(b.worker_rating) + ' ' + b.worker_rating + '</div>' : '') +
+          '<div style="margin-top:6px;"><span class="wrk-badge ' + status + '">' + esc(status.replace(/_/g, ' ')) + '</span> <span class="wrk-badge ' + pay + '">Pay: ' + esc(pay) + '</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="wrk-section"><h4><i class="fas fa-file-alt"></i> Booking Information</h4>' +
+        '<div class="wrk-summary" style="margin:0;">' +
+          '<div class="line"><span>Booking ID</span><span>' + esc(b.booking_id) + '</span></div>' +
+          '<div class="line"><span>Farm</span><span>' + esc(b.farm_name || '—') + '</span></div>' +
+          '<div class="line"><span>Plot</span><span>' + esc(b.plot_name || '—') + '</span></div>' +
+          '<div class="line"><span>Work Type</span><span>' + esc(b.work_type || '—') + '</span></div>' +
+          '<div class="line"><span>Date &amp; Time</span><span>' + esc(loc || '—') + '</span></div>' +
+          '<div class="line"><span>Total Cost</span><span>' + moneys(b.total_cost) + '</span></div>' +
+          (b.created_at ? '<div class="line"><span>Created</span><span>' + esc(String(b.created_at).slice(0, 16)) + '</span></div>' : '') +
+        '</div>' +
+      '</div>' +
+      (b.notes ? '<div class="wrk-section"><h4><i class="fas fa-sticky-note"></i> Notes</h4><p style="font-size:12.5px;color:var(--text-secondary);line-height:1.6;">' + esc(b.notes) + '</p></div>' : '') +
+      '<div style="display:flex;gap:10px;margin-top:4px;">' +
+        '<button class="wrk-btn wrk-btn-ghost" style="flex:1;background:var(--wrk-bg);color:var(--wrk-dark);border:none;" onclick="WorkersApp.closeBDetail()">Close</button>' +
+        actions +
+      '</div>';
+  }
+
+  function cancelBooking(id) {
+    var ok = window.confirm('Cancel this booking? ' + (bookingHadPayment(id) ? 'Your payment will be refunded to your wallet.' : ''));
+    if (!ok) return;
+    doCancel(id);
+  }
+
+  function cancelBookingFromDetail(id) {
+    var ok = window.confirm('Cancel this booking? ' + (bookingHadPayment(id) ? 'Your payment will be refunded to your wallet.' : ''));
+    if (!ok) return;
+    closeBDetail();
+    doCancel(id);
+  }
+
+  function bookingHadPayment(id) {
+    var b = (bookings.items || []).filter(function (x) { return x.booking_id === id; })[0];
+    return b && b.total_cost > 0;
+  }
+
+  function doCancel(id) {
+    API.Worker.updateBooking(id, { status: 'cancelled' }).then(function () {
+      toast('Booking cancelled successfully.', 'success');
+      loadBookings();
+      refreshBookingCount();
+      refreshNotifBadge();
+    }).catch(function (err) {
+      toast(errMsg(err, 'Unable to cancel the booking.'), 'error');
+    });
+  }
+
+  // ---------- Review ----------
+  function openReview(workerId, workerName, bookingId) {
+    reviewCtx = { workerId: workerId, workerName: workerName, bookingId: bookingId };
+    $('wrkReviewWorker').innerHTML =
+      '<div class="wrk-avatar" style="background:' + avatarColor(workerId) + ';">' + esc(initials(workerName)) + '</div>' +
+      '<div><div style="font-weight:700;font-size:14px;">' + esc(workerName) + '</div><div style="font-size:11px;color:var(--text-muted);">Share your experience</div></div>';
+    var stars = document.querySelectorAll('#wrkReviewStars i');
+    stars.forEach(function (s) { s.className = 'far fa-star'; });
+    $('wrkReviewComment').value = '';
+    $('wrkReviewModal').classList.add('open');
+  }
+
+  function onReviewStarClick(v) {
+    document.querySelectorAll('#wrkReviewStars i').forEach(function (s) {
+      var n = parseInt(s.getAttribute('data-v'), 10);
+      s.className = (n <= v) ? 'fas fa-star lit' : 'far fa-star';
+    });
+  }
+
+  function submitReview() {
+    if (!reviewCtx) return;
+    var rating = 0;
+    document.querySelectorAll('#wrkReviewStars i').forEach(function (s) {
+      if (s.className.indexOf('lit') !== -1) rating = Math.max(rating, parseInt(s.getAttribute('data-v'), 10));
+    });
+    if (!rating) { toast('Please select a rating.', 'error'); return; }
+    var comment = ($('wrkReviewComment').value || '').trim();
+    var btn = $('wrkReviewSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+    API.Worker.addReview(reviewCtx.workerId, {
+      rating: rating,
+      comment: comment || null,
+      booking_id: reviewCtx.bookingId || null
+    }).then(function () {
+      closeReview();
+      toast('Thank you! Your review has been submitted.', 'success');
+      loadBookings();
+    }).catch(function (err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
+      toast(errMsg(err, 'Unable to submit the review.'), 'error');
+    });
+  }
+
+  // ---------- Navigation / toggles ----------
+  function switchTab(tab) {
+    editMode = tab;
+    document.querySelectorAll('.wrk-tab').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+    });
+    $('wrkExplorePane').style.display = tab === 'explore' ? 'block' : 'none';
+    $('wrkBookingsPane').style.display = tab === 'bookings' ? 'block' : 'none';
+    if (tab === 'bookings') loadBookings();
+  }
+
+  function toggleBookings() {
+    switchTab(editMode === 'bookings' ? 'explore' : 'bookings');
+  }
+
+  function closeDetail() { $('wrkDetailModal').classList.remove('open'); }
+  function closeBooking() { $('wrkBookingModal').classList.remove('open'); BSTEP = 1; }
+  function closeBDetail() { $('wrkBDetailModal').classList.remove('open'); }
+  function closeReview() { $('wrkReviewModal').classList.remove('open'); reviewCtx = null; }
+
+  function toggleFilters() {
+    var sheet = $('wrkFilterSheet');
+    var open = !sheet.classList.contains('open');
+    sheet.classList.toggle('open', open);
+    $('wrkFilterToggle').classList.toggle('active', open);
+    if (open) updateFilterCount();
+  }
+
+  function applyFilters() {
+    activeFilters = gatherActiveFilters();
+    catalog.page = 1;
+    toggleFilters();
+    loadWorkers(1);
+  }
+
+  function clearFilters() {
+    $('fltWorkType').value = '';
+    $('fltSkill').value = '';
+    $('fltLocation').value = '';
+    $('fltExp').value = '';
+    $('fltRating').value = '';
+    $('fltAvail').checked = false;
+    activeFilters = {};
+    updateFilterCount();
+    catalog.page = 1;
+    loadWorkers(1);
+  }
+
+  function onSortChange() {
+    catalog.page = 1;
+    loadWorkers(1);
+  }
+
+  function goPage(p) {
+    if (p < 1 || p > catalog.totalPages) return;
+    loadWorkers(p);
+  }
+
+  function goBookingsPage(p) {
+    if (p < 1 || p > bookings.totalPages) return;
+    loadBookings(p);
+  }
+
+  function clearSearch() {
+    $('wrkSearch').value = '';
+    $('wrkSearchClear').style.display = 'none';
+    catalog.page = 1;
+    loadWorkers(1);
+  }
+
+  // ---------- Init ----------
+  function init() {
+    if (!isAuthed()) { notFound(); return; }
+    loadFilters();
+    loadWorkers(1);
+
+    var searchInput = $('wrkSearch');
+    searchInput.addEventListener('input', function () {
+      var v = searchInput.value.trim();
+      $('wrkSearchClear').style.display = v ? 'inline-flex' : 'none';
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        catalog.page = 1;
+        loadWorkers(1);
+      }, 450);
+    });
+    searchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { clearTimeout(searchTimer); catalog.page = 1; loadWorkers(1); }
+    });
+
+    // review star interactions
+    document.querySelectorAll('#wrkReviewStars i').forEach(function (s) {
+      s.addEventListener('mouseenter', function () { onReviewStarClick(parseInt(s.getAttribute('data-v'), 10)); });
+      s.addEventListener('click', function () {
+        var v = parseInt(s.getAttribute('data-v'), 10);
+        document.querySelectorAll('#wrkReviewStars i').forEach(function (x) {
+          x.className = (parseInt(x.getAttribute('data-v'), 10) <= v) ? 'fas fa-star lit' : 'far fa-star';
+        });
+      });
+    });
+
+    // close modal on backdrop click
+    document.querySelectorAll('.wrk-modal').forEach(function (m) {
+      m.addEventListener('mousedown', function (e) {
+        if (e.target === m) { m.classList.remove('open'); if (m.id === 'wrkBookingModal') BSTEP = 1; if (m.id === 'wrkReviewModal') reviewCtx = null; }
+      });
+    });
+
+    // preload bookings count badge
+    loadBookings();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  // expose app
+  window.WorkersApp = {
+    toggleFilters: toggleFilters,
+    applyFilters: applyFilters,
+    clearFilters: clearFilters,
+    clearSearch: clearSearch,
+    onSortChange: onSortChange,
+    switchTab: switchTab,
+    toggleBookings: toggleBookings,
+    loadWorkers: loadWorkers,
+    loadBookings: loadBookings,
+    setBookingsFilter: setBookingsFilter,
+    goPage: goPage,
+    goBookingsPage: goBookingsPage,
+    viewWorker: viewWorker,
+    startBooking: startBooking,
+    viewBooking: viewBooking,
+    cancelBooking: cancelBooking,
+    cancelBookingFromDetail: cancelBookingFromDetail,
+    openReview: openReview,
+    submitReview: submitReview,
+    onFarmChange: onFarmChange,
+    onWorkTypeChange: onWorkTypeChange,
+    bookingNext1: bookingNext1,
+    bookingNext2: bookingNext2,
+    bookingNext3: bookingNext3,
+    bookingBack: bookingBack,
+    confirmBooking: confirmBooking,
+    onBookingCalc: onBookingCalc,
+    closeDetail: closeDetail,
+    closeBooking: closeBooking,
+    closeBDetail: closeBDetail,
+    closeReview: closeReview
   };
-}
+})();
 </script>
 </body>
 </html>

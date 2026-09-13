@@ -162,6 +162,14 @@ ADDITIVE_COLUMNS = {
         ("settled_at", "VARCHAR(10)"),
     ],
     # calendar_events is created by create_all; no additive columns needed yet.
+    "equipment": [
+        ("deposit_amount", "FLOAT"),
+        ("min_duration_days", "INTEGER DEFAULT 1"),
+        ("rental_terms", "TEXT"),
+    ],
+    "equipment_metadata": [
+        ("location", "VARCHAR(200)"),
+    ],
 }
 
 

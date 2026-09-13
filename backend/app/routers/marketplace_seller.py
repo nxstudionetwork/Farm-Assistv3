@@ -23,13 +23,14 @@ from sqlalchemy import func, or_
 
 from app.database.connection import get_db
 from app.utils.auth import get_current_user, generate_id
-from app.models.user import User
+from app.models.user import User, FarmerProfile, UserAddress
 from app.models.marketplace import (
     MarketplaceCategory,
     MarketplaceListing,
     MarketplaceListingImage,
     MarketplaceEnquiry,
     MarketplaceSale,
+    MarketplaceBuyerRecommendation,
 )
 from app.models.messages import Conversation, ConversationParticipant, Message
 
@@ -147,6 +148,14 @@ class EnquiryReply(BaseModel):
 
 class EnquiryStatusUpdate(BaseModel):
     status: str
+
+
+class BuyerMessage(BaseModel):
+    message: str = Field(..., min_length=1, max_length=4000)
+
+
+class BuyerRecommendUpdate(BaseModel):
+    recommended: bool
 
 
 def _category_payload(cat):
@@ -1102,3 +1111,223 @@ def update_enquiry_status(
     db.commit()
     db.refresh(enquiry)
     return {"status": "success", "data": _enquiry_payload(db, enquiry)}
+
+
+# ---------------------------------------------------------------------------
+# Potential buyers (seller dashboard "Buyers waiting for your produce" strip)
+# ---------------------------------------------------------------------------
+@router.get("/buyers")
+def list_potential_buyers(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    uid = current_user.id
+
+    # Only listings the seller currently has on the market build the buyer pool
+    listings = (
+        db.query(MarketplaceListing)
+        .filter(
+            MarketplaceListing.user_id == uid,
+            MarketplaceListing.is_active == True,
+            MarketplaceListing.status.in_(["active", "pending"]),
+        )
+        .all()
+    )
+
+    if not listings:
+        return {"status": "success", "data": {"total": 0, "page": page, "limit": limit, "items": []}}
+
+    listing_ids = [l.id for l in listings]
+    cat_names = set()
+    for l in listings:
+        if l.category and l.category.name:
+            cat_names.add(l.category.name.strip().lower())
+
+    # 1. Buyers who actually enquired on the seller's listings
+    enq_rows = (
+        db.query(MarketplaceEnquiry)
+        .filter(
+            MarketplaceEnquiry.listing_id.in_(listing_ids),
+            MarketplaceEnquiry.buyer_user_id.isnot(None),
+            MarketplaceEnquiry.buyer_user_id != uid,
+        )
+        .all()
+    )
+    enq_by_buyer: dict = {}
+    for e in enq_rows:
+        enq_by_buyer.setdefault(e.buyer_user_id, []).append(e)
+    candidate_ids = set(enq_by_buyer.keys())
+
+    # 2. Buyers whose preferred crops overlap the seller's listed categories
+    if cat_names:
+        profiles = (
+            db.query(FarmerProfile)
+            .filter(FarmerProfile.preferred_crops.isnot(None), FarmerProfile.user_id != uid)
+            .all()
+        )
+        for p in profiles:
+            crops = [c.strip().lower() for c in (p.preferred_crops or "").split(",") if c.strip()]
+            if any(c and (any(c in n or n in c for n in cat_names)) for c in crops):
+                candidate_ids.add(p.user_id)
+
+    if not candidate_ids:
+        return {"status": "success", "data": {"total": 0, "page": page, "limit": limit, "items": []}}
+
+    users = db.query(User).filter(User.id.in_(candidate_ids), User.is_active == True).all()
+    if not users:
+        return {"status": "success", "data": {"total": 0, "page": page, "limit": limit, "items": []}}
+
+    user_map = {u.id: u for u in users}
+
+    recs = (
+        db.query(MarketplaceBuyerRecommendation)
+        .filter(MarketplaceBuyerRecommendation.seller_id == uid)
+        .all()
+    )
+    rec_by_buyer = {r.buyer_id: r for r in recs}
+
+    addrs = db.query(UserAddress).filter(UserAddress.user_id.in_(candidate_ids)).all()
+    addr_by_user: dict = {}
+    for a in addrs:
+        addr_by_user.setdefault(a.user_id, []).append(a)
+
+    def _location_for(u: User) -> Optional[str]:
+        p = u.farmer_profile if isinstance(u.farmer_profile, FarmerProfile) else None
+        if p and p.farm_location:
+            return p.farm_location
+        lst = addr_by_user.get(u.id) or []
+        pri = next((a for a in lst if a.is_primary), (lst[0] if lst else None))
+        if pri:
+            parts = [pri.village, pri.mandal, pri.district, pri.state]
+            parts = [x for x in parts if x]
+            return ", ".join(parts) or None
+        return None
+
+    def _crop_tokens(u: User) -> List[str]:
+        p = u.farmer_profile if isinstance(u.farmer_profile, FarmerProfile) else None
+        if not p or not p.preferred_crops:
+            return []
+        return [c.strip() for c in p.preferred_crops.split(",") if c.strip()]
+
+    items = []
+    for u in users:
+        enqs = enq_by_buyer.get(u.id, [])
+        crops = [c.lower() for c in _crop_tokens(u)]
+        matched = []
+        for l in listings:
+            l_cat = (l.category.name or "").strip().lower() if l.category else ""
+            on_enq = any(e.listing_id == l.id for e in enqs)
+            pref_match = any(l_cat and c and (c in l_cat or l_cat in c) for c in crops)
+            if on_enq or pref_match:
+                matched.append(l)
+        prefs = _crop_tokens(u)[:4]
+        for l in matched:
+            if l.category and l.category.name and l.category.name.lower() not in [x.lower() for x in prefs] and len(prefs) < 4:
+                prefs.append(l.category.name)
+        latest_enq = max(enqs, key=lambda e: e.created_at or datetime.min) if enqs else None
+        phone = None
+        if enqs:
+            phone = (latest_enq.buyer_phone if latest_enq and latest_enq.buyer_phone else None) or u.phone_number
+        last_at = latest_enq.created_at.isoformat() if latest_enq and latest_enq.created_at else None
+        is_rec = u.id in rec_by_buyer
+        items.append({
+            "id": u.id,
+            "full_name": u.full_name,
+            "farmer_id": u.farmer_id,
+            "phone_number": phone,
+            "location": _location_for(u),
+            "preferences": prefs,
+            "matched_listings": {"count": len(matched), "titles": [l.title for l in matched[:3]]},
+            "enquiries_count": len(enqs),
+            "last_enquired_at": last_at,
+            "is_recommended": is_rec,
+            "recommendation_id": rec_by_buyer[u.id].recommendation_id if is_rec else None,
+            "profile_image": u.profile_image,
+        })
+
+    items.sort(key=lambda b: (0 if b["is_recommended"] else 1, b["last_enquired_at"] or "", b["full_name"] or ""))
+    total = len(items)
+    start = (page - 1) * limit
+    paged = items[start:start + limit]
+
+    return {"status": "success", "data": {"total": total, "page": page, "limit": limit, "items": paged}}
+
+
+@router.post("/buyers/{buyer_id}/message", status_code=201)
+def message_buyer(
+    buyer_id: str,
+    payload: BuyerMessage,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if buyer_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot message yourself")
+    buyer = db.query(User).filter(User.id == buyer_id, User.is_active == True).first()
+    if not buyer:
+        raise HTTPException(status_code=404, detail="Buyer not found")
+
+    conversation = _find_or_create_conversation(db, current_user.id, buyer.id)
+    message = _send_message(db, conversation.id, current_user.id, payload.message)
+    return {
+        "status": "success",
+        "data": {
+            "conversation_id": conversation.id,
+            "conversation_public_id": conversation.conversation_id,
+            "message_id": message.message_id,
+            "buyer_id": buyer.id,
+            "buyer_name": buyer.full_name,
+            "status": message.status,
+        },
+    }
+
+
+@router.post("/buyers/{buyer_id}/recommend")
+def set_buyer_recommendation(
+    buyer_id: str,
+    payload: BuyerRecommendUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if buyer_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot recommend yourself")
+    buyer = db.query(User).filter(User.id == buyer_id, User.is_active == True).first()
+    if not buyer:
+        raise HTTPException(status_code=404, detail="Buyer not found")
+
+    existing = (
+        db.query(MarketplaceBuyerRecommendation)
+        .filter(
+            MarketplaceBuyerRecommendation.seller_id == current_user.id,
+            MarketplaceBuyerRecommendation.buyer_id == buyer.id,
+        )
+        .first()
+    )
+
+    if payload.recommended:
+        if not existing:
+            existing = MarketplaceBuyerRecommendation(
+                recommendation_id=generate_id("FA-BRC", db, MarketplaceBuyerRecommendation),
+                seller_id=current_user.id,
+                buyer_id=buyer.id,
+            )
+            db.add(existing)
+            db.commit()
+            db.refresh(existing)
+        return {
+            "status": "success",
+            "data": {
+                "buyer_id": buyer.id,
+                "recommended": True,
+                "recommendation_id": existing.recommendation_id,
+            },
+        }
+
+    if existing:
+        db.delete(existing)
+        db.commit()
+    return {
+        "status": "success",
+        "data": {"buyer_id": buyer.id, "recommended": False, "recommendation_id": None},
+    }

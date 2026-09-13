@@ -23,6 +23,7 @@ from app.models.marketplace import MarketplaceOrder
 from app.models.government import SchemeApplication, InsurancePolicy
 from app.models.learning import CourseEnrollment
 from app.models.farm import Farm, FarmPlot
+from app.models.emergency import EmergencyReport
 
 
 def _parse_dt(date_str, time_str=None):
@@ -161,7 +162,7 @@ def sync_consultations(db: Session, farmer_id: str) -> int:
                       priority="normal",
                       farm_name=c.farm_name,
                       crop_name=c.crop_name,
-                      source_page=f"expert.html?consult={c.consultation_id or c.id}")
+                      source_page=f"expert.html?ref={c.consultation_id or c.id}")
         count += 1
     db.flush()
     return count
@@ -277,7 +278,7 @@ def sync_orders(db: Session, farmer_id: str) -> int:
                       all_day=True,
                       status=status_map.get(o.status, "scheduled"),
                       priority="normal",
-                      source_page=f"marketplace.html?order={o.order_id or o.id}")
+                      source_page=f"my-orders.html?order={o.order_id or o.id}")
         count += 1
     db.flush()
     return count
@@ -441,6 +442,39 @@ def sync_enrollments(db: Session, farmer_id: str) -> int:
     return count
 
 
+def sync_emergency_reports(db: Session, farmer_id: str) -> int:
+    """Sync emergency reports → calendar events (recorded on the report date)."""
+    reports = db.query(EmergencyReport).filter(
+        EmergencyReport.farmer_id == farmer_id
+    ).all()
+    count = 0
+    for r in reports:
+        start = r.created_at
+        if not start:
+            continue
+        status_map = {"submitted": "scheduled", "acknowledged": "scheduled",
+                      "resolved": "completed", "cancelled": "cancelled",
+                      "closed": "completed"}
+        parts = []
+        severity = (r.urgency or "").strip()
+        if severity:
+            parts.append(f"Urgency: {severity}")
+        if r.location:
+            parts.append(f"Location: {r.location}")
+        _upsert_event(db, farmer_id, "emergency_report", r.reference_id or r.id,
+                      title=f"SOS - {r.emergency_type or 'Emergency'}",
+                      description=" | ".join(parts) or None,
+                      event_type="emergency",
+                      start_datetime=start,
+                      all_day=True,
+                      status=status_map.get(r.status, "scheduled"),
+                      priority="high",
+                      source_page=f"emergency.html?report={r.reference_id or r.id}")
+        count += 1
+    db.flush()
+    return count
+
+
 def sync_farm_journal(db: Session, farmer_id: str) -> int:
     """Sync farm journal activities → calendar events."""
     entries = db.query(FarmJournal).filter(FarmJournal.user_id == farmer_id).all()
@@ -493,6 +527,7 @@ def sync_all_events(db: Session, farmer_id: str) -> dict:
         ("crop_cycles", sync_crop_cycles),
         ("enrollments", sync_enrollments),
         ("farm_journal", sync_farm_journal),
+        ("emergency_reports", sync_emergency_reports),
     ]
     for name, fn in syncers:
         try:

@@ -383,6 +383,7 @@ def get_filters(
                 "equipment_booking", "order", "scheme_application",
                 "insurance_renewal", "insurance_premium", "insurance_expiry",
                 "crop_sowing", "crop_harvest", "enrollment", "farm_journal",
+                "emergency_report",
                 "manual",
             ],
         },

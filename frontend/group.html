@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-hide-nav="true">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Community Group - Farm Assist</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --g-primary: #0B3D2E; --g-dark: #07261C; --g-accent: #2D8659;
+      --g-bg: #F2F7F2; --g-card: #FFFFFF; --g-text: #14281D; --g-muted: #7E978B;
+      --g-border: rgba(11, 61, 46, 0.12); --g-danger: #C62828;
+    }
+    html, body { height: 100%; height: 100dvh; width: 100%; overflow: hidden; background: var(--g-bg); color: var(--g-text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    button { font-family: inherit; cursor: pointer; }
+    input, textarea { font-family: inherit; outline: none; }
+
+    .g-app { display: flex; flex-direction: column; height: 100%; max-width: 720px; margin: 0 auto; background: var(--g-bg); }
+    .g-top { flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 10px 10px; padding-top: calc(10px + env(safe-area-inset-top)); background: var(--g-card); border-bottom: 1px solid var(--g-border); z-index: 20; }
+    .g-icon-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: rgba(11,61,46,.06); color: var(--g-primary); font-size: 16px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .g-icon-btn:hover { background: rgba(11,61,46,.12); }
+    .g-top-id { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .gt-avatar { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px; flex-shrink: 0; }
+    .gt-name { font-size: 15px; font-weight: 700; color: var(--g-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gt-sub { font-size: 11px; color: var(--g-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .join-bar { flex-shrink: 0; display: flex; align-items: center; gap: 10px; margin: 10px 10px 0; padding: 10px 12px; background: linear-gradient(135deg, #0B3D2E, #175239); color: #fff; border-radius: 14px; }
+    .join-bar .jb-info { flex: 1; min-width: 0; }
+    .join-bar .jb-title { font-weight: 700; font-size: 13px; }
+    .join-bar .jb-sub { font-size: 11px; opacity: .8; }
+    .join-btn { background: #fff; color: var(--g-primary); border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 12px; flex-shrink: 0; }
+    .join-btn:hover { background: #F0F7F1; }
+
+    .g-nav { flex-shrink: 0; display: flex; gap: 6px; padding: 6px 10px; background: var(--g-card); border-bottom: 1px solid var(--g-border); overflow-x: auto; scrollbar-width: none; }
+    .g-nav::-webkit-scrollbar { display: none; }
+    .g-chip { flex-shrink: 0; border: 1px solid var(--g-border); background: #fff; color: var(--g-muted); padding: 6px 12px; border-radius: 18px; font-size: 11px; font-weight: 600; }
+    .g-chip.active { border-color: var(--g-accent); color: var(--g-accent); background: #E8F5E9; }
+    .g-filter-hint { flex-shrink: 0; font-size: 11px; color: var(--g-accent); font-weight: 700; padding: 6px 4px; }
+
+    .g-thread { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px 10px 6px; }
+    .g-thread::-webkit-scrollbar { display: none; }
+    .date-sep { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; }
+    .date-sep::before, .date-sep::after { content: ''; flex: 1; height: 1px; background: var(--g-border); }
+    .date-sep span { font-size: 10px; font-weight: 700; color: var(--g-muted); text-transform: uppercase; letter-spacing: .5px; background: var(--g-bg); padding: 0 8px; }
+
+    .msg { display: flex; gap: 8px; margin-bottom: 12px; }
+    .msg-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #2D8659, #1B5E3F); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex-shrink: 0; overflow: hidden; }
+    .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .msg-body { flex: 1; min-width: 0; }
+    .msg-head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+    .msg-author { font-weight: 700; color: var(--g-text); }
+    .msg-time { font-size: 10px; color: var(--g-muted); }
+    .msg-badge { font-size: 9px; background: #FFF3CD; color: #856404; border-radius: 8px; padding: 1px 6px; font-weight: 700; }
+    .msg-verified { color: var(--g-accent); font-size: 10px; }
+    .msg-card { background: var(--g-card); border: 1px solid var(--g-border); border-radius: 14px; padding: 10px 12px; margin-top: 3px; cursor: pointer; transition: box-shadow .15s; }
+    .msg-card:active { box-shadow: 0 2px 8px rgba(11,61,46,.12); }
+    .msg-cat { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--g-accent); margin-bottom: 4px; }
+    .msg-text { font-size: 13px; line-height: 1.55; color: #2B3B33; word-break: break-word; white-space: pre-wrap; }
+    .msg-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .msg-tag { font-size: 10px; background: #EEF5EE; color: var(--g-accent); border-radius: 8px; padding: 2px 8px; }
+    .msg-media { margin-top: 8px; border-radius: 12px; overflow: hidden; background: #EAF1EA; }
+    .msg-media img { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+    .msg-foot { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+    .msg-act { display: inline-flex; align-items: center; gap: 5px; background: none; border: none; color: var(--g-muted); font-size: 11px; padding: 4px 6px; border-radius: 8px; font-weight: 600; }
+    .msg-act:hover { background: #EEF5EE; }
+    .msg-act.liked { color: var(--g-danger); }
+    .msg-act.liked i { color: var(--g-danger); }
+
+    .g-empty, .g-error { text-align: center; padding: 40px 20px; color: var(--g-muted); font-size: 13px; }
+    .g-empty i, .g-error i { font-size: 30px; display: block; margin-bottom: 8px; color: #B7C9BC; }
+    .g-error i { color: #EF9A9A; }
+    .g-error p { color: var(--g-danger); margin-bottom: 12px; }
+    .g-spinner { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 40px; color: var(--g-muted); font-size: 12px; }
+    .g-spinner i { font-size: 22px; color: var(--g-accent); }
+    .retry-btn { background: var(--g-accent); color: #fff; border: none; padding: 8px 18px; border-radius: 18px; font-size: 12px; font-weight: 600; }
+    .load-old { display: block; margin: 6px auto 10px; border: 1px solid var(--g-border); background: #fff; color: var(--g-primary); font-size: 12px; font-weight: 600; padding: 8px 16px; border-radius: 18px; }
+    .load-old:disabled { opacity: .6; }
+
+    .g-composer { flex-shrink: 0; position: relative; padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); background: var(--g-card); border-top: 1px solid var(--g-border); }
+    .g-attach-preview { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .g-attach-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 10px; border: 1px solid var(--g-border); }
+    .g-attach-preview .ap-actions { display: flex; flex-direction: column; gap: 4px; }
+    .g-attach-preview .ap-name { font-size: 11px; color: var(--g-muted); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .g-attach-preview .ap-cancel { background: none; border: none; color: var(--g-danger); font-size: 12px; text-align: left; cursor: pointer; }
+    .g-composer-bar { display: flex; align-items: flex-end; gap: 8px; }
+    .g-attach { width: 38px; height: 38px; border-radius: 50%; border: none; background: rgba(11,61,46,.06); color: var(--g-primary); font-size: 15px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
+    .g-attach:hover { background: rgba(11,61,46,.12); }
+    .g-composer textarea { flex: 1; border: 1px solid rgba(11,61,46,.18); border-radius: 20px; padding: 10px 14px; font-size: 13px; resize: none; max-height: 96px; line-height: 1.4; background: #EAF3EE; box-shadow: inset 0 1px 2px rgba(11,61,46,.06); }
+    .g-composer textarea::placeholder { color: var(--g-muted); }
+    .g-composer textarea:focus { background: #fff; border-color: var(--g-accent); }
+    .g-send { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--g-accent); color: #fff; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(45,134,89,.35); transition: transform .15s, opacity .15s; }
+    .g-send:hover:not(:disabled) { transform: scale(1.06); background: var(--g-primary); }
+    .g-send:disabled { opacity: .45; cursor: not-allowed; }
+
+    .g-overlay { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.45); display: none; align-items: flex-end; justify-content: center; }
+    .g-overlay.show { display: flex; }
+    .g-sheet { background: #fff; width: 100%; max-width: 720px; border-radius: 18px 18px 0 0; overflow: hidden; animation: gUp .25s ease; max-height: 85vh; display: flex; flex-direction: column; }
+    @keyframes gUp { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .sheet-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--g-border); }
+    .sheet-head h3 { flex: 1; font-size: 16px; }
+    .sheet-close { background: none; border: none; font-size: 18px; color: var(--g-muted); }
+    .sheet-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    .menu-list { padding: 6px 0; }
+    .menu-item { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: none; padding: 14px 18px; font-size: 14px; color: var(--g-text); text-align: left; }
+    .menu-item i { width: 20px; text-align: center; color: var(--g-accent); font-size: 15px; }
+    .menu-item:active { background: #F2F7F2; }
+    .menu-item.danger { color: var(--g-danger); }
+    .menu-item.danger i { color: var(--g-danger); }
+
+    .info-row { display: flex; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--g-border); }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .ir-key { width: 96px; flex-shrink: 0; font-size: 12px; color: var(--g-muted); }
+    .info-row .ir-val { flex: 1; font-size: 13px; color: var(--g-text); line-height: 1.5; }
+    .info-icon-wrap { padding: 18px 18px 6px; display: flex; align-items: center; gap: 12px; }
+    .info-avatar { width: 52px; height: 52px; border-radius: 14px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .info-name { font-size: 18px; font-weight: 700; }
+    .info-sub { font-size: 12px; color: var(--g-muted); margin-top: 2px; }
+    .info-actions { display: flex; gap: 8px; padding: 12px 18px 18px; }
+    .info-actions .cm-btn { flex: 1; justify-content: center; }
+    .cm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; border: none; }
+    .cm-btn.primary { background: var(--g-primary); color: #fff; }
+    .cm-btn.outline { background: #fff; color: var(--g-primary); border: 1px solid var(--g-border); }
+
+    .search-box { padding: 12px 14px; border-bottom: 1px solid var(--g-border); display: flex; align-items: center; gap: 8px; background: #F2F7F2; }
+    .search-box input { flex: 1; border: 1px solid var(--g-border); border-radius: 18px; padding: 9px 14px; font-size: 13px; background: #fff; }
+    .search-results { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .sr-item { display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; border-bottom: 1px solid var(--g-border); width: 100%; background: none; border-left: none; border-right: none; border-top: none; text-align: left; }
+    .sr-item:active { background: #F2F7F2; }
+    .sr-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, #2D8659, #1B5E3F); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .sr-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .sr-body { flex: 1; min-width: 0; }
+    .sr-author { font-size: 12px; font-weight: 700; }
+    .sr-time { font-size: 10px; color: var(--g-muted); }
+    .sr-text { font-size: 12px; color: #3A4A41; margin-top: 2px; word-break: break-word; white-space: pre-wrap; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .sr-none { text-align: center; padding: 30px; color: var(--g-muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="g-app">
+    <div class="g-top">
+      <button class="g-icon-btn" id="backBtn" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
+      <div class="g-top-id">
+        <div class="gt-avatar" id="gAvatar"><i class="fas fa-users"></i></div>
+        <div style="min-width:0;">
+          <div class="gt-name" id="gName">Community</div>
+          <div class="gt-sub" id="gMeta">Loading…</div>
+        </div>
+      </div>
+      <button class="g-icon-btn" id="menuBtn" aria-label="Menu"><i class="fas fa-ellipsis-h"></i></button>
+    </div>
+
+    <div id="joinBar" style="display:none;"></div>
+
+    <div class="g-nav" id="gNav" style="display:none;">
+      <button class="g-chip active" data-filter="all" onclick="setFilter('all')">All posts</button>
+      <button class="g-chip" data-filter="media" onclick="setFilter('media')"><i class="fas fa-image"></i> Media</button>
+      <button class="g-chip" data-filter="questions" onclick="setFilter('questions')"><i class="fas fa-question-circle"></i> Questions</button>
+      <span class="g-filter-hint" id="filterHint" style="display:none;" onclick="setFilter('all')">Clear filter &times;</span>
+    </div>
+
+    <div class="g-thread" id="thread">
+      <div class="g-spinner"><i class="fas fa-spinner fa-spin"></i> Loading conversations…</div>
+    </div>
+
+    <div class="g-composer" id="composer">
+      <div class="g-attach-preview" id="attachPreview" style="display:none;">
+        <img id="attachThumb" src="" alt="">
+        <div class="ap-actions">
+          <div class="ap-name" id="attachName"></div>
+          <button class="ap-cancel" id="attachCancel"><i class="fas fa-times"></i> Remove</button>
+        </div>
+      </div>
+      <div class="g-composer-bar">
+        <input type="file" id="attachInput" accept="image/*" style="display:none;">
+        <button class="g-attach" id="attachBtn" aria-label="Attach image"><i class="fas fa-paperclip"></i></button>
+        <textarea id="composerInput" rows="1" placeholder="Write a message…" maxlength="5000"></textarea>
+        <button class="g-send" id="sendBtn" disabled aria-label="Send"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3-dot menu -->
+  <div class="g-overlay" id="menuOverlay" onclick="if(event.target===this)closeOverlay('menuOverlay')">
+    <div class="g-sheet" style="border-radius:18px;margin:auto;padding:6px 0;">
+      <button class="menu-item" onclick="closeOverlay('menuOverlay');openInfo()"><i class="fas fa-info-circle"></i> Group Info</button>
+      <button class="menu-item" onclick="closeOverlay('menuOverlay');openSearch()"><i class="fas fa-search"></i> Search Messages</button>
+      <button class="menu-item" onclick="closeOverlay('menuOverlay');openMedia()"><i class="fas fa-images"></i> Media &amp; Files</button>
+      <button class="menu-item danger" onclick="closeOverlay('menuOverlay');leaveGroup()"><i class="fas fa-sign-out-alt"></i> Leave Group</button>
+    </div>
+  </div>
+
+  <!-- Group Info -->
+  <div class="g-overlay" id="infoOverlay" onclick="if(event.target===this)closeOverlay('infoOverlay')">
+    <div class="g-sheet">
+      <div class="sheet-head"><h3>Group Info</h3><button class="sheet-close" onclick="closeOverlay('infoOverlay')">&times;</button></div>
+      <div class="sheet-body" id="infoBody"></div>
+    </div>
+  </div>
+
+  <!-- Search Messages -->
+  <div class="g-overlay" id="searchOverlay" onclick="if(event.target===this)closeOverlay('searchOverlay')">
+    <div class="g-sheet">
+      <div class="sheet-head"><h3>Search Messages</h3><button class="sheet-close" onclick="closeOverlay('searchOverlay')">&times;</button></div>
+      <div class="search-box"><i class="fas fa-search" style="color:var(--g-muted)"></i><input id="searchInput" placeholder="Search in this group…" autocomplete="off"></div>
+      <div class="search-results" id="searchResults" style="max-height:55vh;overflow-y:auto;">
+        <div class="sr-none">Type to search this group's messages.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Media overlay -->
+  <div class="g-overlay" id="mediaOverlay" onclick="if(event.target===this)closeOverlay('mediaOverlay')">
+    <div class="g-sheet">
+      <div class="sheet-head"><h3>Media &amp; Files</h3><button class="sheet-close" onclick="closeOverlay('mediaOverlay')">&times;</button></div>
+      <div class="sheet-body" id="mediaBody" style="padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;"></div>
+    </div>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var GROUP_ID = new URLSearchParams(window.location.search).get('id') || '';
+    var api = window.API && window.API.Community;
+    var group = null;
+    var posts = [];
+    var page = 1, hasMore = false, loading = false;
+    var filter = 'all';
+    var firstLoad = true;
+
+    var threadEl = document.getElementById('thread');
+    var nameEl = document.getElementById('gName');
+    var metaEl = document.getElementById('gMeta');
+    var avatarEl = document.getElementById('gAvatar');
+    var composerInput = document.getElementById('composerInput');
+    var sendBtn = document.getElementById('sendBtn');
+    var composer = document.getElementById('composer');
+    var searchInput = document.getElementById('searchInput');
+    var attachBtn = document.getElementById('attachBtn');
+    var attachInput = document.getElementById('attachInput');
+    var attachPreview = document.getElementById('attachPreview');
+    var attachThumb = document.getElementById('attachThumb');
+    var attachName = document.getElementById('attachName');
+    var attachCancel = document.getElementById('attachCancel');
+    var pendingImageData = null;
+    var pendingImageName = '';
+
+    function esc(s) {
+      if (s === null || s === undefined) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function initials(name) {
+      var n = (name || 'F').trim();
+      var parts = n.split(/\s+/).filter(Boolean);
+      if (!parts.length) return 'F';
+      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+    function timeAgo(s) {
+      if (!s) return '';
+      var diff = Date.now() - new Date(s).getTime();
+      if (diff < 0) return 'Just now';
+      var mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return mins + 'm ago';
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      var days = Math.floor(hrs / 24);
+      if (days < 7) return days + 'd ago';
+      var weeks = Math.floor(days / 7);
+      if (weeks < 5) return weeks + 'w ago';
+      var months = Math.floor(days / 30);
+      if (months < 12) return months + 'mo ago';
+      return Math.floor(days / 365) + 'y ago';
+    }
+    function dayLabel(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      var today = new Date();
+      var y = function (x) { return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+      var key = y(d);
+      if (key === y(today)) return 'Today';
+      var yest = new Date(today); yest.setDate(today.getDate() - 1);
+      if (key === y(yest)) return 'Yesterday';
+      return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+    }
+    function avatarHtml(author) {
+      var img = author && author.profile_image;
+      if (img && (/^data:|^https?:\/\//.test(img) || img.charAt(0) === '/')) {
+        return '<div class="msg-avatar"><img src="' + esc(img) + '" alt=""></div>';
+      }
+      return '<div class="msg-avatar">' + esc(initials(author && author.full_name)) + '</div>';
+    }
+    function openPostThread(id) {
+      window.location.href = 'community.html?post=' + encodeURIComponent(id);
+    }
+
+    function renderThread() {
+      threadEl.innerHTML = '';
+      if (!posts.length) {
+        if (filter !== 'all') {
+          threadEl.innerHTML = '<div class="g-empty"><i class="fas fa-filter"></i>No messages match this filter.<br><br><button class="retry-btn" onclick="setFilter(\'all\')">Show all posts</button></div>';
+        } else {
+          threadEl.innerHTML = '<div class="g-empty"><i class="far fa-comments"></i>No messages yet.<br><br><button class="retry-btn" onclick="openComposerFocus()">Start the conversation</button></div>';
+        }
+        return;
+      }
+      var ordered = posts.slice().slice().reverse(); // oldest at top
+      var lastDay = null;
+      var html = '';
+      ordered.forEach(function (p) {
+        var day = dayLabel(p.created_at);
+        if (day !== lastDay) { html += '<div class="date-sep"><span>' + esc(day) + '</span></div>'; lastDay = day; }
+        html += buildMsg(p);
+      });
+      if (hasMore) {
+        html = '<button class="load-old" id="loadOlderBtn" onclick="loadOlder()"><i class="fas fa-chevron-up"></i> Load older messages</button>' + html;
+      }
+      threadEl.innerHTML = html;
+      if (firstLoad) { scrollToBottom(false); firstLoad = false; }
+    }
+
+    function buildMsg(p) {
+      var img = p.image_url || p.image;
+      var author = p.author || {};
+      var cats = [p.category];
+      if (p.crop) cats.push(p.crop);
+      var tagsHtml = '';
+      cats.forEach(function (c) { if (c) tagsHtml += '<span class="msg-tag">#' + esc(c) + '</span>'; });
+      return '<div class="msg" id="msg-' + esc(p.id) + '">' +
+        avatarHtml(author) +
+        '<div class="msg-body">' +
+          '<div class="msg-head"><span class="msg-author">' + esc(p.author_name || 'Farmer') + '</span>' +
+            (author.is_verified ? '<span class="msg-verified"><i class="fas fa-check-circle"></i></span>' : '') +
+            '<span class="msg-time">' + timeAgo(p.created_at) + '</span></div>' +
+          '<div class="msg-card" onclick="openPostThread(\'' + esc(p.id) + '\')">' +
+            (filter === 'questions' && p.post_type === 'question' ? '<div class="msg-cat"><i class="fas fa-question-circle"></i> Question</div>' : '') +
+            (p.title ? '<div class="msg-text" style="font-weight:700;margin-bottom:4px;">' + esc(p.title) + '</div>' : '') +
+            '<div class="msg-text">' + esc(p.content || '') + '</div>' +
+            (tagsHtml ? '<div class="msg-tags">' + tagsHtml + '</div>' : '') +
+            (img ? '<div class="msg-media"><img src="' + esc(img) + '" alt="Post image" loading="lazy"></div>' : '') +
+            '<div class="msg-foot">' +
+              '<button class="msg-act' + (p.is_liked ? ' liked' : '') + '" onclick="event.stopPropagation();toggleLike(\'' + esc(p.id) + '\', this)"><i class="fas fa-heart"></i> <span>' + (p.likes_count || 0) + '</span></button>' +
+              '<button class="msg-act" onclick="event.stopPropagation();openPostThread(\'' + esc(p.id) + '\')"><i class="fas fa-comment"></i> <span>' + (p.comments_count || 0) + '</span></button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function scrollToBottom(smooth) {
+      var t = threadEl;
+      if (smooth) t.scrollTo({ top: t.scrollHeight, behavior: 'smooth' });
+      else t.scrollTop = t.scrollHeight;
+    }
+
+    function loadGroup() {
+      api.getGroup(GROUP_ID).then(function (g) {
+        group = g || {};
+        nameEl.textContent = group.name || 'Community';
+        var color = group.color || '#2D8659';
+        var icon = group.icon || 'fa-users';
+        avatarEl.style.background = color;
+        avatarEl.innerHTML = '<i class="fas ' + esc(icon) + '"></i>';
+        var members = (group.member_count || 0) + (group.member_count === 1 ? ' member' : ' members');
+        metaEl.textContent = (group.category || 'Community') + ' &middot; ' + members;
+        var joined = !!group.is_joined;
+        if (!joined) {
+          var jb = document.getElementById('joinBar');
+          jb.style.display = 'flex';
+          jb.innerHTML = '<div class="jb-info"><div class="jb-title">' + esc(group.name) + '</div><div class="jb-sub">Join ' + (group.member_count || 0) + ' farmers in this community</div></div>' +
+            '<button class="join-btn" onclick="joinGroup()"><i class="fas fa-plus"></i> Join</button>';
+          composer.style.opacity = '0.5';
+          composerInput.placeholder = 'Join this community to post';
+          sendBtn.disabled = true;
+        } else {
+          document.getElementById('joinBar').style.display = 'none';
+          composer.style.opacity = '1';
+          composerInput.placeholder = 'Write a message…';
+          enableSend();
+        }
+        document.getElementById('gNav').style.display = 'flex';
+        loadThread();
+      })['catch'](function () {
+        threadEl.innerHTML = '<div class="g-error"><i class="fas fa-exclamation-triangle"></i><p>Unable to load this community.</p><button class="retry-btn" onclick="location.reload()">Retry</button></div>';
+      });
+    }
+
+    function loadThread(scrollBottom) {
+      if (loading) return;
+      loading = true;
+      if (page === 1) threadEl.innerHTML = '<div class="g-spinner"><i class="fas fa-spinner fa-spin"></i> Loading conversations…</div>';
+      var params = { page: page, limit: 25, community_id: GROUP_ID, sort: 'latest' };
+      api.feed(params).then(function (res) {
+        loading = false;
+        var data = res || {};
+        var items = data.items || [];
+        if (page === 1) posts = items; else posts = items.concat(posts);
+        hasMore = (data.total || 0) > posts.length;
+        renderThread();
+        if (scrollBottom) scrollToBottom(true);
+      })['catch'](function () {
+        loading = false;
+        if (page === 1) threadEl.innerHTML = '<div class="g-error"><i class="fas fa-plug"></i><p>Unable to connect.</p><button class="retry-btn" onclick="location.reload()">Retry</button></div>';
+      });
+    }
+
+    window.loadOlder = function () {
+      if (loading) return;
+      page++;
+      var btn = document.getElementById('loadOlderBtn');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading…'; }
+      api.feed({ page: page, limit: 25, community_id: GROUP_ID, sort: 'latest' }).then(function (res) {
+        loading = false;
+        var items = ((res || {}).items) || [];
+        var existingIds = {};
+        posts.forEach(function (p) { existingIds[p.id] = 1; });
+        var older = [];
+        items.forEach(function (p) { if (!existingIds[p.id]) older.push(p); });
+        posts = older.concat(posts);
+        hasMore = ((res && res.total) || 0) > posts.length;
+        renderThread();
+        var el = document.getElementById('msg-' + (older.length ? older[older.length - 1].id : ''));
+        if (el) el.scrollIntoView({ block: 'end' });
+      })['catch'](function () {
+        loading = false;
+        page--;
+        renderThread();
+      });
+    };
+
+    window.toggleLike = function (postId, btn) {
+      api.toggleLike(postId).then(function (res) {
+        var liked = !!(res && res.is_liked);
+        btn.classList.toggle('liked', liked);
+        var n = btn.querySelector('span');
+        var cur = parseInt(n.textContent, 10) || 0;
+        n.textContent = Math.max(0, cur + (liked ? 1 : -1));
+      })['catch'](function () {
+        showToast('Unable to like. Please try again.');
+      });
+    };
+
+    function enableSend() {
+      var hasContent = composerInput.value.trim().length >= 2;
+      sendBtn.disabled = !(group && group.is_joined && (hasContent || pendingImageData));
+    }
+    composerInput.addEventListener('input', function () {
+      enableSend();
+      composerInput.style.height = 'auto';
+      composerInput.style.height = Math.min(composerInput.scrollHeight, 96) + 'px';
+    });
+    composerInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    attachBtn.addEventListener('click', function () { attachInput.click(); });
+    attachInput.addEventListener('change', function () {
+      var file = attachInput.files && attachInput.files[0];
+      if (!file) return;
+      if (!/^image\//.test(file.type)) { showToast('Please choose an image file.'); attachInput.value = ''; return; }
+      if (file.size > 5 * 1024 * 1024) { showToast('Image too large. Max 5MB.'); attachInput.value = ''; return; }
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        pendingImageData = e.target.result;
+        pendingImageName = file.name;
+        attachThumb.src = pendingImageData;
+        attachName.textContent = file.name;
+        attachPreview.style.display = 'flex';
+        enableSend();
+      };
+      reader.readAsDataURL(file);
+      attachInput.value = '';
+    });
+    attachCancel.addEventListener('click', function () {
+      pendingImageData = null;
+      pendingImageName = '';
+      attachPreview.style.display = 'none';
+      attachThumb.src = '';
+      enableSend();
+    });
+
+    function sendMessage() {
+      var content = composerInput.value.trim();
+      if (!(group && group.is_joined)) return;
+      if (content.length < 2 && !pendingImageData) return;
+      sendBtn.disabled = true;
+      var upload = pendingImageData
+        ? window.API.FileStorage.uploadBase64(pendingImageData, 'community').then(function (res) {
+            return (res && (res.url || res.file_url || res.file_path)) || pendingImageData;
+          })
+        : Promise.resolve(null);
+      upload.then(function (image_url) {
+        return api.createPost({
+          title: null,
+          content: content || (image_url ? 'Shared an image' : ''),
+          post_type: 'discussion',
+          category: group.category || 'General',
+          community_id: GROUP_ID,
+          crop: null,
+          location: null,
+          image_url: image_url
+        });
+      }).then(function () {
+        composerInput.value = '';
+        composerInput.style.height = 'auto';
+        pendingImageData = null; pendingImageName = '';
+        attachPreview.style.display = 'none'; attachThumb.src = '';
+        enableSend();
+        page = 1; hasMore = false;
+        loadThread(true);
+      })['catch'](function () {
+        sendBtn.disabled = false;
+        showToast('Unable to send message. Please try again.');
+      });
+    }
+    sendBtn.addEventListener('click', sendMessage);
+
+    window.openComposerFocus = function () {
+      composerInput.focus();
+    };
+    window.setFilter = function (f) {
+      filter = f;
+      document.querySelectorAll('#gNav .g-chip').forEach(function (c) {
+        c.classList.toggle('active', c.getAttribute('data-filter') === f);
+      });
+      var hint = document.getElementById('filterHint');
+      if (f !== 'all') { hint.style.display = 'inline'; hint.textContent = (f === 'media' ? 'Showing media only' : 'Showing questions only') + ' &times;'; }
+      else hint.style.display = 'none';
+      renderThread();
+    };
+
+    window.openInfo = function () {
+      renderInfo();
+      document.getElementById('infoOverlay').classList.add('show');
+    };
+    function renderInfo() {
+      var body = document.getElementById('infoBody');
+      var color = (group && group.color) || '#2D8659';
+      var icon = (group && group.icon) || 'fa-users';
+      body.innerHTML =
+        '<div class="info-icon-wrap"><div class="info-avatar" style="background:' + esc(color) + '"><i class="fas ' + esc(icon) + '"></i></div>' +
+        '<div style="min-width:0;"><div class="info-name">' + esc((group && group.name) || 'Community') + '</div>' +
+        '<div class="info-sub">' + esc((group && group.category) || 'General') + '</div></div></div>' +
+        '<div class="info-row"><span class="ir-key">Description</span><span class="ir-val">' + esc((group && group.description) || 'No description') + '</span></div>' +
+        '<div class="info-row"><span class="ir-key">Members</span><span class="ir-val">' + (group ? (group.member_count || 0) : 0) + '</span></div>' +
+        '<div class="info-row"><span class="ir-key">Created</span><span class="ir-val">' + ((group && group.created_at) ? new Date(group.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—') + '</span></div>' +
+        '<div class="info-actions">' +
+          (group && group.is_joined
+            ? '<button class="cm-btn outline" onclick="document.getElementById(\'infoOverlay\').classList.remove(\'show\');leaveGroup()"><i class="fas fa-user-check"></i> Joined</button>'
+            : '<button class="cm-btn primary" onclick="joinGroup()"><i class="fas fa-plus"></i> Join</button>') +
+          '<button class="cm-btn primary" onclick="window.location.href=\'community.html\'"><i class="fas fa-users"></i> Community Home</button>' +
+        '</div>';
+    }
+
+    var searchTimer = null;
+    window.openSearch = function () {
+      document.getElementById('searchOverlay').classList.add('show');
+      searchInput.value = '';
+      document.getElementById('searchResults').innerHTML = '<div class="sr-none">Type to search this group\'s messages.</div>';
+      setTimeout(function () { searchInput.focus(); }, 60);
+    };
+    searchInput.addEventListener('input', function () {
+      var q = searchInput.value.trim();
+      clearTimeout(searchTimer);
+      var res = document.getElementById('searchResults');
+      if (!q) { res.innerHTML = '<div class="sr-none">Type to search this group\'s messages.</div>'; return; }
+      res.innerHTML = '<div class="sr-none"><i class="fas fa-spinner fa-spin"></i> Searching…</div>';
+      searchTimer = setTimeout(function () {
+        api.feed({ community_id: GROUP_ID, search: q, limit: 30 }).then(function (data) {
+          var items = (data && data.items) || [];
+          if (!items.length) { res.innerHTML = '<div class="sr-none">No messages match &ldquo;' + esc(q) + '&rdquo;.</div>'; return; }
+          var html = '';
+          items.forEach(function (p) {
+            var author = p.author || {};
+            var img = author.profile_image;
+            html += '<button class="sr-item" onclick="openPostThread(\'' + esc(p.id) + '\')">' +
+              '<div class="sr-avatar">' + (img && (/^data:|^https?:\/\/|^\//.test(img)) ? '<img src="' + esc(img) + '">' : esc(initials(author.full_name))) + '</div>' +
+              '<div class="sr-body"><div class="sr-author">' + esc(p.author_name || 'Farmer') + ' <span class="sr-time">' + timeAgo(p.created_at) + '</span></div>' +
+              '<div class="sr-text">' + esc(p.title ? p.title + ': ' : '') + esc(p.content || '') + '</div></div>' +
+            '</button>';
+          });
+          res.innerHTML = html;
+        })['catch'](function () { res.innerHTML = '<div class="sr-none">Search failed. Please try again.</div>'; });
+      }, 350);
+    });
+
+    window.openMedia = function () {
+      var box = document.getElementById('mediaBody');
+      var imgs = [];
+      posts.forEach(function (p) {
+        var u = p.image_url || p.image;
+        if (u) imgs.push({ url: u, id: p.id, author: p.author_name || 'Farmer', time: p.created_at });
+      });
+      if (!imgs.length) { box.innerHTML = '<div class="sr-none">No media shared in this group yet.</div>'; }
+      else {
+        box.innerHTML = imgs.map(function (m) {
+          return '<div style="position:relative;" onclick="openPostThread(\'' + esc(m.id) + '\')"><img src="' + esc(m.url) + '" style="width:100%;height:90px;object-fit:cover;border-radius:10px;display:block;cursor:pointer;" loading="lazy"><div style="font-size:9px;color:var(--g-muted);padding:3px 2px;">' + esc(m.author) + ' &middot; ' + timeAgo(m.time) + '</div></div>';
+        }).join('');
+      }
+      document.getElementById('mediaOverlay').classList.add('show');
+    };
+
+    window.joinGroup = function () {
+      api.joinGroup(GROUP_ID).then(function () {
+        group.is_joined = true;
+        document.getElementById('joinBar').style.display = 'none';
+        composer.style.opacity = '1';
+        composerInput.placeholder = 'Write a message…';
+        enableSend();
+        var overlay = document.getElementById('infoOverlay');
+        if (overlay.classList.contains('show')) renderInfo();
+      })['catch'](function () {
+        showToast('Unable to join this community.');
+      });
+    };
+
+    window.leaveGroup = function () {
+      if (!window.confirm('Leave this community? You can join again anytime.')) return;
+      api.leaveGroup(GROUP_ID).then(function () {
+        showToast('Left community');
+        setTimeout(function () { window.location.href = 'community.html'; }, 700);
+      })['catch'](function () {
+        showToast('Unable to leave this community.');
+      });
+    };
+
+    window.closeOverlay = function (id) {
+      document.getElementById(id).classList.remove('show');
+    };
+
+    var toastTimer = null;
+    function showToast(msg) {
+      var el = document.getElementById('miniToast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'miniToast';
+        el.style.cssText = 'position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#0B3D2E;color:#fff;padding:10px 18px;border-radius:20px;font-size:12px;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.22);max-width:86%;text-align:center;';
+        document.body.appendChild(el);
+      }
+      el.textContent = msg;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { el.style.opacity = '0'; }, 2400);
+    }
+
+    document.getElementById('backBtn').addEventListener('click', function () {
+      if (history.length > 1) history.back();
+      else window.location.href = 'community.html';
+    });
+    document.getElementById('menuBtn').addEventListener('click', function () {
+      document.getElementById('menuOverlay').classList.add('show');
+    });
+
+    function start() {
+      if (!api) {
+        threadEl.innerHTML = '<div class="g-error"><i class="fas fa-plug"></i><p>Community service unavailable.</p><button class="retry-btn" onclick="location.reload()">Retry</button></div>';
+        return;
+      }
+      if (!window.UserStore || !window.UserStore.isLoggedIn()) {
+        threadEl.innerHTML = '<div class="g-error"><i class="fas fa-lock"></i><p>Please log in to view this community.</p><button class="retry-btn" onclick="location.href=\'login.html\'">Log In</button></div>';
+        return;
+      }
+      if (!GROUP_ID) {
+        window.location.href = 'community.html';
+        return;
+      }
+      loadGroup();
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+    else start();
+  })();
+  </script>
+</body>
+</html>

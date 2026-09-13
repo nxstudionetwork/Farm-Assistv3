@@ -139,6 +139,7 @@ ID_COLUMN_MAP: Dict[str, str] = {
     "AIRecommendation": "id",
     "MarketplaceListing": "listing_id",
     "MarketplaceSale": "sale_id",
+    "MarketplaceBuyerRecommendation": "recommendation_id",
     "WeatherCache": "id",
     "Conversation": "conversation_id",
     "ConversationParticipant": "id",

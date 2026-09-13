@@ -1643,12 +1643,6 @@ Backend: FastAPI served from the same origin (port 8000).
     unreadCount: function () {
       return http('GET', '/messages/unread-count').then(unwrap);
     },
-    setOnline: function () {
-      return http('POST', '/messages/presence/online', {}).then(unwrap);
-    },
-    setOffline: function () {
-      return http('POST', '/messages/presence/offline', {}).then(unwrap);
-    },
     listContacts: function () {
       return http('GET', '/messages/contacts').then(unwrap);
     },

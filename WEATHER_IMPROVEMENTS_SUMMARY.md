@@ -53,6 +53,7 @@ The Weather page has been comprehensively improved to provide real-time weather 
 - **WMO codes**: Proper mapping of WMO weather codes to human-readable conditions
 - **Wind direction**: Proper conversion of degrees to cardinal directions (N, NE, E, SE, S, SW, W, NW)
 - **Timezone support**: Automatic timezone detection for accurate sunrise/sunset times
+- **Fixed API parameters**: Removed invalid `wind_direction_10m_max` parameter that was causing forecast API failures
 
 ### 8. ✅ Frontend URL Configuration
 - **Fixed API base URL**: Changed from hardcoded `http://localhost:8000/api/v1` to relative `/api/v1`
@@ -86,7 +87,7 @@ Backend `_weather_insights()` function generates smart alerts and advice based o
 3. `frontend/js/services.js` - Enhanced WeatherService to handle optional coordinates
 
 ### Backend Files:
-- `backend/app/routers/weather.py` - Already had excellent implementation (no changes needed)
+1. `backend/app/routers/weather.py` - Fixed forecast API parameters (removed invalid wind_direction_10m_max)
 
 ## Technical Architecture
 
@@ -124,6 +125,8 @@ DISPLAY (Current Weather + Forecast + Alerts + Advice)
 ✅ **API configuration** - fixed to work with backend serving frontend
 ✅ **Loading/error/empty states** - proper UI states for all scenarios
 ✅ **Farm Assist theme** - maintained dark-green design identity
+✅ **Fixed forecast API** - removed invalid parameter causing 502 errors
+✅ **14-day forecast** - working correctly with valid API parameters
 
 ## Testing Status
 
@@ -134,6 +137,36 @@ DISPLAY (Current Weather + Forecast + Alerts + Advice)
 - ✅ Real Open-Meteo API integration working
 - ✅ Database caching implemented
 - ✅ Location resolution logic functional
+- ✅ Forecast API fixed and working (returns 14 days of data)
+- ✅ Current weather API working with real data
+- ✅ Weather alerts generation working
+- ✅ Farming advice generation working
+
+## Comprehensive Test Results
+
+```
+=== Testing Authentication ===
+Login Status: 200
+Token obtained successfully
+
+=== Testing Current Weather ===
+Current Weather Status: 200
+Temperature: 30.2
+Humidity: 64
+Wind Speed: 5.1
+Weather Condition: Partly Cloudy
+Alerts: 1
+Advice: 1
+
+=== Testing Forecast ===
+Forecast Status: 200
+Forecast Days: 14
+Day 1 - Max Temp: 33.9
+Day 1 - Min Temp: 25.6
+Day 1 - Precipitation: 2.3
+
+=== All Tests Completed Successfully ===
+```
 
 ## How to Test
 
@@ -162,5 +195,7 @@ DISPLAY (Current Weather + Forecast + Alerts + Advice)
 ✅ Responsive behavior on desktop, tablet, and mobile
 ✅ No broken authentication or other working features
 ✅ Maintained existing Farm Assist design and theme
+✅ Fixed API connection issues
+✅ Proper error handling and validation
 
 The Weather page is now a complete, production-ready weather system that provides real-time agricultural weather insights while maintaining the Farm Assist design identity.
