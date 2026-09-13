@@ -7,24 +7,43 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
+    .tk-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .tk-search{display:flex;align-items:center;gap:10px;flex:1;min-width:0;background:white;border:1px solid var(--border-light);border-radius:12px;padding:0 14px;height:46px;transition:border-color .2s,box-shadow .2s}
+    .tk-search:focus-within{border-color:var(--primary-green);box-shadow:0 0 0 3px rgba(34,197,94,.12)}
+    .tk-search>i{color:var(--text-muted);font-size:14px;flex-shrink:0}
+    .tk-search input{border:none;outline:none;flex:1;min-width:0;font-size:13px;background:transparent;color:var(--text-primary)}
+    .tk-search input::placeholder{color:var(--text-muted)}
+    .tk-clear{display:none;border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:12px;padding:4px;flex-shrink:0}
+    .tk-clear.show{display:block}
+    .tk-clear:hover{color:var(--text-primary)}
+    .tk-filter-btn{display:flex;align-items:center;gap:7px;height:46px;padding:0 16px;border-radius:12px;border:1px solid var(--border-light);background:white;color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;flex-shrink:0}
+    .tk-filter-btn:hover{border-color:var(--primary-green);color:var(--primary-green)}
+    .tk-filter-btn.active{background:var(--primary-green);color:white;border-color:var(--primary-green)}
+    .tk-filter-btn .tk-count{background:var(--primary-green);color:white;font-size:10px;font-weight:700;border-radius:10px;padding:1px 7px;min-width:18px;text-align:center}
+    .tk-filter-btn.active .tk-count{background:rgba(255,255,255,.9);color:var(--primary-green)}
+
     .task-card{display:flex;align-items:flex-start;gap:12px;padding:14px;background:white;border-radius:12px;border:1px solid var(--border-light);margin-bottom:8px;transition:all 0.2s;cursor:pointer}
     .task-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm);border-color:var(--primary-green)}
     .task-card.completed{opacity:0.6;background:var(--bg-card-soft)}
     .task-card .check{width:28px;height:28px;border-radius:6px;border:2px solid var(--border-dark);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:2px;transition:all 0.2s}
     .task-card .check.checked{background:var(--primary-green);border-color:var(--primary-green);color:white}
     .task-card .task-body{flex:1;min-width:0}
-    .task-card .task-title{font-size:14px;font-weight:600;color:var(--text-primary)}
-    .task-card .task-meta{font-size:11px;color:var(--text-muted);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
-    .task-card .task-desc{font-size:12px;color:var(--text-secondary);margin-top:4px;line-height:1.5}
+    .task-card .task-title{font-size:14px;font-weight:600;color:var(--text-primary);word-wrap:break-word}
+    .task-card .task-meta{font-size:11px;color:var(--text-muted);margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .task-card .task-desc{font-size:12px;color:var(--text-secondary);margin-top:4px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .task-rel{font-size:11px;color:var(--text-secondary);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .task-rel span{display:inline-flex;align-items:center;gap:4px;min-width:0}
+    .task-rel i{color:var(--text-muted);font-size:9px}
     .priority-badge{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase}
     .priority-badge.high{background:rgba(239,68,68,.1);color:#dc2626}
     .priority-badge.medium{background:rgba(234,179,8,.1);color:#ca8a04}
     .priority-badge.low{background:rgba(34,197,94,.1);color:#16a34a}
     .cat-badge{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600;background:var(--bg-card-soft);color:var(--text-secondary)}
-    .task-filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-    .task-filters button{padding:7px 16px;font-size:11px;font-weight:600;border-radius:20px;border:1px solid var(--border-light);background:transparent;cursor:pointer;transition:all 0.2s;color:var(--text-secondary)}
-    .task-filters button:hover{border-color:var(--primary-green);color:var(--primary-green)}
-    .task-filters button.active{background:var(--primary-green);color:white;border-color:var(--primary-green)}
+    .status-pill{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase}
+    .status-pill.pending{background:rgba(234,179,8,.15);color:#ca8a04}
+    .status-pill.in_progress{background:rgba(59,130,246,.15);color:#2563eb}
+    .status-pill.completed{background:rgba(34,197,94,.15);color:#16a34a}
+    .status-pill.overdue{background:rgba(239,68,68,.15);color:#dc2626}
 
     .section-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg-card-soft);border-radius:10px;margin:12px 0 8px;cursor:pointer;user-select:none;transition:background 0.2s}
     .section-header:hover{background:var(--border-light)}
@@ -35,38 +54,28 @@
     .section-header .sec-badge{font-size:9px;padding:2px 10px;border-radius:10px;font-weight:700;text-transform:uppercase}
     .sec-badge.overdue{background:rgba(239,68,68,.15);color:#dc2626}
     .sec-badge.today-badge{background:rgba(34,197,94,.15);color:#16a34a}
-    .sec-badge.upcoming-badge{background:rgba(59,130,246,.15);color:#2563eb}
+    .sec-badge.completed-badge{background:rgba(34,197,94,.15);color:#16a34a}
     .sec-body{padding-left:0}
     .sec-body.hidden{display:none}
 
-    .search-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;background:white;border:1px solid var(--border-light);border-radius:12px;padding:8px 14px}
-    .search-bar i{color:var(--text-muted);font-size:14px}
-    .search-bar input{border:none;outline:none;flex:1;font-size:13px;background:transparent;color:var(--text-primary)}
-    .search-bar input::placeholder{color:var(--text-muted)}
+    .empty-state{text-align:center;padding:44px 20px;color:var(--text-muted)}
+    .empty-state i{font-size:38px;color:#4caf50;margin-bottom:10px;display:block}
+    .empty-state .es-title{font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:4px}
+    .empty-state .es-sub{font-size:12px;line-height:1.6}
+    .empty-state .es-actions{margin-top:16px}
 
-    .filter-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-    .filter-row select{padding:7px 12px;font-size:12px;border-radius:8px;border:1px solid var(--border-light);background:white;color:var(--text-primary);cursor:pointer;flex:1;min-width:100px}
-    .filter-row select:focus{outline:none;border-color:var(--primary-green)}
+    .state-box{text-align:center;padding:44px 20px}
+    .state-box i{font-size:38px;color:var(--text-muted);margin-bottom:10px;display:block}
+    .state-box .es-title{font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:4px}
+    .state-box .es-sub{font-size:12px;color:var(--text-muted);line-height:1.6}
 
-    .filter-tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--bg-card-soft);border-radius:10px;padding:4px}
-    .filter-tabs .filter-tab{flex:1;padding:8px;font-size:12px;font-weight:600;border:none;border-radius:8px;background:transparent;cursor:pointer;color:var(--text-secondary);transition:all 0.2s;text-align:center}
-    .filter-tabs .filter-tab.active{background:white;color:var(--primary-green);box-shadow:var(--shadow-sm)}
-
-    .form-group{margin-bottom:12px}
-    .form-label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px}
-    .badge{display:inline-block;padding:2px 8px;font-size:9px;font-weight:600;border-radius:10px}
-
-    .farm-tag{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600;background:rgba(139,92,246,.1);color:#7c3aed}
-    .crop-tag{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600;background:rgba(245,158,11,.1);color:#d97706}
+    .loading-shimmer{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;height:14px;margin:8px 0}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .skeleton-card{background:white;border:1px solid var(--border-light);border-radius:12px;padding:14px;margin-bottom:8px}
+    .skeleton-card .loading-shimmer{margin:6px 0}
 
     .proof-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border-light);cursor:pointer;flex-shrink:0}
     .proof-thumb:hover{opacity:0.8}
-
-    .completed-item{display:flex;align-items:center;gap:10px;padding:12px;background:white;border-radius:10px;border:1px solid var(--border-light);margin-bottom:6px}
-    .completed-item .ci-body{flex:1;min-width:0}
-    .completed-item .ci-title{font-size:13px;font-weight:600;color:var(--text-primary)}
-    .completed-item .ci-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
-    .completed-item .ci-notes{font-size:11px;color:var(--text-secondary);margin-top:3px;font-style:italic}
 
     .proof-modal-photos{display:flex;gap:10px;margin-bottom:10px}
     .proof-modal-photos .photo-box{flex:1;padding:20px;border:2px dashed var(--border-light);border-radius:10px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative}
@@ -80,98 +89,82 @@
 
     .gps-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:10px;font-size:12px;color:var(--text-secondary)}
     .gps-row i{color:var(--primary-green);font-size:14px}
-    .gps-row .gps-status{flex:1}
-    .gps-row .gps-btn{padding:4px 12px;font-size:10px;font-weight:600;border-radius:6px;border:1px solid var(--primary-green);background:transparent;color:var(--primary-green);cursor:pointer}
+    .gps-row .gps-status{flex:1;min-width:0}
+    .gps-row .gps-btn{padding:4px 12px;font-size:10px;font-weight:600;border-radius:6px;border:1px solid var(--primary-green);background:transparent;color:var(--primary-green);cursor:pointer;flex-shrink:0}
     .gps-row .gps-btn:hover{background:var(--primary-green);color:white}
 
     .timestamp-row{font-size:11px;color:var(--text-muted);padding:4px 0;margin-bottom:10px}
 
-    .empty-state{text-align:center;padding:40px 20px;color:var(--text-muted)}
-    .empty-state i{font-size:36px;color:#4caf50;margin-bottom:10px;display:block}
+    .form-group{margin-bottom:12px}
+    .form-label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px}
+    .form-hint{font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.5}
+    .cycle-note{font-size:11px;color:var(--primary-green);background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.5;display:none;word-wrap:break-word}
+    .cycle-note.show{display:block}
+    .cycle-note.error{color:#dc2626;background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25)}
+
+    .detail-rows{display:flex;flex-direction:column;gap:8px;margin:12px 0 16px}
+    .detail-row{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5}
+    .detail-row i{width:16px;color:var(--primary-green);margin-top:2px;flex-shrink:0}
+    .detail-row .dr-label{color:var(--text-muted);font-size:11px;min-width:64px;flex-shrink:0}
+    .detail-row .dr-value{color:var(--text-primary);min-width:0;word-wrap:break-word}
+    .detail-desc{font-size:13px;color:var(--text-secondary);line-height:1.6;white-space:pre-wrap;word-wrap:break-word}
+
+    .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+    .action-grid .full{grid-column:1/-1}
+    .action-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border-light);background:white;color:var(--text-primary);transition:all .2s}
+    .action-btn:hover{border-color:var(--primary-green);color:var(--primary-green)}
+    .action-btn.primary{background:var(--primary-green);color:white;border-color:var(--primary-green)}
+    .action-btn.primary:hover{filter:brightness(1.1);color:white}
+    .action-btn.danger{border-color:rgba(239,68,68,.4);color:#dc2626}
+    .action-btn.danger:hover{background:rgba(239,68,68,.1)}
+    .action-btn:disabled{opacity:.6;cursor:not-allowed}
+    .action-btn.full{grid-column:1/-1}
+
+    .modal-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+    .modal-close{border:none;background:transparent;color:var(--text-muted);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0}
+    .modal-close:hover{color:var(--text-primary)}
+
+    .filter-sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1200;display:none;align-items:flex-end;justify-content:center}
+    .filter-sheet-backdrop.open{display:flex}
+    .filter-sheet{width:100%;max-width:560px;background:white;border-radius:18px 18px 0 0;padding:20px;max-height:88vh;overflow-y:auto;animation:sheetUp .25s ease}
+    @keyframes sheetUp{from{transform:translateY(40px);opacity:.5}to{transform:translateY(0);opacity:1}}
+    .filter-field{margin-bottom:14px}
+    .filter-sheet-actions{display:flex;gap:8px;padding-top:6px}
+    .filter-sheet-actions .fs-btn{flex:1;padding:12px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border-light);background:white;transition:all .2s}
+    .filter-sheet-actions .fs-btn.apply{background:var(--primary-green);color:white;border-color:var(--primary-green)}
+    .filter-sheet-actions .fs-btn.apply:hover{filter:brightness(1.1)}
+    .filter-sheet-actions .fs-btn.clear:hover{border-color:#dc2626;color:#dc2626}
 
     .view-hidden{display:none !important}
 
-    .loading-shimmer{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;height:14px;margin:6px 0}
-    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-    .ai-suggest-card{background:linear-gradient(135deg,#fff 0%,#F4F9F4 100%);border:1px solid rgba(139,92,246,.2)}
-    .ai-suggest-item{display:flex;align-items:flex-start;gap:10px;padding:10px;background:white;border-radius:10px;margin-bottom:8px;border:1px solid var(--border-light);animation:fadeUp .4s ease both;transition:all .2s}
-    .ai-suggest-item:hover{border-color:var(--premium-green);box-shadow:var(--shadow-sm)}
-    .ai-suggest-item .asi-icon{width:34px;height:34px;border-radius:10px;background:rgba(139,92,246,.1);color:#7c3aed;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
-    .ai-suggest-item .asi-body{flex:1;min-width:0}
-    .ai-suggest-item .asi-title{font-size:13px;font-weight:600}
-    .ai-suggest-item .asi-reason{font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.45}
-    .ai-suggest-item .asi-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-    .ai-suggest-item .asi-add{padding:5px 14px;border-radius:8px;background:var(--primary-green);color:white;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .2s;flex-shrink:0;margin-top:2px}
-    .ai-suggest-item .asi-add:hover{filter:brightness(1.12)}
-    .ai-suggest-item .asi-add.added{background:var(--text-muted)}
-    .ai-suggest-empty{text-align:center;padding:16px;color:var(--text-muted);font-size:12px}
+    @media(min-width:768px){.filter-sheet-backdrop{align-items:center;padding:20px}.filter-sheet{border-radius:18px}}
+    @media(max-width:380px){.tk-filter-btn .tk-label{display:none}.tk-filter-btn{padding:0 13px}}
   </style>
 </head>
 <body>
   <main class="page-container">
     <div class="page-header">
       <h1><i class="fas fa-list-check"></i> Tasks</h1>
-      <p>Manage and track your farming tasks, reminders, and to-dos</p>
+      <p>Manage and track your farm activities in one place.</p>
     </div>
 
     <div class="page-action-bar">
       <span class="pab-title">Actions</span>
       <button class="pab-btn primary" onclick="showAddTask()"><i class="fas fa-plus"></i> Add Task</button>
-      <button class="pab-btn" onclick="window.location.href='farm-calendar.html'"><i class="fas fa-calendar"></i> Calendar</button>
     </div>
 
-    <div class="search-bar">
-      <i class="fas fa-search"></i>
-      <input type="text" id="search-input" placeholder="Search tasks by name..." oninput="onSearchChange()">
-    </div>
-
-    <div class="filter-row">
-      <select id="filter-status" onchange="onFilterChange()">
-        <option value="all">All Status</option>
-        <option value="pending">Pending</option>
-        <option value="completed">Completed</option>
-        <option value="overdue">Overdue</option>
-      </select>
-      <select id="filter-crop" onchange="onFilterChange()">
-        <option value="all">All Crops</option>
-        <option value="Rice">Rice</option>
-        <option value="Cotton">Cotton</option>
-        <option value="Maize">Maize</option>
-        <option value="Wheat">Wheat</option>
-      </select>
-      <select id="filter-farm" onchange="onFilterChange()">
-        <option value="all">All Farms</option>
-      </select>
-    </div>
-
-    <div class="filter-tabs">
-      <button class="filter-tab active" data-tab="active" onclick="switchTab('active')"><i class="fas fa-tasks"></i> Active Tasks</button>
-      <button class="filter-tab" data-tab="completed" onclick="switchTab('completed')"><i class="fas fa-check-double"></i> Completed Tasks</button>
-    </div>
-
-    <div class="card-premium ai-suggest-card" style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
-        <h3 style="font-size:14px"><i class="fas fa-wand-magic-sparkles" style="color:var(--premium-green);margin-right:6px"></i> AI Suggested Tasks</h3>
-        <button class="pab-btn" id="ai-suggest-refresh" style="padding:5px 12px;font-size:10px;flex-shrink:0"><i class="fas fa-rotate"></i> Refresh</button>
-      </div>
-      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Smart suggestions based on your crops, schedule and weather. Tap <b>Add</b> to create a task.</p>
-      <div id="ai-suggest-list">
-        <div class="loading-shimmer"></div>
-        <div class="loading-shimmer" style="width:75%"></div>
-      </div>
-    </div>
-
-    <div id="active-tasks-view">
-      <div id="tasks-sections"></div>
-    </div>
-
-    <div id="completed-tasks-view" class="view-hidden">
-      <div class="search-bar" style="margin-bottom:10px">
+    <div class="tk-toolbar">
+      <div class="tk-search" id="tk-search">
         <i class="fas fa-search"></i>
-        <input type="text" id="completed-search-input" placeholder="Search completed tasks..." oninput="onCompletedSearchChange()">
+        <input type="text" id="search-input" autocomplete="off" placeholder="Search tasks..." oninput="onSearchChange()">
+        <button class="tk-clear" id="search-clear" onclick="clearSearch()" title="Clear search" aria-label="Clear search"><i class="fas fa-times-circle"></i></button>
       </div>
-      <div id="completed-tasks-list"></div>
+      <button class="tk-filter-btn" id="tk-filter-btn" onclick="openFilterSheet()">
+        <i class="fas fa-sliders-h"></i><span class="tk-label">Filter</span><span class="tk-count view-hidden" id="tk-filter-count">0</span>
+      </button>
     </div>
+
+    <div id="tasks-sections"></div>
 
     <div class="card-premium" style="margin-top:16px;text-align:center;padding:20px">
       <h3 style="font-size:14px;margin-bottom:6px"><i class="fas fa-lightbulb" style="color:#f59e0b"></i> Smart Reminder</h3>
@@ -180,29 +173,62 @@
   </main>
 
   <div class="modal-backdrop" id="task-modal" style="display:none" onclick="if(event.target===this)closeModal('task-modal')">
-    <div class="modal-box" style="max-width:440px;padding:20px;border-radius:16px">
-      <h3 style="font-size:16px;margin-bottom:14px"><i class="fas fa-plus-circle" style="color:var(--primary-green)"></i> New Task</h3>
-      <div class="form-group"><label class="form-label">Task Title</label><input class="form-input" id="t-title" placeholder="e.g. Irrigate Wheat Field"></div>
+    <div class="modal-box" style="max-width:460px;padding:20px;border-radius:16px">
+      <div class="modal-title">
+        <h3 style="font-size:16px" id="task-modal-title"><i class="fas fa-plus-circle" style="color:var(--primary-green)"></i> New Task</h3>
+        <button class="modal-close" onclick="closeModal('task-modal')" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="form-group"><label class="form-label">Task Title</label><input class="form-input" id="t-title" placeholder="e.g. Irrigate rice field"></div>
       <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="t-desc" rows="2"></textarea></div>
+      <div class="form-group" id="t-cycle-field">
+        <label class="form-label">Related Crop, Farm &amp; Plot</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <select class="form-select" id="t-crop" onchange="onAddCycleChange()">
+            <option value="">Select crop</option>
+          </select>
+          <select class="form-select" id="t-farm" onchange="onAddCycleChange()">
+            <option value="">Select farm</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:8px">
+          <select class="form-select" id="t-plot" onchange="onAddCycleChange()">
+            <option value="">Select plot</option>
+          </select>
+        </div>
+        <div class="cycle-note" id="t-cycle-note"></div>
+        <div class="form-hint" id="t-cycle-hint">Select the crop, farm and plot this task belongs to.</div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group"><label class="form-label">Due Date</label><input class="form-input" id="t-date" type="date"></div>
+        <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="t-cat"><option>Irrigation</option><option>Farm Management</option><option>Crop Care</option><option>Soil</option><option>Pest &amp; Disease</option><option>Harvesting</option><option>Livestock</option><option>Marketplace</option><option>Government &amp; Schemes</option><option>Other</option></select></div>
         <div class="form-group"><label class="form-label">Priority</label><select class="form-select" id="t-priority"><option value="medium">Medium</option><option value="high">High</option><option value="low">Low</option></select></div>
       </div>
-      <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="t-cat"><option>Irrigation</option><option>Fertilizer</option><option>Pest Control</option><option>Harvesting</option><option>Supplies</option><option>Maintenance</option><option>Other</option></select></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group"><label class="form-label">Farm</label><select class="form-select" id="t-farm"><option>North Field</option><option>South Field</option><option>East Field</option><option>West Field</option><option>Greenhouse A</option></select></div>
-        <div class="form-group"><label class="form-label">Crop</label><select class="form-select" id="t-crop"><option>Rice</option><option>Cotton</option><option>Maize</option><option>Wheat</option></select></div>
+        <div class="form-group"><label class="form-label">Due Date</label><input class="form-input" id="t-date" type="date"></div>
+        <div class="form-group"><label class="form-label">Due Time</label><input class="form-input" id="t-time" type="time"></div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
-        <button class="btn-secondary btn-sm" onclick="closeModal('task-modal')" style="flex:1;padding:10px;border-radius:10px">Cancel</button>
-        <button class="btn-primary btn-sm" onclick="saveTask()" style="flex:1;padding:10px;border-radius:10px">Add Task</button>
+        <button class="btn-secondary btn-sm" onclick="closeModal('task-modal')" style="flex:1;padding:12px;border-radius:10px">Cancel</button>
+        <button class="btn-primary btn-sm" id="t-save-btn" onclick="saveTask()" style="flex:1;padding:12px;border-radius:10px">Add Task</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="detail-modal" style="display:none" onclick="if(event.target===this)closeModal('detail-modal')">
+    <div class="modal-box" style="max-width:460px;padding:20px;border-radius:16px">
+      <div class="modal-title">
+        <h3 style="font-size:16px"><i class="fas fa-clipboard-list" style="color:var(--primary-green)"></i> Task Details</h3>
+        <button class="modal-close" onclick="closeModal('detail-modal')" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="detail-content"></div>
     </div>
   </div>
 
   <div class="modal-backdrop" id="proof-modal" style="display:none" onclick="if(event.target===this)closeProofModal()">
     <div class="modal-box" style="max-width:460px;padding:20px;border-radius:16px">
-      <h3 style="font-size:16px;margin-bottom:14px"><i class="fas fa-camera" style="color:var(--primary-green)"></i> Add Proof of Completion</h3>
+      <div class="modal-title">
+        <h3 style="font-size:16px"><i class="fas fa-camera" style="color:var(--primary-green)"></i> Add Proof of Completion</h3>
+        <button class="modal-close" onclick="closeProofModal()" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
       <div id="proof-task-name" style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:10px"></div>
       <div class="proof-modal-photos">
         <div class="photo-box" id="proof-upload-box">
@@ -226,27 +252,93 @@
       </div>
       <div class="timestamp-row" id="proof-timestamp"></div>
       <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn-secondary btn-sm" onclick="closeProofModal()" style="flex:1;padding:10px;border-radius:10px">Cancel</button>
-        <button class="btn-primary btn-sm" onclick="saveProof()" style="flex:1;padding:10px;border-radius:10px"><i class="fas fa-save"></i> Save Proof</button>
+        <button class="btn-secondary btn-sm" onclick="closeProofModal()" style="flex:1;padding:11px;border-radius:10px">Cancel</button>
+        <button class="btn-primary btn-sm" id="proof-save-btn" onclick="saveProof()" style="flex:1;padding:11px;border-radius:10px"><i class="fas fa-save"></i> Save Proof</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-sheet-backdrop" id="filter-sheet" onclick="if(event.target===this)closeFilterSheet()">
+    <div class="filter-sheet">
+      <div class="modal-title" style="margin-bottom:14px">
+        <h3 style="font-size:16px"><i class="fas fa-sliders-h" style="color:var(--primary-green)"></i> Filter Tasks</h3>
+        <button class="modal-close" onclick="closeFilterSheet()" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="filter-field">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="filter-status">
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="overdue">Overdue</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label class="form-label">Priority</label>
+        <select class="form-select" id="filter-priority">
+          <option value="all">All</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label class="form-label">Task Type / Category</label>
+        <select class="form-select" id="filter-category">
+          <option value="all">All</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label class="form-label">Crop</label>
+        <select class="form-select" id="filter-crop">
+          <option value="all">All Crops</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label class="form-label">Farm</label>
+        <select class="form-select" id="filter-farm">
+          <option value="all">All Farms</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label class="form-label">Plot</label>
+        <select class="form-select" id="filter-plot">
+          <option value="all">All Plots</option>
+        </select>
+      </div>
+      <div class="filter-sheet-actions">
+        <button class="fs-btn clear" onclick="clearFilters()"><i class="fas fa-times"></i> Clear</button>
+        <button class="fs-btn apply" onclick="applyFilters()"><i class="fas fa-check"></i> Apply</button>
       </div>
     </div>
   </div>
 
   <script src="js/services.js"></script>
   <script src="js/userStore.js"></script>
-  <script src="js/mockData.js"></script>
   <script src="assets/js/navigation.js"></script>
   <script src="assets/js/app.js"></script>
   <script>
     var tasks = [];
-    var currentTab = 'active';
+    var allTasks = [];
+    var cycles = [];
+    var farms = [];
     var searchQuery = '';
-    var completedSearchQuery = '';
-    var filterStatus = 'all';
-    var filterCrop = 'all';
-    var filterFarm = 'all';
+    var filters = { status: 'all', priority: 'all', category: 'all', crop: 'all', farm: 'all', plot: 'all' };
+    var editingTaskId = null;
     var pendingProofTaskId = null;
     var proofPhotoData = null;
+    var currentDetailTask = null;
+    var undoDeleteTimer = null;
+    var debounceTimer = null;
+    var fetchToken = 0;
+    var savingTask = false;
+
+    var DEFAULT_CATEGORIES = ['Farm Management', 'Crop Care', 'Irrigation', 'Soil', 'Pest & Disease', 'Harvesting', 'Livestock', 'Marketplace', 'Government & Schemes', 'Other'];
+
+    function isAuthed() {
+      return !!(window.API && localStorage.getItem('fa-auth-token'));
+    }
 
     function getDateStr(offset) {
       var d = new Date();
@@ -258,8 +350,8 @@
     }
 
     function formatDateDisplay(dateStr) {
-      if (!dateStr) return 'No date';
-      var parts = dateStr.split('-');
+      if (!dateStr) return null;
+      var parts = String(dateStr).split('-');
       if (parts.length !== 3) return dateStr;
       var d = new Date(parts[0], parts[1] - 1, parts[2]);
       var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -270,7 +362,8 @@
       if (!dateStr) return false;
       var today = new Date();
       today.setHours(0, 0, 0, 0);
-      var parts = dateStr.split('-');
+      var parts = String(dateStr).split('-');
+      if (parts.length !== 3) return false;
       var d = new Date(parts[0], parts[1] - 1, parts[2]);
       return d < today;
     }
@@ -280,7 +373,8 @@
       var target = new Date();
       target.setDate(target.getDate() + offset);
       target.setHours(0, 0, 0, 0);
-      var parts = dateStr.split('-');
+      var parts = String(dateStr).split('-');
+      if (parts.length !== 3) return false;
       var d = new Date(parts[0], parts[1] - 1, parts[2]);
       d.setHours(0, 0, 0, 0);
       return d.getTime() === target.getTime();
@@ -291,7 +385,8 @@
       var target = new Date();
       target.setDate(target.getDate() + offset);
       target.setHours(23, 59, 59, 999);
-      var parts = dateStr.split('-');
+      var parts = String(dateStr).split('-');
+      if (parts.length !== 3) return false;
       var d = new Date(parts[0], parts[1] - 1, parts[2]);
       d.setHours(0, 0, 0, 0);
       return d > target;
@@ -304,403 +399,706 @@
       return months[d.getMonth()] + ' ' + d.getDate();
     }
 
-    function generateMockTasks() {
-      var farms = ['North Field', 'South Field', 'East Field', 'West Field', 'Greenhouse A'];
-      var crops = ['Rice', 'Cotton', 'Maize', 'Wheat'];
-      var categories = ['Irrigation', 'Fertilizer', 'Pest Control', 'Harvesting', 'Supplies', 'Maintenance'];
-      var priorities = ['high', 'medium', 'low'];
-
-      var mockList = [
-        { title: 'Irrigate Rice Field', desc: 'Flood irrigate the north rice paddies', due: getDateStr(-1), pri: 'high', cat: 'Irrigation', status: 'pending', farm: 'North Field', crop: 'Rice' },
-        { title: 'Apply Fertilizer to Cotton', desc: 'Apply NPK 20-10-10 to south cotton rows', due: getDateStr(-1), pri: 'medium', cat: 'Fertilizer', status: 'completed', farm: 'South Field', crop: 'Cotton' },
-        { title: 'Check Pest Traps', desc: 'Inspect pheromone traps in maize field', due: getDateStr(-1), pri: 'low', cat: 'Pest Control', status: 'completed', farm: 'East Field', crop: 'Maize' },
-        { title: 'Harvest Maize Section B', desc: 'Mechanical harvest of section B, east field', due: getDateStr(-1), pri: 'high', cat: 'Harvesting', status: 'pending', farm: 'East Field', crop: 'Maize' },
-
-        { title: 'Water Greenhouse Seedlings', desc: 'Mist irrigate rice seedlings in greenhouse', due: getDateStr(0), pri: 'high', cat: 'Irrigation', status: 'pending', farm: 'Greenhouse A', crop: 'Rice' },
-        { title: 'Spray Pesticide Wheat', desc: 'Apply fungicide to west wheat field', due: getDateStr(0), pri: 'medium', cat: 'Pest Control', status: 'completed', farm: 'West Field', crop: 'Wheat' },
-        { title: 'Inspect Irrigation System', desc: 'Check drip lines and sprinklers', due: getDateStr(0), pri: 'medium', cat: 'Maintenance', status: 'pending', farm: 'North Field', crop: 'Rice' },
-        { title: 'Apply Urea to Wheat', desc: 'Top dress urea 46-0-0 on wheat', due: getDateStr(0), pri: 'high', cat: 'Fertilizer', status: 'pending', farm: 'West Field', crop: 'Wheat' },
-        { title: 'Collect Soil Samples', desc: 'Take samples from south field for testing', due: getDateStr(0), pri: 'low', cat: 'Maintenance', status: 'completed', farm: 'South Field', crop: 'Cotton' },
-
-        { title: 'Transplant Rice Seedlings', desc: 'Transplant from greenhouse to north field', due: getDateStr(1), pri: 'high', cat: 'Harvesting', status: 'pending', farm: 'North Field', crop: 'Rice' },
-        { title: 'Repair Fence East Boundary', desc: 'Fix broken fence posts along east edge', due: getDateStr(1), pri: 'medium', cat: 'Maintenance', status: 'pending', farm: 'East Field', crop: 'Maize' },
-        { title: 'Order Fertilizer Supplies', desc: 'Order urea and DAP for next season', due: getDateStr(1), pri: 'low', cat: 'Supplies', status: 'pending', farm: 'Greenhouse A', crop: 'Rice' },
-
-        { title: 'Prune Fruit Trees', desc: 'Prune mango and guava trees near south field', due: getDateStr(3), pri: 'medium', cat: 'Maintenance', status: 'pending', farm: 'South Field', crop: 'Cotton' },
-        { title: 'Prepare Harvest Equipment', desc: 'Service combine harvester and tractors', due: getDateStr(4), pri: 'high', cat: 'Supplies', status: 'pending', farm: 'West Field', crop: 'Wheat' },
-        { title: 'Apply Herbicide Maize Field', desc: 'Pre-emergent herbicide on east maize rows', due: getDateStr(5), pri: 'medium', cat: 'Pest Control', status: 'pending', farm: 'East Field', crop: 'Maize' },
-        { title: 'Irrigate Cotton Field', desc: 'Drip irrigate south cotton field', due: getDateStr(6), pri: 'medium', cat: 'Irrigation', status: 'completed', farm: 'South Field', crop: 'Cotton' },
-        { title: 'Monitor Grain Moisture', desc: 'Check moisture levels in stored wheat', due: getDateStr(7), pri: 'low', cat: 'Maintenance', status: 'pending', farm: 'West Field', crop: 'Wheat' },
-
-        { title: 'Fix Water Pump', desc: 'Repair broken pump at north well', due: getDateStr(-4), pri: 'high', cat: 'Maintenance', status: 'pending', farm: 'North Field', crop: 'Rice' },
-        { title: 'Weed Control West Field', desc: 'Manual weeding of wheat field', due: getDateStr(-3), pri: 'medium', cat: 'Pest Control', status: 'pending', farm: 'West Field', crop: 'Wheat' },
-        { title: 'Clean Storage Shed', desc: 'Organize tools and equipment in shed', due: getDateStr(-5), pri: 'low', cat: 'Maintenance', status: 'pending', farm: 'Greenhouse A', crop: 'Rice' }
-      ];
-
-      return mockList.map(function(m, i) {
-        return {
-          id: 't' + (i + 1),
-          title: m.title,
-          description: m.desc,
-          dueDate: m.due,
-          priority: m.pri,
-          status: m.status,
-          category: m.cat,
-          farm: m.farm,
-          crop: m.crop
-        };
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
       });
     }
 
-    var activeCycleId = null;
+    function statusOf(t) {
+      if (t.status !== 'completed' && isOverdue(t.due_date) && t.status !== 'overdue') return 'overdue';
+      return t.status === 'in_progress' ? 'in_progress' : (t.status || 'pending');
+    }
 
-    function loadTasks() {
-      var mock = window.AppMockData ? AppMockData.tasks : null;
-      if (mock && mock.length) {
-        tasks = mock.map(function(t) {
-          return {
-            id: t.id, title: t.title, description: t.description, dueDate: t.dueDate,
-            priority: t.priority, status: t.status, category: t.category,
-            farm: t.farm || 'North Field', crop: t.crop || 'Rice'
-          };
-        });
-      } else {
-        tasks = generateMockTasks();
+    function buildQuery() {
+      var p = [];
+      if (searchQuery) p.push('q=' + encodeURIComponent(searchQuery));
+      if (filters.status && filters.status !== 'all') p.push('status=' + encodeURIComponent(filters.status));
+      if (filters.priority && filters.priority !== 'all') p.push('priority=' + encodeURIComponent(filters.priority));
+      if (filters.category && filters.category !== 'all') p.push('category=' + encodeURIComponent(filters.category));
+      if (filters.crop && filters.crop !== 'all') p.push('crop=' + encodeURIComponent(filters.crop));
+      if (filters.farm && filters.farm !== 'all') p.push('farm_id=' + encodeURIComponent(filters.farm));
+      if (filters.plot && filters.plot !== 'all') p.push('plot_id=' + encodeURIComponent(filters.plot));
+      return p.length ? p.join('&') : '';
+    }
+
+    function activeFilterCount() {
+      var n = 0;
+      for (var k in filters) {
+        if (filters[k] && filters[k] !== 'all') n++;
       }
-      populateFarmFilter();
-      renderAll();
-      renderAISuggestions();
-      loadBackendTasks();
+      return n + (searchQuery ? 1 : 0);
     }
 
-    function loadBackendTasks() {
-      if (!window.API || !localStorage.getItem('fa-auth-token')) return;
-      return window.API.Crop.listTasks().then(function (list) {
-        if (list && list.length) {
-          tasks = list.map(function (t) {
-            return {
-              id: t.id || t.task_id,
-              taskId: t.task_id || t.id,
-              title: t.title,
-              description: t.description || '',
-              dueDate: (t.due_date || '').substring(0, 10),
-              priority: t.priority || 'medium',
-              status: t.status === 'completed' ? 'completed' : 'pending',
-              category: t.category || 'General',
-              farm: '',
-              crop: ''
-            };
-          });
-          populateFarmFilter();
-          renderAll();
-        }
-      }).catch(function () { /* keep mock fallback */ });
+    function updateFilterBadge() {
+      var n = activeFilterCount();
+      var btn = document.getElementById('tk-filter-btn');
+      var badge = document.getElementById('tk-filter-count');
+      if (n) {
+        btn.classList.add('active');
+        badge.classList.remove('view-hidden');
+        badge.textContent = n;
+      } else {
+        btn.classList.remove('active');
+        badge.classList.add('view-hidden');
+      }
     }
 
-    function loadCycleId() {
-      activeCycleId = null;
-      if (!window.API || !localStorage.getItem('fa-auth-token')) return Promise.resolve(null);
-      return window.API.Crop.listCycles().then(function (cycles) {
-        if (cycles && cycles.length) activeCycleId = cycles[0].id || cycles[0].cycle_id;
-        return activeCycleId;
-      }).catch(function () { return null; });
+    function renderSkeletons(container) {
+      var html = '';
+      for (var i = 0; i < 5; i++) {
+        html += '<div class="skeleton-card"><div class="loading-shimmer" style="width:55%"></div>';
+        html += '<div class="loading-shimmer" style="width:90%"></div>';
+        html += '<div class="loading-shimmer" style="width:35%"></div></div>';
+      }
+      container.innerHTML = html;
     }
 
-    // ==================== AI SUGGESTED TASKS ====================
-
-    var AI_SUGGEST_KEY = 'fa-ai-suggest-accepted';
-
-    function getAcceptedSuggestions() {
-      try { return JSON.parse(localStorage.getItem(AI_SUGGEST_KEY) || '[]'); } catch (e) { return []; }
-    }
-
-    function acceptSuggestion(id) {
-      var acc = getAcceptedSuggestions();
-      if (acc.indexOf(id) === -1) acc.push(id);
-      try { localStorage.setItem(AI_SUGGEST_KEY, JSON.stringify(acc)); } catch (e) {}
-    }
-
-    function generateAISuggestions() {
-      var pool = [
-        { id: 'ai-1', title: 'Pre-irrigate before heatwave', cat: 'Irrigation', pri: 'high', farm: 'North Field', crop: 'Rice', icon: 'fa-droplet', reason: 'Temperature is expected to cross 38\u00b0C tomorrow. Early-morning irrigation prevents heat stress in rice.' },
-        { id: 'ai-2', title: 'Schedule pest spray window', cat: 'Pest Control', pri: 'medium', farm: 'South Field', crop: 'Cotton', icon: 'fa-bug', reason: 'Pheromone trap counts crossed the economic threshold in the south cotton block.' },
-        { id: 'ai-3', title: 'Order DAP before sowing', cat: 'Supplies', pri: 'low', farm: 'West Field', crop: 'Wheat', icon: 'fa-box-open', reason: 'DAP stock is below 25 kg and the wheat sowing window opens in about 2 weeks.' },
-        { id: 'ai-4', title: 'Inspect drip filters after rain', cat: 'Maintenance', pri: 'medium', farm: 'Greenhouse A', crop: 'Rice', icon: 'fa-gears', reason: 'Recent muddy water can clog emitters - flush filters to keep irrigation uniformity high.' },
-        { id: 'ai-5', title: 'Book harvest labour in advance', cat: 'Harvesting', pri: 'high', farm: 'East Field', crop: 'Maize', icon: 'fa-users', reason: 'Maize section B reaches maturity in 5 days; labour is scarce on weekends.' },
-        { id: 'ai-6', title: 'Set market-price alert for Tomato', cat: 'Supplies', pri: 'low', farm: 'Greenhouse A', crop: 'Rice', icon: 'fa-chart-line', reason: 'Tomato mandi rates are trending up 8% this week - lock in a good selling window.' }
-      ];
-      var accepted = getAcceptedSuggestions();
-      return pool.filter(function (s) { return accepted.indexOf(s.id) === -1; }).slice(0, 3);
-    }
-
-    function renderAISuggestions() {
-      var listEl = document.getElementById('ai-suggest-list');
-      if (!listEl) return;
-      listEl.innerHTML = '<div class="loading-shimmer"></div><div class="loading-shimmer" style="width:75%"></div>';
-      setTimeout(function () {
-        var items = generateAISuggestions();
-        if (!items.length) {
-          listEl.innerHTML = '<div class="ai-suggest-empty"><i class="fas fa-check-circle" style="font-size:20px;display:block;margin-bottom:6px;color:var(--primary-green)"></i>All caught up! Tap Refresh for fresh ideas.</div>';
-          return;
-        }
-        var html = '';
-        items.forEach(function (s, idx) {
-          html += '<div class="ai-suggest-item" style="animation-delay:' + (idx * 0.08) + 's">';
-          html += '<div class="asi-icon"><i class="fas ' + s.icon + '"></i></div>';
-          html += '<div class="asi-body">';
-          html += '<div class="asi-title">' + s.title + '</div>';
-          html += '<div class="asi-reason"><i class="fas fa-lightbulb" style="color:#f59e0b;margin-right:3px;font-size:9px"></i>' + s.reason + '</div>';
-          html += '<div class="asi-meta">';
-          html += '<span class="priority-badge ' + s.pri + '">' + s.pri + '</span>';
-          html += '<span class="farm-tag"><i class="fas fa-tractor" style="font-size:8px"></i> ' + s.farm + '</span>';
-          html += '<span class="crop-tag"><i class="fas fa-seedling" style="font-size:8px"></i> ' + s.crop + '</span>';
-          html += '<span class="cat-badge">' + s.cat + '</span>';
-          html += '</div></div>';
-          html += '<button class="asi-add" data-id="' + s.id + '"><i class="fas fa-plus"></i> Add</button>';
-          html += '</div>';
-        });
-        listEl.innerHTML = html;
-
-        listEl.querySelectorAll('.asi-add').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var id = btn.getAttribute('data-id');
-            var item = null;
-            for (var i = 0; i < items.length; i++) {
-              if (items[i].id === id) { item = items[i]; break; }
-            }
-            if (!item) return;
-            acceptSuggestion(id);
-            var newTask = {
-              id: 't' + Date.now(),
-              title: item.title,
-              description: item.reason,
-              dueDate: getDateStr(1),
-              priority: item.pri,
-              status: 'pending',
-              category: item.cat,
-              farm: item.farm,
-              crop: item.crop
-            };
-            tasks.unshift(newTask);
-            btn.classList.add('added');
-            btn.innerHTML = '<i class="fas fa-check"></i> Added';
-            btn.disabled = true;
-            renderAll();
-            showToast('AI task added to your list', 'success');
-          });
-        });
-      }, 900);
-    }
-
-    function populateFarmFilter() {
-      var select = document.getElementById('filter-farm');
-      var farmSet = {};
-      tasks.forEach(function(t) { if (t.farm) farmSet[t.farm] = true; });
-      var farmList = Object.keys(farmSet);
-      farmList.sort();
-      farmList.forEach(function(f) {
-        var opt = document.createElement('option');
-        opt.value = f;
-        opt.textContent = f;
-        select.appendChild(opt);
+    function fetchTasks(silent) {
+      if (!isAuthed()) {
+        renderLoggedOut();
+        updateReminder();
+        return Promise.resolve();
+      }
+      var container = document.getElementById('tasks-sections');
+      var token = ++fetchToken;
+      if (!silent) renderSkeletons(container);
+      return window.API.Crop.listTasks(buildQuery()).then(function (list) {
+        if (token !== fetchToken) return;
+        tasks = list || [];
+        allTasks = tasks.slice();
+        updateReminder();
+        renderSections();
+      }).catch(function (err) {
+        if (token !== fetchToken) return;
+        if (!silent) setLoading(false);
+        renderError(err);
       });
-      var savedFarm = '';
-      try { savedFarm = localStorage.getItem('fa-selected-farm') || ''; } catch (e) {}
-      if (savedFarm) select.value = savedFarm;
     }
 
-    function filterTasks(taskList) {
-      return taskList.filter(function(t) {
-        if (filterStatus === 'pending' && t.status !== 'pending') return false;
-        if (filterStatus === 'completed' && t.status !== 'completed') return false;
-        if (filterStatus === 'overdue' && !(t.status !== 'completed' && isOverdue(t.dueDate))) return false;
-        if (filterCrop !== 'all' && t.crop !== filterCrop) return false;
-        if (filterFarm !== 'all' && t.farm !== filterFarm) return false;
-        if (searchQuery && t.title.toLowerCase().indexOf(searchQuery.toLowerCase()) === -1) return false;
-        return true;
+    function setLoading(loading) {
+      var container = document.getElementById('tasks-sections');
+      if (loading) renderSkeletons(container);
+    }
+
+    function loadOptions() {
+      if (!isAuthed()) return Promise.resolve();
+      return Promise.all([
+        window.API.Crop.listCycles(),
+        window.API.Farm.list()
+      ]).then(function (results) {
+        cycles = results[0] || [];
+        farms = results[1] || [];
+        populateFilterOptions();
+        populateAddTaskOptions();
+      }).catch(function () {});
+    }
+
+    function populateFilterOptions() {
+      var cropSet = {}, farmSet = {}, plotSet = {};
+      for (var i = 0; i < cycles.length; i++) {
+        var c = cycles[i];
+        if (c.crop_name) cropSet[c.crop_name] = true;
+        if (c.farm_id && c.farm_name) farmSet[c.farm_id] = c.farm_name;
+        if (c.plot_id && c.plot_name) plotSet[c.plot_id] = c.plot_name;
+      }
+      for (var j = 0; j < farms.length; j++) {
+        if (farms[j].id && farms[j].farm_name) farmSet[farms[j].id] = farms[j].farm_name;
+      }
+      var cropEl = document.getElementById('filter-crop');
+      var farmEl = document.getElementById('filter-farm');
+      var plotEl = document.getElementById('filter-plot');
+      fillSelect(cropEl, Object.keys(cropSet).sort(), 'All Crops', cropSet);
+      fillSelect(farmEl, Object.keys(farmSet).sort(), 'All Farms', farmSet);
+      fillSelect(plotEl, Object.keys(plotSet).sort(), 'All Plots', plotSet);
+      fillSelect(document.getElementById('filter-category'), collectCategories(), 'All');
+    }
+
+    function collectCategories() {
+      var set = {};
+      var src = allTasks.length ? allTasks : tasks;
+      for (var i = 0; i < src.length; i++) {
+        if (src[i].category) set[src[i].category] = true;
+      }
+      for (var j = 0; j < DEFAULT_CATEGORIES.length; j++) {
+        set[DEFAULT_CATEGORIES[j]] = true;
+      }
+      return Object.keys(set).sort();
+    }
+
+    function fillSelect(el, values, allLabel, labelMap, placeholderVal) {
+      el.innerHTML = '';
+      var ph = placeholderVal === undefined ? 'all' : placeholderVal;
+      var opt = document.createElement('option');
+      opt.value = ph;
+      opt.textContent = allLabel || 'All';
+      el.appendChild(opt);
+      var list = values;
+      if (!list || !list.length) return;
+      list.forEach(function (v) {
+        var o = document.createElement('option');
+        o.value = v;
+        o.textContent = (labelMap && labelMap[v]) || v;
+        el.appendChild(o);
       });
+    }
+
+    function populateAddTaskOptions() {
+      var cropSet = {}, farmSet = {}, plotSet = {};
+      for (var i = 0; i < cycles.length; i++) {
+        var c = cycles[i];
+        if (c.crop_id && c.crop_name) cropSet[c.crop_id] = c.crop_name;
+        if (c.farm_id && c.farm_name) farmSet[c.farm_id] = c.farm_name;
+        if (c.plot_id && c.plot_name) plotSet[c.plot_id] = c.plot_name;
+      }
+      fillSelect(document.getElementById('t-crop'), Object.keys(cropSet).sort(), 'Select crop', cropSet, '');
+      fillSelect(document.getElementById('t-farm'), Object.keys(farmSet).sort(), 'Select farm', farmSet, '');
+      fillSelect(document.getElementById('t-plot'), Object.keys(plotSet).sort(), 'Select plot', plotSet, '');
+      var hint = document.getElementById('t-cycle-hint');
+      if (!Object.keys(cropSet).length) {
+        hint.textContent = 'No crop cycles found. Create a crop cycle under Farm Management first, then add tasks for it.';
+        document.getElementById('t-save-btn').disabled = true;
+      } else {
+        hint.textContent = 'Select the crop, farm and plot this task belongs to.';
+        document.getElementById('t-save-btn').disabled = false;
+      }
+    }
+
+    function onAddCycleChange() {
+      var cycleNote = document.getElementById('t-cycle-note');
+      var saveBtn = document.getElementById('t-save-btn');
+      var cycleId = resolveSelectedCycleId();
+      if (cycleId) {
+        cycleNote.className = 'cycle-note show';
+        cycleNote.textContent = 'Task will be linked to ' + (document.getElementById('t-crop').selectedOptions[0] || {}).text + ' @ ' + (document.getElementById('t-farm').selectedOptions[0] || {}).text + (document.getElementById('t-plot').value ? ' / ' + (document.getElementById('t-plot').selectedOptions[0] || {}).text : '');
+        saveBtn.disabled = false;
+      } else {
+        cycleNote.className = 'cycle-note show error';
+        cycleNote.textContent = 'No matching crop cycle for the selected crop, farm and plot. Create the cycle first under Farm Management.';
+        saveBtn.disabled = true;
+      }
+    }
+
+    function resolveSelectedCycleId() {
+      var cropEl = document.getElementById('t-crop');
+      var farmEl = document.getElementById('t-farm');
+      var plotEl = document.getElementById('t-plot');
+      var cropId = cropEl.value;
+      var farmId = farmEl.value;
+      var plotId = plotEl.value || null;
+      if (!cropId || !farmId) return null;
+      for (var i = 0; i < cycles.length; i++) {
+        var c = cycles[i];
+        if (c.crop_id === cropId && c.farm_id === farmId && (plotId === null ? true : c.plot_id === plotId)) {
+          return c.id || c.cycle_id;
+        }
+      }
+      for (var j = 0; j < cycles.length; j++) {
+        var cj = cycles[j];
+        if (cropId && cj.crop_id === cropId && cj.farm_id === farmId) return cj.id || cj.cycle_id;
+      }
+      return null;
     }
 
     function getSections() {
-      var filtered = filterTasks(tasks);
-      var sections = [
-        { key: 'pending', label: 'Pending', icon: 'fa-exclamation-triangle', badge: 'overdue', badgeText: 'OVERDUE' },
-        { key: 'yesterday', label: 'Yesterday', dateLabel: getSectionDateLabel(-1), icon: 'fa-calendar-day' },
-        { key: 'today', label: 'Today', dateLabel: getSectionDateLabel(0), icon: 'fa-calendar-day', badge: 'today-badge', badgeText: 'TODAY' },
-        { key: 'tomorrow', label: 'Tomorrow', dateLabel: getSectionDateLabel(1), icon: 'fa-calendar-day' },
-        { key: 'upcoming', label: 'Upcoming', icon: 'fa-calendar-week' }
-      ];
-
-      var result = [];
-      for (var si = 0; si < sections.length; si++) {
-        var sec = sections[si];
-        var sectionTasks = [];
-        for (var ti = 0; ti < filtered.length; ti++) {
-          var t = filtered[ti];
-          if (sec.key === 'pending') {
-            if (t.status !== 'completed' && isOverdue(t.dueDate)) {
-              sectionTasks.push(t);
-            }
-          } else if (sec.key === 'yesterday') {
-            if (isSameDay(t.dueDate, -1)) {
-              sectionTasks.push(t);
-            }
-          } else if (sec.key === 'today') {
-            if (isSameDay(t.dueDate, 0)) {
-              sectionTasks.push(t);
-            }
-          } else if (sec.key === 'tomorrow') {
-            if (isSameDay(t.dueDate, 1)) {
-              sectionTasks.push(t);
-            }
-          } else if (sec.key === 'upcoming') {
-            if (isAfterDay(t.dueDate, 1)) {
-              sectionTasks.push(t);
-            }
-          }
-        }
-        if (sectionTasks.length > 0) {
-          result.push({
-            key: sec.key,
-            label: sec.label,
-            dateLabel: sec.dateLabel || '',
-            icon: sec.icon || '',
-            badge: sec.badge || '',
-            badgeText: sec.badgeText || '',
-            tasks: sectionTasks
-          });
-        }
+      var buckets = { overdue: [], today: [], tomorrow: [], upcoming: [], completed: [] };
+      for (var i = 0; i < tasks.length; i++) {
+        var t = tasks[i];
+        if (t.status === 'completed') { buckets.completed.push(t); continue; }
+        if (isOverdue(t.due_date)) buckets.overdue.push(t);
+        else if (isSameDay(t.due_date, 0)) buckets.today.push(t);
+        else if (isSameDay(t.due_date, 1)) buckets.tomorrow.push(t);
+        else buckets.upcoming.push(t);
       }
-      return result;
-    }
-
-    function renderAll() {
-      renderSections();
-      renderCompletedTasks();
-      updateReminderCount();
+      var out = [];
+      if (buckets.overdue.length) out.push({ key: 'overdue', label: 'Overdue', icon: 'fa-exclamation-triangle', badge: 'overdue', badgeText: 'OVERDUE', tasks: buckets.overdue });
+      if (buckets.today.length) out.push({ key: 'today', label: 'Today', dateLabel: getSectionDateLabel(0), icon: 'fa-calendar-day', badge: 'today-badge', badgeText: 'TODAY', tasks: buckets.today });
+      if (buckets.tomorrow.length) out.push({ key: 'tomorrow', label: 'Tomorrow', dateLabel: getSectionDateLabel(1), icon: 'fa-calendar-day', tasks: buckets.tomorrow });
+      if (buckets.upcoming.length) out.push({ key: 'upcoming', label: 'Upcoming', icon: 'fa-calendar-week', tasks: buckets.upcoming });
+      if (buckets.completed.length) out.push({ key: 'completed', label: 'Completed', icon: 'fa-check-double', badge: 'completed-badge', badgeText: 'DONE', tasks: buckets.completed });
+      return out;
     }
 
     function renderSections() {
       var container = document.getElementById('tasks-sections');
-      var sections = getSections();
-
-      if (!sections.length) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i>No tasks found. Great work!</div>';
+      if (!isAuthed()) { renderLoggedOut(); return; }
+      if (!tasks.length) {
+        renderEmpty();
         return;
       }
-
+      var sections = getSections();
+      if (!sections.length) { renderEmpty(); return; }
       var html = '';
       for (var si = 0; si < sections.length; si++) {
         var sec = sections[si];
         var badgeHtml = '';
-        if (sec.badge) {
-          badgeHtml = '<span class="sec-badge ' + sec.badge + '">' + sec.badgeText + '</span>';
-        }
+        if (sec.badge) badgeHtml = '<span class="sec-badge ' + sec.badge + '">' + sec.badgeText + '</span>';
         var dateHtml = sec.dateLabel ? '<span style="font-size:11px;color:var(--text-muted);margin-left:4px">(' + sec.dateLabel + ')</span>' : '';
+        var collapsed = sec.key === 'completed' ? ' collapsed' : '';
+        var bodyHidden = sec.key === 'completed' ? ' hidden' : '';
         html += '<div class="task-section">';
         html += '<div class="section-header" onclick="toggleSection(this)">';
-        html += '<i class="fas ' + sec.icon + ' sec-icon" style="font-size:12px;color:var(--text-muted)"></i>';
+        html += '<i class="fas ' + sec.icon + ' sec-icon' + (collapsed ? ' collapsed' : '') + '" style="font-size:12px;color:var(--text-muted)"></i>';
         html += '<span class="sec-title">' + sec.label + dateHtml + '</span>';
         html += badgeHtml;
         html += '<span class="sec-count">' + sec.tasks.length + '</span>';
         html += '<i class="fas fa-chevron-down sec-icon" style="font-size:10px;color:var(--text-muted)"></i>';
         html += '</div>';
-        html += '<div class="sec-body">';
-
+        html += '<div class="sec-body' + bodyHidden + '">';
         for (var ti = 0; ti < sec.tasks.length; ti++) {
           html += renderTaskCard(sec.tasks[ti]);
         }
-
         html += '</div></div>';
       }
       container.innerHTML = html;
     }
 
     function renderTaskCard(t) {
-      var done = t.status === 'completed';
-      var proofData = getProofData(t.id);
-      var hasProof = proofData !== null;
+      var st = statusOf(t);
+      var done = st === 'completed';
+      var proofData = getProofData(t.task_id);
+      var hasProof = !!proofData;
       var proofThumbHtml = '';
       if (done && hasProof && proofData.photo) {
-        proofThumbHtml = '<img src="' + proofData.photo + '" class="proof-thumb" onclick="event.stopPropagation();viewProof(\'' + t.id + '\')" title="View proof">';
+        proofThumbHtml = '<img src="' + proofData.photo + '" class="proof-thumb" onclick="event.stopPropagation();viewProof(\'' + escapeHtml(t.task_id) + '\')" title="View proof">';
       } else if (done && hasProof) {
-        proofThumbHtml = '<span class="proof-thumb" style="display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--bg-card-soft)" onclick="event.stopPropagation();viewProof(\'' + t.id + '\')" title="View proof"><i class="fas fa-check-circle" style="color:var(--primary-green)"></i></span>';
+        proofThumbHtml = '<span class="proof-thumb" style="display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--bg-card-soft)" onclick="event.stopPropagation();viewProof(\'' + escapeHtml(t.task_id) + '\')" title="View proof"><i class="fas fa-check-circle" style="color:var(--primary-green)"></i></span>';
       }
-
-      var html = '<div class="task-card' + (done ? ' completed' : '') + '">';
-      html += '<div class="check' + (done ? ' checked' : '') + '" onclick="event.stopPropagation();toggleTask(\'' + t.id + '\')">' + (done ? '<i class="fas fa-check" style="font-size:10px"></i>' : '') + '</div>';
+      var relHtml = '';
+      if (t.crop_name || t.farm_name || t.plot_name) {
+        relHtml = '<div class="task-rel">';
+        if (t.crop_name) relHtml += '<span><i class="fas fa-seedling"></i> ' + escapeHtml(t.crop_name) + '</span>';
+        if (t.farm_name) relHtml += '<span><i class="fas fa-tractor"></i> ' + escapeHtml(t.farm_name) + '</span>';
+        if (t.plot_name) relHtml += '<span><i class="fas fa-map-marked-alt"></i> ' + escapeHtml(t.plot_name) + '</span>';
+        relHtml += '</div>';
+      }
+      var dueHtml = '';
+      var dueDateText = formatDateDisplay(t.due_date);
+      if (dueDateText || t.due_time) {
+        dueHtml = '<div class="task-meta" style="margin-top:4px"><i class="fas fa-clock" style="font-size:9px;color:var(--text-muted)"></i> Due: ' + (dueDateText || 'No date') + (t.due_time ? ' ' + escapeHtml(t.due_time) : '') + (st === 'overdue' ? ' <span style="color:#dc2626;font-weight:600">(overdue)</span>' : '') + '</div>';
+      }
+      var html = '<div class="task-card' + (done ? ' completed' : '') + '" onclick="openDetails(\'' + escapeHtml(t.task_id) + '\')">';
+      html += '<div class="check' + (done ? ' checked' : '') + '" onclick="event.stopPropagation();toggleComplete(\'' + escapeHtml(t.task_id) + '\')">' + (done ? '<i class="fas fa-check" style="font-size:10px"></i>' : '') + '</div>';
       html += '<div class="task-body">';
-      html += '<div class="task-title">' + t.title + '</div>';
+      html += '<div class="task-title">' + escapeHtml(t.title) + '</div>';
       html += '<div class="task-meta">';
-      html += '<span class="cat-badge">' + t.category + '</span>';
-      html += '<span class="priority-badge ' + t.priority + '">' + t.priority + '</span>';
-      html += '<span class="farm-tag"><i class="fas fa-tractor" style="font-size:8px"></i> ' + (t.farm || 'N/A') + '</span>';
-      html += '<span class="crop-tag"><i class="fas fa-seedling" style="font-size:8px"></i> ' + (t.crop || 'N/A') + '</span>';
-      html += '<span>Due: ' + formatDateDisplay(t.dueDate) + '</span>';
+      if (t.category) html += '<span class="cat-badge">' + escapeHtml(t.category) + '</span>';
+      html += '<span class="priority-badge ' + escapeHtml(t.priority) + '">' + escapeHtml(t.priority) + '</span>';
+      html += '<span class="status-pill ' + st + '">' + st.replace('_', ' ') + '</span>';
       html += '</div>';
-      if (t.description) html += '<div class="task-desc">' + t.description + '</div>';
+      if (t.description) html += '<div class="task-desc">' + escapeHtml(t.description) + '</div>';
+      html += relHtml;
+      html += dueHtml;
       html += '</div>';
       html += proofThumbHtml;
       html += '</div>';
-
       return html;
     }
 
-    function toggleSection(header) {
-      var body = header.nextElementSibling;
-      if (body.classList.contains('hidden')) {
-        body.classList.remove('hidden');
-        header.querySelectorAll('.sec-icon')[1].style.transform = 'rotate(0deg)';
+    function renderEmpty() {
+      var container = document.getElementById('tasks-sections');
+      var isFiltered = !!(searchQuery || activeFilterCount());
+      if (isFiltered) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-filter" style="color:var(--text-muted)"></i><div class="es-title">No matching tasks</div><div class="es-sub">Try changing your filters or search.</div><div class="es-actions"><button class="pab-btn" onclick="clearAllFilters()" style="margin:0 auto"><i class="fas fa-times"></i> Clear Filters &amp; Search</button></div></div>';
       } else {
-        body.classList.add('hidden');
-        header.querySelectorAll('.sec-icon')[1].style.transform = 'rotate(-90deg)';
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i><div class="es-title">No tasks yet</div><div class="es-sub">Create a task to start managing your farm activities.</div><div class="es-actions"><button class="pab-btn primary" onclick="showAddTask()" style="margin:0 auto"><i class="fas fa-plus"></i> Add Task</button></div></div>';
       }
     }
 
-    function updateReminderCount() {
+    function renderLoggedOut() {
+      var container = document.getElementById('tasks-sections');
+      container.innerHTML = '<div class="state-box"><i class="fas fa-user-lock"></i><div class="es-title">Please log in</div><div class="es-sub">Log in to view and manage your tasks.</div></div>';
+    }
+
+    function renderError(err) {
+      var container = document.getElementById('tasks-sections');
+      var detail = (err && err.message) ? err.message : 'Unable to load tasks';
+      container.innerHTML = '<div class="state-box"><i class="fas fa-exclamation-triangle" style="color:#dc2626"></i><div class="es-title">Unable to load tasks</div><div class="es-sub">' + escapeHtml(detail) + '</div><div class="es-actions"><button class="pab-btn" onclick="retryTasks()" style="margin:0 auto"><i class="fas fa-rotate"></i> Retry</button></div></div>';
+    }
+
+    function retryTasks() {
+      renderSkeletons(document.getElementById('tasks-sections'));
+      fetchTasks();
+    }
+
+    function updateReminder() {
       var count = 0;
-      for (var i = 0; i < tasks.length; i++) {
-        if (tasks[i].status === 'pending') count++;
+      for (var i = 0; i < allTasks.length; i++) {
+        if (allTasks[i].status !== 'completed') count++;
       }
       document.getElementById('reminder-count').textContent = count;
     }
 
-    function toggleTask(id) {
-      var task = null;
-      for (var i = 0; i < tasks.length; i++) {
-        if (tasks[i].id === id) {
-          task = tasks[i];
-          break;
-        }
-      }
-      if (!task) return;
-
-      if (task.status === 'completed') {
-        task.status = 'pending';
-        removeProofData(id);
-        renderAll();
-        if (task.taskId && window.API && localStorage.getItem('fa-auth-token')) {
-          window.API.Crop.updateTask(task.taskId, { status: 'pending' }).catch(function () {});
-        }
+    function toggleSection(header) {
+      var body = header.nextElementSibling;
+      var icons = header.querySelectorAll('.sec-icon');
+      if (body.classList.contains('hidden')) {
+        body.classList.remove('hidden');
+        if (icons[0]) icons[0].classList.remove('collapsed');
       } else {
-        pendingProofTaskId = id;
-        showProofModal(task);
+        body.classList.add('hidden');
+        if (icons[0]) icons[0].classList.add('collapsed');
       }
     }
 
+    function toggleComplete(id) {
+      var t = findTask(id);
+      if (!t) return;
+      if (t.status === 'completed') {
+        reopenTask(t);
+      } else {
+        showProofModal(t);
+      }
+    }
+
+    function findTask(id) {
+      for (var i = 0; i < allTasks.length; i++) if (allTasks[i].task_id === id) return allTasks[i];
+      for (var j = 0; j < tasks.length; j++) if (tasks[j].task_id === id) return tasks[j];
+      return null;
+    }
+
+    function upsertTask(list, updated) {
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].task_id === updated.task_id) { list[i] = updated; return; }
+      }
+      list.unshift(updated);
+    }
+
+    // ==================== SEARCH / FILTER ====================
+
+    function onSearchChange() {
+      var value = document.getElementById('search-input').value;
+      if (searchQuery === value) return;
+      var clearBtn = document.getElementById('search-clear');
+      if (value) clearBtn.classList.add('show'); else clearBtn.classList.remove('show');
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function () {
+        searchQuery = value.trim();
+        updateFilterBadge();
+        fetchTasks();
+      }, 350);
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-clear').classList.remove('show');
+      clearTimeout(debounceTimer);
+      searchQuery = '';
+      updateFilterBadge();
+      fetchTasks();
+    }
+
+    function openFilterSheet() {
+      syncFilterForm();
+      document.getElementById('filter-sheet').classList.add('open');
+    }
+
+    function closeFilterSheet() {
+      document.getElementById('filter-sheet').classList.remove('open');
+    }
+
+    function syncFilterForm() {
+      document.getElementById('filter-status').value = filters.status || 'all';
+      document.getElementById('filter-priority').value = filters.priority || 'all';
+      document.getElementById('filter-category').value = filters.category || 'all';
+      document.getElementById('filter-crop').value = filters.crop || 'all';
+      document.getElementById('filter-farm').value = filters.farm || 'all';
+      document.getElementById('filter-plot').value = filters.plot || 'all';
+    }
+
+    function applyFilters() {
+      filters.status = document.getElementById('filter-status').value;
+      filters.priority = document.getElementById('filter-priority').value;
+      filters.category = document.getElementById('filter-category').value;
+      filters.crop = document.getElementById('filter-crop').value;
+      filters.farm = document.getElementById('filter-farm').value;
+      filters.plot = document.getElementById('filter-plot').value;
+      closeFilterSheet();
+      updateFilterBadge();
+      fetchTasks();
+    }
+
+    function clearFilters() {
+      filters = { status: 'all', priority: 'all', category: 'all', crop: 'all', farm: 'all', plot: 'all' };
+      syncFilterForm();
+      closeFilterSheet();
+      updateFilterBadge();
+      fetchTasks();
+    }
+
+    function clearAllFilters() {
+      clearSearch();
+      filters = { status: 'all', priority: 'all', category: 'all', crop: 'all', farm: 'all', plot: 'all' };
+      updateFilterBadge();
+      fetchTasks();
+    }
+
+    // ==================== ADD / EDIT TASK ====================
+
+    function showAddTask() {
+      if (!isAuthed()) { showToast('Please log in to add a task', 'error'); return; }
+      if (!cycles.length) {
+        loadOptions().then(function () {
+          if (!cycles.length) {
+            showToast('No crop cycles found. Create one under Farm Management first.', 'error');
+            return;
+          }
+          openAddModal();
+        });
+        return;
+      }
+      openAddModal();
+    }
+
+    function openAddModal() {
+      editingTaskId = null;
+      document.getElementById('task-modal-title').innerHTML = '<i class="fas fa-plus-circle" style="color:var(--primary-green)"></i> New Task';
+      document.getElementById('t-save-btn').textContent = 'Add Task';
+      document.getElementById('t-title').value = '';
+      document.getElementById('t-desc').value = '';
+      document.getElementById('t-date').value = getDateStr(0);
+      document.getElementById('t-time').value = '';
+      document.getElementById('t-priority').value = 'medium';
+      document.getElementById('t-cat').value = 'Irrigation';
+      document.getElementById('t-cycle-note').className = 'cycle-note';
+      document.getElementById('t-cycle-note').textContent = '';
+      var crops = document.getElementById('t-crop');
+      if (crops.options.length > 1) crops.selectedIndex = 1;
+      onAddCycleChange();
+      document.getElementById('task-modal').style.display = 'flex';
+    }
+
+    function showEditTask(t) {
+      editingTaskId = t.task_id;
+      document.getElementById('task-modal-title').innerHTML = '<i class="fas fa-pen" style="color:var(--primary-green)"></i> Edit Task';
+      document.getElementById('t-save-btn').textContent = 'Save Changes';
+      document.getElementById('t-title').value = t.title || '';
+      document.getElementById('t-desc').value = t.description || '';
+      document.getElementById('t-date').value = (t.due_date || '').substring(0, 10);
+      document.getElementById('t-time').value = t.due_time || '';
+      document.getElementById('t-priority').value = t.priority || 'medium';
+      document.getElementById('t-cat').value = t.category || 'Irrigation';
+      var note = document.getElementById('t-cycle-note');
+      note.className = 'cycle-note show';
+      note.textContent = 'Editing task linked to ' + (t.crop_name || 'N/A') + ' @ ' + (t.farm_name || 'N/A') + (t.plot_name ? ' / ' + t.plot_name : '');
+      document.getElementById('t-cycle-hint').textContent = 'The linked crop, farm and plot cannot be changed for an existing task.';
+      document.getElementById('t-save-btn').disabled = false;
+      document.getElementById('task-modal').style.display = 'flex';
+    }
+
+    function saveTask() {
+      if (savingTask) return;
+      var title = document.getElementById('t-title').value.trim();
+      if (!title) { showToast('Please enter a task title', 'error'); return; }
+      var payload = {
+        title: title,
+        description: document.getElementById('t-desc').value.trim() || null,
+        category: document.getElementById('t-cat').value || null,
+        due_date: document.getElementById('t-date').value || null,
+        due_time: document.getElementById('t-time').value || null,
+        priority: document.getElementById('t-priority').value || 'medium'
+      };
+      if (editingTaskId) {
+        savingTask = true;
+        window.API.Crop.updateTask(editingTaskId, payload).then(function (updated) {
+          savingTask = false;
+          upsertTask(allTasks, updated);
+          closeModal('task-modal');
+          showToast('Task updated successfully', 'success');
+          fetchTasks(true);
+          closeDetailsIfLinked(editingTaskId);
+        }).catch(function (err) {
+          savingTask = false;
+          showToast((err && err.message) || 'Failed to update task', 'error');
+        });
+      } else {
+        var cycleId = resolveSelectedCycleId();
+        if (!cycleId) {
+          showToast('Select a crop cycle for this task first', 'error');
+          return;
+        }
+        payload.crop_cycle_id = cycleId;
+        savingTask = true;
+        document.getElementById('t-save-btn').disabled = true;
+        window.API.Crop.createTask(payload).then(function (created) {
+          savingTask = false;
+          document.getElementById('t-save-btn').disabled = false;
+          upsertTask(allTasks, created);
+          closeModal('task-modal');
+          showToast('Task added successfully', 'success');
+          fetchTasks(true);
+        }).catch(function (err) {
+          savingTask = false;
+          document.getElementById('t-save-btn').disabled = false;
+          showToast((err && err.message) || 'Failed to create task', 'error');
+        });
+      }
+    }
+
+    // ==================== DETAILS ====================
+
+    function openDetails(id) {
+      var t = findTask(id);
+      if (!t) return;
+      currentDetailTask = t;
+      renderDetails();
+      document.getElementById('detail-modal').style.display = 'flex';
+    }
+
+    function renderDetails() {
+      var t = currentDetailTask;
+      if (!t) return;
+      var st = statusOf(t);
+      var html = '';
+      html += '<div class="task-meta" style="margin-bottom:10px">';
+      if (t.category) html += '<span class="cat-badge">' + escapeHtml(t.category) + '</span>';
+      html += '<span class="priority-badge ' + escapeHtml(t.priority) + '">' + escapeHtml(t.priority) + '</span>';
+      html += '<span class="status-pill ' + st + '">' + st.replace('_', ' ') + '</span>';
+      html += '</div>';
+      html += '<h3 style="font-size:16px;color:var(--text-primary);margin-bottom:6px">' + escapeHtml(t.title) + '</h3>';
+      if (t.description) html += '<p class="detail-desc">' + escapeHtml(t.description) + '</p>';
+      html += '<div class="detail-rows">';
+      if (t.crop_name) html += '<div class="detail-row"><i class="fas fa-seedling"></i><span class="dr-label">Crop</span><span class="dr-value">' + escapeHtml(t.crop_name) + '</span></div>';
+      if (t.farm_name) html += '<div class="detail-row"><i class="fas fa-tractor"></i><span class="dr-label">Farm</span><span class="dr-value">' + escapeHtml(t.farm_name) + '</span></div>';
+      if (t.plot_name) html += '<div class="detail-row"><i class="fas fa-map-marked-alt"></i><span class="dr-label">Plot</span><span class="dr-value">' + escapeHtml(t.plot_name) + '</span></div>';
+      var dueDateText = formatDateDisplay(t.due_date);
+      html += '<div class="detail-row"><i class="fas fa-calendar-day"></i><span class="dr-label">Due</span><span class="dr-value">' + (dueDateText || 'No date') + (t.due_time ? ' at ' + escapeHtml(t.due_time) : '') + (st === 'overdue' ? ' <span style="color:#dc2626;font-weight:600">(overdue)</span>' : '') + '</span></div>';
+      if (t.created_at) {
+        var parts = String(t.created_at).split('T')[0];
+        if (parts.length !== 10) parts = String(t.created_at).split(' ')[0];
+        html += '<div class="detail-row"><i class="fas fa-plus-circle"></i><span class="dr-label">Created</span><span class="dr-value">' + escapeHtml(formatDateDisplay(parts) || t.created_at) + '</span></div>';
+      }
+      html += '<div class="detail-row"><i class="fas fa-hashtag"></i><span class="dr-label">Task ID</span><span class="dr-value">' + escapeHtml(t.task_id) + '</span></div>';
+      var proof = getProofData(t.task_id);
+      if (proof) {
+        html += '<div class="detail-row"><i class="fas fa-camera"></i><span class="dr-label">Proof</span><span class="dr-value">' + (proof.timestamp ? escapeHtml(new Date(proof.timestamp).toLocaleString()) : 'Recorded') + (proof.notes ? ' &middot; ' + escapeHtml(proof.notes) : '') + '</span></div>';
+      }
+      html += '</div>';
+      html += '<div class="action-grid">';
+      if (t.task_id) html += '<div class="action-btn primary" style="font-size:11px;grid-column:1/-1;text-align:center" onclick="copyTaskId(\'' + escapeHtml(t.task_id) + '\')"><i class="fas fa-copy"></i> Task ID: ' + escapeHtml(t.task_id) + '</div>';
+      if (st !== 'completed') {
+        html += '<button class="action-btn primary full" onclick="completeFromDetails()"><i class="fas fa-check-circle"></i> Mark Complete</button>';
+        html += '<button class="action-btn full" onclick="markInProgress()"><i class="fas fa-play"></i> Mark In Progress</button>';
+      } else {
+        html += '<button class="action-btn full" onclick="reopenTask(currentDetailTask)"><i class="fas fa-undo"></i> Reopen Task</button>';
+      }
+      html += '<button class="action-btn" onclick="editFromDetails()"><i class="fas fa-pen"></i> Edit</button>';
+      html += '<button class="action-btn danger" id="task-delete-btn" onclick="deleteFromDetails(this)"><i class="fas fa-trash"></i> Delete</button>';
+      html += '</div>';
+      document.getElementById('detail-content').innerHTML = html;
+    }
+
+    function copyTaskId(id) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(id).then(function () { showToast('Task ID copied', 'success'); }).catch(function () {});
+      } else {
+        showToast('Task ID: ' + id, 'success');
+      }
+    }
+
+    function completeFromDetails() {
+      showProofModal(currentDetailTask);
+    }
+
+    function markInProgress() {
+      var t = currentDetailTask;
+      if (!t) return;
+      window.API.Crop.updateTask(t.task_id, { status: 'in_progress' }).then(function (updated) {
+        upsertTask(allTasks, updated);
+        currentDetailTask = updated;
+        renderDetails();
+        showToast('Task marked as in progress', 'success');
+        fetchTasks(true);
+      }).catch(function (err) {
+        showToast((err && err.message) || 'Failed to update task', 'error');
+      });
+    }
+
+    function reopenTask(t) {
+      window.API.Crop.updateTask(t.task_id, { status: 'pending' }).then(function (updated) {
+        upsertTask(allTasks, updated);
+        removeProofData(updated.task_id);
+        if (currentDetailTask && currentDetailTask.task_id === updated.task_id) {
+          currentDetailTask = updated;
+          renderDetails();
+        }
+        showToast('Task reopened', 'success');
+        fetchTasks(true);
+      }).catch(function (err) {
+        showToast((err && err.message) || 'Failed to reopen task', 'error');
+      });
+    }
+
+    function editFromDetails() {
+      closeModal('detail-modal');
+      showEditTask(currentDetailTask);
+    }
+
+    function deleteFromDetails(btn) {
+      var t = currentDetailTask;
+      if (!t) return;
+      if (btn.dataset.confirm !== '1') {
+        btn.dataset.confirm = '1';
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Confirm Delete';
+        clearTimeout(undoDeleteTimer);
+        undoDeleteTimer = setTimeout(function () {
+          btn.dataset.confirm = '0';
+          if (currentDetailTask) renderDetails();
+        }, 3500);
+        return;
+      }
+      clearTimeout(undoDeleteTimer);
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+      window.API.Crop.deleteTask(t.task_id).then(function () {
+        for (var i = allTasks.length - 1; i >= 0; i--) {
+          if (allTasks[i].task_id === t.task_id) allTasks.splice(i, 1);
+        }
+        for (var j = tasks.length - 1; j >= 0; j--) {
+          if (tasks[j].task_id === t.task_id) tasks.splice(j, 1);
+        }
+        removeProofData(t.task_id);
+        closeModal('detail-modal');
+        currentDetailTask = null;
+        showToast('Task deleted successfully', 'success');
+        updateReminder();
+        renderSections();
+      }).catch(function (err) {
+        btn.disabled = false;
+        btn.dataset.confirm = '0';
+        btn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        showToast((err && err.message) || 'Failed to delete task', 'error');
+      });
+    }
+
+    function closeDetailsIfLinked(id) {
+      if (currentDetailTask && currentDetailTask.task_id === id) {
+        currentDetailTask = null;
+        closeModal('detail-modal');
+      }
+    }
+
+    // ==================== PROOF ====================
+
     function showProofModal(task) {
-      var modal = document.getElementById('proof-modal');
+      if (!isAuthed()) { showToast('Please log in to complete a task', 'error'); return; }
       document.getElementById('proof-task-name').textContent = task.title;
       document.getElementById('proof-notes').value = '';
       document.getElementById('gps-status').textContent = 'Location not available';
+      document.getElementById('gps-status').style.color = 'var(--text-muted)';
+      document.getElementById('gps-btn').disabled = false;
+      document.getElementById('gps-btn').innerHTML = '<i class="fas fa-sync-alt"></i> Get Location';
       document.getElementById('proof-timestamp').textContent = 'Timestamp: ' + formatDateDisplay(getDateStr(0)) + ' ' + new Date().toLocaleTimeString();
       document.getElementById('proof-upload-preview').style.display = 'none';
       document.getElementById('proof-capture-preview').style.display = 'none';
       document.getElementById('proof-upload-box').classList.remove('has-image');
       document.getElementById('proof-capture-box').classList.remove('has-image');
+      document.getElementById('proof-save-btn').disabled = false;
       proofPhotoData = null;
+      pendingProofTaskId = task.task_id;
       getGPSLocation();
-      modal.style.display = 'flex';
+      document.getElementById('proof-modal').style.display = 'flex';
     }
 
     function closeProofModal() {
@@ -713,7 +1111,7 @@
       var file = event.target.files[0];
       if (!file) return;
       var reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         proofPhotoData = e.target.result;
         var preview = document.getElementById('proof-upload-preview');
         preview.src = proofPhotoData;
@@ -727,7 +1125,7 @@
       var file = event.target.files[0];
       if (!file) return;
       var reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         proofPhotoData = e.target.result;
         var preview = document.getElementById('proof-capture-preview');
         preview.src = proofPhotoData;
@@ -748,7 +1146,7 @@
       btn.disabled = true;
       btn.textContent = 'Locating...';
       navigator.geolocation.getCurrentPosition(
-        function(pos) {
+        function (pos) {
           var lat = pos.coords.latitude.toFixed(6);
           var lng = pos.coords.longitude.toFixed(6);
           statusEl.textContent = 'Lat: ' + lat + ', Lng: ' + lng;
@@ -758,7 +1156,7 @@
           window._proofLat = lat;
           window._proofLng = lng;
         },
-        function(err) {
+        function (err) {
           statusEl.textContent = 'Location not available (' + err.message + ')';
           statusEl.style.color = 'var(--text-muted)';
           btn.disabled = false;
@@ -771,7 +1169,7 @@
     }
 
     function saveProof() {
-      if (!pendingProofTaskId) return;
+      if (!pendingProofTaskId || savingTask) return;
       var notes = document.getElementById('proof-notes').value.trim();
       var timestamp = new Date().toISOString();
       var proof = {
@@ -781,35 +1179,36 @@
         longitude: window._proofLng || null,
         timestamp: timestamp
       };
-      saveProofData(pendingProofTaskId, proof);
-
-      for (var i = 0; i < tasks.length; i++) {
-        if (tasks[i].id === pendingProofTaskId) {
-          tasks[i].status = 'completed';
-          var backendId = tasks[i].taskId || null;
-          break;
+      var buttons = document.getElementById('proof-save-btn');
+      savingTask = true;
+      buttons.disabled = true;
+      window.API.Crop.updateTask(pendingProofTaskId, { status: 'completed' }).then(function (updated) {
+        savingTask = false;
+        buttons.disabled = false;
+        upsertTask(allTasks, updated);
+        saveProofData(pendingProofTaskId, proof);
+        var cur = currentDetailTask;
+        if (cur && cur.task_id === pendingProofTaskId) {
+          currentDetailTask = updated;
+          renderDetails();
         }
-      }
-
-      closeProofModal();
-      renderAll();
-      showToast('Task completed with proof!', 'success');
-
-      if (backendId && window.API && localStorage.getItem('fa-auth-token')) {
-        window.API.Crop.updateTask(backendId, { status: 'completed' }).catch(function () {
-          /* proof saved locally; server sync retried next load */
-        });
-      }
+        closeProofModal();
+        showToast('Task completed successfully', 'success');
+        fetchTasks(true);
+      }).catch(function (err) {
+        savingTask = false;
+        buttons.disabled = false;
+        showToast((err && err.message) || 'Failed to complete task', 'error');
+      });
     }
 
     function saveProofData(taskId, data) {
-      var allProofs = {};
       try {
         var stored = localStorage.getItem('farm_task_proofs');
-        if (stored) allProofs = JSON.parse(stored);
-      } catch(e) {}
-      allProofs[taskId] = data;
-      localStorage.setItem('farm_task_proofs', JSON.stringify(allProofs));
+        var allProofs = stored ? JSON.parse(stored) : {};
+        allProofs[taskId] = data;
+        localStorage.setItem('farm_task_proofs', JSON.stringify(allProofs));
+      } catch (e) {}
     }
 
     function getProofData(taskId) {
@@ -818,7 +1217,7 @@
         if (!stored) return null;
         var allProofs = JSON.parse(stored);
         return allProofs[taskId] || null;
-      } catch(e) { return null; }
+      } catch (e) { return null; }
     }
 
     function removeProofData(taskId) {
@@ -828,27 +1227,18 @@
         var allProofs = JSON.parse(stored);
         delete allProofs[taskId];
         localStorage.setItem('farm_task_proofs', JSON.stringify(allProofs));
-      } catch(e) {}
+      } catch (e) {}
     }
 
     function viewProof(taskId) {
       var proof = getProofData(taskId);
-      if (!proof) {
-        showToast('No proof data found', 'error');
-        return;
-      }
-      var task = null;
-      for (var i = 0; i < tasks.length; i++) {
-        if (tasks[i].id === taskId) { task = tasks[i]; break; }
-      }
+      if (!proof) { showToast('No proof data found', 'error'); return; }
+      var task = findTask(taskId);
       var info = 'Task: ' + (task ? task.title : 'Unknown') + '\n';
       info += 'Completed: ' + (proof.timestamp ? new Date(proof.timestamp).toLocaleString() : 'N/A') + '\n';
       info += 'Notes: ' + (proof.notes || 'None') + '\n';
-      if (proof.latitude && proof.longitude) {
-        info += 'Location: ' + proof.latitude + ', ' + proof.longitude;
-      } else {
-        info += 'Location: Not available';
-      }
+      if (proof.latitude && proof.longitude) info += 'Location: ' + proof.latitude + ', ' + proof.longitude;
+      else info += 'Location: Not available';
       if (proof.photo) {
         var w = window.open('', '_blank');
         w.document.write('<html><head><title>Proof - ' + (task ? task.title : 'Task') + '</title>');
@@ -858,11 +1248,8 @@
         w.document.write('<strong>' + (task ? task.title : 'Unknown Task') + '</strong><br>');
         w.document.write('Completed: ' + (proof.timestamp ? new Date(proof.timestamp).toLocaleString() : 'N/A') + '<br>');
         w.document.write('Notes: ' + (proof.notes || 'None') + '<br>');
-        if (proof.latitude && proof.longitude) {
-          w.document.write('Location: ' + proof.latitude + ', ' + proof.longitude);
-        } else {
-          w.document.write('Location: Not available');
-        }
+        if (proof.latitude && proof.longitude) w.document.write('Location: ' + proof.latitude + ', ' + proof.longitude);
+        else w.document.write('Location: Not available');
         w.document.write('</div></body></html>');
         w.document.close();
       } else {
@@ -870,167 +1257,21 @@
       }
     }
 
-    function renderCompletedTasks() {
-      var container = document.getElementById('completed-tasks-list');
-      var completed = [];
-      for (var i = 0; i < tasks.length; i++) {
-        if (tasks[i].status === 'completed') {
-          completed.push(tasks[i]);
-        }
-      }
-      if (completedSearchQuery) {
-        var q = completedSearchQuery.toLowerCase();
-        completed = completed.filter(function(t) {
-          return t.title.toLowerCase().indexOf(q) !== -1;
-        });
-      }
-      if (!completed.length) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-check-double"></i>No completed tasks yet.</div>';
-        return;
-      }
-      completed.sort(function(a, b) {
-        var pa = getProofData(a.id);
-        var pb = getProofData(b.id);
-        var ta = pa && pa.timestamp ? pa.timestamp : a.dueDate;
-        var tb = pb && pb.timestamp ? pb.timestamp : b.dueDate;
-        if (ta < tb) return 1;
-        if (ta > tb) return -1;
-        return 0;
-      });
-      var html = '';
-      for (var ci = 0; ci < completed.length; ci++) {
-        var t = completed[ci];
-        var proof = getProofData(t.id);
-        var thumbHtml = '';
-        if (proof && proof.photo) {
-          thumbHtml = '<img src="' + proof.photo + '" class="proof-thumb" onclick="viewProof(\'' + t.id + '\')" title="View proof" style="width:40px;height:40px">';
-        } else {
-          thumbHtml = '<span class="proof-thumb" style="display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--bg-card-soft);width:40px;height:40px"><i class="fas fa-check-circle" style="color:var(--primary-green)"></i></span>';
-        }
-        var completedDate = proof && proof.timestamp ? new Date(proof.timestamp).toLocaleDateString() : formatDateDisplay(t.dueDate);
-        var notesText = proof && proof.notes ? proof.notes : 'No notes';
-        html += '<div class="completed-item">';
-        html += thumbHtml;
-        html += '<div class="ci-body">';
-        html += '<div class="ci-title">' + t.title + '</div>';
-        html += '<div class="ci-meta">Completed: ' + completedDate + ' &middot; ' + (t.farm || 'N/A') + ' &middot; ' + (t.crop || 'N/A') + '</div>';
-        html += '<div class="ci-notes"><i class="fas fa-quote-left" style="font-size:8px;opacity:0.5"></i> ' + notesText + '</div>';
-        html += '</div>';
-        html += '<span class="cat-badge">' + t.category + '</span>';
-        html += '</div>';
-      }
-      container.innerHTML = html;
-    }
-
-    function switchTab(tab) {
-      currentTab = tab;
-      var buttons = document.querySelectorAll('.filter-tab');
-      for (var i = 0; i < buttons.length; i++) {
-        buttons[i].classList.remove('active');
-        if (buttons[i].getAttribute('data-tab') === tab) {
-          buttons[i].classList.add('active');
-        }
-      }
-      if (tab === 'active') {
-        document.getElementById('active-tasks-view').classList.remove('view-hidden');
-        document.getElementById('completed-tasks-view').classList.add('view-hidden');
-      } else {
-        document.getElementById('active-tasks-view').classList.add('view-hidden');
-        document.getElementById('completed-tasks-view').classList.remove('view-hidden');
-        renderCompletedTasks();
-      }
-    }
-
-    function onSearchChange() {
-      searchQuery = document.getElementById('search-input').value;
-      renderSections();
-      updateReminderCount();
-    }
-
-    function onCompletedSearchChange() {
-      completedSearchQuery = document.getElementById('completed-search-input').value;
-      renderCompletedTasks();
-    }
-
-    function onFilterChange() {
-      filterStatus = document.getElementById('filter-status').value;
-      filterCrop = document.getElementById('filter-crop').value;
-      filterFarm = document.getElementById('filter-farm').value;
-      renderSections();
-      updateReminderCount();
-    }
-
-    function showAddTask() {
-      document.getElementById('t-title').value = '';
-      document.getElementById('t-desc').value = '';
-      document.getElementById('t-date').value = getDateStr(0);
-      document.getElementById('t-priority').value = 'medium';
-      document.getElementById('t-cat').value = 'Irrigation';
-      document.getElementById('t-farm').value = 'North Field';
-      document.getElementById('t-crop').value = 'Rice';
-      document.getElementById('task-modal').style.display = 'flex';
-    }
-
     function closeModal(id) {
       document.getElementById(id).style.display = 'none';
     }
 
-    function saveTask() {
-      var title = document.getElementById('t-title').value.trim();
-      if (!title) { showToast('Please enter a task title', 'error'); return; }
-      var newTask = {
-        id: 't' + Date.now(),
-        title: title,
-        description: document.getElementById('t-desc').value.trim(),
-        dueDate: document.getElementById('t-date').value || 'No date',
-        priority: document.getElementById('t-priority').value,
-        status: 'pending',
-        category: document.getElementById('t-cat').value,
-        farm: document.getElementById('t-farm').value,
-        crop: document.getElementById('t-crop').value
-      };
-
-      function applyLocal() {
-        tasks.unshift(newTask);
-        renderAll();
-        closeModal('task-modal');
-        showToast('Task added successfully', 'success');
-      }
-
-      if (window.API && localStorage.getItem('fa-auth-token')) {
-        var cyclePromise = activeCycleId ? Promise.resolve(activeCycleId) : loadCycleId();
-        return cyclePromise.then(function (cycleId) {
-          if (!cycleId) { applyLocal(); return; }
-          var payload = {
-            crop_cycle_id: cycleId,
-            title: title,
-            description: newTask.description || null,
-            category: newTask.category || null,
-            due_date: newTask.dueDate === 'No date' ? null : newTask.dueDate,
-            priority: newTask.priority
-          };
-          return window.API.Crop.createTask(payload).then(function (created) {
-            if (created && created.id) newTask.id = created.id || newTask.id;
-            if (created && created.task_id) newTask.id = created.task_id;
-            applyLocal();
-          }).catch(function (err) {
-            showToast((err && err.message) || 'Failed to save task', 'error');
-            applyLocal();
-          });
-        });
-      }
-      applyLocal();
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(function() {
-        loadTasks();
-        loadCycleId();
-        var refreshBtn = document.getElementById('ai-suggest-refresh');
-        if (refreshBtn) {
-          refreshBtn.addEventListener('click', function() { renderAISuggestions(); });
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(function () {
+        if (!isAuthed()) {
+          renderLoggedOut();
+          updateReminder();
+          return;
         }
-      }, 200);
+        renderSkeletons(document.getElementById('tasks-sections'));
+        fetchTasks();
+        loadOptions();
+      }, 100);
     });
   </script>
 </body>

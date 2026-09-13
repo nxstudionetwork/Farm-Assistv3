@@ -1,15 +1,19 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, case, func
 
 from app.database.connection import get_db
 from app.models.user import User
 from app.models.farm import Farm, FarmPlot
 from app.models.crop import Crop, CropCycle, CropTask, FarmJournal
 from app.utils.auth import get_current_user, generate_id
+
+TASK_STATUSES = ["pending", "in_progress", "completed"]
+TASK_PRIORITIES = ["low", "medium", "high"]
 
 router = APIRouter(prefix="/api/v1", tags=["Crops"])
 
@@ -99,8 +103,11 @@ def _cycle_dict(cycle: CropCycle) -> dict:
         "id": cycle.id,
         "cycle_id": cycle.cycle_id,
         "farm_id": cycle.farm_id,
+        "farm_name": cycle.farm.farm_name if cycle.farm else None,
         "plot_id": cycle.plot_id,
+        "plot_name": cycle.plot.plot_name if cycle.plot else None,
         "crop_id": cycle.crop_id,
+        "crop_name": cycle.crop.name if cycle.crop else None,
         "sowing_date": cycle.sowing_date,
         "expected_harvest_date": cycle.expected_harvest_date,
         "actual_harvest_date": cycle.actual_harvest_date,
@@ -120,10 +127,18 @@ def _cycle_dict(cycle: CropCycle) -> dict:
 
 
 def _task_dict(task: CropTask) -> dict:
+    cycle = task.crop_cycle
     return {
         "id": task.id,
         "task_id": task.task_id,
         "crop_cycle_id": task.crop_cycle_id,
+        "cycle_id": cycle.cycle_id if cycle else None,
+        "farm_id": cycle.farm_id if cycle else None,
+        "farm_name": cycle.farm.farm_name if cycle and cycle.farm else None,
+        "plot_id": cycle.plot_id if cycle else None,
+        "plot_name": cycle.plot.plot_name if cycle and cycle.plot else None,
+        "crop_id": cycle.crop_id if cycle else None,
+        "crop_name": cycle.crop.name if cycle and cycle.crop else None,
         "title": task.title,
         "description": task.description,
         "category": task.category,
@@ -304,12 +319,87 @@ def delete_crop_cycle(
 
 @router.get("/crop-tasks", response_model=dict)
 def list_crop_tasks(
+    q: Optional[str] = None,
+    status: Optional[str] = Query(None, pattern="^(pending|in_progress|completed|overdue)$"),
+    priority: Optional[str] = Query(None, pattern="^(low|medium|high)$"),
+    category: Optional[str] = None,
+    farm_id: Optional[str] = None,
+    plot_id: Optional[str] = None,
+    crop: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     farm_ids = _get_user_farm_ids(db, current_user.id)
-    cycle_ids = [c.id for c in db.query(CropCycle.id).filter(CropCycle.farm_id.in_(farm_ids)).all()]
-    tasks = db.query(CropTask).filter(CropTask.crop_cycle_id.in_(cycle_ids)).all()
+    if not farm_ids:
+        return {"status": "success", "data": []}
+
+    qry = (
+        db.query(CropTask)
+        .join(CropCycle, CropTask.crop_cycle_id == CropCycle.id)
+        .join(Crop, CropCycle.crop_id == Crop.id)
+        .join(Farm, CropCycle.farm_id == Farm.id)
+        .outerjoin(FarmPlot, CropCycle.plot_id == FarmPlot.id)
+        .filter(CropCycle.farm_id.in_(farm_ids))
+    )
+
+    if q:
+        term = f"%{q.strip()}%"
+        qry = qry.filter(
+            or_(
+                CropTask.title.ilike(term),
+                CropTask.description.ilike(term),
+                CropTask.category.ilike(term),
+                CropTask.status.ilike(term),
+                Crop.name.ilike(term),
+                Farm.farm_name.ilike(term),
+                FarmPlot.plot_name.ilike(term),
+            )
+        )
+
+    if status:
+        if status == "overdue":
+            today = date.today().strftime("%Y-%m-%d")
+            qry = qry.filter(
+                CropTask.status != "completed",
+                CropTask.due_date.isnot(None),
+                CropTask.due_date < today,
+            )
+        else:
+            qry = qry.filter(CropTask.status == status)
+
+    if priority:
+        qry = qry.filter(CropTask.priority == priority)
+
+    if category:
+        qry = qry.filter(CropTask.category.ilike(category))
+
+    if farm_id:
+        if farm_id not in farm_ids:
+            return {"status": "success", "data": []}
+        qry = qry.filter(CropCycle.farm_id == farm_id)
+
+    if plot_id:
+        owned_plot_ids = [
+            row[0]
+            for row in db.query(FarmPlot.id).filter(FarmPlot.farm_id.in_(farm_ids)).all()
+        ]
+        if plot_id not in owned_plot_ids:
+            return {"status": "success", "data": []}
+        qry = qry.filter(CropCycle.plot_id == plot_id)
+
+    if crop:
+        qry = qry.filter(Crop.name.ilike(f"%{crop.strip()}%"))
+
+    tasks = qry.order_by(
+        case((CropTask.status != "completed", 0), else_=1),
+        func.coalesce(CropTask.due_date, "9999-12-31").asc(),
+        case(
+            (CropTask.priority == "high", 0),
+            (CropTask.priority == "medium", 1),
+            else_=2,
+        ),
+        CropTask.created_at.asc(),
+    ).all()
 
     return {
         "status": "success",
@@ -375,6 +465,8 @@ def update_crop_task(
     update_data = payload.model_dump(exclude_unset=True)
     if "status" in update_data and update_data["status"] == "completed":
         task.completed_at = datetime.utcnow()
+    elif "status" in update_data and update_data["status"] in ("pending", "in_progress"):
+        task.completed_at = None
 
     for field, value in update_data.items():
         setattr(task, field, value)
@@ -387,6 +479,29 @@ def update_crop_task(
         "message": "Task updated successfully",
         "data": _task_dict(task),
     }
+
+
+@router.delete("/crop-tasks/{task_id}", response_model=dict)
+def delete_crop_task(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    task = db.query(CropTask).filter(CropTask.task_id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    cycle = db.query(CropCycle).filter(CropCycle.id == task.crop_cycle_id).first()
+    if not cycle:
+        raise HTTPException(status_code=404, detail="Crop cycle not found")
+    farm = db.query(Farm).filter(Farm.id == cycle.farm_id, Farm.user_id == current_user.id).first()
+    if not farm:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db.delete(task)
+    db.commit()
+
+    return {"status": "success", "message": "Task deleted successfully"}
 
 
 @router.post("/farm-journal", response_model=dict, status_code=status.HTTP_201_CREATED)
