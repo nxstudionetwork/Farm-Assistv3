@@ -1,4 +1,6 @@
-from datetime import datetime, date
+import asyncio
+import re
+from datetime import datetime, date, timedelta
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -502,6 +504,319 @@ def delete_crop_task(
     db.commit()
 
     return {"status": "success", "message": "Task deleted successfully"}
+
+
+# ==================== AI TASK SUGGESTIONS ====================
+
+def _norm_title(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
+
+
+def _date_from_today(offset: int) -> str:
+    return (date.today() + timedelta(days=offset)).isoformat()
+
+
+def _cycle_stage(cycle: CropCycle, crop: Crop) -> str:
+    if cycle.current_stage:
+        return cycle.current_stage.strip().lower()
+    sowing = cycle.sowing_date or cycle.created_at.strftime("%Y-%m-%d") if cycle.created_at else None
+    if not sowing:
+        return "vegetative"
+    try:
+        sd = date.fromisoformat(str(sowing)[:10])
+        days = (date.today() - sd).days
+    except Exception:
+        return "vegetative"
+    if days < 0:
+        return "vegetative"
+    duration = crop.growth_duration_days or 0
+    if not duration or duration <= 0:
+        if days < 40: return "seedling"
+        if days < 80: return "vegetative"
+        if days < 120: return "flowering"
+        if days < 160: return "ripening"
+        return "harvest"
+    fraction = days / duration
+    if fraction < 0.15: return "seedling"
+    if fraction < 0.45: return "vegetative"
+    if fraction < 0.70: return "flowering"
+    if fraction <= 1.0: return "ripening"
+    return "harvest"
+
+
+_STAGE_TASKS = {
+    "seedling": [
+        {"title": "Thin seedlings and check germination", "category": "Crop Care", "off": 3, "priority": "high",
+         "desc_extra": "Remove weak seedlings so healthy plants get enough space and sunlight."},
+    ],
+    "vegetative": [
+        {"title": "Apply nitrogen top dressing", "category": "Crop Care", "off": 7, "priority": "high",
+         "desc_extra": "Split nitrogen in 2-3 doses for better growth during the vegetative stage."},
+        {"title": "Weed the field", "category": "Farm Management", "off": 2, "priority": "medium",
+         "desc_extra": "Weeds compete for water and nutrients. Remove them before they flower."},
+        {"title": "Inspect irrigation lines and water the crop", "category": "Irrigation", "off": 1, "priority": "high",
+         "desc_extra": "Check moisture in the soil and ensure the irrigation system is working."},
+    ],
+    "flowering": [
+        {"title": "Irrigate during flowering stage", "category": "Irrigation", "off": 1, "priority": "high",
+         "desc_extra": "Water stress at flowering directly reduces grain and fruit formation."},
+        {"title": "Apply flowering-stage nutrients", "category": "Crop Care", "off": 5, "priority": "medium",
+         "desc_extra": "A small balanced dose at flowering supports better filling of grains and fruits."},
+        {"title": "Monitor pests and diseases", "category": "Pest & Disease", "off": 1, "priority": "high",
+         "desc_extra": "Scout the field weekly and inspect under leaves for eggs, larvae or fungal spots."},
+    ],
+    "ripening": [
+        {"title": "Reduce irrigation before harvest", "category": "Irrigation", "off": 4, "priority": "medium",
+         "desc_extra": "Cut back water once grains/fruits start maturing to improve quality."},
+        {"title": "Install bird scaring devices", "category": "Farm Management", "off": 2, "priority": "low",
+         "desc_extra": "Protect the maturing crop from bird and animal damage near harvest."},
+    ],
+    "harvest": [
+        {"title": "Harvest the mature crop", "category": "Harvesting", "off": 2, "priority": "high",
+         "desc_extra": "Harvest at the right moisture level to get the best market price."},
+        {"title": "Plan post-harvest drying and storage", "category": "Harvesting", "off": 6, "priority": "medium",
+         "desc_extra": "Arrange drying shade and clean storage to avoid moisture and pest loss after harvest."},
+    ],
+}
+
+
+def _mk_suggestion(title, category, off, priority, description, cycle, crop, source, reason, links=None):
+    return {
+        "crop_cycle_id": cycle.id,
+        "title": title,
+        "description": description,
+        "category": category,
+        "due_date": _date_from_today(off),
+        "priority": priority,
+        "source": source,
+        "reason": reason,
+        "crop_id": crop.id if crop else None,
+        "crop_name": crop.name if crop else None,
+        "farm_id": cycle.farm_id,
+        "farm_name": cycle.farm.farm_name if cycle.farm else None,
+        "plot_id": cycle.plot_id,
+        "plot_name": cycle.plot.plot_name if cycle.plot else None,
+        "links": links or {},
+    }
+
+
+def _stage_suggestions(cycle: CropCycle, crop: Crop, stage: str) -> list:
+    out = []
+    crop_name = crop.name if crop else "your crop"
+    for tpl in _STAGE_TASKS.get(stage, _STAGE_TASKS["vegetative"]):
+        title = tpl["title"]
+        if "irrigation lines" in title:
+            title = "Inspect irrigation and water the " + crop_name
+        elif "top dressing" in title:
+            title = "Apply nitrogen top dressing to " + crop_name
+        elif "flowering-stage nutrients" in title:
+            title = "Apply flowering-stage nutrients to " + crop_name
+        elif "Monitoring" in title or tpl["title"].startswith("Monitor"):
+            title = tpl["title"] + " on " + crop_name
+        elif tpl["title"].startswith("Thin"):
+            title = "Thin " + crop_name + " seedlings and check germination"
+        elif tpl["title"].startswith("Reduce"):
+            title = "Reduce irrigation to " + crop_name + " before harvest"
+        elif tpl["title"].startswith("Install"):
+            title = "Install bird scaring devices near " + crop_name
+        elif tpl["title"].startswith("Weed"):
+            title = "Weed the " + crop_name + " field"
+        elif tpl["title"].startswith("Harvest"):
+            title = "Harvest mature " + crop_name
+        elif tpl["title"].startswith("Plan"):
+            title = "Plan post-harvest drying and storage for " + crop_name
+        description = (
+            "AI suggestion for the " + stage.replace("_", " ") + " stage of " + crop_name + "."
+            + " " + tpl["desc_extra"]
+            + (" Plot: " + cycle.plot.plot_name if cycle.plot else "")
+        )
+        out.append(_mk_suggestion(
+            title, tpl["category"], tpl["off"], tpl["priority"], description,
+            cycle, crop, "crop_stage",
+            "Based on the current growth stage of " + crop_name,
+        ))
+    return out
+
+
+def _climate_suggestions(cycle: CropCycle, crop: Crop, weather: Optional[dict]) -> list:
+    out = []
+    if not weather:
+        return out
+    forecast = weather.get("forecast") or []
+    today_rain = 0.0
+    tomorrow_rain = 0.0
+    highest_temp = float(weather.get("temperature") or 0)
+    wind = float(weather.get("wind_speed") or 0)
+    storm = False
+    for i in range(min(2, len(forecast))):
+        day = forecast[i]
+        prec = float(day.get("precipitation") or 0)
+        if i == 0:
+            today_rain += prec
+        else:
+            tomorrow_rain += prec
+    for day in forecast:
+        if int(day.get("weather_code") or 0) >= 95 or "thunderstorm" in str(day.get("description") or "").lower():
+            storm = True
+        try:
+            tmax = float(day.get("max_temp") or 0)
+            if tmax > highest_temp:
+                highest_temp = tmax
+        except Exception:
+            pass
+
+    plot = cycle.plot.plot_name if cycle.plot else None
+    if today_rain >= 3 or tomorrow_rain >= 3:
+        out.append(_mk_suggestion(
+            "Avoid fertilizer and pesticide application before rain" + (" (" + plot + ")" if plot else ""),
+            "Pest & Disease", 0, "high",
+            "Your 7-day forecast shows significant rain within the next 48 hours. "
+            "Apply fertilizer or sprays only after the rain clears to avoid runoff and wastage.",
+            cycle, crop, "climate",
+            "Live weather forecast for your farm",
+        ))
+    if storm:
+        out.append(_mk_suggestion(
+            "Secure crop area before the thunderstorm" + (" (" + plot + ")" if plot else ""),
+            "Farm Management", 0, "high",
+            "Thunderstorm conditions are forecast. Clear drainage channels, secure covers "
+            "and avoid working in the field during the storm.",
+            cycle, crop, "climate",
+            "Live weather forecast for your farm",
+        ))
+    if highest_temp >= 36 and today_rain < 1:
+        out.append(_mk_suggestion(
+            "Provide irrigation to prevent heat stress" + (" (" + plot + ")" if plot else ""),
+            "Irrigation", 1, "high",
+            "Temperatures are expected to reach {:.0f}°C with little rain. Irrigate early morning "
+            "or evening to protect the crop from heat stress.".format(highest_temp),
+            cycle, crop, "climate",
+            "Live weather forecast for your farm",
+        ))
+    if wind >= 35:
+        out.append(_mk_suggestion(
+            "Delay spraying until the wind slows down" + (" (" + plot + ")" if plot else ""),
+            "Pest & Disease", 0, "medium",
+            "Wind speed is high. Spraying now would drift the chemical away and waste it. "
+            "Wait for a calm window, ideally early morning.",
+            cycle, crop, "climate",
+            "Live weather forecast for your farm",
+        ))
+    return out
+
+
+def _crop_health_suggestion(cycle: CropCycle, crop: Crop, stage: str) -> list:
+    crop_name = crop.name if crop else "your crop"
+    return [_mk_suggestion(
+        "Run a crop health check on " + crop_name + (" (" + cycle.plot.plot_name + ")" if cycle.plot else ""),
+        "Crop Care", 1, "medium",
+        "Scan " + crop_name + " during the " + stage.replace("_", " ") + " stage for yellowing, spots, "
+        "wilting or pest damage. Early detection saves the crop. Use the Crop Health tool for a quick check.",
+        cycle, crop, "crop_health",
+        "Regular crop health monitoring to catch problems early",
+        links={"crop_health": "crop-health.html", "farm": "farm.html"},
+    )]
+
+
+@router.get("/crop-tasks/ai-suggest", response_model=dict)
+def suggest_ai_tasks(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    farms = db.query(Farm).filter(Farm.user_id == current_user.id, Farm.is_active == True).all()
+    farm_ids = [f.id for f in farms]
+    if not farm_ids:
+        return {"status": "success", "data": {"weather": None, "suggestions": []}}
+
+    cycles = (
+        db.query(CropCycle)
+        .filter(CropCycle.farm_id.in_(farm_ids), CropCycle.status.notin_(["completed", "harvested"]))
+        .all()
+    )
+    if not cycles:
+        return {"status": "success", "data": {"weather": None, "suggestions": []}}
+
+    from app.services.weather_service import get_current_weather
+
+    existing_titles = {}
+    pending = (
+        db.query(CropTask)
+        .join(CropCycle, CropTask.crop_cycle_id == CropCycle.id)
+        .filter(CropCycle.farm_id.in_(farm_ids), CropTask.status.in_(["pending", "in_progress"]))
+        .all()
+    )
+    for t in pending:
+        existing_titles.setdefault(t.crop_cycle_id, set()).add(_norm_title(t.title))
+
+    weather_cache = {}
+    suggestions = []
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+
+    for cycle in cycles:
+        crop = cycle.crop
+        farm = cycle.farm
+        if not crop or not farm:
+            continue
+        plot = cycle.plot
+        lat = (plot.latitude if plot and plot.latitude else None) or farm.latitude
+        lon = (plot.longitude if plot and plot.longitude else None) or farm.longitude
+
+        weather = None
+        if lat and lon:
+            wkey = (round(float(lat), 3), round(float(lon), 3))
+            if wkey in weather_cache:
+                weather = weather_cache[wkey]
+            else:
+                try:
+                    weather = asyncio.run(get_current_weather(float(lat), float(lon)))
+                except Exception:
+                    weather = None
+                weather_cache[wkey] = weather
+
+        stage = _cycle_stage(cycle, crop)
+        candidates = _stage_suggestions(cycle, crop, stage)
+        candidates += _climate_suggestions(cycle, crop, weather)
+        candidates += _crop_health_suggestion(cycle, crop, stage)
+
+        for cand in candidates:
+            key = _norm_title(cand["title"])
+            if key in existing_titles.get(cycle.id, set()):
+                continue
+            existing_titles.setdefault(cycle.id, set()).add(key)
+            suggestions.append(cand)
+
+    suggestions.sort(key=lambda s: (priority_order.get(s["priority"], 3), s["due_date"]))
+
+    weather_out = None
+    wf = farms[0]
+    lat0, lon0 = wf.latitude, wf.longitude
+    if lat0 is None or lon0 is None:
+        for cycle in cycles:
+            p = cycle.plot
+            if p and p.latitude and p.longitude:
+                lat0, lon0 = p.latitude, p.longitude
+                break
+    wkey = None
+    if lat0 is not None and lon0 is not None:
+        wkey = (round(float(lat0), 3), round(float(lon0), 3))
+    if wkey:
+        weather_out = weather_cache.get(wkey)
+        if weather_out is None:
+            try:
+                weather_out = asyncio.run(get_current_weather(float(lat0), float(lon0)))
+            except Exception:
+                weather_out = None
+            weather_cache[wkey] = weather_out
+        if weather_out:
+            weather_out = dict(weather_out)
+    if weather_out:
+        weather_out["location"] = wf.district or wf.farm_name
+        weather_out["soil_type"] = wf.soil_type
+
+    return {
+        "status": "success",
+        "data": {"weather": weather_out, "suggestions": suggestions[:12]},
+    }
 
 
 @router.post("/farm-journal", response_model=dict, status_code=status.HTTP_201_CREATED)

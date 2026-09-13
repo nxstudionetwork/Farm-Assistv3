@@ -392,6 +392,9 @@ Backend: FastAPI served from the same origin (port 8000).
       var qs = params || '';
       return http('GET', '/crop-tasks' + (qs ? '?' + qs : '')).then(unwrap);
     },
+    suggestTasks: function () {
+      return http('GET', '/crop-tasks/ai-suggest').then(unwrap);
+    },
     createTask: function (data) {
       return http('POST', '/crop-tasks', data).then(unwrap);
     },
@@ -831,6 +834,15 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     insights: function () {
       return http('GET', M + '/insights').then(unwrap);
+    },
+    listBuyers: function (params) {
+      return http('GET', M + '/buyers' + buildQuery(params)).then(unwrap);
+    },
+    sendBuyerMessage: function (buyerId, message) {
+      return http('POST', M + '/buyers/' + enc(buyerId) + '/message', { message: message }).then(unwrap);
+    },
+    setBuyerRecommendation: function (buyerId, recommended) {
+      return http('POST', M + '/buyers/' + enc(buyerId) + '/recommend', { recommended: !!recommended }).then(unwrap);
     }
   };
 
@@ -1630,6 +1642,12 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     unreadCount: function () {
       return http('GET', '/messages/unread-count').then(unwrap);
+    },
+    setOnline: function () {
+      return http('POST', '/messages/presence/online', {}).then(unwrap);
+    },
+    setOffline: function () {
+      return http('POST', '/messages/presence/offline', {}).then(unwrap);
     },
     listContacts: function () {
       return http('GET', '/messages/contacts').then(unwrap);

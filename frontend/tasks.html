@@ -137,6 +137,35 @@
 
     .view-hidden{display:none !important}
 
+    .ai-panel{background:linear-gradient(135deg,#0f7a3d,#1e9e5a);border-radius:16px;padding:16px;margin-bottom:16px;color:#fff;box-shadow:0 6px 18px rgba(15,122,61,.2)}
+    .ai-panel-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .ai-panel-head .ai-ico{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .ai-panel-head .ai-title{font-size:15px;font-weight:800;letter-spacing:.2px}
+    .ai-panel-head .ai-sub{font-size:11px;color:rgba(255,255,255,.85);margin-top:2px}
+    .ai-panel-head .ai-spark{margin-left:auto;font-size:11px;font-weight:700;background:rgba(255,255,255,.18);padding:5px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+    .ai-weather-chip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 4px;padding:10px 12px;background:rgba(255,255,255,.12);border-radius:10px;font-size:12px}
+    .ai-weather-chip i{color:#ffd66b}
+    .ai-weather-chip .w-temp{font-size:16px;font-weight:800}
+    .ai-weather-chip .w-desc{color:rgba(255,255,255,.9)}
+    .ai-weather-chip .w-loc{margin-left:auto;color:rgba(255,255,255,.75);font-size:11px;display:inline-flex;align-items:center;gap:5px}
+    .ai-sugg-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .ai-card{display:flex;gap:10px;align-items:flex-start;background:#fff;color:var(--text-primary);border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+    .ai-card .ai-card-body{flex:1;min-width:0}
+    .ai-card .ai-card-title{font-size:13px;font-weight:700;margin:4px 0 2px;word-wrap:break-word}
+    .ai-card .ai-card-desc{font-size:11px;color:var(--text-secondary);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .ai-card .ai-card-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+    .ai-card .ai-add-btn{border:none;background:#0f7a3d;color:#fff;font-size:11px;font-weight:700;padding:8px 12px;border-radius:8px;cursor:pointer;transition:filter .2s}
+    .ai-card .ai-add-btn:hover{filter:brightness(1.15)}
+    .ai-card .ai-add-btn:disabled{opacity:.6;cursor:not-allowed}
+    .ai-card .ai-link-btn{font-size:10px;font-weight:600;text-align:center;padding:6px 8px;border-radius:8px;border:1px solid rgba(15,122,61,.4);color:#0f7a3d;background:transparent;cursor:pointer;text-decoration:none}
+    .ai-card .ai-link-btn:hover{background:rgba(15,122,61,.08)}
+    .ai-source{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;background:rgba(245,158,11,.15);color:#b45309}
+    .ai-source.climate{background:rgba(59,130,246,.15);color:#2563eb}
+    .ai-source.crop_health{background:rgba(16,185,129,.15);color:#059669}
+    .ai-panel-empty{color:rgba(255,255,255,.9);font-size:12px;margin-top:10px}
+    @media(min-width:640px){.ai-sugg-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+    @media(max-width:380px){.ai-card{flex-direction:column}.ai-card .ai-card-actions{flex-direction:row;width:100%}.ai-card .ai-card-actions .ai-link-btn{flex:1}}
+
     @media(min-width:768px){.filter-sheet-backdrop{align-items:center;padding:20px}.filter-sheet{border-radius:18px}}
     @media(max-width:380px){.tk-filter-btn .tk-label{display:none}.tk-filter-btn{padding:0 13px}}
   </style>
@@ -163,6 +192,8 @@
         <i class="fas fa-sliders-h"></i><span class="tk-label">Filter</span><span class="tk-count view-hidden" id="tk-filter-count">0</span>
       </button>
     </div>
+
+    <div id="ai-suggest-panel"></div>
 
     <div id="tasks-sections"></div>
 
@@ -333,6 +364,8 @@
     var debounceTimer = null;
     var fetchToken = 0;
     var savingTask = false;
+    var aiWeather = null;
+    var aiSuggestions = [];
 
     var DEFAULT_CATEGORIES = ['Farm Management', 'Crop Care', 'Irrigation', 'Soil', 'Pest & Disease', 'Harvesting', 'Livestock', 'Marketplace', 'Government & Schemes', 'Other'];
 
@@ -493,6 +526,105 @@
         populateFilterOptions();
         populateAddTaskOptions();
       }).catch(function () {});
+    }
+
+    // ==================== AI SUGGESTIONS ====================
+
+    function fetchSuggestions() {
+      if (!isAuthed()) { aiWeather = null; aiSuggestions = []; renderAiSuggestions(); return Promise.resolve(); }
+      return window.API.Crop.suggestTasks().then(function (d) {
+        aiWeather = (d && d.weather) || null;
+        aiSuggestions = (d && d.suggestions) || [];
+        renderAiSuggestions();
+        if (!tasks.length) renderSections();
+      }).catch(function () {
+        aiWeather = null;
+        aiSuggestions = [];
+        renderAiSuggestions();
+      });
+    }
+
+    function renderAiSuggestions() {
+      var panel = document.getElementById('ai-suggest-panel');
+      if (!isAuthed()) { panel.innerHTML = ''; return; }
+      if (!aiSuggestions.length && !aiWeather) { panel.innerHTML = ''; return; }
+      var html = '<div class="ai-panel">';
+      html += '<div class="ai-panel-head">';
+      html += '<span class="ai-ico"><i class="fas fa-robot"></i></span>';
+      html += '<div><div class="ai-title">AI Suggested Tasks</div><div class="ai-sub">Smart tasks from your crops, schedule and local climate</div></div>';
+      html += '<span class="ai-spark"><i class="fas fa-wand-magic-sparkles"></i> AI</span>';
+      html += '</div>';
+      if (aiWeather) {
+        var rainSoon = false;
+        var fc = aiWeather.forecast || [];
+        for (var f = 0; f < Math.min(2, fc.length); f++) {
+          if (parseFloat(fc[f].precipitation || 0) >= 2) rainSoon = true;
+        }
+        html += '<div class="ai-weather-chip">';
+        html += '<i class="fas fa-cloud-sun-rain"></i>';
+        html += '<span class="w-temp">' + Math.round(aiWeather.temperature || 0) + '\u00B0C</span>';
+        html += '<span class="w-desc">' + escapeHtml(aiWeather.description || '') + '</span>';
+        if (rainSoon) html += '<span style="background:rgba(255,214,107,.25);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:600"><i class="fas fa-umbrella"></i> Rain expected soon \u2014 plan field work accordingly</span>';
+        if (aiWeather.location) html += '<span class="w-loc"><i class="fas fa-map-marker-alt"></i> ' + escapeHtml(aiWeather.location) + '</span>';
+        html += '</div>';
+      }
+      if (aiSuggestions.length) {
+        html += '<div class="ai-sugg-list">';
+        for (var i = 0; i < aiSuggestions.length; i++) {
+          var s = aiSuggestions[i];
+          var rel = '';
+          if (s.crop_name || s.farm_name || s.plot_name) {
+            rel += '<div class="task-rel">';
+            if (s.crop_name) rel += '<span><i class="fas fa-seedling"></i> ' + escapeHtml(s.crop_name) + '</span>';
+            if (s.farm_name) rel += '<span><i class="fas fa-tractor"></i> ' + escapeHtml(s.farm_name) + '</span>';
+            if (s.plot_name) rel += '<span><i class="fas fa-map-marked-alt"></i> ' + escapeHtml(s.plot_name) + '</span>';
+            rel += '</div>';
+          }
+          html += '<div class="ai-card">';
+          html += '<div class="ai-card-body">';
+          html += '<div class="task-meta"><span class="cat-badge">' + escapeHtml(s.category || 'Task') + '</span><span class="priority-badge ' + escapeHtml(s.priority) + '">' + escapeHtml(s.priority) + '</span><span class="ai-source ' + escapeHtml(s.source) + '">' + escapeHtml(s.source.replace('_', ' ')) + '</span></div>';
+          html += '<div class="ai-card-title">' + escapeHtml(s.title) + '</div>';
+          if (s.description) html += '<div class="ai-card-desc">' + escapeHtml(s.description) + '</div>';
+          html += rel;
+          if (s.due_date) html += '<div class="task-meta" style="margin-top:4px"><i class="fas fa-clock" style="font-size:9px"></i> Suggested: ' + escapeHtml(formatDateDisplay(s.due_date) || s.due_date) + '</div>';
+          html += '</div>';
+          html += '<div class="ai-card-actions">';
+          html += '<button class="ai-add-btn" onclick="addSuggestion(' + i + ')' + (savingTask ? ' disabled' : '') + '"><i class="fas fa-plus"></i> Add Task</button>';
+          if (s.links && s.links.crop_health) html += '<a class="ai-link-btn" href="' + escapeHtml(s.links.crop_health) + '" target="_blank" rel="noopener"><i class="fas fa-heartbeat"></i> Crop Health</a>';
+          html += '</div>';
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+      panel.innerHTML = html;
+    }
+
+    function addSuggestion(idx) {
+      var s = aiSuggestions[idx];
+      if (!s || savingTask) return;
+      if (!isAuthed()) { showToast('Please log in to add a task', 'error'); return; }
+      savingTask = true;
+      renderAiSuggestions();
+      window.API.Crop.createTask({
+        crop_cycle_id: s.crop_cycle_id,
+        title: s.title,
+        description: s.description || null,
+        category: s.category || null,
+        due_date: s.due_date || null,
+        priority: s.priority || 'medium'
+      }).then(function (created) {
+        savingTask = false;
+        aiSuggestions.splice(idx, 1);
+        upsertTask(allTasks, created);
+        renderAiSuggestions();
+        showToast('AI task added to your list', 'success');
+        fetchTasks(true);
+      }).catch(function (err) {
+        savingTask = false;
+        renderAiSuggestions();
+        showToast((err && err.message) || 'Failed to add task', 'error');
+      });
     }
 
     function populateFilterOptions() {
@@ -701,8 +833,16 @@
       var isFiltered = !!(searchQuery || activeFilterCount());
       if (isFiltered) {
         container.innerHTML = '<div class="empty-state"><i class="fas fa-filter" style="color:var(--text-muted)"></i><div class="es-title">No matching tasks</div><div class="es-sub">Try changing your filters or search.</div><div class="es-actions"><button class="pab-btn" onclick="clearAllFilters()" style="margin:0 auto"><i class="fas fa-times"></i> Clear Filters &amp; Search</button></div></div>';
+        return;
+      }
+      if (aiSuggestions.length) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-robot" style="color:#4caf50"></i><div class="es-title">No tasks added yet \u2014 your AI suggestions are ready above</div><div class="es-sub">Add one of the AI tasks or create your own to start tracking your farm work.</div><div class="es-actions"><button class="pab-btn primary" onclick="showAddTask()" style="margin:0 auto"><i class="fas fa-plus"></i> Add Task</button></div></div>';
+        return;
+      }
+      if (!cycles.length) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-tractor" style="color:#4caf50"></i><div class="es-title">Set up your farm to unlock smart tasks</div><div class="es-sub">Add a farm and a crop cycle under My Farm, then AI will suggest and manage your daily farm tasks automatically.</div><div class="es-actions"><button class="pab-btn primary" onclick="window.location.href=\'farm.html\'" style="margin:0 auto"><i class="fas fa-tractor"></i> Go to My Farm</button></div></div>';
       } else {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i><div class="es-title">No tasks yet</div><div class="es-sub">Create a task to start managing your farm activities.</div><div class="es-actions"><button class="pab-btn primary" onclick="showAddTask()" style="margin:0 auto"><i class="fas fa-plus"></i> Add Task</button></div></div>';
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-robot" style="color:#4caf50"></i><div class="es-title">No tasks yet \u2014 let AI plan your farm work</div><div class="es-sub">Loading AI suggestions from your crops and climate, or create a task manually.</div><div class="es-actions"><button class="pab-btn primary" onclick="showAddTask()" style="margin:0 auto"><i class="fas fa-plus"></i> Add Task</button></div></div>';
       }
     }
 
@@ -1271,7 +1411,17 @@
         renderSkeletons(document.getElementById('tasks-sections'));
         fetchTasks();
         loadOptions();
+        fetchSuggestions();
       }, 100);
+    });
+
+    /* Deep link from Calendar: tasks.html?task=<task_id> */
+    document.addEventListener('DOMContentLoaded', function () {
+      var params = new URLSearchParams(window.location.search);
+      var taskId = params.get('task');
+      if (!taskId) return;
+      setTimeout(function () { if (typeof openDetails === 'function') openDetails(taskId); }, 900);
+      setTimeout(function () { if (typeof openDetails === 'function') openDetails(taskId); }, 2200);
     });
   </script>
 </body>
