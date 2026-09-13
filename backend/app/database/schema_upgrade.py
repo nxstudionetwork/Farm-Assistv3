@@ -99,10 +99,17 @@ ADDITIVE_COLUMNS = {
         ("started_at", "DATETIME"),
         ("last_accessed_at", "DATETIME"),
     ],
+    "courses": [
+        ("video_url", "VARCHAR(500)"),
+        ("core_content", "TEXT"),
+        ("tools_materials", "TEXT"),
+        ("safety_tips", "TEXT"),
+    ],
     "users": [
         ("is_online", "BOOLEAN DEFAULT 0"),
         ("last_seen_at", "DATETIME"),
         ("typing_conversation_id", "VARCHAR(36)"),
+        ("is_demo", "BOOLEAN DEFAULT 0"),
     ],
     "messages": [
         ("status", "VARCHAR(10) DEFAULT 'sent'"),
@@ -113,6 +120,48 @@ ADDITIVE_COLUMNS = {
         ("muted", "BOOLEAN DEFAULT 0"),
         ("deleted_at", "DATETIME"),
     ],
+    "community_posts": [
+        ("is_demo", "BOOLEAN DEFAULT 0"),
+    ],
+    "community_comments": [
+        ("parent_comment_id", "VARCHAR(36)"),
+        ("is_demo", "BOOLEAN DEFAULT 0"),
+    ],
+    "community_likes": [
+        ("is_demo", "BOOLEAN DEFAULT 0"),
+    ],
+    "community_saves": [
+        ("is_demo", "BOOLEAN DEFAULT 0"),
+    ],
+    "community_answers": [
+        ("is_demo", "BOOLEAN DEFAULT 0"),
+    ],
+    "community_groups": [
+        ("is_demo", "BOOLEAN DEFAULT 0"),
+    ],
+    "insurance_policies": [
+        ("product_id", "VARCHAR(36)"),
+        ("application_id", "VARCHAR(36)"),
+        ("insured_item", "VARCHAR(300)"),
+        ("sum_insured", "FLOAT"),
+        ("premium_paid", "FLOAT"),
+        ("premium_due", "FLOAT"),
+        ("premium_due_date", "VARCHAR(10)"),
+        ("renewal_date", "VARCHAR(10)"),
+        ("renewal_count", "INTEGER DEFAULT 0"),
+        ("policy_holder_name", "VARCHAR(200)"),
+        ("updated_at", "DATETIME"),
+    ],
+    "insurance_claims": [
+        ("claim_number", "VARCHAR(20)"),
+        ("incident_date", "VARCHAR(10)"),
+        ("incident_location", "VARCHAR(300)"),
+        ("estimated_loss", "FLOAT"),
+        ("description", "TEXT"),
+        ("assessment_amount", "FLOAT"),
+        ("settled_at", "VARCHAR(10)"),
+    ],
+    # calendar_events is created by create_all; no additive columns needed yet.
 }
 
 

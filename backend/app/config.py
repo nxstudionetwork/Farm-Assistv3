@@ -1,15 +1,34 @@
 ﻿import os
 from pathlib import Path
-from pydantic_settings import BaseSettings
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=str(BACKEND_DIR / ".env"),
+        extra="ignore",
+    )
+
     APP_NAME: str = "Farm Assist"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
 
-    DATABASE_URL: str = "sqlite:///./farm_assist.db"
+    DATABASE_URL: str = f"sqlite:///{(BACKEND_DIR / 'farm_assist.db').as_posix()}"
+
+    @field_validator("DATABASE_URL", mode="after")
+    @classmethod
+    def resolve_sqlite_path(cls, value: str) -> str:
+        prefix = "sqlite:///"
+        if not value.startswith(prefix):
+            return value
+        database_path = Path(value[len(prefix):])
+        if database_path.is_absolute():
+            return value
+        return f"{prefix}{(BACKEND_DIR / database_path).resolve().as_posix()}"
 
     SECRET_KEY: str = "farm-assist-dev-secret-key-change-in-production-2024"
     ALGORITHM: str = "HS256"
@@ -58,6 +77,22 @@ class Settings(BaseSettings):
     MARKET_PRICE_STALE_HOURS: int = 72
     MARKET_PRICE_FETCH_LIMIT: int = 500
 
+    # ---- Government Schemes (official GoI sources) ----
+    # Configure in backend/.env. Only URLs/keys from official Government of
+    # India / Ministry of Agriculture & Farmers Welfare domains are supported;
+    # nothing is fetched, stored or labelled "live" unless a source actually
+    # responds with valid JSON. Sources stay configurable here (server-side),
+    # never hardcoded on the frontend.
+    GOV_SCHEMES_API_KEY: str = ""                     # data.gov.in / API Setu key
+    GOV_SCHEMES_SOURCE_URLS: List[str] = []           # full official JSON endpoints
+    GOV_SCHEMES_SOURCE_BASE: str = "https://api.data.gov.in/resource"
+    GOV_SCHEMES_RESOURCE_IDS: List[str] = []          # optional data.gov.in resource ids
+    GOV_SCHEMES_SOURCE_NAME: str = "Government of India Open Data (data.gov.in)"
+    GOV_SCHEMES_SOURCE_URL: str = "https://data.gov.in"
+    GOV_SCHEMES_REFRESH_MINUTES: int = 180
+    GOV_SCHEMES_STALE_HOURS: int = 240
+    GOV_SCHEMES_FETCH_LIMIT: int = 500
+
     TRANSLATION_API_KEY: str = ""
     SPEECH_API_KEY: str = ""
 
@@ -84,10 +119,6 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "logs/farm_assist.log"
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 settings = Settings()

@@ -5,3 +5,5 @@ from app.routers import loans, sensors, storage, news, translation, qrcode, anal
 from app.routers import services
 from app.routers import wallet
 from app.routers import documents
+from app.routers import tools_equipment
+

@@ -13,10 +13,28 @@ Backend: FastAPI served from the same origin (port 8000).
     if (window._API_BASE_URL) return window._API_BASE_URL;
     var meta = document.querySelector('meta[name="api-base-url"], meta[name="api-base"]');
     if (meta && meta.content) return meta.content;
-    var origin = window.location.origin || '';
+
+    var origin = (window.location && window.location.origin) || '';
+    var host = (window.location && window.location.hostname) || '';
+    var localBackend = 'http://localhost:8000/api/v1';
+
     if (!origin || origin === 'null' || origin.indexOf('file:') === 0) {
-      origin = 'http://localhost:8000';
+      return localBackend;
     }
+
+    if (origin.indexOf('localhost:8000') !== -1 || origin.indexOf('127.0.0.1:8000') !== -1 || origin.indexOf('0.0.0.0:8000') !== -1) {
+      return origin + '/api/v1';
+    }
+
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') {
+      return localBackend;
+    }
+
+    if (origin.indexOf('localhost:5500') !== -1 || origin.indexOf('localhost:3000') !== -1 || origin.indexOf('localhost:8080') !== -1 ||
+        origin.indexOf('127.0.0.1:5500') !== -1 || origin.indexOf('127.0.0.1:3000') !== -1 || origin.indexOf('127.0.0.1:8080') !== -1) {
+      return localBackend;
+    }
+
     return origin + '/api/v1';
   }
 
@@ -370,14 +388,18 @@ Backend: FastAPI served from the same origin (port 8000).
     deleteCycle: function (id) {
       return http('DELETE', '/crop-cycles/' + id).then(unwrap);
     },
-    listTasks: function () {
-      return http('GET', '/crop-tasks').then(unwrap);
+    listTasks: function (params) {
+      var qs = params || '';
+      return http('GET', '/crop-tasks' + (qs ? '?' + qs : '')).then(unwrap);
     },
     createTask: function (data) {
       return http('POST', '/crop-tasks', data).then(unwrap);
     },
     updateTask: function (id, data) {
       return http('PUT', '/crop-tasks/' + id, data).then(unwrap);
+    },
+    deleteTask: function (id) {
+      return http('DELETE', '/crop-tasks/' + id).then(unwrap);
     },
     createJournal: function (data) {
       return http('POST', '/farm-journal', data).then(unwrap);
@@ -583,26 +605,113 @@ Backend: FastAPI served from the same origin (port 8000).
       var qs = '';
       if (params) {
         var parts = [];
-        Object.keys(params).forEach(function (k) { if (params[k]) parts.push(k + '=' + encodeURIComponent(params[k])); });
+        Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(k + '=' + encodeURIComponent(params[k])); });
         qs = parts.join('&');
       }
       return http('GET', '/workers' + (qs ? '?' + qs : '')).then(unwrap);
     },
     get: function (id) {
-      return http('GET', '/workers/' + id).then(unwrap);
+      return http('GET', '/workers/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getFilters: function () {
+      return http('GET', '/workers/filters').then(unwrap);
     },
     book: function (data) {
       return http('POST', '/worker-bookings', data).then(unwrap);
     },
-    listBookings: function () {
-      return http('GET', '/worker-bookings').then(unwrap);
+    listBookings: function (params) {
+      var qs = '';
+      if (params) {
+        var parts = [];
+        Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(k + '=' + encodeURIComponent(params[k])); });
+        qs = parts.join('&');
+      }
+      return http('GET', '/worker-bookings' + (qs ? '?' + qs : '')).then(unwrap);
+    },
+    getBooking: function (id) {
+      return http('GET', '/worker-bookings/' + encodeURIComponent(id)).then(unwrap);
     },
     updateBooking: function (id, data) {
-      return http('PUT', '/worker-bookings/' + id, data).then(unwrap);
+      return http('PUT', '/worker-bookings/' + encodeURIComponent(id), data).then(unwrap);
+    },
+    addReview: function (workerId, data) {
+      return http('POST', '/workers/' + encodeURIComponent(workerId) + '/reviews', data).then(unwrap);
+    },
+    getReviews: function (workerId, params) {
+      var qs = '';
+      if (params) {
+        var parts = [];
+        Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(k + '=' + encodeURIComponent(params[k])); });
+        qs = parts.join('&');
+      }
+      return http('GET', '/workers/' + encodeURIComponent(workerId) + '/reviews' + (qs ? '?' + qs : '')).then(unwrap);
     }
   };
 
   var EquipmentService = {
+    // Buy Mode - Tools & Equipment Products
+    listProducts: function (params) {
+      var qs = '';
+      if (params) {
+        var parts = [];
+        Object.keys(params).forEach(function (k) {
+          if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+            parts.push(k + '=' + encodeURIComponent(params[k]));
+          }
+        });
+        qs = parts.join('&');
+      }
+      return http('GET', '/tools-equipment/products' + (qs ? '?' + qs : '')).then(unwrap);
+    },
+    getProduct: function (id) {
+      return http('GET', '/tools-equipment/products/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getCategories: function () {
+      return http('GET', '/tools-equipment/categories').then(unwrap);
+    },
+    getFilters: function () {
+      return http('GET', '/tools-equipment/filters').then(unwrap);
+    },
+    getRecommended: function (params) {
+      var qs = '';
+      if (params && params.limit) qs = '?limit=' + encodeURIComponent(params.limit);
+      return http('GET', '/tools-equipment/recommended' + qs).then(unwrap);
+    },
+    getRecentlyViewed: function (params) {
+      var qs = '';
+      if (params && params.limit) qs = '?limit=' + encodeURIComponent(params.limit);
+      return http('GET', '/tools-equipment/recent' + qs).then(unwrap);
+    },
+    recordView: function (id) {
+      return http('POST', '/tools-equipment/viewed/' + encodeURIComponent(id)).then(unwrap);
+    },
+    compare: function (ids) {
+      var param = Array.isArray(ids) ? ids.join(',') : ids;
+      return http('GET', '/tools-equipment/compare?ids=' + encodeURIComponent(param)).then(unwrap);
+    },
+
+    // Rent Mode - Machinery Rentals
+    listRentals: function (params) {
+      var qs = '';
+      if (params) {
+        var parts = [];
+        Object.keys(params).forEach(function (k) {
+          if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+            parts.push(k + '=' + encodeURIComponent(params[k]));
+          }
+        });
+        qs = parts.join('&');
+      }
+      return http('GET', '/tools-equipment/rentals/list' + (qs ? '?' + qs : '')).then(unwrap);
+    },
+    bookRental: function (data) {
+      return http('POST', '/tools-equipment/rentals/book', data).then(unwrap);
+    },
+    getMyRentals: function () {
+      return http('GET', '/tools-equipment/rentals/my-bookings').then(unwrap);
+    },
+
+    // Legacy compatibility for worker equipment rental
     list: function (params) {
       var qs = '';
       if (params) {
@@ -671,6 +780,60 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  // Marketplace - Farmer SELLING side (separate from the Input Store BUY side).
+  var M = '/marketplace';
+  var enc = encodeURIComponent;
+  var MarketplaceSellerService = {
+    dashboard: function () {
+      return http('GET', M + '/dashboard').then(unwrap);
+    },
+    categories: function () {
+      return http('GET', M + '/categories').then(unwrap);
+    },
+    listListings: function (params) {
+      return http('GET', M + '/listings' + buildQuery(params)).then(unwrap);
+    },
+    getListing: function (id) {
+      return http('GET', M + '/listings/' + enc(id)).then(unwrap);
+    },
+    createListing: function (data) {
+      return http('POST', M + '/listings', data).then(unwrap);
+    },
+    updateListing: function (id, data) {
+      return http('PUT', M + '/listings/' + enc(id), data).then(unwrap);
+    },
+    updateListingStatus: function (id, status) {
+      return http('PATCH', M + '/listings/' + enc(id) + '/status', { status: status }).then(unwrap);
+    },
+    deleteListing: function (id) {
+      return http('DELETE', M + '/listings/' + enc(id)).then(unwrap);
+    },
+    recordSale: function (listingId, data) {
+      return http('POST', M + '/listings/' + enc(listingId) + '/sales', data).then(unwrap);
+    },
+    listSales: function (params) {
+      return http('GET', M + '/sales' + buildQuery(params)).then(unwrap);
+    },
+    getSale: function (id) {
+      return http('GET', M + '/sales/' + enc(id)).then(unwrap);
+    },
+    updateSale: function (id, data) {
+      return http('PATCH', M + '/sales/' + enc(id), data).then(unwrap);
+    },
+    listEnquiries: function (params) {
+      return http('GET', M + '/enquiries' + buildQuery(params)).then(unwrap);
+    },
+    replyEnquiry: function (id, message) {
+      return http('POST', M + '/enquiries/' + enc(id) + '/reply', { message: message }).then(unwrap);
+    },
+    updateEnquiryStatus: function (id, status) {
+      return http('PATCH', M + '/enquiries/' + enc(id) + '/status', { status: status }).then(unwrap);
+    },
+    insights: function () {
+      return http('GET', M + '/insights').then(unwrap);
+    }
+  };
+
   var GovernmentService = {
     listSchemes: function (params) {
       var qs = '';
@@ -703,6 +866,15 @@ Backend: FastAPI served from the same origin (port 8000).
     recommended: function (params) {
       var qs = params && params.limit ? '?limit=' + params.limit : '';
       return http('GET', '/government-schemes/recommended' + qs).then(unwrap);
+    },
+    syncStatus: function () {
+      return http('GET', '/government-schemes/sync').then(unwrap);
+    },
+    syncNow: function () {
+      return http('POST', '/government-schemes/sync').then(unwrap);
+    },
+    states: function () {
+      return http('GET', '/government-schemes/states').then(unwrap);
     },
     applyScheme: function (id, data) {
       return http('POST', '/government-schemes/' + encodeURIComponent(id) + '/apply', data || {}).then(unwrap);
@@ -990,6 +1162,9 @@ Backend: FastAPI served from the same origin (port 8000).
       var q = params ? '?' + buildQuery(params) : '';
       return http('GET', '/farmbuzz/shorts/recommended' + q).then(unwrap);
     },
+    shortCategories: function () {
+      return http('GET', '/farmbuzz/shorts/categories').then(unwrap);
+    },
     recordEvent: function (id, data) {
       return http('POST', '/farmbuzz/posts/' + id + '/event', data || {}).then(unwrap);
     },
@@ -1059,6 +1234,206 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     summary: function () {
       return http('GET', '/loans/summary').then(unwrap);
+    },
+    categories: function () {
+      return http('GET', '/loans/categories').then(unwrap);
+    },
+    filterOptions: function () {
+      return http('GET', '/loans/filters').then(unwrap);
+    },
+    products: function (params) {
+      return http('GET', '/loans/products' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    searchProducts: function (q) {
+      return http('GET', '/loans/search?q=' + encodeURIComponent(q || '')).then(unwrap);
+    },
+    getProduct: function (productId) {
+      return http('GET', '/loans/products/' + encodeURIComponent(productId)).then(unwrap);
+    },
+    saveProduct: function (productId) {
+      return http('POST', '/loans/products/' + encodeURIComponent(productId) + '/save', {}).then(unwrap);
+    },
+    unsaveProduct: function (productId) {
+      return http('DELETE', '/loans/products/' + encodeURIComponent(productId) + '/save').then(unwrap);
+    },
+    savedProducts: function (params) {
+      return http('GET', '/loans/products/saved' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    checkEligibility: function (data) {
+      return http('POST', '/loans/check-eligibility', data).then(unwrap);
+    },
+    applications: function (params) {
+      return http('GET', '/loans/applications' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    getApplication: function (applicationId) {
+      return http('GET', '/loans/applications/' + encodeURIComponent(applicationId)).then(unwrap);
+    },
+    createApplication: function (data) {
+      return http('POST', '/loans/applications', data).then(unwrap);
+    },
+    updateApplication: function (applicationId, data) {
+      return http('PATCH', '/loans/applications/' + encodeURIComponent(applicationId), data).then(unwrap);
+    },
+    uploadDocument: function (applicationId, file, documentType) {
+      var formData = new FormData();
+      formData.append('file', file);
+      formData.append('document_type', documentType || 'other');
+      return http('POST', '/loans/applications/' + encodeURIComponent(applicationId) + '/documents', formData).then(unwrap);
+    },
+    documentUrl: function (applicationId, documentId) {
+      return Config.BASE_URL + '/loans/applications/' + encodeURIComponent(applicationId) + '/documents/' + encodeURIComponent(documentId) + '/file';
+    },
+    fetchDocument: function (applicationId, documentId, download) {
+      var token = localStorage.getItem('fa-auth-token');
+      var url = Config.BASE_URL + '/loans/applications/' + encodeURIComponent(applicationId) + '/documents/' + encodeURIComponent(documentId) + '/file' + (download ? '?download=true' : '');
+      var headers = {};
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return fetch(url, { method: 'GET', headers: headers, credentials: 'same-origin' }).then(function (r) {
+        if (!r.ok) {
+          return r.json().then(function (data) {
+            var err = new Error((data && data.detail) || 'HTTP ' + r.status);
+            err.status = r.status;
+            throw err;
+          });
+        }
+        return r.blob();
+      });
+    },
+    farmerLoans: function (params) {
+      return http('GET', '/loans/farmer-loans' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    farmerLoanRepayments: function (farmerLoanId) {
+      return http('GET', '/loans/farmer-loans/' + encodeURIComponent(farmerLoanId) + '/repayments').then(unwrap);
+    },
+    repay: function (farmerLoanId, amount, walletPin) {
+      return http('POST', '/loans/farmer-loans/' + encodeURIComponent(farmerLoanId) + '/repay', {
+        amount: amount,
+        wallet_pin: walletPin
+      }).then(unwrap);
+    },
+    overview: function () {
+      return http('GET', '/loans/overview').then(unwrap);
+    }
+  };
+
+  var InsuranceService = {
+    overview: function () {
+      return http('GET', '/insurance/overview').then(unwrap);
+    },
+    categories: function () {
+      return http('GET', '/insurance/categories').then(unwrap);
+    },
+    filters: function () {
+      return http('GET', '/insurance/filters').then(unwrap);
+    },
+    products: function (params) {
+      return http('GET', '/insurance/products' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    search: function (q) {
+      return http('GET', '/insurance/search?q=' + encodeURIComponent(q || '')).then(unwrap);
+    },
+    getProduct: function (productId) {
+      return http('GET', '/insurance/products/' + encodeURIComponent(productId)).then(unwrap);
+    },
+    saveProduct: function (productId) {
+      return http('POST', '/insurance/products/' + encodeURIComponent(productId) + '/save', {}).then(unwrap);
+    },
+    unsaveProduct: function (productId) {
+      return http('DELETE', '/insurance/products/' + encodeURIComponent(productId) + '/save').then(unwrap);
+    },
+    savedProducts: function (params) {
+      return http('GET', '/insurance/products/saved' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    checkEligibility: function (data) {
+      return http('POST', '/insurance/check-eligibility', data).then(unwrap);
+    },
+    applications: function (params) {
+      return http('GET', '/insurance/applications' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    getApplication: function (applicationId) {
+      return http('GET', '/insurance/applications/' + encodeURIComponent(applicationId)).then(unwrap);
+    },
+    createApplication: function (data) {
+      return http('POST', '/insurance/applications', data).then(unwrap);
+    },
+    uploadApplicationDocument: function (applicationId, file, documentType) {
+      var formData = new FormData();
+      formData.append('file', file);
+      formData.append('document_type', documentType || 'other');
+      return http('POST', '/insurance/applications/' + encodeURIComponent(applicationId) + '/documents', formData).then(unwrap);
+    },
+    applicationDocumentUrl: function (applicationId, documentId) {
+      return Config.BASE_URL + '/insurance/applications/' + encodeURIComponent(applicationId) + '/documents/' + encodeURIComponent(documentId) + '/file';
+    },
+    fetchApplicationDocument: function (applicationId, documentId, download) {
+      var token = localStorage.getItem('fa-auth-token');
+      var url = Config.BASE_URL + '/insurance/applications/' + encodeURIComponent(applicationId) + '/documents/' + encodeURIComponent(documentId) + '/file' + (download ? '?download=true' : '');
+      var headers = {};
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return fetch(url, { method: 'GET', headers: headers, credentials: 'same-origin' }).then(function (r) {
+        if (!r.ok) {
+          return r.json().then(function (data) {
+            var err = new Error((data && data.detail) || 'HTTP ' + r.status);
+            err.status = r.status;
+            throw err;
+          });
+        }
+        return r.blob();
+      });
+    },
+    policies: function (params) {
+      return http('GET', '/insurance/policies' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    getPolicy: function (policyId) {
+      return http('GET', '/insurance/policies/' + encodeURIComponent(policyId)).then(unwrap);
+    },
+    policyPayments: function (policyId) {
+      return http('GET', '/insurance/policies/' + encodeURIComponent(policyId) + '/payments').then(unwrap);
+    },
+    payPremium: function (policyId, amount, walletPin) {
+      return http('POST', '/insurance/policies/' + encodeURIComponent(policyId) + '/pay-premium', {
+        amount: amount,
+        wallet_pin: walletPin
+      }).then(unwrap);
+    },
+    renewPolicy: function (policyId, walletPin) {
+      var formData = new FormData();
+      if (walletPin) formData.append('wallet_pin', walletPin);
+      return http('POST', '/insurance/policies/' + encodeURIComponent(policyId) + '/renew', formData).then(unwrap);
+    },
+    claims: function (params) {
+      return http('GET', '/insurance/claims' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    getClaim: function (claimId) {
+      return http('GET', '/insurance/claims/' + encodeURIComponent(claimId)).then(unwrap);
+    },
+    createClaim: function (data) {
+      return http('POST', '/insurance/claims', data).then(unwrap);
+    },
+    uploadClaimDocument: function (claimId, file, documentType) {
+      var formData = new FormData();
+      formData.append('file', file);
+      formData.append('document_type', documentType || 'other');
+      return http('POST', '/insurance/claims/' + encodeURIComponent(claimId) + '/documents', formData).then(unwrap);
+    },
+    claimDocumentUrl: function (claimId, documentId) {
+      return Config.BASE_URL + '/insurance/claims/' + encodeURIComponent(claimId) + '/documents/' + encodeURIComponent(documentId) + '/file';
+    },
+    fetchClaimDocument: function (claimId, documentId, download) {
+      var token = localStorage.getItem('fa-auth-token');
+      var url = Config.BASE_URL + '/insurance/claims/' + encodeURIComponent(claimId) + '/documents/' + encodeURIComponent(documentId) + '/file' + (download ? '?download=true' : '');
+      var headers = {};
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return fetch(url, { method: 'GET', headers: headers, credentials: 'same-origin' }).then(function (r) {
+        if (!r.ok) {
+          return r.json().then(function (data) {
+            var err = new Error((data && data.detail) || 'HTTP ' + r.status);
+            err.status = r.status;
+            throw err;
+          });
+        }
+        return r.blob();
+      });
     }
   };
 
@@ -1484,6 +1859,38 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  var CalendarService = {
+    listEvents: function (params) {
+      var q = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/calendar/events' + q).then(unwrap);
+    },
+    getEvent: function (eventId) {
+      return http('GET', '/calendar/events/' + encodeURIComponent(eventId)).then(unwrap);
+    },
+    createEvent: function (data) {
+      return http('POST', '/calendar/events', data).then(unwrap);
+    },
+    updateEvent: function (eventId, data) {
+      return http('PUT', '/calendar/events/' + encodeURIComponent(eventId), data).then(unwrap);
+    },
+    deleteEvent: function (eventId) {
+      return http('DELETE', '/calendar/events/' + encodeURIComponent(eventId)).then(unwrap);
+    },
+    today: function () {
+      return http('GET', '/calendar/today').then(unwrap);
+    },
+    upcoming: function (limit) {
+      var q = limit ? '?limit=' + limit : '';
+      return http('GET', '/calendar/upcoming' + q).then(unwrap);
+    },
+    filters: function () {
+      return http('GET', '/calendar/filters').then(unwrap);
+    },
+    sync: function () {
+      return http('POST', '/calendar/sync').then(unwrap);
+    }
+  };
+
   function buildQuery(params) {
     var parts = [];
     for (var k in params) {
@@ -1508,13 +1915,16 @@ Backend: FastAPI served from the same origin (port 8000).
     Wallet: WalletService,
     Equipment: EquipmentService,
     Marketplace: MarketplaceService,
+    MarketplaceSeller: MarketplaceSellerService,
     Government: GovernmentService,
+    GovernmentService: GovernmentService,
     Community: CommunityService,
     Notification: NotificationService,
     Weather: WeatherService,
     Maps: MapsService,
     AI: AIService,
     Loan: LoanService,
+    Insurance: InsuranceService,
     Sensor: SensorService,
     FileStorage: StorageService,
     Documents: DocumentService,
@@ -1532,6 +1942,7 @@ Backend: FastAPI served from the same origin (port 8000).
     Support: SupportService,
     Learning: LearningService,
     Technique: TechniqueService,
+    Calendar: CalendarService,
     buildQuery: buildQuery
   };
 
@@ -1545,6 +1956,7 @@ Backend: FastAPI served from the same origin (port 8000).
   global.WalletService = WalletService;
   global.EquipmentService = EquipmentService;
   global.MarketplaceService = MarketplaceService;
+  global.MarketplaceSellerService = MarketplaceSellerService;
   global.GovernmentService = GovernmentService;
   global.CommunityService = CommunityService;
   global.FarmBuzzService = FarmBuzzService;
@@ -1553,6 +1965,7 @@ Backend: FastAPI served from the same origin (port 8000).
   global.MapsService = MapsService;
   global.AIService = AIService;
   global.LoanService = LoanService;
+  global.InsuranceService = InsuranceService;
   global.SensorService = SensorService;
   global.StorageService = StorageService;
   global.DocumentService = DocumentService;
@@ -1566,5 +1979,6 @@ Backend: FastAPI served from the same origin (port 8000).
   global.AnalyticsService = AnalyticsService;
   global.LearningService = LearningService;
   global.TechniqueService = TechniqueService;
+  global.CalendarService = CalendarService;
 
 })(window);

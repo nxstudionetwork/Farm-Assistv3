@@ -13,11 +13,21 @@ from app.models.worker import (
 )
 from app.models.marketplace import (
     ProductCategory, Seller, Product, MarketplaceCart, MarketplaceCartItem, MarketplaceWishlist, MarketplaceOrder, OrderItem,
-    Payment, DeliveryTracking
+    Payment, DeliveryTracking, EquipmentMetadata, FarmerRecentlyViewed,
+    MarketplaceCategory, MarketplaceListing, MarketplaceListingImage,
+    MarketplaceEnquiry, MarketplaceSale,
 )
 from app.models.government import (
     GovernmentScheme, SchemeApplication, SchemeDocument,
-    InsurancePolicy, InsuranceClaim
+    InsurancePolicy, InsuranceClaim, SchemeSyncLog,
+)
+from app.models.insurance import (
+    InsuranceProduct, SavedInsurance, InsuranceApplication,
+    InsuranceApplicationDocument, InsurancePayment, InsuranceClaimDocument,
+)
+from app.models.insurance import (
+    InsuranceProduct, SavedInsurance, InsuranceApplication,
+    InsuranceApplicationDocument, InsurancePayment,
 )
 from app.models.community import (
     CommunityPost, CommunityComment, CommunityLike, CommunitySave, CommunityAnswer,
@@ -48,6 +58,12 @@ from app.models.news import NewsArticle, SavedNews
 from app.models.market_price import (
     MarketPrice, MarketWatchlist, MarketPriceAlert, MarketDataSync
 )
+from app.models.loan_product import (
+    AgriculturalLoanProduct, SavedAgriculturalLoan, AgriculturalLoanApplication,
+    AgriculturalLoanDocument, AgriculturalFarmerLoan, AgriculturalLoanRepayment,
+    AgriculturalLoanEligibility,
+)
+from app.models.calendar import CalendarEvent
 
 __all__ = [
     "User", "FarmerProfile", "UserAddress", "OTPVerification",
@@ -59,9 +75,15 @@ __all__ = [
     "Worker", "WorkerAvailability", "WorkerBooking", "WorkerPayment", "WorkerReview",
     "Equipment", "EquipmentBooking",
     "ProductCategory", "Seller", "Product", "MarketplaceCart", "MarketplaceCartItem", "MarketplaceWishlist", "MarketplaceOrder", "OrderItem",
-    "Payment", "DeliveryTracking",
+    "Payment", "DeliveryTracking", "EquipmentMetadata", "FarmerRecentlyViewed",
+    "MarketplaceCategory", "MarketplaceListing", "MarketplaceListingImage",
+    "MarketplaceEnquiry", "MarketplaceSale",
     "GovernmentScheme", "SchemeApplication", "SchemeDocument",
-    "InsurancePolicy", "InsuranceClaim",
+    "InsurancePolicy", "InsuranceClaim", "SchemeSyncLog",
+    "InsuranceProduct", "SavedInsurance", "InsuranceApplication",
+    "InsuranceApplicationDocument", "InsurancePayment", "InsuranceClaimDocument",
+    "InsuranceProduct", "SavedInsurance", "InsuranceApplication",
+    "InsuranceApplicationDocument", "InsurancePayment",
     "CommunityPost", "CommunityComment", "CommunityLike", "CommunitySave",
     "CommunityAnswer", "CommunityGroup", "CommunityGroupMember", "CommunityReport",
     "Expert", "Consultation",
@@ -81,4 +103,8 @@ __all__ = [
     "Technique", "TechniqueBookmark",
     "NewsArticle", "SavedNews",
     "MarketPrice", "MarketWatchlist", "MarketPriceAlert", "MarketDataSync",
+    "AgriculturalLoanProduct", "SavedAgriculturalLoan", "AgriculturalLoanApplication",
+    "AgriculturalLoanDocument", "AgriculturalFarmerLoan", "AgriculturalLoanRepayment",
+    "AgriculturalLoanEligibility",
+    "CalendarEvent",
 ]

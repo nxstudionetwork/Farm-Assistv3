@@ -3,212 +3,722 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-  <title>Farm Assist - Loans</title>
+  <title>Farm Assist - Agricultural Loans</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    :root { --loan-blue: #2563eb; --loan-blue-soft: #DBEAFE; --loan-blue-bg: rgba(37,99,235,0.06); --loan-purple: #7c3aed; --loan-green: #059669; }
-    .loan-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
-    .loan-badge.active { background:#D1FAE5; color:#065F46; }
-    .loan-badge.draft { background:#F3F4F6; color:#6B7280; }
-    .loan-badge.submitted { background:#DBEAFE; color:#1E40AF; }
-    .loan-badge.approved { background:#D1FAE5; color:#065F46; }
-    .loan-badge.rejected { background:#FEE2E2; color:#991B1B; }
-    .loan-badge.review { background:#FEF3C7; color:#92400E; }
-    .loan-tab { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
-    .loan-tab-btn { padding:8px 18px; font-size:12px; font-weight:600; border-radius:30px; cursor:pointer; transition:all 0.2s; background:transparent; color:var(--text-secondary); border:1px solid var(--border-light); }
-    .loan-tab-btn:hover { border-color:var(--loan-blue); color:var(--loan-blue); }
-    .loan-tab-btn.active { background:var(--loan-blue); color:white; border-color:var(--loan-blue); }
-    .loan-section { margin-bottom:20px; }
-    .loan-section-title { font-size:16px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
-    .loan-form-group { margin-bottom:14px; }
-    .loan-form-label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
-    .loan-form-input,.loan-form-select { width:100%; padding:12px 14px; border:1px solid var(--border-light); border-radius:var(--radius-sm); font-size:14px; background:white; transition:border-color 0.2s; }
-    .loan-form-input:focus,.loan-form-select:focus { border-color:var(--loan-blue); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
-    .loan-product-card { background:white; border-radius:var(--radius-md); padding:16px; border:1px solid var(--border-light); margin-bottom:10px; transition:transform 0.2s; }
-    .loan-product-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-sm); }
-    .loan-product-card .bank-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
-    .loan-stat { text-align:center; padding:12px 8px; background:var(--loan-blue-bg); border-radius:var(--radius-sm); }
-    .loan-stat-value { font-size:16px; font-weight:800; color:var(--loan-blue); }
-    .loan-stat-label { font-size:10px; color:var(--text-muted); }
-    .loan-step { display:none; }
-    .loan-step.active { display:block; }
-    .loan-step-indicator { display:flex; gap:8px; margin-bottom:20px; justify-content:center; }
-    .loan-step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; background:var(--border-light); color:var(--text-muted); transition:all 0.3s; }
-    .loan-step-dot.active { background:var(--loan-blue); color:white; }
-    .loan-step-dot.done { background:var(--loan-green); color:white; }
-    .loan-success-icon { font-size:56px; color:var(--loan-green); margin-bottom:12px; }
-    .tab-content { display:none; }
-    .tab-content.active { display:block; }
+    .lo-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; }
+    .lo-badge.submitted { background:var(--soft-green); color:var(--primary-green); }
+    .lo-badge.under_review { background:var(--sun-soft); color:#A67C00; }
+    .lo-badge.approved { background:var(--soft-green); color:var(--primary-green); }
+    .lo-badge.rejected { background:#FFF0F0; color:var(--danger); }
+    .lo-badge.active { background:var(--soft-green); color:var(--primary-green); }
+    .lo-badge.closed { background:#F3F4F6; color:#6B7280; }
+    .lo-badge.completed { background:var(--soft-green); color:var(--primary-green); }
+    .lo-badge.pending { background:var(--sun-soft); color:#A67C00; }
+    .lo-badge.failed { background:#FFF0F0; color:var(--danger); }
+    .lo-badge.default { background:#F3F4F6; color:#6B7280; }
+
+    .lo-page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+    .lo-page-header h1 { font-size:22px; color:var(--primary-green); display:flex; align-items:center; gap:10px; }
+    .lo-page-header p { font-size:13px; color:var(--text-muted); }
+    .lo-header-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+    .lo-overview { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:22px; }
+    .lo-ov-card { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px 14px; position:relative; overflow:hidden; }
+    .lo-ov-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--primary-green); }
+    .lo-ov-card.special { background:linear-gradient(135deg,var(--forest-800) 0%,var(--primary-green) 100%); color:white; border:none; }
+    .lo-ov-card.special::before { display:none; }
+    .lo-ov-label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px; }
+    .lo-ov-card.special .lo-ov-label { color:rgba(255,255,255,0.75); }
+    .lo-ov-value { font-size:20px; font-weight:800; color:var(--text-primary); }
+    .lo-ov-card.special .lo-ov-value { color:white; }
+    .lo-ov-sub { font-size:11px; color:var(--text-muted); margin-top:4px; }
+    .lo-ov-card.special .lo-ov-sub { color:rgba(255,255,255,0.8); }
+    .lo-ov-cta { margin-top:10px; }
+
+    .lo-hero { background:linear-gradient(135deg,var(--forest-800) 0%,var(--primary-green) 100%); border-radius:var(--radius-lg,14px); padding:22px 20px; margin-bottom:22px; color:white; display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; }
+    .lo-hero h3 { font-size:18px; margin-bottom:6px; }
+    .lo-hero p { font-size:13px; color:rgba(255,255,255,0.85); max-width:560px; }
+
+    .lo-tab-bar { display:flex; gap:6px; margin-bottom:16px; flex-wrap:nowrap; overflow-x:auto; border-bottom:1px solid var(--border-light); padding-bottom:10px; scrollbar-width:thin; }
+    .lo-tab-btn { flex:0 0 auto; white-space:nowrap; padding:8px 18px; font-size:12px; font-weight:600; border-radius:30px; cursor:pointer; transition:all 0.2s; background:transparent; color:var(--text-secondary); border:1px solid var(--border-light); }
+    .lo-tab-btn:hover { border-color:var(--light-green); color:var(--primary-green); }
+    .lo-tab-btn.active { background:var(--primary-green); color:white; border-color:var(--primary-green); }
+
+    .lo-toolbar { display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+    .lo-search { flex:1; min-width:220px; display:flex; align-items:center; gap:8px; background:white; border:1px solid var(--border-light); border-radius:12px; padding:0 14px; transition:border-color 0.2s; }
+    .lo-search:focus-within { border-color:var(--light-green); box-shadow:0 0 0 3px rgba(45,106,79,0.08); }
+    .lo-search i { color:var(--text-muted); font-size:13px; }
+    .lo-search input { flex:1; border:none; outline:none; padding:11px 0; font-size:13px; background:transparent; color:var(--text-primary); }
+    .lo-select { padding:11px 12px; border:1px solid var(--border-light); border-radius:12px; font-size:13px; background:white; color:var(--text-primary); outline:none; cursor:pointer; }
+    .lo-select:focus { border-color:var(--light-green); }
+
+    .lo-filters-btn { padding:11px 16px; border:1px solid var(--border-light); border-radius:12px; background:white; font-size:13px; font-weight:600; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; gap:7px; transition:all 0.2s; }
+    .lo-filters-btn:hover { border-color:var(--light-green); color:var(--primary-green); }
+    .lo-filters-btn.has-filter { background:var(--soft-green); color:var(--primary-green); border-color:var(--light-green); }
+
+    .lo-category-row { display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:16px; scrollbar-width:thin; }
+    .lo-chip { padding:7px 14px; font-size:11px; font-weight:600; border-radius:30px; cursor:pointer; transition:all 0.2s; background:white; color:var(--text-secondary); border:1px solid var(--border-light); white-space:nowrap; }
+    .lo-chip:hover { border-color:var(--light-green); color:var(--primary-green); }
+    .lo-chip.active { background:var(--primary-green); color:white; border-color:var(--primary-green); }
+
+    .lo-card { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; display:flex; flex-direction:column; transition:transform 0.2s, box-shadow 0.2s; }
+    .lo-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-sm); }
+    .lo-card-top { display:flex; align-items:flex-start; gap:12px; margin-bottom:10px; }
+    .lo-card-bank { width:44px; height:44px; border-radius:12px; background:var(--soft-green); color:var(--primary-green); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .lo-card-name { font-size:14px; font-weight:700; color:var(--text-primary); line-height:1.3; }
+    .lo-card-lender { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .lo-save-btn { margin-left:auto; background:none; border:none; font-size:17px; cursor:pointer; color:var(--text-muted); padding:4px; transition:all 0.2s; }
+    .lo-save-btn:hover { color:var(--primary-green); }
+    .lo-save-btn.saved { color:var(--primary-green); }
+    .lo-card-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    .lo-tag { padding:3px 9px; border-radius:8px; font-size:10px; font-weight:600; background:var(--soft-green); color:var(--primary-green); }
+    .lo-tag.gov { background:var(--sun-soft); color:#A67C00; }
+    .lo-card-desc { font-size:12px; color:var(--text-secondary); line-height:1.55; margin-bottom:12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:36px; }
+    .lo-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; background:var(--bg-card-soft); border-radius:var(--radius-sm); padding:10px; margin-bottom:12px; }
+    .lo-stat { text-align:center; }
+    .lo-stat-num { font-size:13px; font-weight:800; color:var(--text-primary); overflow-wrap:anywhere; }
+    .lo-stat-label { font-size:9.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px; margin-top:2px; }
+    .lo-card-actions { display:flex; gap:8px; margin-top:auto; }
+    .lo-btn { flex:1; padding:9px 8px; border-radius:10px; font-size:12px; font-weight:600; border:none; cursor:pointer; transition:all 0.2s; text-align:center; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
+    .lo-btn-primary { background:var(--primary-green); color:white; }
+    .lo-btn-primary:hover { background:var(--primary-dark); }
+    .lo-btn-ghost { background:transparent; color:var(--primary-green); border:1px solid var(--light-green); }
+    .lo-btn-ghost:hover { background:var(--soft-green); }
+    .lo-btn-subtle { background:var(--soft-green); color:var(--primary-green); }
+    .lo-btn-subtle:hover { background:var(--pale-green); }
+    .lo-btn-micro { padding:6px 12px; font-size:11px; border-radius:8px; font-weight:600; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s; }
+    .lo-btn-danger { background:#FFF0F0; color:var(--danger); }
+
+    .lo-pagination { display:flex; align-items:center; justify-content:center; gap:14px; margin:18px 0 6px; }
+    .lo-page-btn { padding:8px 16px; border:1px solid var(--border-light); border-radius:10px; background:white; font-size:12px; font-weight:600; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s; }
+    .lo-page-btn:hover:not(:disabled) { border-color:var(--light-green); color:var(--primary-green); }
+    .lo-page-btn:disabled { opacity:0.45; cursor:default; }
+    .lo-page-info { font-size:11px; color:var(--text-muted); }
+
+    .lo-list { display:flex; flex-direction:column; gap:12px; }
+    .lo-row-card { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; }
+    .lo-row-main { display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap; }
+    .lo-row-icon { width:44px; height:44px; border-radius:12px; background:var(--soft-green); color:var(--primary-green); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+    .lo-row-info { flex:1; min-width:0; }
+    .lo-row-title { font-size:14px; font-weight:700; color:var(--text-primary); }
+    .lo-row-sub { font-size:11px; color:var(--text-muted); margin-top:3px; line-height:1.5; }
+    .lo-row-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .lo-progress { height:6px; background:var(--border-light); border-radius:10px; overflow:hidden; margin:10px 0 4px; }
+    .lo-progress-fill { height:100%; background:linear-gradient(90deg,var(--light-green),var(--primary-green)); border-radius:10px; transition:width 0.4s ease; }
+
+    .lo-form-group { margin-bottom:13px; }
+    .lo-form-label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
+    .lo-form-input, .lo-form-select, .lo-form-textarea { width:100%; padding:11px 13px; border:1px solid var(--border-light); border-radius:var(--radius-sm); font-size:13px; background:white; color:var(--text-primary); outline:none; transition:border-color 0.2s; font-family:inherit; }
+    .lo-form-input:focus, .lo-form-select:focus, .lo-form-textarea:focus { border-color:var(--light-green); box-shadow:0 0 0 3px rgba(45,106,79,0.08); }
+    .lo-form-hint { font-size:10px; color:var(--text-muted); margin-top:3px; }
+    .lo-form-err { font-size:11px; color:var(--danger); margin-top:4px; display:none; }
+    .lo-form-err.show { display:block; }
+
+    .lo-step { display:none; }
+    .lo-step.active { display:block; }
+    .lo-step-indicator { display:flex; gap:8px; margin-bottom:20px; justify-content:center; }
+    .lo-step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; background:var(--border-light); color:var(--text-muted); transition:all 0.3s; }
+    .lo-step-dot.active { background:var(--primary-green); color:white; }
+    .lo-step-dot.done { background:var(--light-green); color:white; }
+    .lo-success-icon { font-size:56px; color:var(--light-green); margin-bottom:12px; }
+
+    .lo-result-verdict { border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:12px; }
+    .lo-result-verdict.likely { background:var(--soft-green); border-left:4px solid var(--primary-green); }
+    .lo-result-verdict.review { background:var(--sun-soft); border-left:4px solid #D97706; }
+    .lo-result-verdict.notlikely { background:#FFF0F0; border-left:4px solid var(--danger); }
+    .lo-verdict-label { font-size:12px; font-weight:700; }
+    .lo-verdict-headline { font-size:12px; margin-top:3px; }
+    .lo-result-group { font-size:12px; margin-bottom:10px; }
+    .lo-result-group h5 { font-size:11px; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-muted); margin-bottom:6px; }
+    .lo-result-group ul { list-style:none; padding:0; margin:0; }
+    .lo-result-group li { padding:6px 10px; border-radius:8px; margin-bottom:5px; font-size:12px; line-height:1.45; }
+    .lo-result-group li.ok { background:var(--soft-green); color:var(--primary-green); }
+    .lo-result-group li.warn { background:var(--sun-soft); color:#7A5B00; }
+    .lo-result-group li.miss { background:#FFF0F0; color:#7A1D1D; }
+    .lo-disclaimer { font-size:11px; color:var(--text-muted); background:var(--bg-card-soft); border-radius:var(--radius-sm); padding:10px 12px; line-height:1.5; }
+
+    .lo-detail-section { margin-bottom:14px; }
+    .lo-detail-section h4 { font-size:13px; font-weight:700; color:var(--primary-green); margin-bottom:8px; display:flex; align-items:center; gap:7px; }
+    .lo-detail-row { display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-bottom:1px dashed var(--border-light); font-size:12px; }
+    .lo-detail-row:last-child { border-bottom:none; }
+    .lo-detail-row .lbl { color:var(--text-muted); }
+    .lo-detail-row .val { font-weight:600; color:var(--text-primary); text-align:right; }
+    .lo-detail-row .val a { color:var(--primary-green); text-decoration:none; word-break:break-all; }
+    .lo-doc-tag { display:inline-flex; align-items:center; gap:5px; font-size:11px; background:var(--soft-green); color:var(--primary-green); border-radius:8px; padding:4px 10px; margin:0 5px 5px 0; }
+
+    .lo-amount-picker { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .lo-amount-btn { padding:8px 14px; border-radius:9px; font-size:12px; font-weight:600; border:1px solid var(--border-light); background:white; color:var(--text-secondary); cursor:pointer; transition:all 0.2s; }
+    .lo-amount-btn:hover { border-color:var(--light-green); color:var(--primary-green); }
+    .lo-amount-btn.active { background:var(--primary-green); color:white; border-color:var(--primary-green); }
+
+    .lo-file-box { border:1.5px dashed var(--light-green); border-radius:var(--radius-sm); padding:14px; margin-bottom:10px; background:var(--bg-card-soft); }
+    .lo-file-box label { font-size:12px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:5px; }
+    .lo-file-box.lo-required label::after { content:' *'; color:var(--danger); }
+    .lo-file-box input[type=file] { width:100%; font-size:12px; }
+    .lo-file-name { font-size:10.5px; color:var(--text-muted); margin-top:4px; }
+
+    .lo-emi-result { text-align:center; padding:16px; background:var(--bg-card-soft); border-radius:var(--radius-sm); margin-bottom:12px; }
+    .lo-emi-value { font-size:30px; font-weight:800; color:var(--primary-green); }
+    .lo-emi-row { display:flex; justify-content:space-between; padding:8px 2px; border-bottom:1px dashed var(--border-light); font-size:12px; }
+    .lo-emi-row:last-child { border:none; }
+    .lo-emi-row .lbl { color:var(--text-muted); }
+    .lo-emi-row .val { font-weight:700; color:var(--text-primary); }
+
+    .lo-repay-amount { font-size:24px; font-weight:800; color:var(--primary-green); text-align:center; margin-bottom:4px; }
+
+    .lo-banner { background:var(--bg-card-soft); border:1px solid var(--border-light); border-left:4px solid var(--light-green); border-radius:var(--radius-sm); padding:14px 16px; font-size:12px; color:var(--text-secondary); margin-bottom:16px; line-height:1.55; }
+
+    .lo-skeleton-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px; }
+    .lo-skel-card { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; }
+
+    .lo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px; margin-bottom:18px; }
+
+    /* Hard overflow guards: nothing — including long, unbroken text — may
+       spill out of a card. Flex/grid children can always shrink (min-width:0)
+       and every text node wraps anywhere as a last resort. */
+    .lo-card, .lo-row-card, .lo-card-top, .lo-card-tags, .lo-stats, .lo-stat, .lo-row-main, .lo-row-right { min-width:0; max-width:100%; }
+    .lo-row-info, .lo-badge, .lo-tag, .lo-doc-tag { min-width:0; max-width:100%; }
+    .lo-card-name, .lo-card-lender, .lo-card-desc, .lo-tag, .lo-row-title, .lo-row-sub,
+    .lo-stat-num, .lo-stat-label, .lo-ov-value, .lo-ov-sub, .lo-detail-row .val, .lo-doc-tag { overflow-wrap:anywhere; word-break:break-word; min-width:0; }
+    .lo-tag { display:inline-block; white-space:normal; }
+    .lo-badge { overflow:hidden; text-overflow:ellipsis; }
+
+    body.lo-modal-open { overflow:hidden; }
+
+    .lo-filters-btn { position:relative; }
+    .lo-filter-count { position:absolute; top:-6px; right:-6px; background:var(--danger); color:white; border-radius:50%; min-width:20px; height:20px; display:none; align-items:center; justify-content:center; font-size:10px; font-weight:700; border:2px solid white; }
+    .lo-filter-count.show { display:flex; }
+
+    /* ===== FILTER DRAWER (documents-page style) ===== */
+    .filter-drawer-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2999; }
+    .filter-drawer-overlay.active { display:block; }
+    .filter-drawer { position:fixed; top:0; right:-100%; width:100%; max-width:350px; height:100vh; background:white; box-shadow:-2px 0 8px rgba(0,0,0,0.1); z-index:3000; transition:right 0.3s ease; display:flex; flex-direction:column; overflow:hidden; }
+    .filter-drawer.active { right:0; }
+    @media (max-width:640px) {
+      .filter-drawer { position:fixed; bottom:-100%; right:auto; top:auto; left:0; width:100%; max-width:none; height:auto; max-height:85vh; border-radius:16px 16px 0 0; box-shadow:0 -2px 8px rgba(0,0,0,0.1); transition:bottom 0.3s ease; }
+      .filter-drawer.active { bottom:0; right:auto; }
+    }
+    .filter-drawer-header { padding:16px; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+    .filter-drawer-header-actions { display:flex; align-items:center; gap:10px; }
+    .filter-apply-top { border:0; border-radius:var(--radius-sm); padding:8px 10px; background:var(--primary-green); color:white; cursor:pointer; font-size:12px; font-weight:600; }
+    .filter-apply-top:hover { opacity:0.9; }
+    .filter-drawer-title { font-size:16px; font-weight:700; color:var(--text-primary); margin:0; }
+    .filter-drawer-content { flex:1; overflow-y:auto; overflow-x:hidden; padding:16px; }
+    .filter-drawer-footer { padding:16px; border-top:1px solid var(--border-light); display:flex; gap:10px; flex-shrink:0; position:sticky; bottom:0; background:white; z-index:1; }
+    .filter-drawer-footer button { flex:1; padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; border:1px solid var(--border-light); background:white; cursor:pointer; transition:all 0.2s; }
+    .filter-drawer-footer .btn-clear { color:var(--text-muted); }
+    .filter-drawer-footer .btn-clear:hover { background:var(--bg-card-soft); color:var(--text-primary); }
+    .filter-drawer-footer .btn-apply { background:var(--primary-green); color:white; border-color:var(--primary-green); }
+    .filter-drawer-footer .btn-apply:hover { opacity:0.9; }
+    .filter-group { margin-bottom:20px; }
+    .filter-group-title { font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px; }
+    .filter-options { display:flex; flex-direction:column; gap:8px; }
+    .filter-option { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:6px; cursor:pointer; transition:background 0.2s; min-width:0; }
+    .filter-option:hover { background:var(--bg-card-soft); }
+    .filter-option label { flex:1; min-width:0; overflow-wrap:anywhere; cursor:pointer; font-size:13px; color:var(--text-primary); margin:0; }
+    .filter-checkbox, .filter-radio { appearance:none; -webkit-appearance:none; flex-shrink:0; background:white; cursor:pointer; transition:all 0.2s; }
+    .filter-checkbox { width:18px; height:18px; border:2px solid var(--border-light); border-radius:4px; display:flex; align-items:center; justify-content:center; }
+    .filter-checkbox:checked { background:var(--primary-green); border-color:var(--primary-green); }
+    .filter-checkbox:checked::after { content:'\2713'; color:white; font-size:12px; font-weight:700; }
+    .filter-radio { width:18px; height:18px; border:2px solid var(--border-light); border-radius:50%; }
+    .filter-radio:checked { background:var(--primary-green); border-color:var(--primary-green); }
+    .filter-radio:checked::after { content:''; display:block; width:6px; height:6px; background:white; border-radius:50%; margin:3px; }
   </style>
 </head>
 <body>
 <main class="page-container">
 
-  <div class="page-header">
+  <div class="lo-page-header">
     <div>
-      <h1><i class="fas fa-hand-holding-usd" style="color:var(--loan-blue);"></i> Loans</h1>
-      <p>Explore and apply for agricultural loans from banks and lenders.</p>
+      <h1><i class="fas fa-hand-holding-heart"></i> Agricultural Loans</h1>
+      <p>Explore verified loans from banks, NBFCs and government-backed agencies. Check eligibility, apply, and repay from your wallet.</p>
     </div>
-    <button class="btn-primary btn-sm" onclick="openModal('apply-modal')" style="background:var(--loan-blue);"><i class="fas fa-plus-circle"></i> New Application</button>
+    <div class="lo-header-actions">
+      <button class="btn-secondary btn-sm" onclick="LoansApp.openEmi()"><i class="fas fa-calculator"></i> EMI Calculator</button>
+      <button class="btn-primary btn-sm" onclick="LoansApp.scrollToCatalog()"><i class="fas fa-plus-circle"></i> New Application</button>
+    </div>
   </div>
 
-  <!-- Tab Navigation -->
-  <div class="loan-tab" id="tab-nav">
-    <button class="loan-tab-btn active" data-tab="available"><i class="fas fa-list"></i> Available Loans</button>
-    <button class="loan-tab-btn" data-tab="applications"><i class="fas fa-file-alt"></i> My Applications</button>
+  <div id="lo-overview-wrap"></div>
+
+  <div class="lo-tab-bar" id="lo-tab-bar">
+    <button class="lo-tab-btn active" data-lo-tab="explore"><i class="fas fa-list"></i> Explore</button>
+    <button class="lo-tab-btn" data-lo-tab="saved"><i class="fas fa-bookmark"></i> Saved</button>
+    <button class="lo-tab-btn" data-lo-tab="apps"><i class="fas fa-file-signature"></i> My Applications</button>
+    <button class="lo-tab-btn" data-lo-tab="loans"><i class="fas fa-hand-holding-usd"></i> My Loans</button>
   </div>
 
-  <!-- ===== AVAILABLE LOANS TAB ===== -->
-  <div class="tab-content active" id="tab-available">
-    <div class="loan-section">
-      <div class="loan-section-title"><i class="fas fa-university" style="color:var(--loan-blue);"></i> Loan Products</div>
-      <div id="available-loans-list">
-        <div style="text-align:center;padding:40px 20px;">
-          <div class="skeleton-loader" style="height:20px;width:200px;margin:0 auto 10px;border-radius:8px;"></div>
-          <div class="skeleton-loader" style="height:14px;width:160px;margin:0 auto;border-radius:8px;"></div>
-        </div>
+  <div id="lo-tab-explore" class="lo-tab-pane">
+    <div class="lo-toolbar">
+      <div class="lo-search">
+        <i class="fas fa-search"></i>
+        <input type="text" id="lo-search-input" placeholder="Search lenders, crop loans, machinery, KCC..." autocomplete="off">
       </div>
+      <select class="lo-select" id="lo-sort-select">
+        <option value="">Recommended</option>
+        <option value="name">Name A&ndash;Z</option>
+        <option value="amount_desc">Max Amount: High &rarr; Low</option>
+        <option value="amount_asc">Max Amount: Low &rarr; High</option>
+        <option value="rate">Lowest Interest Rate</option>
+      </select>
+      <button class="lo-filters-btn" id="lo-filters-toggle" onclick="LoansApp.openFilterDrawer()"><i class="fas fa-sliders-h"></i> Filters <span class="lo-filter-count" id="lo-filter-count">0</span></button>
     </div>
+
+    <div id="lo-catalog-container"></div>
   </div>
 
-  <!-- ===== MY APPLICATIONS TAB ===== -->
-  <div class="tab-content" id="tab-applications">
-    <div class="loan-section">
-      <div class="loan-section-title"><i class="fas fa-file-alt" style="color:var(--loan-blue);"></i> My Applications</div>
-      <div id="my-applications-list">
-        <div style="text-align:center;padding:40px 20px;">
-          <div class="skeleton-loader" style="height:20px;width:200px;margin:0 auto 10px;border-radius:8px;"></div>
-          <div class="skeleton-loader" style="height:14px;width:160px;margin:0 auto;border-radius:8px;"></div>
-        </div>
-      </div>
-    </div>
+  <div id="lo-tab-saved" class="lo-tab-pane" style="display:none;">
+    <div class="lo-banner"><i class="fas fa-bookmark" style="color:var(--primary-green);"></i> Loans you've saved for later. They're always kept up to date from the lender-published catalogue.</div>
+    <div id="lo-saved-container"></div>
   </div>
+
+  <div id="lo-tab-apps" class="lo-tab-pane" style="display:none;">
+    <div class="lo-category-row" id="lo-app-status-row">
+      <button class="lo-chip active" data-lo-status=""><i class="fas fa-layer-group"></i> All</button>
+      <button class="lo-chip" data-lo-status="submitted">Submitted</button>
+      <button class="lo-chip" data-lo-status="under_review">Under Review</button>
+      <button class="lo-chip" data-lo-status="approved">Approved</button>
+      <button class="lo-chip" data-lo-status="rejected">Rejected</button>
+    </div>
+    <div id="lo-apps-container"></div>
+  </div>
+
+  <div id="lo-tab-loans" class="lo-tab-pane" style="display:none;">
+    <div id="lo-loans-container"></div>
+  </div>
+
 </main>
 
-<!-- Apply Loan Modal -->
-<div class="modal-backdrop" id="apply-modal">
-  <div class="modal-box" style="max-width:520px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-      <h3 style="font-size:18px;"><i class="fas fa-hand-holding-usd" style="color:var(--loan-blue);"></i> Apply for Loan</h3>
-      <button onclick="closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+<!-- FILTER DRAWER OVERLAY -->
+<div class="filter-drawer-overlay" id="lo-filter-overlay"></div>
+
+<!-- FILTER DRAWER -->
+<div class="filter-drawer" id="lo-filter-drawer">
+  <div class="filter-drawer-header">
+    <h3 class="filter-drawer-title">Filters</h3>
+    <div class="filter-drawer-header-actions">
+      <button class="filter-apply-top" id="lo-filter-apply-top" type="button"><i class="fas fa-check"></i> Apply Filters</button>
     </div>
+  </div>
 
-    <input type="hidden" id="apply-loan-name">
-
-    <!-- Step Indicator -->
-    <div class="loan-step-indicator">
-      <div class="loan-step-dot active" id="step-dot-1">1</div>
-      <div class="loan-step-dot" id="step-dot-2">2</div>
-      <div class="loan-step-dot" id="step-dot-3">3</div>
-      <div class="loan-step-dot" id="step-dot-4">4</div>
+  <div class="filter-drawer-content" id="lo-filter-drawer-content">
+    <div class="filter-group">
+      <div class="filter-group-title">Lender</div>
+      <div class="filter-options" id="lo-f-lender"></div>
     </div>
-
-    <form id="loan-application-form" onsubmit="submitLoanApplication(event)">
-      <!-- Step 1: Personal Details -->
-      <div class="loan-step active" id="loan-step-1">
-        <h4 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-user" style="color:var(--loan-blue);"></i> Step 1: Personal Details</h4>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Full Name <span style="color:#EF4444;">*</span></label>
-          <input class="loan-form-input" id="app-name" placeholder="Enter your full name" required>
+    <div class="filter-group">
+      <div class="filter-group-title">State</div>
+      <div class="filter-options" id="lo-f-state"></div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-group-title">Availability</div>
+      <div class="filter-options">
+        <div class="filter-option">
+          <input type="checkbox" id="lo-f-gov" class="filter-checkbox">
+          <label for="lo-f-gov">Government-backed only</label>
         </div>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Phone Number <span style="color:#EF4444;">*</span></label>
-          <input class="loan-form-input" type="tel" id="app-phone" placeholder="Enter 10-digit mobile number" pattern="[0-9]{10}" required>
+        <div class="filter-option">
+          <input type="checkbox" id="lo-f-collateral" class="filter-checkbox">
+          <label for="lo-f-collateral">Collateral-free only</label>
         </div>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Aadhar Number <span style="color:#EF4444;">*</span></label>
-          <input class="loan-form-input" type="text" id="app-aadhar" placeholder="Enter 12-digit Aadhar number" pattern="[0-9]{12}" required>
-        </div>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Email</label>
-          <input class="loan-form-input" type="email" id="app-email" placeholder="Enter your email (optional)">
-        </div>
-        <button type="button" class="btn-primary" style="width:100%;background:var(--loan-blue);" onclick="nextStep(2)"><i class="fas fa-arrow-right"></i> Next</button>
       </div>
+    </div>
+  </div>
 
-      <!-- Step 2: Farm Details -->
-      <div class="loan-step" id="loan-step-2">
-        <h4 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-tractor" style="color:var(--loan-blue);"></i> Step 2: Farm Details</h4>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Farm Size (acres) <span style="color:#EF4444;">*</span></label>
-          <input class="loan-form-input" type="number" id="app-farm-size" placeholder="e.g. 5" min="0" step="0.1" required>
+  <div class="filter-drawer-footer">
+    <button class="btn-clear" id="lo-filter-clear" type="button">Clear All</button>
+    <button class="btn-apply" id="lo-filter-apply" type="button"><i class="fas fa-check"></i> Apply Filters</button>
+  </div>
+</div>
+
+<!-- Product details modal -->
+<div class="modal-backdrop" id="lo-modal-details">
+  <div class="modal-box" style="max-width:620px;max-height:86vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="lo-card-bank" id="lo-det-bankicon"><i class="fas fa-university"></i></div>
+        <div>
+          <h3 id="lo-det-name" style="font-size:17px;margin-bottom:2px;">--</h3>
+          <div id="lo-det-lender" style="font-size:11px;color:var(--text-muted);">--</div>
         </div>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Primary Crop</label>
-          <input class="loan-form-input" id="app-crop" placeholder="e.g. Paddy, Wheat, Cotton">
+      </div>
+      <button onclick="LoansApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="lo-card-tags" id="lo-det-tags"></div>
+    <div id="lo-det-body"></div>
+    <div class="lo-disclaimer" id="lo-det-disclaimer" style="margin-bottom:16px;"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="lo-btn lo-btn-ghost" id="lo-det-elig" onclick="LoansApp.openEligibility()"><i class="fas fa-clipboard-check"></i> Check Eligibility</button>
+      <button class="lo-btn lo-btn-primary" onclick="LoansApp.openApply()"><i class="fas fa-paper-plane"></i> Apply Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- Eligibility modal -->
+<div class="modal-backdrop" id="lo-modal-elig">
+  <div class="modal-box" style="max-width:560px;max-height:86vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:16px;"><i class="fas fa-clipboard-check" style="color:var(--primary-green);"></i> Eligibility Check</h3>
+      <button onclick="LoansApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="lo-elig-product-name" style="font-size:18px;font-weight:800;color:var(--primary-green);margin-bottom:4px;">--</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;" id="lo-elig-product-lender">--</div>
+    <input type="hidden" id="lo-elig-product-id">
+    <div id="lo-elig-form">
+      <div class="lo-form-group">
+        <label class="lo-form-label">Farmer Type</label>
+        <select class="lo-form-select" id="lo-elig-type">
+          <option value="">Select farmer type</option>
+          <option value="individual">Individual farmer</option>
+          <option value="group">Farmer group</option>
+          <option value="self_help_group">Self Help Group (SHG)</option>
+          <option value="joint_liability_group">Joint Liability Group (JLG)</option>
+          <option value="fpo">Farmer Producer Organisation (FPO)</option>
+        </select>
+      </div>
+      <div class="lo-form-group">
+        <label class="lo-form-label">Farmer Category</label>
+        <select class="lo-form-select" id="lo-elig-category">
+          <option value="">Select category</option>
+          <option value="marginal">Marginal (&lt;1 ha)</option>
+          <option value="small">Small (1&ndash;2 ha)</option>
+          <option value="semi_medium">Semi-medium (2&ndash;4 ha)</option>
+          <option value="medium">Medium (4&ndash;10 ha)</option>
+          <option value="large">Large (&gt;10 ha)</option>
+        </select>
+      </div>
+      <div class="grid-2">
+        <div class="lo-form-group">
+          <label class="lo-form-label">State</label>
+          <select class="lo-form-select" id="lo-elig-state"></select>
         </div>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Land Type</label>
-          <select class="loan-form-select" id="app-land-type">
+        <div class="lo-form-group">
+          <label class="lo-form-label">District</label>
+          <input class="lo-form-input" id="lo-elig-district" placeholder="e.g. Nagpur">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="lo-form-group">
+          <label class="lo-form-label">Primary Crop</label>
+          <input class="lo-form-input" id="lo-elig-crop" placeholder="e.g. Paddy, Cotton">
+        </div>
+        <div class="lo-form-group">
+          <label class="lo-form-label">Farm Size (acres)</label>
+          <input class="lo-form-input" type="number" id="lo-elig-farm" min="0" step="0.1" placeholder="e.g. 3.5">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="lo-form-group">
+          <label class="lo-form-label">Requested Amount</label>
+          <input class="lo-form-input" type="number" id="lo-elig-amount" min="0" step="1000" placeholder="e.g. 500000">
+        </div>
+        <div class="lo-form-group">
+          <label class="lo-form-label">Existing Agricultural Loan</label>
+          <select class="lo-form-select" id="lo-elig-existing">
+            <option value="">Not specified</option>
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+      </div>
+      <button class="lo-btn lo-btn-primary" style="width:100%;padding:12px;" onclick="LoansApp.checkEligibility()"><i class="fas fa-search"></i> Check Eligibility</button>
+    </div>
+    <div id="lo-elig-result" style="display:none;">
+      <div id="lo-elig-verdict"></div>
+      <div id="lo-elig-details"></div>
+      <div class="grid-2" style="margin-top:8px;">
+        <button class="lo-btn lo-btn-ghost" onclick="LoansApp.resetEligibility()"><i class="fas fa-undo"></i> Change Answers</button>
+        <button class="lo-btn lo-btn-primary" onclick="LoansApp.openApply()"><i class="fas fa-arrow-right"></i> Apply Now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Application wizard modal -->
+<div class="modal-backdrop" id="lo-modal-apply">
+  <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:16px;"><i class="fas fa-file-signature" style="color:var(--primary-green);"></i> Loan Application</h3>
+      <button onclick="LoansApp.cancelApply()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="lo-apply-product-name" style="font-size:14px;font-weight:800;color:var(--primary-green);margin-bottom:2px;">--</div>
+    <div id="lo-apply-product-sub" style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">--</div>
+    <input type="hidden" id="lo-apply-product-id">
+
+    <div class="lo-step-indicator" id="lo-apply-dots">
+      <div class="lo-step-dot active" id="lo-apply-dot-1">1</div>
+      <div class="lo-step-dot" id="lo-apply-dot-2">2</div>
+      <div class="lo-step-dot" id="lo-apply-dot-3">3</div>
+      <div class="lo-step-dot" id="lo-apply-dot-4">4</div>
+    </div>
+
+    <div class="lo-step active" id="lo-apply-step-1">
+      <h4 style="font-size:13px;margin-bottom:12px;"><i class="fas fa-user" style="color:var(--primary-green);"></i> Step 1: Personal Details</h4>
+      <div class="lo-form-group">
+        <label class="lo-form-label">Full Name <span style="color:var(--danger);">*</span></label>
+        <input class="lo-form-input" id="lo-app-name" placeholder="Enter your full name">
+      </div>
+      <div class="lo-form-group">
+        <label class="lo-form-label">Phone Number <span style="color:var(--danger);">*</span></label>
+        <input class="lo-form-input" type="tel" id="lo-app-phone" placeholder="10-digit mobile number" maxlength="13">
+      </div>
+      <div class="lo-form-group">
+        <label class="lo-form-label">Aadhaar Number</label>
+        <input class="lo-form-input" id="lo-app-aadhaar" placeholder="12-digit Aadhaar (recommended)" maxlength="12">
+      </div>
+      <div class="lo-form-group">
+        <label class="lo-form-label">Email</label>
+        <input class="lo-form-input" type="email" id="lo-app-email" placeholder="email@example.com">
+      </div>
+      <button class="lo-btn lo-btn-primary" style="width:100%;padding:12px;" onclick="LoansApp.nextApplyStep(2)"><i class="fas fa-arrow-right"></i> Next</button>
+    </div>
+
+    <div class="lo-step" id="lo-apply-step-2">
+      <h4 style="font-size:13px;margin-bottom:12px;"><i class="fas fa-tractor" style="color:var(--primary-green);"></i> Step 2: Farm Details</h4>
+      <div class="grid-2">
+        <div class="lo-form-group">
+          <label class="lo-form-label">Farm Size (acres)</label>
+          <input class="lo-form-input" type="number" id="lo-app-farm" min="0" step="0.1" placeholder="e.g. 5">
+        </div>
+        <div class="lo-form-group">
+          <label class="lo-form-label">Primary Crop</label>
+          <input class="lo-form-input" id="lo-app-crop" placeholder="e.g. Paddy, Wheat">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="lo-form-group">
+          <label class="lo-form-label">Land Type</label>
+          <select class="lo-form-select" id="lo-app-land">
             <option value="">Select land type</option>
             <option value="Owned">Owned</option>
             <option value="Leased">Leased</option>
             <option value="Shared">Shared / Joint</option>
           </select>
         </div>
-        <div class="grid-2">
-          <button type="button" class="btn-secondary" onclick="prevStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
-          <button type="button" class="btn-primary" style="background:var(--loan-blue);" onclick="nextStep(3)"><i class="fas fa-arrow-right"></i> Next</button>
+        <div class="lo-form-group">
+          <label class="lo-form-label">State</label>
+          <select class="lo-form-select" id="lo-app-state"></select>
         </div>
       </div>
+      <div class="lo-form-group">
+        <label class="lo-form-label">District</label>
+        <input class="lo-form-input" id="lo-app-district" placeholder="e.g. Nagpur">
+      </div>
+      <div class="grid-2">
+        <button class="lo-btn lo-btn-ghost" onclick="LoansApp.prevApplyStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="lo-btn lo-btn-primary" onclick="LoansApp.nextApplyStep(3)"><i class="fas fa-arrow-right"></i> Next</button>
+      </div>
+    </div>
 
-      <!-- Step 3: Upload Documents -->
-      <div class="loan-step" id="loan-step-3">
-        <h4 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-file-upload" style="color:var(--loan-blue);"></i> Step 3: Upload Documents</h4>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Aadhar Card <span style="color:#EF4444;">*</span></label>
-          <input class="loan-form-input" type="file" id="app-doc-aadhar" accept=".pdf,.jpg,.jpeg,.png" required>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">PDF, JPG or PNG (max 5MB)</div>
-        </div>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Land Records <span style="color:#EF4444;">*</span></label>
-          <input class="loan-form-input" type="file" id="app-doc-land" accept=".pdf,.jpg,.jpeg,.png" required>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">7/12 extract or land tax receipt</div>
-        </div>
-        <div class="loan-form-group">
-          <label class="loan-form-label">Bank Statement (6 months)</label>
-          <input class="loan-form-input" type="file" id="app-doc-bank" accept=".pdf,.jpg,.jpeg,.png">
-          <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Optional but recommended</div>
+    <div class="lo-step" id="lo-apply-step-3">
+      <h4 style="font-size:13px;margin-bottom:12px;"><i class="fas fa-money-check-alt" style="color:var(--primary-green);"></i> Step 3: Amount &amp; Purpose</h4>
+      <div id="lo-apply-range" class="lo-banner" style="margin-bottom:12px;"></div>
+      <div class="lo-form-group">
+        <label class="lo-form-label">Requested Amount <span style="color:var(--danger);">*</span></label>
+        <input class="lo-form-input" type="number" id="lo-app-amount" min="0" step="1000" placeholder="e.g. 500000">
+        <div class="lo-form-hint">Stay within the lender's published range for smoother processing.</div>
+        <div class="lo-form-err" id="lo-app-amount-err">Amount exceeds the maximum published for this product.</div>
+      </div>
+      <div class="lo-form-group">
+        <label class="lo-form-label">Purpose <span style="color:var(--danger);">*</span></label>
+        <input class="lo-form-input" id="lo-app-purpose" placeholder="e.g. Purchase seeds &amp; fertilisers for Kharif season">
+      </div>
+      <div class="lo-form-group">
+        <label class="lo-form-label">Notes for the lender</label>
+        <textarea class="lo-form-textarea" id="lo-app-notes" rows="2" placeholder="Anything the lender should know (optional)"></textarea>
+      </div>
+      <div class="grid-2">
+        <button class="lo-btn lo-btn-ghost" onclick="LoansApp.prevApplyStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="lo-btn lo-btn-primary" onclick="LoansApp.nextApplyStep(4)"><i class="fas fa-arrow-right"></i> Next</button>
+      </div>
+    </div>
+
+    <div class="lo-step" id="lo-apply-step-4">
+      <h4 style="font-size:13px;margin-bottom:6px;"><i class="fas fa-file-upload" style="color:var(--primary-green);"></i> Step 4: Review &amp; Submit</h4>
+      <div class="lo-banner" style="margin-bottom:12px;">Documents are uploaded securely after your application is created. You can also add them later from My Applications.</div>
+      <div class="card-premium" style="padding:14px;margin-bottom:12px;">
+        <div id="lo-apply-review" style="font-size:12px;line-height:1.9;"></div>
+      </div>
+      <div id="lo-apply-doc-progress"></div>
+      <div class="grid-2">
+        <button class="lo-btn lo-btn-ghost" onclick="LoansApp.prevApplyStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="lo-btn lo-btn-primary" id="lo-apply-submit-btn" onclick="LoansApp.submitApplication()"><i class="fas fa-paper-plane"></i> Submit Application</button>
+      </div>
+    </div>
+
+    <div class="lo-step" id="lo-apply-step-docs">
+      <h4 style="font-size:13px;margin-bottom:12px;"><i class="fas fa-file-upload" style="color:var(--primary-green);"></i> Upload Supporting Documents</h4>
+      <div id="lo-apply-docs-status" class="lo-banner" style="margin-bottom:12px;"></div>
+      <div class="lo-file-box lo-required">
+        <label for="lo-doc-one">Aadhaar / ID Proof</label>
+        <input type="file" id="lo-doc-one" accept=".pdf,.jpg,.jpeg,.png">
+        <div class="lo-file-name" id="lo-doc-one-name">PDF, JPG or PNG (max 5MB)</div>
+      </div>
+      <div class="lo-file-box lo-required">
+        <label for="lo-doc-two">Land Records / 7-12 Extract</label>
+        <input type="file" id="lo-doc-two" accept=".pdf,.jpg,.jpeg,.png">
+        <div class="lo-file-name" id="lo-doc-two-name">PDF, JPG or PNG (max 5MB)</div>
+      </div>
+      <div class="lo-file-box">
+        <label for="lo-doc-three">Bank Statement (6 months)</label>
+        <input type="file" id="lo-doc-three" accept=".pdf,.jpg,.jpeg,.png">
+        <div class="lo-file-name" id="lo-doc-three-name">Optional but recommended</div>
+      </div>
+      <div class="lo-file-box">
+        <label for="lo-doc-four">Any Other Document</label>
+        <input type="file" id="lo-doc-four" accept=".pdf,.jpg,.jpeg,.png">
+        <div class="lo-file-name" id="lo-doc-four-name">Optional</div>
+      </div>
+      <button class="lo-btn lo-btn-primary" style="width:100%;padding:12px;margin-top:4px;" onclick="LoansApp.uploadApplicationDocs()"><i class="fas fa-cloud-upload-alt"></i> Upload &amp; Finish</button>
+      <button class="lo-btn lo-btn-ghost" style="width:100%;padding:10px;margin-top:8px;" onclick="LoansApp.skipApplicationDocs()">Skip &mdash; upload later</button>
+    </div>
+
+    <div class="lo-step" id="lo-apply-step-success">
+      <div style="text-align:center;padding:20px 0;">
+        <div class="lo-success-icon"><i class="fas fa-check-circle"></i></div>
+        <h4 style="font-size:18px;margin-bottom:8px;">Application Submitted</h4>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Your application has been sent to the lender for review. Farm Assist does not approve loans &mdash; the lender decides.</p>
+        <div class="card-premium" style="padding:12px;text-align:left;margin-bottom:14px;">
+          <div style="font-size:11px;color:var(--text-muted);">Application Reference</div>
+          <div style="font-size:16px;font-weight:800;color:var(--primary-green);" id="lo-apply-ref">--</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;" id="lo-apply-ref-msg">Track &amp; upload documents under My Applications.</div>
         </div>
         <div class="grid-2">
-          <button type="button" class="btn-secondary" onclick="prevStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
-          <button type="button" class="btn-primary" style="background:var(--loan-blue);" onclick="nextStep(4)"><i class="fas fa-arrow-right"></i> Next</button>
+          <button class="lo-btn lo-btn-ghost" onclick="LoansApp.goToApplications()"><i class="fas fa-list"></i> My Applications</button>
+          <button class="lo-btn lo-btn-primary" onclick="LoansApp.closeModal()"><i class="fas fa-check"></i> Done</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
 
-      <!-- Step 4: Review & Submit -->
-      <div class="loan-step" id="loan-step-4">
-        <h4 style="font-size:14px;margin-bottom:12px;"><i class="fas fa-check-circle" style="color:var(--loan-blue);"></i> Step 4: Review &amp; Submit</h4>
-        <div class="card-premium" style="padding:14px;margin-bottom:12px;">
-          <div id="review-details" style="font-size:12px;line-height:1.8;">
-            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Loan:</span> <span id="review-loan" style="font-weight:600;">--</span></div>
-            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Name:</span> <span id="review-name" style="font-weight:600;">--</span></div>
-            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Phone:</span> <span id="review-phone" style="font-weight:600;">--</span></div>
-            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Farm Size:</span> <span id="review-farm" style="font-weight:600;">--</span></div>
-            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Crop:</span> <span id="review-crop" style="font-weight:600;">--</span></div>
-          </div>
-        </div>
-        <div class="grid-2">
-          <button type="button" class="btn-secondary" onclick="prevStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
-          <button type="submit" class="btn-primary" style="background:var(--loan-blue);"><i class="fas fa-paper-plane"></i> Submit</button>
-        </div>
+<!-- Application detail modal -->
+<div class="modal-backdrop" id="lo-modal-application">
+  <div class="modal-box" style="max-width:600px;max-height:86vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
+      <div>
+        <h3 style="font-size:17px;margin-bottom:3px;color:var(--primary-green);" id="lo-appdet-name">--</h3>
+        <div style="font-size:11px;color:var(--text-muted);" id="lo-appdet-ref">--</div>
       </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="lo-badge default" id="lo-appdet-status">--</span>
+        <button onclick="LoansApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+    <div id="lo-appdet-body"></div>
+    <div id="lo-appdet-docs">
+      <h4 style="font-size:13px;font-weight:700;color:var(--primary-green);margin:12px 0 8px;display:flex;align-items:center;gap:7px;"><i class="fas fa-file-alt"></i> Documents</h4>
+      <div id="lo-appdet-docs-list" style="font-size:12px;"></div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="lo-btn lo-btn-primary" style="width:100%;" onclick="LoansApp.openApplicationWizardAddDocs()"><i class="fas fa-file-upload"></i> Upload More Documents</button>
+    </div>
+  </div>
+</div>
 
-      <!-- Step 5: Success -->
-      <div class="loan-step" id="loan-step-5">
-        <div style="text-align:center;padding:20px 0;">
-          <div class="loan-success-icon"><i class="fas fa-check-circle"></i></div>
-          <h4 style="font-size:18px;margin-bottom:8px;">Application Submitted!</h4>
-          <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Your loan application has been received. We will contact you within 48 hours.</p>
-          <div class="card-premium" style="padding:12px;text-align:left;margin-bottom:16px;">
-            <div style="font-size:11px;color:var(--text-muted);">Application ID</div>
-            <div style="font-size:16px;font-weight:800;color:var(--loan-blue);" id="app-submitted-id">FALOAN-0000</div>
-          </div>
-          <button type="button" class="btn-primary" style="background:var(--loan-blue);width:100%;" onclick="closeModalAndRefresh()"><i class="fas fa-check"></i> Done</button>
-        </div>
+<!-- Add docs modal (for existing application) -->
+<div class="modal-backdrop" id="lo-modal-add-docs">
+  <div class="modal-box" style="max-width:520px;max-height:86vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:16px;"><i class="fas fa-file-upload" style="color:var(--primary-green);"></i> Upload Documents</h3>
+      <button onclick="LoansApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="lo-adddocs-ref" style="font-size:12px;font-weight:700;color:var(--primary-green);margin-bottom:12px;">--</div>
+    <div class="lo-file-box lo-required">
+      <label for="lo-add-doc-one">Aadhaar / ID Proof</label>
+      <input type="file" id="lo-add-doc-one" accept=".pdf,.jpg,.jpeg,.png">
+      <div class="lo-file-name">PDF, JPG or PNG (max 5MB)</div>
+    </div>
+    <div class="lo-file-box lo-required">
+      <label for="lo-add-doc-two">Land Records / 7-12 Extract</label>
+      <input type="file" id="lo-add-doc-two" accept=".pdf,.jpg,.jpeg,.png">
+      <div class="lo-file-name">PDF, JPG or PNG (max 5MB)</div>
+    </div>
+    <div class="lo-file-box">
+      <label for="lo-add-doc-three">Bank Statement / Other</label>
+      <input type="file" id="lo-add-doc-three" accept=".pdf,.jpg,.jpeg,.png">
+      <div class="lo-file-name">PDF, JPG or PNG (max 5MB)</div>
+    </div>
+    <button class="lo-btn lo-btn-primary" style="width:100%;padding:12px;" onclick="LoansApp.uploadAddDocs()"><i class="fas fa-cloud-upload-alt"></i> Upload</button>
+  </div>
+</div>
+
+<!-- Repayment history modal -->
+<div class="modal-backdrop" id="lo-modal-history">
+  <div class="modal-box" style="max-width:560px;max-height:86vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
+      <div>
+        <h3 style="font-size:16px;"><i class="fas fa-history" style="color:var(--primary-green);"></i> Repayment History</h3>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;" id="lo-history-loan">--</div>
       </div>
-    </form>
+      <button onclick="LoansApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="lo-history-body"></div>
+  </div>
+</div>
+
+<!-- Repay modal -->
+<div class="modal-backdrop" id="lo-modal-repay">
+  <div class="modal-box" style="max-width:480px;max-height:86vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:16px;"><i class="fas fa-hand-holding-usd" style="color:var(--primary-green);"></i> Repay from Wallet</h3>
+      <button onclick="LoansApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="lo-repay-loan" style="font-size:13px;font-weight:700;margin-bottom:2px;">--</div>
+    <div id="lo-repay-outstanding" style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">--</div>
+    <input type="hidden" id="lo-repay-id">
+    <div class="lo-repay-amount" id="lo-repay-expanded"></div>
+    <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:8px;">Outstanding balance</div>
+    <div class="lo-form-group">
+      <label class="lo-form-label">Amount to repay <span style="color:var(--danger);">*</span></label>
+      <input class="lo-form-input" type="number" id="lo-repay-amount-input" min="1" step="100" placeholder="Enter amount">
+    </div>
+    <div class="lo-amount-picker">
+      <button class="lo-amount-btn" onclick="LoansApp.setRepayPercent(25)">25%</button>
+      <button class="lo-amount-btn" onclick="LoansApp.setRepayPercent(50)">50%</button>
+      <button class="lo-amount-btn" onclick="LoansApp.setRepayPercent(75)">75%</button>
+      <button class="lo-amount-btn" onclick="LoansApp.setRepayPercent(100)">100%</button>
+    </div>
+    <div class="lo-form-group" style="margin-top:12px;">
+      <label class="lo-form-label">Wallet Balance</label>
+      <div id="lo-repay-balance" style="font-size:13px;font-weight:700;color:var(--primary-green);">Loading...</div>
+    </div>
+    <div class="lo-form-group">
+      <label class="lo-form-label">Wallet PIN <span style="color:var(--danger);">*</span></label>
+      <input class="lo-form-input" type="password" id="lo-repay-pin" maxlength="4" inputmode="numeric" placeholder="Enter 4-digit wallet PIN">
+    </div>
+    <div class="lo-form-group">
+      <button class="lo-btn lo-btn-primary" style="width:100%;padding:12px;" id="lo-repay-btn" onclick="LoansApp.confirmRepay()"><i class="fas fa-check-circle"></i> Confirm &amp; Pay</button>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:4px;">
+      Need to add money or set a PIN? <a href="wallet.html" style="color:var(--primary-green);text-decoration:none;font-weight:600;">Open Wallet</a>
+    </div>
+  </div>
+</div>
+
+<!-- EMI calculator modal -->
+<div class="modal-backdrop" id="lo-modal-emi">
+  <div class="modal-box" style="max-width:480px;max-height:86vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:16px;"><i class="fas fa-calculator" style="color:var(--primary-green);"></i> EMI Calculator</h3>
+      <button onclick="LoansApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="lo-form-group">
+      <label class="lo-form-label">Loan Amount</label>
+      <input class="lo-form-input" type="number" id="lo-emi-amount" min="0" step="1000" value="500000" placeholder="e.g. 500000">
+    </div>
+    <div class="lo-form-group">
+      <label class="lo-form-label">Annual Interest Rate (%)</label>
+      <input class="lo-form-input" type="number" id="lo-emi-rate" min="0" step="0.05" value="7" placeholder="e.g. 7">
+    </div>
+    <div class="lo-form-group">
+      <label class="lo-form-label">Tenure (months)</label>
+      <input class="lo-form-input" type="number" id="lo-emi-tenure" min="1" max="360" step="1" value="24" placeholder="e.g. 24">
+    </div>
+    <button class="lo-btn lo-btn-primary" style="width:100%;padding:12px;" onclick="LoansApp.computeEmi()"><i class="fas fa-equals"></i> Calculate EMI</button>
+    <div id="lo-emi-result" style="display:none;margin-top:16px;"></div>
   </div>
 </div>
 
@@ -220,461 +730,1318 @@
 (function () {
   'use strict';
 
-  var formatters = {
+  if (!window.API || !window.API.Loan || !localStorage.getItem('fa-auth-token')) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  var Loan = window.API.Loan;
+
+  var STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman & Nicobar Islands','Chandigarh','Dadra & Nagar Haveli and Daman & Diu','Delhi','Jammu & Kashmir','Ladakh','Lakshadweep','Puducherry'];
+
+  var st = {
     inr: function (amount) {
-      var num = parseFloat(amount) || 0;
-      var parts = num.toFixed(2).split('.');
-      var intPart = parts[0];
-      var lastThree = intPart.substring(intPart.length - 3);
-      var otherNums = intPart.substring(0, intPart.length - 3);
-      if (otherNums !== '') lastThree = ',' + lastThree;
-      var formatted = otherNums.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
-      return '\u20B9' + formatted;
+      if (amount === null || amount === undefined || amount === '') return 'Not specified';
+      var n = parseFloat(amount);
+      if (isNaN(n)) return 'Not specified';
+      return '\u20B9' + n.toLocaleString('en-IN', { maximumFractionDigits: n % 1 === 0 ? 0 : 2 });
     },
     inrShort: function (amount) {
-      var num = parseFloat(amount) || 0;
-      if (num >= 10000000) return '\u20B9' + (num / 10000000).toFixed(1) + ' Cr';
-      if (num >= 100000) return '\u20B9' + (num / 100000).toFixed(1) + ' L';
-      return formatters.inr(num);
+      var n = parseFloat(amount);
+      if (isNaN(n)) return 'Not specified';
+      if (n >= 10000000) return '\u20B9' + (n / 10000000).toFixed(1) + ' Cr';
+      if (n >= 100000) return '\u20B9' + (n / 100000).toFixed(1) + ' L';
+      if (n >= 1000) return '\u20B9' + (n / 1000).toFixed(1) + ' K';
+      return st.inr(n);
     },
     date: function (d) {
-      if (!d) return '';
-      return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      if (!d) return 'Not specified';
+      var dt = new Date(d);
+      if (isNaN(dt.getTime())) return d;
+      return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    },
+    pct: function (v) {
+      if (v === null || v === undefined || v === '') return 'Not specified';
+      var n = parseFloat(v);
+      if (isNaN(n)) return 'Not specified';
+      return n.toFixed(2) + '%';
     }
   };
 
-  /* ---- Mock Loan Products ---- */
-  var mockLoanProducts = [
-    {
-      id: 'KCC',
-      bank: 'State Bank of India',
-      bankIcon: 'fas fa-university',
-      bankColor: '#2563eb',
-      bankBg: 'rgba(37,99,235,0.1)',
-      name: 'Kisan Credit Card',
-      interest: '4% p.a.',
-      maxAmount: 300000,
-      repayment: '12 months',
-      eligibility: 'All farmers with land records',
-      description: 'Short-term credit for crop cultivation, post-harvest expenses and domestic needs.'
-    },
-    {
-      id: 'CROP-LOAN',
-      bank: 'Bank of Baroda',
-      bankIcon: 'fas fa-piggy-bank',
-      bankColor: '#D97706',
-      bankBg: 'rgba(217,119,6,0.1)',
-      name: 'Crop Loan',
-      interest: '7% p.a.',
-      maxAmount: 500000,
-      repayment: '18 months',
-      eligibility: 'Farmers with 2+ acres of cultivable land',
-      description: 'Flexible loan for sowing, fertilisers, irrigation and labour expenses.'
-    },
-    {
-      id: 'FARM-MACHINERY',
-      bank: 'NABARD',
-      bankIcon: 'fas fa-tractor',
-      bankColor: '#059669',
-      bankBg: 'rgba(5,150,105,0.1)',
-      name: 'Farm Machinery Loan',
-      interest: '8% p.a.',
-      maxAmount: 1500000,
-      repayment: '60 months',
-      eligibility: 'Farmers & agri-entrepreneurs with 5+ acres',
-      description: 'Finance tractors, harvesters, rotavators and other farm equipment.'
-    },
-    {
-      id: 'SOLAR-PUMP',
-      bank: 'Indian Bank',
-      bankIcon: 'fas fa-sun',
-      bankColor: '#D97706',
-      bankBg: 'rgba(245,158,11,0.1)',
-      name: 'Solar Pump Loan',
-      interest: '5% p.a.',
-      maxAmount: 800000,
-      repayment: '36 months',
-      eligibility: 'Farmers with existing irrigation source',
-      description: 'Subsidised financing for solar-powered pump sets with government subsidy.'
-    },
-    {
-      id: 'COLD-STORAGE',
-      bank: 'Canara Bank',
-      bankIcon: 'fas fa-snowflake',
-      bankColor: '#0891B2',
-      bankBg: 'rgba(8,145,178,0.1)',
-      name: 'Cold Storage Loan',
-      interest: '9% p.a.',
-      maxAmount: 2500000,
-      repayment: '84 months',
-      eligibility: 'FPOs, cooperatives & individual farmers with 10+ acres',
-      description: 'Build or expand cold storage facilities for produce preservation.'
-    },
-    {
-      id: 'DAIRY-DEV',
-      bank: 'Punjab National Bank',
-      bankIcon: 'fas fa-cow',
-      bankColor: '#7c3aed',
-      bankBg: 'rgba(124,58,237,0.1)',
-      name: 'Dairy Development Loan',
-      interest: '6% p.a.',
-      maxAmount: 600000,
-      repayment: '48 months',
-      eligibility: 'Dairy farmers with 5+ cattle',
-      description: 'Purchase milch animals, milking machines and cattle feed storage.'
-    },
-    {
-      id: 'ORGANIC-FARMING',
-      bank: 'Union Bank of India',
-      bankIcon: 'fas fa-leaf',
-      bankColor: '#16a34a',
-      bankBg: 'rgba(22,163,74,0.1)',
-      name: 'Organic Farming Loan',
-      interest: '5.5% p.a.',
-      maxAmount: 400000,
-      repayment: '24 months',
-      eligibility: 'Farmers with organic certification or in conversion',
-      description: 'Support for organic inputs, bio-fertilisers, vermicompost and certification.'
-    },
-    {
-      id: 'LAND-DEV',
-      bank: 'Axis Bank',
-      bankIcon: 'fas fa-mountain',
-      bankColor: '#dc2626',
-      bankBg: 'rgba(220,38,38,0.1)',
-      name: 'Land Development Loan',
-      interest: '8.5% p.a.',
-      maxAmount: 2000000,
-      repayment: '72 months',
-      eligibility: 'Farmers with clear land title of 3+ acres',
-      description: 'Leveling, terracing, bunding, drainage and soil conservation works.'
-    }
-  ];
-
-  /* ---- Mock Applications ---- */
-  var mockApplications = [
-    {
-      id: 'FALOAN-1042',
-      loanName: 'Kisan Credit Card',
-      bank: 'State Bank of India',
-      amount: 150000,
-      date: '2026-07-15',
-      status: 'draft'
-    },
-    {
-      id: 'FALOAN-1043',
-      loanName: 'Crop Loan',
-      bank: 'SBI',
-      amount: 300000,
-      date: '2026-07-18',
-      status: 'submitted'
-    },
-    {
-      id: 'FALOAN-1044',
-      loanName: 'Solar Pump Loan',
-      bank: 'Indian Bank',
-      amount: 650000,
-      date: '2026-06-10',
-      status: 'approved'
-    },
-    {
-      id: 'FALOAN-1045',
-      loanName: 'Farm Machinery Loan',
-      bank: 'NABARD',
-      amount: 1200000,
-      date: '2026-05-22',
-      status: 'rejected'
-    }
-  ];
-
-  var currentStep = 1;
-  var appCounter = 1046;
-
-  function mapBackendLoan(l) {
-    var statusMap = { active: 'approved', approved: 'approved', pending: 'submitted', submitted: 'submitted', draft: 'draft', rejected: 'rejected' };
-    var st = statusMap[l.status] || 'submitted';
-    return {
-      id: l.loan_id || l.id,
-      loanName: (l.loan_type) ? l.loan_type : (l.bank_name || 'Farm Loan'),
-      bank: l.bank_name || 'Bank',
-      amount: l.loan_amount || 0,
-      date: l.start_date || l.created_at,
-      status: st
-    };
+  function esc(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function loadBackendLoans() {
-    if (!window.API || !localStorage.getItem('fa-auth-token')) return;
-    API.Loan.list().then(function (res) {
-      var items = (res && res.data) || [];
-      if (!items.length) return;
-      mockApplications = items.map(mapBackendLoan);
-      renderMyApplications();
+  function firstDef(arr) {
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] !== null && arr[i] !== undefined && arr[i] !== '') return arr[i];
+    }
+    return null;
+  }
+
+  function productKey(p) {
+    return p.product_id || p.id;
+  }
+
+  function lenderIcon(lender) {
+    var s = String(lender || '').toLowerCase();
+    if (/kisan|credit card|kcc/.test(s)) return 'fa-credit-card';
+    if (/sb|state bank|nabard/.test(s)) return 'fa-university';
+    if (/co-op|cooperative/.test(s)) return 'fa-handshake';
+    if (/bank/.test(s)) return 'fa-landmark';
+    if (/nbfc|micro|finance|capital|credit/.test(s)) return 'fa-building-columns';
+    return 'fa-leaf';
+  }
+
+  function appStatusMeta(s) {
+    var m = {
+      submitted: { label: 'Submitted', cls: 'submitted' },
+      under_review: { label: 'Under Review', cls: 'under_review' },
+      in_review: { label: 'Under Review', cls: 'under_review' },
+      approved: { label: 'Approved', cls: 'approved' },
+      rejected: { label: 'Rejected', cls: 'rejected' },
+      withdrawn: { label: 'Withdrawn', cls: 'closed' },
+      draft: { label: 'Draft', cls: 'default' },
+      active: { label: 'Active', cls: 'active' },
+      closed: { label: 'Closed', cls: 'closed' }
+    };
+    var meta = m[s];
+    if (meta) return meta;
+    return { label: (s ? String(s).replace(/_/g, ' ') : 'Unknown'), cls: 'default' };
+  }
+
+  function loanStatusMeta(s) {
+    if (s === 'active') return { label: 'Active', cls: 'active', icon: 'fa-circle-check' };
+    if (s === 'closed') return { label: 'Closed', cls: 'closed', icon: 'fa-circle-check' };
+    return { label: (String(s || 'unknown').replace(/_/g, ' ')), cls: 'default', icon: 'fa-circle-question' };
+  }
+
+  function skeletonCards(n) {
+    var h = '<div class="lo-skeleton-grid">';
+    for (var i = 0; i < n; i++) {
+      h += '<div class="lo-skel-card">' +
+        '<div class="skeleton-loader" style="height:44px;width:44px;border-radius:12px;margin-bottom:12px;"></div>' +
+        '<div class="skeleton-loader" style="height:14px;width:70%;margin-bottom:8px;"></div>' +
+        '<div class="skeleton-loader" style="height:11px;width:45%;margin-bottom:14px;"></div>' +
+        '<div class="skeleton-loader" style="height:30px;margin-bottom:12px;"></div>' +
+        '<div class="skeleton-loader" style="height:46px;"></div>' +
+      '</div>';
+    }
+    return h + '</div>';
+  }
+
+  function emptyState(msg, sub) {
+    return '<div style="text-align:center;padding:44px 20px;">' +
+      '<div style="font-size:46px;color:var(--text-muted);margin-bottom:14px;opacity:0.5;"><i class="fas fa-seedling"></i></div>' +
+      '<h4 style="font-size:15px;color:var(--text-secondary);margin-bottom:6px;">' + esc(msg) + '</h4>' +
+      (sub ? '<p style="font-size:12px;color:var(--text-muted);">' + esc(sub) + '</p>' : '') +
+    '</div>';
+  }
+
+  function errorState(msg, retryFn) {
+    var el = document.createElement('div');
+    el.style.cssText = 'text-align:center;padding:44px 20px;';
+    el.innerHTML = '<div style="font-size:46px;color:var(--danger);margin-bottom:14px;opacity:0.5;"><i class="fas fa-exclamation-triangle"></i></div>' +
+      '<h4 style="font-size:15px;color:var(--text-secondary);margin-bottom:10px;">' + esc(msg) + '</h4>' +
+      '<button class="btn-primary" style="padding:10px 24px;font-size:12px;border-radius:11px;">Retry</button>';
+    var btn = el.querySelector('button');
+    if (btn) btn.addEventListener('click', retryFn);
+    return el;
+  }
+
+  var currentProduct = null;
+  var currentApplicationId = null;
+  var currentLoanForRepay = null;
+  var currentLoanForHistory = null;
+  var currentAddDocsApplication = null;
+  var currentRepayLoan = null;
+
+  var applyCurrentStep = 1;
+
+  var catalogState = { page: 1, limit: 12, search: '', lender: '', state: '', gov: null, collateral: null, sort: '', total: 0, totalPages: 0 };
+  var appsState = { page: 1, limit: 10, status: '', total: 0, totalPages: 0 };
+  var loadedOnce = { saved: false, apps: false, loans: false };
+
+  /* ================= Overview ================= */
+  function renderOverview(data) {
+    var wrap = document.getElementById('lo-overview-wrap');
+    if (!data || !data.has_loans) {
+      wrap.innerHTML =
+        '<div class="lo-hero">' +
+          '<div style="flex:1;min-width:240px;">' +
+            '<h3><i class="fas fa-sprout"></i> Agriculture grows with the right credit</h3>' +
+            '<p>Compare verified loans for crop, machinery, dairy, irrigation and more. Check what you may qualify for, then apply in minutes.</p>' +
+          '</div>' +
+          '<button class="btn-secondary" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.35);color:white;" onclick="LoansApp.scrollToCatalog()">' +
+            '<i class="fas fa-arrow-down"></i> Explore Loan Options' +
+          '</button>' +
+        '</div>';
+      return;
+    }
+    var next = data.next_due_date ? st.date(data.next_due_date) + ' · ' + st.inr(data.next_payment) : 'No dues scheduled';
+    wrap.innerHTML =
+      '<div class="lo-overview">' +
+        '<div class="lo-ov-card special">' +
+          '<div class="lo-ov-label">Total Outstanding</div>' +
+          '<div class="lo-ov-value">' + st.inr(data.total_outstanding) + '</div>' +
+          '<div class="lo-ov-sub"><i class="fas fa-hand-holding-usd"></i> ' + (data.active_loans_count || 0) + ' active loan(s)</div>' +
+        '</div>' +
+        '<div class="lo-ov-card">' +
+          '<div class="lo-ov-label">Total Borrowed</div>' +
+          '<div class="lo-ov-value">' + st.inr(data.total_borrowed) + '</div>' +
+          '<div class="lo-ov-sub">Across all your loans</div>' +
+        '</div>' +
+        '<div class="lo-ov-card">' +
+          '<div class="lo-ov-label">Total Repaid</div>' +
+          '<div class="lo-ov-value">' + st.inr(data.total_repaid) + '</div>' +
+          '<div class="lo-ov-sub">Via wallet repayments</div>' +
+        '</div>' +
+        '<div class="lo-ov-card">' +
+          '<div class="lo-ov-label">Monthly EMI</div>' +
+          '<div class="lo-ov-value">' + st.inr(data.monthly_emi) + '</div>' +
+          '<div class="lo-ov-sub">Next: ' + esc(next) + '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function loadOverview() {
+    Loan.overview().then(function (data) {
+      renderOverview(data);
+    }).catch(function () {
+      var wrap = document.getElementById('lo-overview-wrap');
+      if (wrap) wrap.innerHTML = '';
+    });
+  }
+
+  /* ================= Filter options ================= */
+  function loadFilterOptions() {
+    Loan.filterOptions().then(function (data) {
+      var lenders = data.lenders || [];
+      var states = data.states || [];
+      var lenderBox = document.getElementById('lo-f-lender');
+      if (lenderBox) {
+        var lh = '<div class="filter-option"><input type="radio" name="lo_flender" value="" id="lo-flender-all" class="filter-radio" checked><label for="lo-flender-all">All lenders</label></div>';
+        for (var i = 0; i < lenders.length; i++) {
+          lh += '<div class="filter-option"><input type="radio" name="lo_flender" value="' + esc(lenders[i]) + '" id="lo-flender-' + i + '" class="filter-radio"><label for="lo-flender-' + i + '">' + esc(lenders[i]) + '</label></div>';
+        }
+        lenderBox.innerHTML = lh;
+        var savedLender = catalogState.lender;
+        if (savedLender) {
+          lenderBox.querySelectorAll('input[name="lo_flender"]').forEach(function (b) { b.checked = (b.value === savedLender); });
+        }
+      }
+      var stateBox = document.getElementById('lo-f-state');
+      if (stateBox) {
+        var sh = '<div class="filter-option"><input type="radio" name="lo_fstate" value="" id="lo-fstate-all" class="filter-radio" checked><label for="lo-fstate-all">All states</label></div>';
+        for (var j = 0; j < states.length; j++) {
+          sh += '<div class="filter-option"><input type="radio" name="lo_fstate" value="' + esc(states[j]) + '" id="lo-fstate-' + j + '" class="filter-radio"><label for="lo-fstate-' + j + '">' + esc(states[j]) + '</label></div>';
+        }
+        stateBox.innerHTML = sh;
+        var savedState = catalogState.state;
+        if (savedState) {
+          stateBox.querySelectorAll('input[name="lo_fstate"]').forEach(function (b) { b.checked = (b.value === savedState); });
+        }
+      }
     }).catch(function () {});
   }
 
-  /* ---- Render Available Loans ---- */
-  function renderAvailableLoans() {
-    var container = document.getElementById('available-loans-list');
-    UIState.loading(container);
+  function updateFilterBadge() {
+    var count = 0;
+    if (catalogState.lender) count++;
+    if (catalogState.state) count++;
+    if (catalogState.gov) count++;
+    if (catalogState.collateral) count++;
+    var badge = document.getElementById('lo-filter-count');
+    var btn = document.getElementById('lo-filters-toggle');
+    if (badge) {
+      badge.textContent = count;
+      badge.classList.toggle('show', count > 0);
+    }
+    if (btn) btn.classList.toggle('has-filter', count > 0);
+  }
 
-    setTimeout(function () {
-      var html = '';
-      for (var i = 0; i < mockLoanProducts.length; i++) {
-        var p = mockLoanProducts[i];
-        html += '<div class="loan-product-card">' +
-          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
-            '<div class="bank-icon" style="background:' + p.bankBg + ';color:' + p.bankColor + ';"><i class="' + p.bankIcon + '"></i></div>' +
-            '<div style="flex:1;">' +
-              '<div style="font-size:14px;font-weight:700;">' + p.name + '</div>' +
-              '<div style="font-size:11px;color:var(--text-muted);">' + p.bank + '</div>' +
-            '</div>' +
-            '<span class="loan-badge active" style="font-size:10px;">' + p.interest + '</span>' +
-          '</div>' +
-          '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">' + p.description + '</div>' +
-          '<div class="grid-3" style="margin-bottom:10px;">' +
-            '<div class="loan-stat"><div class="loan-stat-value">' + formatters.inrShort(p.maxAmount) + '</div><div class="loan-stat-label">Max Amount</div></div>' +
-            '<div class="loan-stat"><div class="loan-stat-value">' + p.repayment + '</div><div class="loan-stat-label">Repayment</div></div>' +
-            '<div class="loan-stat"><div class="loan-stat-value" style="font-size:12px;">' + p.eligibility.substring(0, 20) + '...</div><div class="loan-stat-label">Eligibility</div></div>' +
-          '</div>' +
-          '<button class="btn-primary btn-sm" style="width:100%;background:var(--loan-blue);" onclick="openApplyModal(\'' + p.id + '\')"><i class="fas fa-file-signature"></i> Apply Now</button>' +
+  /* ================= Catalog ================= */
+  function catalogParams() {
+    var p = { page: catalogState.page, limit: catalogState.limit };
+    if (catalogState.search) p.search = catalogState.search;
+    if (catalogState.lender) p.lender = catalogState.lender;
+    if (catalogState.state) p.state = catalogState.state;
+    if (catalogState.gov) p.government_backed = 1;
+    if (catalogState.collateral) p.collateral_free = 1;
+    if (catalogState.sort) p.sort = catalogState.sort;
+    return p;
+  }
+
+  function productCard(p) {
+    var maxAmt = firstDef([p.max_amount, p.min_amount]);
+    var rate = firstDef([p.interest_rate_annual, p.interest_rate]);
+    var tenure = firstDef([p.tenure_text, p.tenure_months ? p.tenure_months + ' months' : null]);
+    var pid = productKey(p);
+    var tags = '<span class="lo-tag">' + esc(firstDef([p.category, 'Loan'])) + '</span>';
+    if (p.government_backed) tags += '<span class="lo-tag gov"><i class="fas fa-landmark"></i> Govt-backed</span>';
+    return '<div class="lo-card" data-pid="' + esc(pid) + '">' +
+      '<div class="lo-card-top">' +
+        '<div class="lo-card-bank"><i class="fas ' + lenderIcon(p.lender) + '"></i></div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="lo-card-name">' + esc(p.name) + '</div>' +
+          '<div class="lo-card-lender">' + esc(firstDef([p.lender, 'Lender'])) + '</div>' +
+        '</div>' +
+        '<button class="lo-save-btn' + (p.is_saved ? ' saved' : '') + '" title="' + (p.is_saved ? 'Remove from saved' : 'Save for later') + '" data-saved="' + (p.is_saved ? '1' : '0') + '" onclick="LoansApp.toggleSave(\'' + esc(pid) + '\')"><i class="' + (p.is_saved ? 'fas fa-bookmark' : 'far fa-bookmark') + '"></i></button>' +
+      '</div>' +
+      '<div class="lo-card-tags">' + tags + '</div>' +
+      '<div class="lo-card-desc">' + esc(firstDef([p.description, 'No description published by the lender.'])) + '</div>' +
+      '<div class="lo-stats">' +
+        '<div class="lo-stat"><div class="lo-stat-num">' + st.inrShort(maxAmt) + '</div><div class="lo-stat-label">Max</div></div>' +
+        '<div class="lo-stat"><div class="lo-stat-num">' + st.pct(rate) + '</div><div class="lo-stat-label">Interest</div></div>' +
+        '<div class="lo-stat"><div class="lo-stat-num">' + esc(firstDef([tenure, '—'])) + '</div><div class="lo-stat-label">Tenure</div></div>' +
+      '</div>' +
+      '<div class="lo-card-actions">' +
+        '<button class="lo-btn lo-btn-ghost" onclick="LoansApp.openDetails(\'' + esc(pid) + '\')"><i class="fas fa-eye"></i> Details</button>' +
+        '<button class="lo-btn lo-btn-primary" onclick="LoansApp.openApplyFrom(\'' + esc(pid) + '\')"><i class="fas fa-paper-plane"></i> Apply</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function loadCatalog() {
+    var container = document.getElementById('lo-catalog-container');
+    if (!container) return;
+    container.innerHTML = skeletonCards(6);
+
+    Loan.products(catalogParams()).then(function (data) {
+      var items = data.items || [];
+      var total = data.total || 0;
+      var totalPages = data.total_pages || 0;
+      catalogState.total = total;
+      catalogState.totalPages = totalPages;
+
+      if (!items.length) {
+        container.innerHTML = '<div style="margin-top:6px;">' + emptyState('No loan products match your filters', 'Try widening your search or resetting the filters.') + '</div>';
+        return;
+      }
+      var h = '<div class="lo-grid">';
+      for (var i = 0; i < items.length; i++) h += productCard(items[i]);
+      h += '</div>';
+
+      var from = ((catalogState.page - 1) * catalogState.limit) + 1;
+      var to = Math.min(from + items.length - 1, total);
+      h += '<div class="lo-pagination">' +
+        '<button class="lo-page-btn" data-lo-page="' + (catalogState.page - 1) + '" onclick="LoansApp.setCatalogPage(' + (catalogState.page - 1) + ')" ' + (catalogState.page <= 1 ? 'disabled' : '') + '><i class="fas fa-chevron-left"></i> Prev</button>' +
+        '<span class="lo-page-info">' + from + ' &ndash; ' + to + ' of ' + total + '</span>' +
+        '<button class="lo-page-btn" data-lo-page="' + (catalogState.page + 1) + '" onclick="LoansApp.setCatalogPage(' + (catalogState.page + 1) + ')" ' + (catalogState.page >= totalPages ? 'disabled' : '') + '>Next <i class="fas fa-chevron-right"></i></button>' +
+      '</div>';
+      container.innerHTML = h;
+    }).catch(function (err) {
+      container.innerHTML = '';
+      var msg = (err && err.message) || 'Unable to load loan products.';
+      if (err && (err.isAuthError)) msg = 'Your session has expired. Please log in again.';
+      var el = errorState(msg, loadCatalog);
+      container.appendChild(el);
+    });
+  }
+
+  /* ================= Saved ================= */
+  function loadSaved() {
+    loadedOnce.saved = true;
+    var container = document.getElementById('lo-saved-container');
+    if (!container) return;
+    container.innerHTML = skeletonCards(3);
+
+    Loan.savedProducts({ limit: 50 }).then(function (data) {
+      var items = data.items || [];
+      if (!items.length) {
+        container.innerHTML = emptyState('No saved loans yet', 'Tap the bookmark icon on any loan to save it here.');
+        return;
+      }
+      var h = '<div class="lo-grid">';
+      for (var i = 0; i < items.length; i++) h += productCard(items[i]);
+      h += '</div>';
+      container.innerHTML = h;
+    }).catch(function (err) {
+      container.innerHTML = '';
+      container.appendChild(errorState((err && err.message) || 'Unable to load saved loans.', loadSaved));
+    });
+  }
+
+  /* ================= Applications ================= */
+  function applicationCard(a) {
+    var meta = appStatusMeta(a.status);
+    var docsCount = (a.documents && a.documents.length) || 0;
+    return '<div class="lo-row-card">' +
+      '<div class="lo-row-main">' +
+        '<div class="lo-row-icon"><i class="fas fa-file-signature"></i></div>' +
+        '<div class="lo-row-info">' +
+          '<div class="lo-row-title">' + esc(a.loan_name || 'Loan Application') + '</div>' +
+          '<div class="lo-row-sub">' + esc(firstDef([a.lender, 'Lender'])) + ' &bull; ' + esc(a.reference_number || a.application_id) + ' &bull; ' + esc(st.date(a.submitted_at)) + '</div>' +
+          '<div class="lo-row-sub" style="margin-top:5px;">Requested: <b>' + st.inr(a.requested_amount) + '</b> &nbsp; Docs: ' + docsCount + ' uploaded &nbsp; ' + (a.required_documents && a.required_documents.length ? 'Required: ' + a.required_documents.length : '') + '</div>' +
+        '</div>' +
+        '<div class="lo-row-right">' +
+          '<span class="lo-badge ' + meta.cls + '">' + meta.label + '</span>' +
+          '<button class="lo-btn-micro" style="background:var(--soft-green);color:var(--primary-green);" onclick="LoansApp.openApplication(\'' + esc(a.application_id) + '\')"><i class="fas fa-eye"></i> View</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function loadApplications() {
+    loadedOnce.apps = true;
+    var container = document.getElementById('lo-apps-container');
+    if (!container) return;
+    container.innerHTML = skeletonCards(3);
+
+    var params = { page: appsState.page, limit: appsState.limit };
+    if (appsState.status) params.status = appsState.status;
+
+    Loan.applications(params).then(function (data) {
+      var items = data.items || [];
+      var total = data.total || 0;
+      var totalPages = Math.max(1, Math.ceil(total / appsState.limit));
+      appsState.total = total;
+      appsState.totalPages = totalPages;
+
+      if (!items.length) {
+        container.innerHTML = emptyState(appsState.status ? 'No applications with this status' : 'No loan applications yet', appsState.status ? 'Try another status filter.' : 'Explore the catalogue and submit your first application.');
+        return;
+      }
+      var h = '<div class="lo-list">';
+      for (var i = 0; i < items.length; i++) h += applicationCard(items[i]);
+      h += '</div>';
+
+      if (totalPages > 1) {
+        h += '<div class="lo-pagination">' +
+          '<button class="lo-page-btn" onclick="LoansApp.setAppsPage(' + (appsState.page - 1) + ')" ' + (appsState.page <= 1 ? 'disabled' : '') + '><i class="fas fa-chevron-left"></i> Prev</button>' +
+          '<span class="lo-page-info">Page ' + appsState.page + ' of ' + totalPages + ' &bull; ' + total + ' total</span>' +
+          '<button class="lo-page-btn" onclick="LoansApp.setAppsPage(' + (appsState.page + 1) + ')" ' + (appsState.page >= totalPages ? 'disabled' : '') + '>Next <i class="fas fa-chevron-right"></i></button>' +
         '</div>';
       }
-      container.innerHTML = html;
-    }, 400);
+      container.innerHTML = h;
+    }).catch(function (err) {
+      container.innerHTML = '';
+      container.appendChild(errorState((err && err.message) || 'Unable to load applications.', loadApplications));
+    });
   }
 
-  /* ---- Render My Applications ---- */
-  function renderMyApplications() {
-    var container = document.getElementById('my-applications-list');
-    UIState.loading(container);
+  /* ================= My Loans & Repayments ================= */
+  function farmerLoanCard(fl) {
+    var meta = loanStatusMeta(fl.status);
+    var outstanding = parseFloat(fl.outstanding_amount) || 0;
+    var principal = parseFloat(fl.principal_amount) || 0;
+    var pct = principal > 0 ? Math.max(0, Math.min(100, (100 * (principal - outstanding) / principal))) : 0;
+    var canRepay = fl.status === 'active' && outstanding > 0;
 
-    setTimeout(function () {
-      var html = '';
-      for (var i = 0; i < mockApplications.length; i++) {
-        var a = mockApplications[i];
-        var statusLabel = { draft: 'Draft', submitted: 'Under Review', approved: 'Approved', rejected: 'Rejected' }[a.status] || 'Unknown';
-        var badgeClass = { draft: 'draft', submitted: 'submitted', approved: 'approved', rejected: 'rejected' }[a.status] || 'draft';
-        var iconColor = { draft: '#6B7280', submitted: '#1E40AF', approved: '#065F46', rejected: '#991B1B' }[a.status] || '#6B7280';
-        var iconBg = { draft: 'rgba(107,114,128,0.1)', submitted: 'rgba(30,64,175,0.1)', approved: 'rgba(5,150,105,0.1)', rejected: 'rgba(153,27,27,0.1)' }[a.status] || 'rgba(107,114,128,0.1)';
+    return '<div class="lo-row-card">' +
+      '<div class="lo-row-main">' +
+        '<div class="lo-row-icon"><i class="fas fa-hand-holding-usd"></i></div>' +
+        '<div class="lo-row-info">' +
+          '<div class="lo-row-title">' + esc(fl.loan_name || 'Farm Loan') + '</div>' +
+          '<div class="lo-row-sub">' + esc(fl.lender || 'Lender') + ' &bull; Disbursed ' + esc(st.date(fl.disbursed_at)) + ' &bull; ' + esc(fl.farmer_loan_id) + '</div>' +
+          '<div class="lo-row-sub" style="margin-top:5px;">Principal: <b>' + st.inr(fl.principal_amount) + '</b> &bull; Rate: ' + st.pct(fl.interest_rate_annual) + ' &bull; EMI: <b>' + st.inr(fl.emi_amount) + '</b>/mo &bull; ' + esc(firstDef([fl.tenure_months, '—'])) + ' months</div>' +
+          '<div class="lo-progress"><div class="lo-progress-fill" style="width:' + pct + '%;"></div></div>' +
+          '<div class="lo-row-sub">Paid off ' + pct.toFixed(0) + '% &bull; Outstanding: <b>' + st.inr(outstanding) + '</b></div>' +
+          (fl.status === 'active' ? '<div class="lo-row-sub" style="margin-top:4px;">Next due: ' + esc(st.date(fl.next_due_date)) + ' (' + st.inr(fl.next_payment) + ')</div>' : '') +
+        '</div>' +
+        '<div class="lo-row-right">' +
+          '<span class="lo-badge ' + meta.cls + '">' + meta.label + '</span>' +
+          (canRepay ? '<button class="lo-btn-micro" style="background:var(--primary-green);color:white;" onclick="LoansApp.openRepay(\'' + esc(fl.farmer_loan_id) + '\')"><i class="fas fa-wallet"></i> Repay</button>' : '') +
+          '<button class="lo-btn-micro" style="background:var(--soft-green);color:var(--primary-green);" onclick="LoansApp.openHistory(\'' + esc(fl.farmer_loan_id) + '\')"><i class="fas fa-history"></i> History</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
 
-        html += '<div class="price-card">' +
-          '<div class="price-info">' +
-            '<div class="price-icon" style="background:' + iconBg + ';color:' + iconColor + ';"><i class="fas fa-file-alt"></i></div>' +
-            '<div>' +
-              '<div class="price-crop">' + a.loanName + '</div>' +
-              '<div style="font-size:10px;color:var(--text-muted);">' + a.bank + ' &bull; ' + formatters.date(a.date) + ' &bull; ' + formatters.inr(a.amount) + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-            '<span class="loan-badge ' + badgeClass + '">' + statusLabel + '</span>';
-        if (a.status === 'draft') {
-          html += '<button class="btn-primary btn-sm" style="font-size:10px;padding:5px 10px;border-radius:8px;background:var(--loan-blue);" onclick="continueApplication(\'' + a.id + '\')">Continue Application</button>';
-        } else if (a.status === 'submitted') {
-          html += '<button class="btn-secondary btn-sm" style="font-size:10px;padding:5px 10px;border-radius:8px;" onclick="showToast(\'Tracking details for ' + a.id + ' loading...\',\'info\')">Track</button>';
-        } else if (a.status === 'approved') {
-          html += '<button class="btn-secondary btn-sm" style="font-size:10px;padding:5px 10px;border-radius:8px;" onclick="showToast(\'Loan of ' + formatters.inr(a.amount) + ' approved! Disbursal in 3-5 days.\',\'success\')"><i class="fas fa-check-circle"></i> Disbursal Info</button>';
-        } else if (a.status === 'rejected') {
-          html += '<button class="btn-secondary btn-sm" style="font-size:10px;padding:5px 10px;border-radius:8px;" onclick="showToast(\'Reasons: Insufficient land documents. Please re-apply with updated records.\',\'error\')">View Reason</button>';
+  function loadFarmerLoans() {
+    loadedOnce.loans = true;
+    var container = document.getElementById('lo-loans-container');
+    if (!container) return;
+    container.innerHTML = skeletonCards(2);
+
+    Loan.farmerLoans().then(function (data) {
+      var items = data.items || [];
+      if (!items.length) {
+        container.innerHTML = emptyState('No loans yet', 'Once a lender disburses a loan, you can track and repay it here.');
+        return;
+      }
+      var active = items.filter(function (x) { return x.status === 'active'; });
+      var others = items.filter(function (x) { return x.status !== 'active'; });
+      var h = '';
+      if (active.length) {
+        h += '<div class="lo-banner"><i class="fas fa-hand-holding-usd" style="color:var(--primary-green);"></i> Repayments are debited from your Farm Assist wallet after you confirm with your wallet PIN.</div>';
+        h += '<div class="lo-list">';
+        for (var i = 0; i < active.length; i++) h += farmerLoanCard(active[i]);
+        h += '</div>';
+      }
+      if (others.length) {
+        h += '<h4 style="font-size:14px;font-weight:700;margin:20px 0 12px;display:flex;align-items:center;gap:8px;color:var(--text-secondary);"><i class="fas fa-archive"></i> Closed / Completed</h4>';
+        h += '<div class="lo-list">';
+        for (var j = 0; j < others.length; j++) h += farmerLoanCard(others[j]);
+        h += '</div>';
+      }
+      container.innerHTML = h;
+    }).catch(function (err) {
+      container.innerHTML = '';
+      container.appendChild(errorState((err && err.message) || 'Unable to load your loans.', loadFarmerLoans));
+    });
+  }
+
+  /* ================= Modals ================= */
+  function openModal(id) {
+    var m = document.getElementById(id);
+    if (!m) return;
+    m.classList.add('active');
+    document.body.classList.add('lo-modal-open');
+  }
+
+  window.LoansApp = {
+    closeModal: function () {
+      document.querySelectorAll('.modal-backdrop.active').forEach(function (el) { el.classList.remove('active'); });
+      document.body.classList.remove('lo-modal-open');
+    },
+
+    scrollToCatalog: function () {
+      switchTab('explore');
+      var el = document.getElementById('lo-tab-explore');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+
+    openFilterDrawer: function () {
+      document.getElementById('lo-filter-drawer').classList.add('active');
+      document.getElementById('lo-filter-overlay').classList.add('active');
+      document.body.classList.add('lo-modal-open');
+    },
+
+    closeFilterDrawer: function () {
+      document.getElementById('lo-filter-drawer').classList.remove('active');
+      document.getElementById('lo-filter-overlay').classList.remove('active');
+      if (!document.querySelector('.modal-backdrop.active')) document.body.classList.remove('lo-modal-open');
+    },
+
+    applyFilters: function () {
+      var lenderBox = document.getElementById('lo-f-lender');
+      var stateBox = document.getElementById('lo-f-state');
+      var lender = '';
+      var state = '';
+      if (lenderBox) {
+        var l = lenderBox.querySelector('input[name="lo_flender"]:checked');
+        if (l) lender = l.value;
+      }
+      if (stateBox) {
+        var s = stateBox.querySelector('input[name="lo_fstate"]:checked');
+        if (s) state = s.value;
+      }
+      catalogState.lender = lender;
+      catalogState.state = state;
+      catalogState.gov = document.getElementById('lo-f-gov').checked;
+      catalogState.collateral = document.getElementById('lo-f-collateral').checked;
+      catalogState.page = 1;
+      updateFilterBadge();
+      LoansApp.closeFilterDrawer();
+      loadCatalog();
+    },
+
+    resetFilters: function () {
+      var lenderBox = document.getElementById('lo-f-lender');
+      var stateBox = document.getElementById('lo-f-state');
+      if (lenderBox) {
+        var allL = lenderBox.querySelector('input[name="lo_flender"][value=""]');
+        if (allL) allL.checked = true;
+        else lenderBox.querySelectorAll('input[name="lo_flender"]').forEach(function (b) { b.checked = false; });
+      }
+      if (stateBox) {
+        var allS = stateBox.querySelector('input[name="lo_fstate"][value=""]');
+        if (allS) allS.checked = true;
+        else stateBox.querySelectorAll('input[name="lo_fstate"]').forEach(function (b) { b.checked = false; });
+      }
+      document.getElementById('lo-f-gov').checked = false;
+      document.getElementById('lo-f-collateral').checked = false;
+      catalogState.lender = '';
+      catalogState.state = '';
+      catalogState.gov = null;
+      catalogState.collateral = null;
+      catalogState.page = 1;
+      updateFilterBadge();
+      LoansApp.closeFilterDrawer();
+      loadCatalog();
+    },
+
+    setCatalogPage: function (page) {
+      if (page < 1 || page > catalogState.totalPages) return;
+      catalogState.page = page;
+      loadCatalog();
+    },
+
+    setAppsPage: function (page) {
+      if (page < 1 || page > appsState.totalPages) return;
+      appsState.page = page;
+      loadApplications();
+    },
+
+    toggleSave: function (pid) {
+      Loan.getProduct(pid).then(function (p) {
+        if (p && p.is_saved) {
+          return Loan.unsaveProduct(pid).then(function () {
+            showToast('Removed from saved loans', 'success');
+          });
         }
-        html += '</div></div>';
-      }
-      container.innerHTML = html;
-    }, 400);
-  }
+        return Loan.saveProduct(pid).then(function () {
+          showToast('Loan saved for later', 'success');
+        });
+      }).then(function () {
+        refreshAfterSave();
+      }).catch(function (err) {
+        showToast((err && err.message) || 'Could not update saved loans', 'error');
+      });
 
-  /* ---- Application Modal ---- */
-  window.openApplyModal = function (loanId) {
-    for (var i = 0; i < mockLoanProducts.length; i++) {
-      if (mockLoanProducts[i].id === loanId) {
-        document.getElementById('apply-loan-name').value = mockLoanProducts[i].name;
-        break;
+      function refreshAfterSave() {
+        if (document.getElementById('lo-tab-explore') && document.getElementById('lo-tab-explore').style.display !== 'none') loadCatalog();
+        if (document.getElementById('lo-tab-saved') && document.getElementById('lo-tab-saved').style.display !== 'none') loadSaved();
       }
+    },
+
+    openDetails: function (pid) {
+      Loan.getProduct(pid).then(function (data) {
+        currentProduct = data;
+        renderDetails(data);
+        openModal('lo-modal-details');
+      }).catch(function (err) {
+        showToast((err && err.message) || 'Unable to load loan details', 'error');
+      });
+    },
+
+    openEligibility: function () {
+      if (!currentProduct) return;
+      document.getElementById('lo-elig-product-id').value = productKey(currentProduct);
+      document.getElementById('lo-elig-product-name').textContent = currentProduct.name;
+      document.getElementById('lo-elig-product-lender').textContent = firstDef([currentProduct.lender, 'Lender']) + ' · ' + st.inrShort(currentProduct.max_amount) + ' · ' + st.pct(currentProduct.interest_rate_annual) + ' p.a.';
+      document.getElementById('lo-elig-form').style.display = 'block';
+      document.getElementById('lo-elig-result').style.display = 'none';
+      openModal('lo-modal-elig');
+      if (!document.getElementById('lo-elig-state').options.length) fillStateSelect(document.getElementById('lo-elig-state'));
+    },
+
+    resetEligibility: function () {
+      document.getElementById('lo-elig-form').style.display = 'block';
+      document.getElementById('lo-elig-result').style.display = 'none';
+    },
+
+    checkEligibility: function () {
+      var pid = document.getElementById('lo-elig-product-id').value;
+      var existingVal = document.getElementById('lo-elig-existing').value;
+      var payload = {
+        product_id: pid,
+        farmer_type: document.getElementById('lo-elig-type').value || null,
+        farmer_category: document.getElementById('lo-elig-category').value || null,
+        state: document.getElementById('lo-elig-state').value || null,
+        district: document.getElementById('lo-elig-district').value || null,
+        crop: document.getElementById('lo-elig-crop').value || null,
+        farm_size_acres: parseFloat(document.getElementById('lo-elig-farm').value) || null,
+        loan_amount: parseFloat(document.getElementById('lo-elig-amount').value) || null,
+        has_existing_agri_loan: existingVal === '' ? null : existingVal === 'yes'
+      };
+
+      var btn = document.querySelector('#lo-elig-form .lo-btn-primary');
+      var original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+
+      Loan.checkEligibility(payload).then(function (data) {
+        renderEligibilityResult(data);
+        document.getElementById('lo-elig-form').style.display = 'none';
+        document.getElementById('lo-elig-result').style.display = 'block';
+      }).catch(function (err) {
+        showToast((err && err.message) || 'Eligibility check failed', 'error');
+      }).then(function () {
+        btn.disabled = false;
+        btn.innerHTML = original;
+      });
+    },
+
+    openApply: function () {
+      if (!currentProduct) return;
+      openApplyWizard(currentProduct);
+    },
+
+    openApplyFrom: function (pid) {
+      Loan.getProduct(pid).then(function (data) {
+        currentProduct = data;
+        openApplyWizard(data);
+      }).catch(function (err) {
+        showToast((err && err.message) || 'Unable to load loan', 'error');
+      });
+    },
+
+    openApplication: function (applicationId) {
+      Loan.getApplication(applicationId).then(function (data) {
+        currentApplicationId = data.application_id;
+        renderApplicationDetail(data);
+        openModal('lo-modal-application');
+      }).catch(function (err) {
+        showToast((err && err.message) || 'Unable to load application', 'error');
+      });
+    },
+
+    openRepay: function (farmerLoanId) {
+      currentLoanForRepay = farmerLoanId;
+      document.getElementById('lo-repay-id').value = farmerLoanId;
+      document.getElementById('lo-repay-amount-input').value = '';
+      document.getElementById('lo-repay-pin').value = '';
+      document.querySelectorAll('.lo-amount-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.getElementById('lo-repay-balance').textContent = 'Loading...';
+      document.getElementById('lo-repay-expanded').textContent = '--';
+      Loan.farmerLoans().then(function (data) {
+        var items = data.items || [];
+        var fl = null;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].farmer_loan_id === farmerLoanId) { fl = items[i]; break; }
+        }
+        if (fl) {
+          currentRepayLoan = fl;
+          document.getElementById('lo-repay-loan').textContent = fl.loan_name || 'Farm Loan';
+          document.getElementById('lo-repay-outstanding').textContent = fl.lender + ' · Outstanding: ' + st.inr(fl.outstanding_amount) + ' · EMI: ' + st.inr(fl.emi_amount);
+          document.getElementById('lo-repay-expanded').textContent = st.inr(fl.outstanding_amount);
+        }
+      }).catch(function () {});
+      if (window.API.Wallet) {
+        window.API.Wallet.getSummary().then(function (bal) {
+          var b = bal && (bal.balance !== undefined && bal.balance !== null) ? bal.balance : (bal && bal.wallet ? bal.wallet.balance : null);
+          document.getElementById('lo-repay-balance').textContent = (b === null || b === undefined) ? 'Unavailable' : st.inr(b);
+        }).catch(function () {
+          document.getElementById('lo-repay-balance').textContent = 'Unavailable';
+        });
+      }
+      openModal('lo-modal-repay');
+      setTimeout(function () { document.getElementById('lo-repay-amount-input').focus(); }, 150);
+    },
+
+    setRepayPercent: function (pct) {
+      document.querySelectorAll('.lo-amount-btn').forEach(function (b) { b.classList.remove('active'); });
+      var FL = currentRepayLoan;
+      if (!FL) return;
+      var outstanding = parseFloat(FL.outstanding_amount) || 0;
+      var amt = Math.round(outstanding * pct / 100);
+      if (amt > 0) document.getElementById('lo-repay-amount-input').value = amt;
+      var idx = Math.round(pct / 25);
+      var btns = document.querySelectorAll('.lo-amount-btn');
+      if (idx >= 1 && idx <= btns.length) btns[idx - 1].classList.add('active');
+    },
+
+    confirmRepay: function () {
+      var farmerLoanId = document.getElementById('lo-repay-id').value;
+      var amount = parseFloat(document.getElementById('lo-repay-amount-input').value);
+      var pin = document.getElementById('lo-repay-pin').value.trim();
+      if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
+      if (!pin) { showToast('Enter your wallet PIN', 'error'); return; }
+
+      var btn = document.getElementById('lo-repay-btn');
+      var original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing payment...';
+
+      Loan.repay(farmerLoanId, amount, pin).then(function (data) {
+        showToast((data && data.message) || 'Repayment successful', 'success');
+        closeModal();
+        loadOverview();
+        if (loadedOnce.loans) loadFarmerLoans();
+        if (data && data.wallet_transaction && data.wallet_transaction.balance_after !== undefined) {
+          showToast('Wallet balance: ' + st.inr(data.wallet_transaction.balance_after), 'info');
+        }
+      }).catch(function (err) {
+        var msg = (err && err.message) || 'Repayment failed';
+        if (msg.indexOf('PIN') > -1) msg = 'Incorrect wallet PIN. Please try again.';
+        if (msg.indexOf('Insufficient') > -1) msg += ' — add money from the Wallet page.';
+        showToast(msg, 'error');
+      }).then(function () {
+        btn.disabled = false;
+        btn.innerHTML = original;
+        document.getElementById('lo-repay-pin').value = '';
+      });
+    },
+
+    openHistory: function (farmerLoanId) {
+      currentLoanForHistory = farmerLoanId;
+      document.getElementById('lo-history-loan').textContent = 'Loading...';
+      document.getElementById('lo-history-body').innerHTML = skeletonCards(1);
+      openModal('lo-modal-history');
+
+      Loan.farmerLoanRepayments(farmerLoanId).then(function (data) {
+        var fl = data.farmer_loan;
+        document.getElementById('lo-history-loan').textContent = (fl ? fl.loan_name + ' · ' + fl.lender : 'Repayment history');
+        var items = data.items || [];
+        if (!items.length) {
+          document.getElementById('lo-history-body').innerHTML = emptyState('No repayments yet', 'Your wallet repayments will appear here.');
+          return;
+        }
+        var h = '<div class="lo-list">';
+        for (var i = 0; i < items.length; i++) {
+          var r = items[i];
+          var meta = appStatusMeta(r.status);
+          h += '<div class="lo-row-card">' +
+            '<div class="lo-row-main">' +
+              '<div class="lo-row-icon" style="background:var(--soft-green);color:var(--primary-green);"><i class="fas fa-hand-holding-usd"></i></div>' +
+              '<div class="lo-row-info">' +
+                '<div class="lo-row-title">' + st.inr(r.amount) + '</div>' +
+                '<div class="lo-row-sub">' + esc(r.repayment_id) + ' · ' + esc(r.reference_number) + ' · ' + esc(st.date(r.payment_date)) + '</div>' +
+              '</div>' +
+              '<div class="lo-row-right"><span class="lo-badge ' + meta.cls + '">' + meta.label + '</span></div>' +
+            '</div>' +
+          '</div>';
+        }
+        h += '</div>';
+        document.getElementById('lo-history-body').innerHTML = h;
+      }).catch(function (err) {
+        document.getElementById('lo-history-body').innerHTML = '<div style="padding:10px 0;">' + emptyState((err && err.message) || 'Unable to load repayment history', 'No repayments have been recorded.') + '</div>';
+      });
+    },
+
+    openEmi: function () {
+      document.getElementById('lo-emi-result').style.display = 'none';
+      openModal('lo-modal-emi');
+    },
+
+    computeEmi: function () {
+      var P = parseFloat(document.getElementById('lo-emi-amount').value);
+      var yr = parseFloat(document.getElementById('lo-emi-rate').value);
+      var n = parseInt(document.getElementById('lo-emi-tenure').value, 10);
+      if (!P || P <= 0) { showToast('Enter a valid loan amount', 'error'); return; }
+      if (!yr || yr < 0) { showToast('Enter a valid interest rate', 'error'); return; }
+      if (!n || n <= 0) { showToast('Enter a valid tenure', 'error'); return; }
+      var r = yr / 1200;
+      var emi;
+      if (r === 0) emi = P / n;
+      else emi = P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+      var total = emi * n;
+      var interest = total - P;
+      var el = document.getElementById('lo-emi-result');
+      el.style.display = 'block';
+      el.innerHTML =
+        '<div class="lo-emi-result">' +
+          '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Monthly EMI</div>' +
+          '<div class="lo-emi-value">' + st.inr(Math.round(emi)) + '</div>' +
+        '</div>' +
+        '<div class="lo-emi-row"><span class="lbl">Loan Amount</span><span class="val">' + st.inr(P) + '</span></div>' +
+        '<div class="lo-emi-row"><span class="lbl">Interest Rate</span><span class="val">' + yr.toFixed(2) + '% p.a.</span></div>' +
+        '<div class="lo-emi-row"><span class="lbl">Tenure</span><span class="val">' + n + ' months</span></div>' +
+        '<div class="lo-emi-row"><span class="lbl">Total Payable</span><span class="val">' + st.inr(Math.round(total)) + '</span></div>' +
+        '<div class="lo-emi-row"><span class="lbl">Total Interest</span><span class="val">' + st.inr(Math.round(interest)) + '</span></div>' +
+        '<div style="font-size:10px;color:var(--text-muted);margin-top:10px;">Indicative estimate only. Actuals are decided by the lender based on their terms.</div>';
+    },
+
+    openApplicationWizardAddDocs: function () {
+      if (!currentApplicationId) return;
+      currentAddDocsApplication = currentApplicationId;
+      document.getElementById('lo-adddocs-ref').textContent = 'Application: ' + currentApplicationId;
+      ['lo-add-doc-one', 'lo-add-doc-two', 'lo-add-doc-three'].forEach(function (id) { document.getElementById(id).value = ''; });
+      openModal('lo-modal-add-docs');
+    },
+
+    uploadAddDocs: function () {
+      var appId = currentAddDocsApplication;
+      var picks = [
+        { id: 'lo-add-doc-one', type: 'aadhaar_card' },
+        { id: 'lo-add-doc-two', type: 'land_record' },
+        { id: 'lo-add-doc-three', type: 'bank_statement' }
+      ];
+      uploadPickedDocs(appId, picks, function () {
+        closeModal();
+        LoansApp.openApplication(appId);
+        if (loadedOnce.apps) loadApplications();
+        showToast('Documents uploaded', 'success');
+      });
+    },
+
+    cancelApply: function () {
+      closeModal();
+    },
+
+    nextApplyStep: function (step) {
+      var cur = applyCurrentStep;
+      if (cur === 1) {
+        if (!document.getElementById('lo-app-name').value.trim()) { showToast('Please enter your full name', 'error'); return; }
+        var phone = document.getElementById('lo-app-phone').value.replace(/\D/g, '');
+        if (phone.length < 10 || phone.length > 13) { showToast('Please enter a valid mobile number (10-13 digits)', 'error'); return; }
+        var aadhaar = document.getElementById('lo-app-aadhaar').value.replace(/\D/g, '');
+        if (aadhaar && aadhaar.length !== 12) { showToast('Aadhaar must be exactly 12 digits', 'error'); return; }
+      }
+      if (cur === 2) {
+        var farmVal = parseFloat(document.getElementById('lo-app-farm').value);
+        if (farmVal && farmVal < 0) { showToast('Farm size cannot be negative', 'error'); return; }
+      }
+      if (cur === 3) {
+        var err = document.getElementById('lo-app-amount-err');
+        if (err) err.classList.remove('show');
+        var amt = parseFloat(document.getElementById('lo-app-amount').value);
+        if (!amt || amt <= 0) { showToast('Please enter the requested amount', 'error'); return; }
+        if (currentProduct && currentProduct.max_amount && amt > currentProduct.max_amount) {
+          if (err) err.classList.add('show');
+          return;
+        }
+        if (!document.getElementById('lo-app-purpose').value.trim()) { showToast('Please enter a purpose for the loan', 'error'); return; }
+      }
+      applyCurrentStep = step;
+      if (step === 4) populateApplyReview();
+      applyShowStep(step);
+    },
+
+    prevApplyStep: function (step) {
+      applyCurrentStep = step;
+      applyShowStep(step);
+    },
+
+    submitApplication: function () {
+      var btn = document.getElementById('lo-apply-submit-btn');
+      btn.disabled = true;
+      var original = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+      var payload = {
+        product_id: productKey(currentProduct),
+        applicant_name: document.getElementById('lo-app-name').value.trim(),
+        phone_number: document.getElementById('lo-app-phone').value.trim(),
+        aadhaar_number: document.getElementById('lo-app-aadhaar').value.trim() || null,
+        email: document.getElementById('lo-app-email').value.trim() || null,
+        farm_size: parseFloat(document.getElementById('lo-app-farm').value) || null,
+        crop: document.getElementById('lo-app-crop').value.trim() || null,
+        land_type: document.getElementById('lo-app-land').value || null,
+        state: document.getElementById('lo-app-state').value || null,
+        district: document.getElementById('lo-app-district').value.trim() || null,
+        purpose: document.getElementById('lo-app-purpose').value.trim(),
+        requested_amount: parseFloat(document.getElementById('lo-app-amount').value),
+        notes: document.getElementById('lo-app-notes').value.trim() || null
+      };
+
+      Loan.createApplication(payload).then(function (data) {
+        var appId = data.application_id || data.reference_number;
+        currentApplicationId = appId;
+        applyEnterDocsStep(data);
+        if (loadedOnce.apps) { appsState.page = 1; loadApplications(); } else { loadedOnce.apps = true; }
+        loadOverview();
+      }).catch(function (err) {
+        var msg = (err && err.message) || 'Application could not be submitted.';
+        if (err && err.data && err.data.detail) msg = err.data.detail;
+        showToast(msg, 'error');
+      }).then(function () {
+        btn.disabled = false;
+        btn.innerHTML = original;
+      });
+    },
+
+    uploadApplicationDocs: function () {
+      var appId = currentApplicationId;
+      var picks = [
+        { id: 'lo-doc-one', type: 'aadhaar_card' },
+        { id: 'lo-doc-two', type: 'land_record' },
+        { id: 'lo-doc-three', type: 'bank_statement' },
+        { id: 'lo-doc-four', type: 'other' }
+      ];
+      uploadPickedDocs(appId, picks, function (uploaded, failed) {
+        showStepSuccess(appId);
+        if (loadedOnce.apps) loadApplications();
+        showToast(uploaded ? 'Application submitted with ' + uploaded + ' document(s)' : 'Application submitted', uploaded ? 'success' : 'info');
+        if (failed) showToast(failed + ' document(s) could not be uploaded — you can retry from My Applications.', 'error');
+      });
+    },
+
+    skipApplicationDocs: function () {
+      showStepSuccess(currentApplicationId);
+      if (loadedOnce.apps) loadApplications();
+    },
+
+    goToApplications: function () {
+      closeModal();
+      switchTab('apps');
+      if (loadedOnce.apps) loadApplications();
     }
-    currentStep = 1;
-    showStep(1);
-    document.getElementById('loan-application-form').reset();
-    document.getElementById('loan-step-5').classList.remove('active');
-    openModal('apply-modal');
   };
 
-  /* ---- Multi-step navigation ---- */
-  function showStep(step) {
-    for (var i = 1; i <= 5; i++) {
-      var el = document.getElementById('loan-step-' + i);
-      if (el) el.classList.remove('active');
-      var dot = document.getElementById('step-dot-' + i);
-      if (dot) {
-        dot.classList.remove('active');
-        dot.classList.remove('done');
-      }
-    }
-    var current = document.getElementById('loan-step-' + step);
-    if (current) current.classList.add('active');
-    for (var j = 1; j < step; j++) {
-      var d = document.getElementById('step-dot-' + j);
-      if (d) d.classList.add('done');
-    }
-    var activeDot = document.getElementById('step-dot-' + step);
-    if (activeDot) activeDot.classList.add('active');
-    currentStep = step;
+  function closeModal() {
+    window.LoansApp.closeModal();
   }
 
-  window.nextStep = function (step) {
-    var valid = validateStep(currentStep);
-    if (!valid) {
-      showToast('Please fill all required fields.', 'error');
+  /* ================= Details rendering ================= */
+  function renderDetails(p) {
+    document.getElementById('lo-det-name').textContent = p.name;
+    document.getElementById('lo-det-lender').textContent = firstDef([p.lender, 'Lender']) + (p.lender_type ? ' · ' + p.lender_type : '');
+    document.getElementById('lo-det-disclaimer').innerHTML =
+      '<i class="fas fa-info-circle"></i> Data is as published by the lender' +
+      (p.last_verified_at ? ' and last verified on ' + st.date(p.last_verified_at) : '') +
+      '. Farm Assist does not approve loans — final eligibility and approval are decided solely by the lender.';
+
+    var tags = '<span class="lo-tag">' + esc(firstDef([p.category, 'Loan'])) + '</span>';
+    if (firstDef([p.loan_type])) tags += '<span class="lo-tag">' + esc(p.loan_type) + '</span>';
+    if (p.government_backed) {
+      tags += p.scheme_id
+        ? '<a class="lo-tag gov" style="text-decoration:none;cursor:pointer;" href="scheme_detail.html?id=' + encodeURIComponent(p.scheme_id) + '"><i class="fas fa-landmark"></i> ' + esc(firstDef([p.scheme_name, 'Govt Scheme'])) + '</a>'
+        : '<span class="lo-tag gov"><i class="fas fa-landmark"></i> Govt-backed</span>';
+    }
+    if (firstDef([p.state])) tags += '<span class="lo-tag">' + esc(p.state) + '</span>';
+    document.getElementById('lo-det-tags').innerHTML = tags;
+
+    var body = '';
+    if (firstDef([p.description])) body += '<p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px;">' + esc(p.description) + '</p>';
+
+    body += '<div class="lo-detail-section"><h4><i class="fas fa-credit-card"></i> Loan Overview</h4>' +
+      '<div class="lo-detail-row"><span class="lbl">Amount Range</span><span class="val">' + st.inr(p.min_amount) + ' &ndash; ' + st.inr(p.max_amount) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Interest Rate</span><span class="val">' + esc(firstDef([p.interest_rate, p.interest_rate_annual ? p.interest_rate_annual + '% p.a.' : null])) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Tenure</span><span class="val">' + esc(firstDef([p.tenure_text, p.tenure_months ? p.tenure_months + ' months' : null])) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Repayment Frequency</span><span class="val">' + esc(firstDef([p.repayment_frequency])) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Application Method</span><span class="val">' + esc(firstDef([p.application_method])) + '</span></div>' +
+      (firstDef([p.fees]) ? '<div class="lo-detail-row"><span class="lbl">Fees / Charges</span><span class="val">' + esc(p.fees) + '</span></div>' : '') +
+      '</div>';
+
+    if (firstDef([p.eligibility])) {
+      body += '<div class="lo-detail-section"><h4><i class="fas fa-clipboard-check"></i> Eligibility</h4>' +
+        '<p style="font-size:12px;color:var(--text-secondary);line-height:1.6;">' + esc(p.eligibility) + '</p></div>';
+    }
+
+    if (firstDef([p.collateral_requirement])) {
+      body += '<div class="lo-detail-section"><h4><i class="fas fa-home"></i> Collateral</h4>' +
+        '<p style="font-size:12px;color:var(--text-secondary);">' + esc(p.collateral_requirement) + '</p></div>';
+    }
+
+    if (p.required_documents && p.required_documents.length) {
+      body += '<div class="lo-detail-section"><h4><i class="fas fa-file-alt"></i> Required Documents</h4>' +
+        '<div>' + p.required_documents.map(function (d) { return '<span class="lo-doc-tag"><i class="fas fa-file"></i> ' + esc(d) + '</span>'; }).join('') + '</div></div>';
+    }
+
+    if (firstDef([p.official_url]) || firstDef([p.source]) || firstDef([p.source_url])) {
+      body += '<div class="lo-detail-section"><h4><i class="fas fa-link"></i> Published Source</h4>' +
+        (firstDef([p.official_url]) ? '<div class="lo-detail-row"><span class="lbl">Official Page</span><span class="val"><a href="' + esc(p.official_url) + '" target="_blank" rel="noopener">Open &rarr;</a></span></div>' : '') +
+        (firstDef([p.source]) ? '<div class="lo-detail-row"><span class="lbl">Source</span><span class="val">' + esc(p.source) + '</span></div>' : '') +
+        (firstDef([p.source_url]) ? '<div class="lo-detail-row"><span class="lbl">Source Link</span><span class="val"><a href="' + esc(p.source_url) + '" target="_blank" rel="noopener">Visit &rarr;</a></span></div>' : '') +
+        (p.last_verified_at ? '<div class="lo-detail-row"><span class="lbl">Last Verified</span><span class="val">' + st.date(p.last_verified_at) + '</span></div>' : '') +
+        '</div>';
+    }
+
+    document.getElementById('lo-det-body').innerHTML = body;
+  }
+
+  /* ================= Eligibility rendering ================= */
+  function renderEligibilityResult(data) {
+    var result = data.result || {};
+    var verdict = result.verdict || 'needs_review';
+    var cls = verdict === 'likely_eligible' ? 'likely' : (verdict === 'not_likely' ? 'notlikely' : 'review');
+    var icon = verdict === 'likely_eligible' ? 'fa-circle-check' : (verdict === 'not_likely' ? 'fa-circle-xmark' : 'fa-circle-question');
+
+    var vHtml = '<div class="lo-result-verdict ' + cls + '">' +
+      '<div class="lo-verdict-label"><i class="fas ' + icon + '"></i> ' + esc(result.status_label || 'Result') + '</div>' +
+      '<div class="lo-verdict-headline">' + esc(result.headline || '') + '</div>' +
+    '</div>';
+
+    var dHtml = '';
+    if (result.matched && result.matched.length) {
+      dHtml += '<div class="lo-result-group"><h5><i class="fas fa-check"></i> What looks good</h5><ul>';
+      result.matched.forEach(function (m) { dHtml += '<li class="ok"><i class="fas fa-check-circle"></i> ' + esc(m) + '</li>'; });
+      dHtml += '</ul></div>';
+    }
+    if (result.warnings && result.warnings.length) {
+      dHtml += '<div class="lo-result-group"><h5><i class="fas fa-exclamation-triangle"></i> Points to verify</h5><ul>';
+      result.warnings.forEach(function (w) { dHtml += '<li class="warn"><i class="fas fa-exclamation-circle"></i> ' + esc(w) + '</li>'; });
+      dHtml += '</ul></div>';
+    }
+    if (result.missing && result.missing.length) {
+      dHtml += '<div class="lo-result-group"><h5><i class="fas fa-times"></i> Areas of concern</h5><ul>';
+      result.missing.forEach(function (m) { dHtml += '<li class="miss"><i class="fas fa-times-circle"></i> ' + esc(m) + '</li>'; });
+      dHtml += '</ul></div>';
+    }
+    dHtml += '<div class="lo-disclaimer">' + esc(result.disclaimer || 'This is an indicative check. Farm Assist does not sanction loans.') + '</div>';
+
+    document.getElementById('lo-elig-verdict').innerHTML = vHtml;
+    document.getElementById('lo-elig-details').innerHTML = dHtml;
+  }
+
+  /* ================= Application wizard ================= */
+  function applyShowStep(step) {
+    var steps = ['lo-apply-step-1', 'lo-apply-step-2', 'lo-apply-step-3', 'lo-apply-step-4', 'lo-apply-step-docs', 'lo-apply-step-success'];
+    steps.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+    for (var i = 1; i <= 4; i++) {
+      var d = document.getElementById('lo-apply-dot-' + i);
+      if (!d) continue;
+      if (i === step) { d.classList.add('active'); d.classList.remove('done'); }
+      else if (i < step) { d.classList.add('done'); d.classList.remove('active'); }
+      else { d.classList.remove('active', 'done'); }
+    }
+    document.getElementById('lo-apply-dots').style.display = (step >= 5) ? 'none' : 'flex';
+    var map = { 1: 'lo-apply-step-1', 2: 'lo-apply-step-2', 3: 'lo-apply-step-3', 4: 'lo-apply-step-4', 5: 'lo-apply-step-docs', 6: 'lo-apply-step-success' };
+    var target = document.getElementById(map[step]);
+    if (target) target.classList.add('active');
+  }
+
+  function openApplyWizard(p) {
+    currentProduct = p;
+    applyCurrentStep = 1;
+    document.getElementById('lo-apply-product-id').value = productKey(p);
+    document.getElementById('lo-apply-product-name').textContent = p.name;
+    document.getElementById('lo-apply-product-sub').textContent = firstDef([p.lender, 'Lender']) + ' · ' + st.inrShort(p.max_amount) + ' max · ' + st.pct(p.interest_rate_annual) + ' p.a.';
+
+    var range = document.getElementById('lo-apply-range');
+    range.innerHTML = 'Published range: <b>' + st.inr(p.min_amount) + '</b> &ndash; <b>' + st.inr(p.max_amount) + '</b>. Stay within this range — the lender validates the amount when reviewing.';
+
+    var err = document.getElementById('lo-app-amount-err');
+    if (err) err.classList.remove('show');
+
+    ['lo-app-name', 'lo-app-phone', 'lo-app-aadhaar', 'lo-app-email', 'lo-app-farm', 'lo-app-crop', 'lo-app-land', 'lo-app-district', 'lo-app-amount', 'lo-app-purpose', 'lo-app-notes'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    ['lo-doc-one', 'lo-doc-two', 'lo-doc-three', 'lo-doc-four'].forEach(function (id) { document.getElementById(id).value = ''; });
+    ['lo-doc-one-name', 'lo-doc-two-name', 'lo-doc-three-name', 'lo-doc-four-name'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = id.indexOf('three') > -1 ? 'Optional but recommended' : (id.indexOf('four') > -1 ? 'Optional' : 'PDF, JPG or PNG (max 5MB)');
+    });
+
+    if (!document.getElementById('lo-app-state').options.length) fillStateSelect(document.getElementById('lo-app-state'));
+
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('fa-current-user-data') || 'null'); } catch (e) { saved = null; }
+    if (saved && saved.full_name) document.getElementById('lo-app-name').value = saved.full_name || '';
+    if (saved && saved.phone_number) document.getElementById('lo-app-phone').value = saved.phone_number || '';
+
+    applyShowStep(1);
+    openModal('lo-modal-apply');
+    setTimeout(function () { document.getElementById('lo-app-name').focus(); }, 150);
+  }
+
+  function applyEnterDocsStep(appData) {
+    var statusLine = 'Application <b>' + esc(appData.application_id || appData.reference_number || '') + '</b> created. Now upload your supporting documents.';
+    document.getElementById('lo-apply-docs-status').innerHTML = statusLine;
+    applyShowStep(5);
+  }
+
+  function uploadPickedDocs(appId, picks, doneCb) {
+    var queue = picks.filter(function (pick) {
+      var f = document.getElementById(pick.id);
+      return f && f.files && f.files.length;
+    });
+    var uploaded = 0;
+    var failed = 0;
+    var total = queue.length;
+    if (!total) { doneCb(0, 0); return; }
+
+    var statusEl = document.getElementById('lo-apply-doc-progress');
+    if (statusEl) {
+      statusEl.innerHTML = '<div class="lo-banner"><i class="fas fa-cloud-upload-alt" style="color:var(--primary-green);"></i> Uploading <b>0/' + total + '</b> document(s)...</div>';
+    }
+
+    function next(i) {
+      if (i >= total) {
+        if (statusEl) statusEl.innerHTML = '';
+        doneCb(uploaded, failed);
+        return;
+      }
+      var pick = queue[i];
+      var f = document.getElementById(pick.id).files[0];
+      if (statusEl) {
+        statusEl.innerHTML = '<div class="lo-banner"><i class="fas fa-spinner fa-spin" style="color:var(--primary-green);"></i> Uploading <b>' + (i + 1) + '/' + total + '</b> &mdash; ' + esc(f.name) + '</div>';
+      }
+      Loan.uploadDocument(appId, f, pick.type).then(function () {
+        uploaded++;
+        next(i + 1);
+      }).catch(function () {
+        failed++;
+        next(i + 1);
+      });
+    }
+    next(0);
+  }
+
+  function showStepSuccess(appId) {
+    currentApplicationId = appId;
+    document.getElementById('lo-apply-ref').textContent = appId || '--';
+    applyShowStep(6);
+  }
+
+  /* ================= Application detail rendering ================= */
+  function renderApplicationDetail(a) {
+    document.getElementById('lo-appdet-name').textContent = a.loan_name || 'Loan Application';
+    document.getElementById('lo-appdet-ref').textContent = (a.lender || 'Lender') + ' · ' + (a.reference_number || a.application_id) + ' · ' + st.date(a.submitted_at);
+    var meta = appStatusMeta(a.status);
+    var badge = document.getElementById('lo-appdet-status');
+    badge.className = 'lo-badge ' + meta.cls;
+    badge.textContent = meta.label;
+
+    var body =
+      '<div class="lo-detail-section"><h4><i class="fas fa-info-circle"></i> Details</h4>' +
+      '<div class="lo-detail-row"><span class="lbl">Reference</span><span class="val">' + esc(a.reference_number || a.application_id) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Category</span><span class="val">' + esc(firstDef([a.category])) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Requested Amount</span><span class="val">' + st.inr(a.requested_amount) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Purpose</span><span class="val">' + esc(firstDef([a.purpose])) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Submitted</span><span class="val">' + esc(st.date(a.submitted_at)) + '</span></div>' +
+      '</div>' +
+      '<div class="lo-detail-section"><h4><i class="fas fa-user"></i> Applicant</h4>' +
+      '<div class="lo-detail-row"><span class="lbl">Name</span><span class="val">' + esc(firstDef([a.applicant_name])) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Phone</span><span class="val">' + esc(firstDef([a.phone_number])) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Email</span><span class="val">' + esc(firstDef([a.email])) + '</span></div>' +
+      '</div>' +
+      '<div class="lo-detail-section"><h4><i class="fas fa-tractor"></i> Farm</h4>' +
+      '<div class="lo-detail-row"><span class="lbl">Location</span><span class="val">' + esc(firstDef([a.district, '—'])) + (a.state ? ', ' + esc(a.state) : '') + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Farm Size</span><span class="val">' + (a.farm_size !== null && a.farm_size !== undefined ? a.farm_size + ' acres' : 'Not specified') + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Crop</span><span class="val">' + esc(firstDef([a.crop])) + '</span></div>' +
+      '<div class="lo-detail-row"><span class="lbl">Land Type</span><span class="val">' + esc(firstDef([a.land_type])) + '</span></div>' +
+      '</div>';
+
+    if (a.required_documents && a.required_documents.length) {
+      body += '<div class="lo-detail-section"><h4><i class="fas fa-clipboard-list"></i> Required by Lender</h4>' +
+        '<div>' + a.required_documents.map(function (d) { return '<span class="lo-doc-tag"><i class="fas fa-file"></i> ' + esc(d) + '</span>'; }).join('') + '</div></div>';
+    }
+
+    document.getElementById('lo-appdet-body').innerHTML = body;
+
+    var docs = a.documents || [];
+    var docsEl = document.getElementById('lo-appdet-docs-list');
+    if (!docs.length) {
+      docsEl.innerHTML = '<div style="color:var(--text-muted);padding:8px 0;">No documents uploaded yet.</div>';
       return;
     }
-    if (step === 4) populateReview();
-    showStep(step);
-  };
-
-  window.prevStep = function (step) {
-    showStep(step);
-  };
-
-  function validateStep(step) {
-    if (step === 1) {
-      if (!document.getElementById('app-name').value.trim()) return false;
-      if (!document.getElementById('app-phone').value.trim()) return false;
-      if (!document.getElementById('app-aadhar').value.trim()) return false;
-      return true;
+    var h = '<div class="lo-list">';
+    for (var i = 0; i < docs.length; i++) {
+      var d = docs[i];
+      var sizeKb = d.file_size_bytes ? Math.max(1, Math.round(d.file_size_bytes / 1024)) : null;
+      h += '<div class="lo-row-card" style="padding:11px 13px;">' +
+        '<div class="lo-row-main">' +
+          '<div class="lo-row-icon" style="width:36px;height:36px;font-size:14px;"><i class="fas fa-file"></i></div>' +
+          '<div class="lo-row-info">' +
+            '<div class="lo-row-title" style="font-size:12.5px;">' + esc(d.document_type.replace(/_/g, ' ')) + '</div>' +
+            '<div class="lo-row-sub">' + esc(d.file_name) + (sizeKb ? ' · ' + sizeKb + ' KB' : '') + ' · ' + esc(st.date(d.uploaded_at)) + '</div>' +
+          '</div>' +
+          '<div class="lo-row-right">' +
+            '<button class="lo-btn-micro" style="background:var(--soft-green);color:var(--primary-green);" onclick="LoansApp.downloadDoc(\'' + esc(a.application_id) + '\',\'' + esc(d.id) + '\')"><i class="fas fa-download"></i> Download</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
     }
-    if (step === 2) {
-      if (!document.getElementById('app-farm-size').value) return false;
-      return true;
-    }
-    if (step === 3) {
-      if (!document.getElementById('app-doc-aadhar').value) return false;
-      if (!document.getElementById('app-doc-land').value) return false;
-      return true;
-    }
-    return true;
+    h += '</div>';
+    docsEl.innerHTML = h;
   }
 
-  function populateReview() {
-    document.getElementById('review-loan').textContent = document.getElementById('apply-loan-name').value || '--';
-    document.getElementById('review-name').textContent = document.getElementById('app-name').value || '--';
-    document.getElementById('review-phone').textContent = document.getElementById('app-phone').value || '--';
-    var farmSize = document.getElementById('app-farm-size').value || '0';
-    document.getElementById('review-farm').textContent = farmSize + ' acres';
-    document.getElementById('review-crop').textContent = document.getElementById('app-crop').value || 'Not specified';
+  /* ================= State select ================= */
+  function populateApplyReview() {
+    var rows = [
+      ['Product', currentProduct ? currentProduct.name : '--'],
+      ['Lender', currentProduct ? firstDef([currentProduct.lender, 'Lender']) : '--'],
+      ['Name', document.getElementById('lo-app-name').value.trim() || '--'],
+      ['Phone', document.getElementById('lo-app-phone').value.trim() || '--'],
+      ['Farm Size', (document.getElementById('lo-app-farm').value ? document.getElementById('lo-app-farm').value + ' acres' : 'Not specified')],
+      ['Crop', document.getElementById('lo-app-crop').value.trim() || 'Not specified'],
+      ['State', document.getElementById('lo-app-state').value || 'Not specified'],
+      ['Amount', st.inr(document.getElementById('lo-app-amount').value)],
+      ['Purpose', document.getElementById('lo-app-purpose').value.trim() || '--']
+    ];
+    var h = '';
+    for (var i = 0; i < rows.length; i++) {
+      h += '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;"><span style="color:var(--text-muted);">' + esc(rows[i][0]) + ':</span> <span style="font-weight:600;text-align:right;margin-left:10px;">' + esc(rows[i][1]) + '</span></div>';
+    }
+    document.getElementById('lo-apply-review').innerHTML = h;
   }
 
-  /* ---- Submit ---- */
-  window.submitLoanApplication = function (e) {
-    e.preventDefault();
-    var btn = e.target.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+  function fillStateSelect(sel) {
+    if (!sel) return;
+    var h = '<option value="">Select state</option>';
+    for (var i = 0; i < STATES.length; i++) h += '<option value="' + esc(STATES[i]) + '">' + esc(STATES[i]) + '</option>';
+    sel.innerHTML = h;
+  }
 
-    var loanName = document.getElementById('apply-loan-name').value;
-    var applicantName = document.getElementById('app-name').value;
-    var farmSize = document.getElementById('app-farm-size').value;
-
-    var appId = 'FALOAN-' + appCounter;
-    appCounter++;
-
-    var product = null;
-    for (var i = 0; i < mockLoanProducts.length; i++) {
-      if (mockLoanProducts[i].name === loanName) { product = mockLoanProducts[i]; break; }
+  /* ================= Tabs ================= */
+  function switchTab(name) {
+    var btns = document.querySelectorAll('#lo-tab-bar .lo-tab-btn');
+    btns.forEach(function (b) { b.classList.toggle('active', b.dataset.loTab === name); });
+    var panes = { explore: 'lo-tab-explore', saved: 'lo-tab-saved', apps: 'lo-tab-apps', loans: 'lo-tab-loans' };
+    for (var key in panes) {
+      var el = document.getElementById(panes[key]);
+      if (el) el.style.display = (key === name) ? 'block' : 'none';
     }
-    var bankName = product ? product.bank : loanName;
-    var loanAmount = product ? product.maxAmount : 0;
-    var interest = product ? (parseFloat(product.interest) || 0) : 0;
-    var tenure = product ? (parseInt(product.repayment, 10) || 12) : 12;
+    if (name === 'saved' && !loadedOnce.saved) loadSaved();
+    if (name === 'apps' && !loadedOnce.apps) loadApplications();
+    if (name === 'loans' && !loadedOnce.loans) loadFarmerLoans();
+  }
 
-    function addLocalApplication() {
-      mockApplications.unshift({
-        id: appId,
-        loanName: loanName,
-        bank: bankName,
-        amount: loanAmount,
-        date: new Date().toISOString().split('T')[0],
-        status: 'submitted'
-      });
-    }
-
-    function finishSubmit() {
-      document.getElementById('app-submitted-id').textContent = appId;
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
-      showStep(5);
-      renderMyApplications();
-      showToast('Loan application ' + appId + ' submitted successfully!', 'success');
-    }
-
-    if (window.API && localStorage.getItem('fa-auth-token')) {
-      API.Loan.create({
-        bank_name: bankName,
-        loan_amount: loanAmount,
-        interest_rate: interest,
-        tenure_months: tenure,
-        emi_amount: null
-      }).then(function (res) {
-        if (res && res.data && res.data.loan_id) appId = res.data.loan_id;
-        addLocalApplication();
-        finishSubmit();
-      }).catch(function () {
-        addLocalApplication();
-        finishSubmit();
-      });
-    } else {
-      addLocalApplication();
-      finishSubmit();
-    }
-  };
-
-  window.continueApplication = function (appId) {
-    showToast('Opening draft application ' + appId + '...', 'info');
-    openModal('apply-modal');
-  };
-
-  window.closeModalAndRefresh = function () {
-    closeModal();
-    renderMyApplications();
-  };
-
-  /* ---- Modal ---- */
-  window.openModal = function (id) {
-    var el = document.getElementById(id);
-    if (el) el.classList.add('active');
-  };
-
-  window.closeModal = function () {
-    document.querySelectorAll('.modal-backdrop.active').forEach(function (el) { el.classList.remove('active'); });
-  };
-
-  /* ---- Tab Switching ---- */
   function initTabs() {
-    var btns = document.querySelectorAll('.loan-tab-btn');
-    btns.forEach(function (btn) {
+    var bar = document.getElementById('lo-tab-bar');
+    if (!bar) return;
+    bar.querySelectorAll('.lo-tab-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        btns.forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        document.querySelectorAll('.tab-content').forEach(function (t) { t.classList.remove('active'); });
-        var tabId = 'tab-' + btn.dataset.tab;
-        var tab = document.getElementById(tabId);
-        if (tab) tab.classList.add('active');
-        if (btn.dataset.tab === 'applications') renderMyApplications();
+        switchTab(btn.dataset.loTab);
       });
     });
   }
 
-  /* ---- Close modal on backdrop click ---- */
-  document.addEventListener('click', function (e) {
-    if (e.target.classList.contains('modal-backdrop')) closeModal();
-  });
-
-  /* ---- Init ---- */
-  document.addEventListener('DOMContentLoaded', function () {
+  /* ================= Wiring ================= */
+  function init() {
     initTabs();
-    renderAvailableLoans();
-    renderMyApplications();
-    loadBackendLoans();
-  });
+    fillStateSelect(document.getElementById('lo-elig-state'));
+    fillStateSelect(document.getElementById('lo-app-state'));
+
+    var searchInput = document.getElementById('lo-search-input');
+    var searchTimer = null;
+    searchInput.addEventListener('input', function () {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        catalogState.search = searchInput.value.trim();
+        catalogState.page = 1;
+        loadCatalog();
+      }, 400);
+    });
+
+    var sortSel = document.getElementById('lo-sort-select');
+    sortSel.addEventListener('change', function () {
+      catalogState.sort = sortSel.value;
+      catalogState.page = 1;
+      loadCatalog();
+    });
+
+    var statusRow = document.getElementById('lo-app-status-row');
+    if (statusRow) {
+      statusRow.querySelectorAll('.lo-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          statusRow.querySelectorAll('.lo-chip').forEach(function (c) { c.classList.remove('active'); });
+          chip.classList.add('active');
+          appsState.status = chip.dataset.loStatus || '';
+          appsState.page = 1;
+          loadApplications();
+        });
+      });
+    }
+
+    ['lo-doc-one', 'lo-doc-two', 'lo-doc-three', 'lo-doc-four'].forEach(function (fileId) {
+      var fileEl = document.getElementById(fileId);
+      if (!fileEl) return;
+      fileEl.addEventListener('change', function () {
+        var nameEl = document.getElementById(fileId + '-name');
+        if (nameEl && fileEl.files && fileEl.files.length) nameEl.textContent = fileEl.files[0].name + ' (' + Math.max(1, Math.round(fileEl.files[0].size / 1024)) + ' KB)';
+      });
+    });
+
+    document.addEventListener('click', function (e) {
+      if (e.target.classList && e.target.classList.contains('modal-backdrop')) closeModal();
+      if (e.target.id === 'lo-filter-overlay') LoansApp.closeFilterDrawer();
+      if (e.target.id === 'lo-filter-apply-top' || e.target.id === 'lo-filter-apply') LoansApp.applyFilters();
+      if (e.target.id === 'lo-filter-clear') LoansApp.resetFilters();
+    });
+
+    loadFilterOptions();
+    loadOverview();
+    loadCatalog();
+    updateFilterBadge();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
 })();
+
+window.LoansApp.downloadDoc = function (appId, docId) {
+  window.API.Loan.fetchDocument(appId, docId, true).then(function (blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'loan-document';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }).catch(function (err) {
+    if (window.showToast) window.showToast((err && err.message) || 'Unable to download document', 'error');
+  });
+};
 </script>
 </body>
 </html>

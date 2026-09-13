@@ -27,9 +27,11 @@ from .routers import (
     auth, users, farms, crops, finance, workers,
     marketplace, government, community, notifications,
     weather, maps, ai, ai_chat,
-    loans, sensors, storage, news, translation, qrcode, analytics,
+    loans, loan_products, sensors, storage, news, translation, qrcode, analytics,
     services, farmbuzz, messages, support, feedback, wallet, documents,
     learning, techniques, emergency, market_prices,
+    insurance, calendar, input_store, tools_equipment,
+    marketplace_seller,
 )
 
 
@@ -67,6 +69,8 @@ app.include_router(crops.router)
 app.include_router(finance.router)
 app.include_router(workers.router)
 app.include_router(marketplace.router)
+app.include_router(marketplace_seller.router)
+app.include_router(input_store.router)
 app.include_router(government.router)
 app.include_router(community.router)
 app.include_router(notifications.router)
@@ -74,7 +78,9 @@ app.include_router(weather.router)
 app.include_router(maps.router)
 app.include_router(ai.router)
 app.include_router(ai_chat.router)
+app.include_router(loan_products.router)
 app.include_router(loans.router)
+app.include_router(insurance.router)
 app.include_router(sensors.router)
 app.include_router(storage.router)
 app.include_router(news.router)
@@ -92,6 +98,10 @@ app.include_router(learning.router)
 app.include_router(techniques.router)
 app.include_router(emergency.router)
 app.include_router(market_prices.router)
+app.include_router(calendar.router)
+app.include_router(tools_equipment.router, prefix="/api/equipment")
+app.include_router(tools_equipment.router, prefix="/api/v1/tools-equipment")
+
 
 
 @app.exception_handler(AppException)
@@ -125,22 +135,27 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 async def startup():
     from app.database.schema_upgrade import run_additive_migrations
-    run_additive_migrations(settings.DATABASE_URL)
     Base.metadata.create_all(bind=engine)
+    run_additive_migrations(settings.DATABASE_URL)
     os.makedirs(settings.STORAGE_LOCAL_PATH, exist_ok=True)
     os.makedirs("logs", exist_ok=True)
 
     from app.database.connection import SessionLocal
     from app.database.seed_communities import seed_communities
+    from app.database.seed_community_demo import seed_demo
     db = SessionLocal()
     try:
         created = seed_communities(db)
+        demo_summary = seed_demo(db)
+
+        from app.database.seed_marketplace import seed_marketplace_categories
+        mkt_seeded = seed_marketplace_categories(db)
 
         from sqlalchemy import func
         from app.models.market_price import MarketPrice
-        has_market_data = db.query(
-            func.count(MarketPrice.id)
-        ).scalar() or 0
+        has_market_data = db.query(func.count(MarketPrice.id)).scalar() or 0
+        market_seeded = 0
+        eq_summary = None
         if not has_market_data:
             try:
                 from seed_market_prices import import_msp_prices
@@ -150,16 +165,29 @@ async def startup():
                     sys.path.insert(0, str(_backend_dir))
                 from seed_market_prices import import_msp_prices
             market_seeded = import_msp_prices(db)
-        else:
-            market_seeded = 0
+
+        from app.models.marketplace import EquipmentMetadata
+        has_equipment = db.query(func.count(EquipmentMetadata.id)).scalar() or 0
+        if not has_equipment:
+            from app.database.seed_equipment import seed_equipment
+            eq_summary = seed_equipment(db)
     finally:
         db.close()
 
     print(f"{settings.APP_NAME} v{settings.APP_VERSION} started. DB tables created.")
     if created:
         print(f"Seeded {created} community groups.")
+    if demo_summary and not demo_summary.get("skipped"):
+        print(f"Seeded demo community feed: {demo_summary.get('posts')} posts, "
+              f"{demo_summary.get('comments')} comments, {demo_summary.get('answers')} answers, "
+              f"{demo_summary.get('likes')} likes, {demo_summary.get('saves')} saves.")
     if market_seeded:
         print(f"Seeded {market_seeded} verified market price records (official MSP/FRP).")
+    if mkt_seeded:
+        print(f"Seeded marketplace sell categories (created {mkt_seeded['categories_created']}, total {mkt_seeded['total']}).")
+    if eq_summary:
+        print(f"Seeded {eq_summary['products_seeded']} tools & equipment products and {eq_summary['rentals_seeded']} rental machinery.")
+
 
 
 @app.get("/api/health")

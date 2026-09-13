@@ -3,250 +3,610 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-  <title>Farm Assist - Insurance</title>
+  <meta name="api-base-url" content="http://localhost:8000/api/v1">
+  <script>
+    window._API_BASE_URL = 'http://localhost:8000/api/v1';
+  </script>
+  <title>Farm Assist - Crop &amp; Livestock Insurance</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    :root { --ins-blue: #2563eb; --ins-blue-soft: #DBEAFE; --ins-blue-bg: rgba(37,99,235,0.06); }
-    .ins-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
-    .ins-badge.active { background:#D1FAE5; color:#065F46; }
-    .ins-badge.expiring { background:#FEF3C7; color:#92400E; }
-    .ins-badge.expired { background:#F3F4F6; color:#6B7280; }
-    .ins-badge.approved { background:#D1FAE5; color:#065F46; }
-    .ins-badge.pending { background:#FEF3C7; color:#92400E; }
-    .ins-badge.review { background:#DBEAFE; color:#1E40AF; }
-    .ins-tab { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
-    .ins-tab-btn { padding:8px 18px; font-size:12px; font-weight:600; border-radius:30px; cursor:pointer; transition:all 0.2s; background:transparent; color:var(--text-secondary); border:1px solid var(--border-light); }
-    .ins-tab-btn:hover { border-color:var(--ins-blue); color:var(--ins-blue); }
-    .ins-tab-btn.active { background:var(--ins-blue); color:white; border-color:var(--ins-blue); }
-    .ins-summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
-    .ins-summary-card { background:white; border-radius:var(--radius-md); padding:16px; border:1px solid var(--border-light); display:flex; align-items:center; gap:14px; transition:transform 0.2s; }
-    .ins-summary-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-sm); }
-    .ins-summary-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
-    .ins-summary-val { font-size:20px; font-weight:800; color:var(--text-primary); }
-    .ins-summary-lbl { font-size:11px; color:var(--text-muted); }
-    .ins-section { margin-bottom:20px; }
-    .ins-section-title { font-size:16px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
-    .ins-form-group { margin-bottom:14px; }
+    :root {
+      --ins-teal: var(--primary-green);
+      --ins-teal-dark: var(--forest-800);
+      --ins-teal-soft: var(--soft-green);
+      --ins-teal-bg: rgba(45,134,89,0.08);
+      --ins-cream: var(--bg-app);
+    }
+    body { background:var(--bg-app); -webkit-font-smoothing:antialiased; }
+    .page-container { max-width:1120px; }
+
+    .ins-page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+    .ins-page-header h1 { font-size:22px; color:var(--primary-green); display:flex; align-items:center; gap:10px; }
+    .ins-page-header p { font-size:13px; color:var(--text-muted); }
+    .ins-header-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+    .ins-hero { background:linear-gradient(135deg,var(--forest-800) 0%,var(--ins-teal-dark) 55%,var(--primary-green) 100%); border-radius:var(--radius-lg,14px); padding:24px 22px; margin-bottom:22px; color:white; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; position:relative; overflow:hidden; }
+    .ins-hero-text { max-width:640px; position:relative; z-index:1; }
+    .ins-hero h3 { font-size:19px; margin-bottom:7px; display:flex; align-items:center; gap:9px; }
+    .ins-hero p { font-size:13px; color:rgba(255,255,255,0.88); line-height:1.6; margin-bottom:14px; }
+    .ins-hero-actions { display:flex; gap:8px; flex-wrap:wrap; position:relative; z-index:1; }
+    .ins-hero-btn { padding:10px 18px; border-radius:11px; font-size:12px; font-weight:700; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:all 0.2s; }
+    .ins-hero-btn.primary { background:#fff; color:var(--ins-teal-dark); }
+    .ins-hero-btn.primary:hover { background:var(--ins-teal-soft); }
+    .ins-hero-btn.outline { background:rgba(255,255,255,0.16); color:white; border:1px solid rgba(255,255,255,0.45); }
+    .ins-hero-btn.outline:hover { background:rgba(255,255,255,0.26); }
+
+    .ins-ov-grid { display:flex; gap:12px; overflow-x:auto; overscroll-behavior-x:contain; padding:2px 2px 10px; margin-bottom:22px; scrollbar-width:thin; -webkit-overflow-scrolling:touch; }
+    .ins-ov-grid::-webkit-scrollbar { height:5px; }
+    .ins-ov-card { flex:0 0 172px; }
+    .ins-ov-card { background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-md); padding:15px 14px; position:relative; overflow:hidden; box-shadow:var(--shadow-sm); }
+    .ins-ov-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--ins-teal); }
+    .ins-ov-card.special { background:linear-gradient(135deg,var(--forest-800) 0%,var(--primary-green) 100%); color:white; border:none; }
+    .ins-ov-card.special::before { display:none; }
+    .ins-ov-label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px; }
+    .ins-ov-card.special .ins-ov-label { color:rgba(255,255,255,0.78); }
+    .ins-ov-value { font-size:20px; font-weight:800; color:var(--text-primary); white-space:nowrap; }
+    .ins-ov-card.special .ins-ov-value { color:white; }
+    .ins-ov-sub { font-size:11px; color:var(--text-muted); margin-top:4px; }
+    .ins-ov-card.special .ins-ov-sub { color:rgba(255,255,255,0.8); }
+    .ins-ov-cta { margin-top:10px; }
+
+    .ins-tab-bar { display:flex; gap:6px; margin-bottom:16px; overflow-x:auto; overscroll-behavior-x:contain; border-bottom:1px solid var(--border-light); padding-bottom:10px; scrollbar-width:thin; -webkit-overflow-scrolling:touch; }
+    .ins-tab-bar::-webkit-scrollbar { height:4px; }
+    .ins-tab-btn { padding:8px 16px; font-size:12px; font-weight:600; border-radius:30px; cursor:pointer; transition:all 0.2s; background:transparent; color:var(--text-secondary); border:1px solid var(--border-light); white-space:nowrap; flex-shrink:0; }
+    .ins-tab-btn:hover { border-color:var(--ins-teal); color:var(--ins-teal); }
+    .ins-tab-btn.active { background:var(--ins-teal); color:white; border-color:var(--ins-teal); }
+    .ins-toolbar { margin-bottom:12px; }
+
+    .ins-search { display:flex; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--border-light); border-radius:12px; padding:0 14px; margin-bottom:14px; transition:border-color 0.2s; }
+    .ins-search:focus-within { border-color:var(--ins-teal); box-shadow:0 0 0 3px rgba(15,118,110,0.08); }
+    .ins-search i { color:var(--text-muted); font-size:13px; }
+    .ins-search input { flex:1; border:none; outline:none; padding:11px 0; font-size:13px; background:transparent; color:var(--text-primary); }
+
+    .ins-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px; }
+    .ins-card { background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; display:flex; flex-direction:column; transition:transform 0.2s, box-shadow 0.2s; box-shadow:var(--shadow-sm); }
+    .ins-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-sm); }
+    .ins-card-top { display:flex; align-items:flex-start; gap:12px; margin-bottom:10px; }
+    .ins-card-icon { width:44px; height:44px; border-radius:12px; background:var(--ins-teal-soft); color:var(--ins-teal); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .ins-card-name { font-size:14px; font-weight:700; color:var(--text-primary); line-height:1.3; }
+    .ins-card-provider { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .ins-save-btn { margin-left:auto; background:none; border:none; font-size:17px; cursor:pointer; color:var(--text-muted); padding:4px; transition:all 0.2s; }
+    .ins-save-btn:hover { color:var(--ins-teal); }
+    .ins-save-btn.saved { color:var(--ins-teal); }
+    .ins-card-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    .ins-tag { padding:3px 9px; border-radius:8px; font-size:10px; font-weight:600; }
+    .ins-tag.cat { background:var(--ins-teal-soft); color:var(--ins-teal-dark); }
+    .ins-tag.gov { background:var(--sun-soft); color:#A67C00; }
+    .ins-tag.state { background:var(--soft-green); color:var(--primary-green); }
+    .ins-card-desc { font-size:12px; color:var(--text-secondary); line-height:1.55; margin-bottom:12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:36px; }
+    .ins-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; background:var(--bg-card-soft); border-radius:var(--radius-sm); padding:10px; margin-bottom:12px; }
+    .ins-stat { text-align:center; }
+    .ins-stat-num { font-size:13px; font-weight:800; color:var(--text-primary); white-space:nowrap; }
+    .ins-stat-label { font-size:9.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px; margin-top:2px; }
+    .ins-card-actions { display:flex; gap:8px; margin-top:auto; }
+    .ins-btn { flex:1; padding:9px 8px; border-radius:10px; font-size:12px; font-weight:600; border:none; cursor:pointer; transition:all 0.2s; text-align:center; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
+    .ins-btn-primary { background:var(--ins-teal); color:white; }
+    .ins-btn-primary:hover { background:var(--ins-teal-dark); }
+    .ins-btn-ghost { background:transparent; color:var(--ins-teal); border:1px solid var(--ins-teal-soft); }
+    .ins-btn-ghost:hover { background:var(--ins-teal-soft); }
+    .ins-btn-subtle { background:var(--ins-teal-soft); color:var(--ins-teal-dark); }
+    .ins-btn-subtle:hover { background:var(--ins-teal-bg); }
+    .ins-btn-outline { padding:7px 14px; border-radius:9px; font-size:11px; font-weight:600; cursor:pointer; background:white; color:var(--ins-teal); border:1px solid var(--border-light); }
+    .ins-btn-outline:hover { border-color:var(--ins-teal); }
+
+    .ins-list { display:flex; flex-direction:column; gap:12px; }
+    .ins-row-card { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; }
+    .ins-row-main { display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap; }
+    .ins-row-icon { width:44px; height:44px; border-radius:12px; background:var(--ins-teal-soft); color:var(--ins-teal); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+    .ins-row-info { flex:1; min-width:200px; }
+    .ins-row-title { font-size:14px; font-weight:700; color:var(--text-primary); }
+    .ins-row-sub { font-size:11px; color:var(--text-muted); margin-top:3px; line-height:1.5; }
+    .ins-row-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .ins-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; }
+    .ins-badge.active, .ins-badge.approved, .ins-badge.submitted, .ins-badge.paid, .ins-badge.success { background:#DCFCE7; color:#166534; }
+    .ins-badge.pending_verification, .ins-badge.pending, .ins-badge.under_review, .ins-badge.in_review, .ins-badge.expiring, .ins-badge.review { background:#FEF3C7; color:#92400E; }
+    .ins-badge.expired, .ins-badge.rejected, .ins-badge.failed, .ins-badge.cancelled, .ins-badge.default { background:#F3F4F6; color:#6B7280; }
+    .ins-badge.processing, .ins-badge.approving { background:#DBEAFE; color:#1E40AF; }
+
+    .ins-pagination { display:flex; align-items:center; justify-content:center; gap:14px; margin:18px 0 6px; }
+    .ins-page-btn { padding:8px 16px; border:1px solid var(--border-light); border-radius:10px; background:white; font-size:12px; font-weight:600; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s; }
+    .ins-page-btn:hover:not(:disabled) { border-color:var(--ins-teal); color:var(--ins-teal); }
+    .ins-page-btn:disabled { opacity:0.45; cursor:default; }
+    .ins-page-info { font-size:11px; color:var(--text-muted); }
+
+    .ins-elig-result { border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:12px; }
+    .ins-elig-result.likely { background:#DCFCE7; border-left:4px solid #16A34A; }
+    .ins-elig-result.review { background:var(--sun-soft); border-left:4px solid #D97706; }
+    .ins-elig-result.notlikely { background:#FFF0F0; border-left:4px solid var(--danger); }
+    .ins-elig-label { font-size:12px; font-weight:700; }
+    .ins-elig-headline { font-size:12px; margin-top:3px; line-height:1.5; }
+    .ins-result-group { font-size:12px; margin-bottom:10px; }
+    .ins-result-group h5 { font-size:11px; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-muted); margin-bottom:6px; }
+    .ins-result-group ul { list-style:none; padding:0; margin:0; }
+    .ins-result-group li { padding:6px 10px; border-radius:8px; margin-bottom:5px; font-size:12px; line-height:1.45; }
+    .ins-result-group li.ok { background:#DCFCE7; color:#166534; }
+    .ins-result-group li.warn { background:var(--sun-soft); color:#7A5B00; }
+    .ins-result-group li.miss { background:#FFF0F0; color:#7A1D1D; }
+    .ins-disclaimer { font-size:11px; color:var(--text-muted); background:var(--bg-card-soft); border-radius:var(--radius-sm); padding:10px 12px; line-height:1.5; }
+
+    .ins-sec { margin-bottom:16px; }
+    .ins-sec h4 { font-size:13px; font-weight:700; color:var(--ins-teal-dark); margin-bottom:8px; display:flex; align-items:center; gap:7px; }
+    .ins-detail-row { display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-bottom:1px dashed var(--border-light); font-size:12px; }
+    .ins-detail-row:last-child { border-bottom:none; }
+    .ins-detail-row .lbl { color:var(--text-muted); }
+    .ins-detail-row .val { font-weight:600; color:var(--text-primary); text-align:right; word-break:break-word; }
+    .ins-detail-row .val a { color:var(--ins-teal); text-decoration:none; word-break:break-all; }
+    .ins-doc-tag { display:inline-flex; align-items:center; gap:6px; font-size:11px; background:var(--ins-teal-soft); color:var(--ins-teal-dark); border-radius:8px; padding:4px 10px; margin:0 5px 5px 0; }
+    .ins-doc-tag a { color:var(--ins-teal); }
+
+    .ins-form-group { margin-bottom:13px; }
     .ins-form-label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
-    .ins-form-input,.ins-form-select { width:100%; padding:12px 14px; border:1px solid var(--border-light); border-radius:var(--radius-sm); font-size:14px; background:white; transition:border-color 0.2s; }
-    .ins-form-input:focus,.ins-form-select:focus { border-color:var(--ins-blue); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
-    .ins-premium-box { background:var(--ins-blue-bg); border:1px solid rgba(37,99,235,0.15); border-radius:var(--radius-md); padding:16px; text-align:center; margin-bottom:14px; }
-    .ins-premium-amount { font-size:28px; font-weight:800; color:var(--ins-blue); }
-    .ins-premium-lbl { font-size:11px; color:var(--text-muted); }
-    .ins-loan-card { background:white; border-radius:var(--radius-md); padding:16px; border:1px solid var(--border-light); margin-bottom:10px; transition:transform 0.2s; }
-    .ins-loan-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-sm); }
-    .ins-loan-amount { font-size:18px; font-weight:800; color:var(--text-primary); }
-    .ins-loan-lbl { font-size:11px; color:var(--text-muted); }
-    .ins-loan-option { display:flex; align-items:center; gap:12px; padding:14px; background:var(--ins-blue-bg); border:1px solid rgba(37,99,235,0.12); border-radius:var(--radius-md); cursor:pointer; transition:all 0.2s; }
-    .ins-loan-option:hover { border-color:var(--ins-blue); transform:translateY(-1px); }
-    .ins-loan-option-icon { width:40px; height:40px; border-radius:10px; background:var(--ins-blue); color:white; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
-    .ins-loan-option h4 { font-size:13px; font-weight:600; }
-    .ins-loan-option p { font-size:11px; color:var(--text-muted); }
-    .tab-content { display:none; }
-    .tab-content.active { display:block; }
-    @media (min-width:640px) { .ins-summary-grid { grid-template-columns:repeat(4,1fr); } }
+    .ins-form-label.req::after { content:' *'; color:var(--danger); }
+    .ins-form-input, .ins-form-select, .ins-form-textarea { width:100%; padding:11px 13px; border:1px solid var(--border-light); border-radius:var(--radius-sm); font-size:13px; background:white; color:var(--text-primary); outline:none; transition:border-color 0.2s; font-family:inherit; box-sizing:border-box; }
+    .ins-form-input:focus, .ins-form-select:focus, .ins-form-textarea:focus { border-color:var(--ins-teal); box-shadow:0 0 0 3px rgba(15,118,110,0.08); }
+    .ins-form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .ins-form-hint { font-size:10px; color:var(--text-muted); margin-top:3px; }
+    .ins-form-err { font-size:11px; color:var(--danger); margin-top:4px; display:none; }
+    .ins-form-err.show { display:block; }
+
+    .ins-premium-box { background:var(--ins-teal-bg); border:1px solid rgba(15,118,110,0.2); border-radius:var(--radius-md); padding:16px; text-align:center; margin-bottom:14px; }
+    .ins-premium-amount { font-size:28px; font-weight:800; color:var(--ins-teal); }
+    .ins-premium-lbl { font-size:11px; color:var(--text-muted); margin-top:2px; }
+
+    .ins-steps { display:flex; gap:8px; margin-bottom:20px; justify-content:center; }
+    .ins-step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; background:var(--border-light); color:var(--text-muted); transition:all 0.3s; }
+    .ins-step-dot.active { background:var(--ins-teal); color:white; }
+    .ins-step-dot.done { background:var(--light-green); color:white; }
+
+    .ins-banner { background:var(--bg-card-soft); border:1px solid var(--border-light); border-left:4px solid var(--light-green); border-radius:var(--radius-sm); padding:14px 16px; font-size:12px; color:var(--text-secondary); margin-bottom:16px; line-height:1.55; }
+    .ins-skel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px; }
+    .ins-skel-card { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; }
+    .ins-hscroll { display:flex; gap:14px; overflow-x:auto; padding:4px 2px 10px; margin-bottom:18px; scrollbar-width:thin; -webkit-overflow-scrolling:touch; }
+    .ins-hscroll > .ins-card { flex:0 0 300px; }
+    .ins-hscroll > .ins-row-card { flex:0 0 340px; }
+    body.ins-modal-open { overflow:hidden; }
+    .modal-backdrop:not(.active) { display:none; }
+    .modal-backdrop.active { display:flex; }
+    @media (max-width:640px) {
+      .ins-form-row { grid-template-columns:1fr; }
+      .ins-page-header h1 { font-size:19px; }
+    }
   </style>
 </head>
 <body>
 <main class="page-container">
 
-  <div class="page-header">
+  <div class="ins-page-header">
     <div>
-      <h1><i class="fas fa-shield-halved" style="color:var(--ins-blue);"></i> Insurance</h1>
-      <p>Manage policies, claims &amp; loans</p>
+      <h1><i class="fas fa-shield-halved" style="color:var(--ins-teal);"></i> Crop &amp; Livestock Insurance</h1>
+      <p>Protect your crops, livestock, machinery and farm assets. Explore verified plans, check eligibility and manage everything in one place.</p>
     </div>
-    <button class="btn-primary btn-sm" onclick="openModal('apply-modal')" style="background:var(--ins-blue);"><i class="fas fa-plus-circle"></i> New Policy</button>
+    <div class="ins-header-actions">
+      <button class="btn-secondary btn-sm" onclick="InsuranceApp.openEligibility()"><i class="fas fa-clipboard-check"></i> Check Eligibility</button>
+      <button class="btn-primary btn-sm" onclick="InsuranceApp.scrollToCatalog()"><i class="fas fa-plus-circle"></i> New Policy</button>
+    </div>
   </div>
 
-  <!-- Summary Cards -->
-  <div class="ins-summary-grid" id="summary-grid">
-    <div class="ins-summary-card">
-      <div class="ins-summary-icon" style="background:var(--ins-blue-bg);color:var(--ins-blue);"><i class="fas fa-file-contract"></i></div>
-      <div>
-        <div class="ins-summary-val" id="summary-policies">--</div>
-        <div class="ins-summary-lbl">Active Policies</div>
-      </div>
-    </div>
-    <div class="ins-summary-card">
-      <div class="ins-summary-icon" style="background:rgba(5,150,105,0.1);color:#059669;"><i class="fas fa-rupee-sign"></i></div>
-      <div>
-        <div class="ins-summary-val" id="summary-coverage">--</div>
-        <div class="ins-summary-lbl">Total Coverage</div>
-      </div>
-    </div>
-    <div class="ins-summary-card">
-      <div class="ins-summary-icon" style="background:rgba(245,158,11,0.1);color:#D97706;"><i class="fas fa-money-bill-wave"></i></div>
-      <div>
-        <div class="ins-summary-val" id="summary-premium">--</div>
-        <div class="ins-summary-lbl">Total Premium</div>
-      </div>
-    </div>
-    <div class="ins-summary-card">
-      <div class="ins-summary-icon" style="background:rgba(239,68,68,0.1);color:#EF4444;"><i class="fas fa-file-invoice"></i></div>
-      <div>
-        <div class="ins-summary-val" id="summary-claims">--</div>
-        <div class="ins-summary-lbl">Pending Claims</div>
+  <div class="ins-hero">
+    <div class="ins-hero-text">
+      <h3><i class="fas fa-shield-halved"></i> Protect what grows your future</h3>
+      <p>Cover your crops against pests, diseases and weather risks, insure livestock and farm assets, and claim compensation quickly when the unexpected strikes. Government-backed plans like PMFBY are available right here.</p>
+      <div class="ins-hero-actions">
+        <button class="ins-hero-btn primary" onclick="InsuranceApp.scrollToCatalog()"><i class="fas fa-shield"></i> Explore Plans</button>
+        <button class="ins-hero-btn outline" onclick="InsuranceApp.openEligibility()"><i class="fas fa-clipboard-check"></i> Am I Eligible?</button>
+        <button class="ins-hero-btn outline" onclick="location.href='schemes.html'"><i class="fas fa-building-flag"></i> Government Schemes</button>
       </div>
     </div>
   </div>
 
-  <!-- Tab Navigation -->
-  <div class="ins-tab" id="tab-nav">
-    <button class="ins-tab-btn active" data-tab="policies"><i class="fas fa-file-contract"></i> My Policies</button>
-    <button class="ins-tab-btn" data-tab="claims"><i class="fas fa-file-invoice"></i> Claims</button>
-    <button class="ins-tab-btn" data-tab="loans"><i class="fas fa-university"></i> Loans</button>
+  <div class="ins-ov-grid" id="ins-ov"></div>
+
+  <div class="ins-tab-bar">
+    <button class="ins-tab-btn active" data-ins-tab="explore" onclick="InsuranceApp.switchTab('explore')"><i class="fas fa-list"></i> Explore</button>
+    <button class="ins-tab-btn" data-ins-tab="policies" onclick="InsuranceApp.switchTab('policies')"><i class="fas fa-file-contract"></i> My Policies</button>
+    <button class="ins-tab-btn" data-ins-tab="apps" onclick="InsuranceApp.switchTab('apps')"><i class="fas fa-file-signature"></i> Applications</button>
+    <button class="ins-tab-btn" data-ins-tab="claims" onclick="InsuranceApp.switchTab('claims')"><i class="fas fa-file-invoice"></i> Claims</button>
+    <button class="ins-tab-btn" data-ins-tab="saved" onclick="InsuranceApp.switchTab('saved')"><i class="fas fa-bookmark"></i> Saved</button>
   </div>
 
-  <!-- ===== POLICIES TAB ===== -->
-  <div class="tab-content active" id="tab-policies">
-    <div class="ins-section">
-      <div class="ins-section-title"><i class="fas fa-file-contract" style="color:var(--ins-blue);"></i> My Insurance Policies</div>
-      <div id="policies-list">
-        <div style="text-align:center;padding:40px 20px;">
-          <div class="skeleton-loader" style="height:20px;width:200px;margin:0 auto 10px;border-radius:8px;"></div>
-          <div class="skeleton-loader" style="height:14px;width:160px;margin:0 auto;border-radius:8px;"></div>
+  <div id="ins-pane-explore" class="ins-pane">
+    <div class="ins-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="ins-search-input" placeholder="Search crops, livestock, machinery, PMFBY..." autocomplete="off">
+    </div>
+    <div class="ins-grid" id="ins-catalog"></div>
+    <div class="ins-pagination" id="ins-catalog-pg"></div>
+  </div>
+
+  <div id="ins-pane-saved" class="ins-pane" style="display:none;">
+    <div class="ins-banner"><i class="fas fa-bookmark" style="color:var(--ins-teal);"></i> Keep shortlisted insurance plans here for quick access. Saved plans sync across your devices.</div>
+    <div class="ins-grid" id="ins-saved"></div>
+  </div>
+
+  <div id="ins-pane-apps" class="ins-pane" style="display:none;">
+    <div class="ins-toolbar">
+      <button class="btn-secondary btn-sm" onclick="InsuranceApp.scrollToCatalog()"><i class="fas fa-plus-circle"></i> New Application</button>
+    </div>
+    <div class="ins-list" id="ins-apps"></div>
+    <div class="ins-pagination" id="ins-apps-pg"></div>
+  </div>
+
+  <div id="ins-pane-policies" class="ins-pane" style="display:none;">
+    <div class="ins-list" id="ins-policies"></div>
+    <div class="ins-pagination" id="ins-policies-pg"></div>
+  </div>
+
+  <div id="ins-pane-claims" class="ins-pane" style="display:none;">
+    <div class="ins-toolbar">
+      <button class="btn-secondary btn-sm" onclick="InsuranceApp.openClaim()"><i class="fas fa-file-invoice"></i> File New Claim</button>
+    </div>
+    <div class="ins-list" id="ins-claims"></div>
+    <div class="ins-pagination" id="ins-claims-pg"></div>
+  </div>
+
+<!-- Product details modal -->
+  <div class="modal-backdrop" id="ins-modal-details">
+    <div class="modal-box" style="max-width:620px;max-height:86vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="ins-row-icon" id="ins-det-icon"><i class="fas fa-leaf"></i></div>
+          <div>
+            <h3 id="ins-det-name" style="font-size:17px;margin-bottom:2px;">--</h3>
+            <div id="ins-det-provider" style="font-size:11px;color:var(--text-muted);">--</div>
+          </div>
         </div>
+        <button onclick="InsuranceApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="ins-card-tags" id="ins-det-tags"></div>
+      <div id="ins-det-body"></div>
+      <div class="ins-disclaimer" id="ins-det-disclaimer" style="margin-bottom:16px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="ins-btn ins-btn-ghost" onclick="InsuranceApp.openEligibility()"><i class="fas fa-clipboard-check"></i> Check Eligibility</button>
+        <button class="ins-btn ins-btn-primary" onclick="InsuranceApp.openApply()"><i class="fas fa-paper-plane"></i> Apply Now</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== CLAIMS TAB ===== -->
-  <div class="tab-content" id="tab-claims">
-    <div class="ins-section">
-      <div class="ins-section-title"><i class="fas fa-file-invoice" style="color:var(--ins-blue);"></i> My Claims</div>
-      <div style="margin-bottom:12px;">
-        <button class="btn-secondary btn-sm" onclick="openModal('claim-modal')" style="border-color:var(--ins-blue);color:var(--ins-blue);"><i class="fas fa-plus-circle"></i> File New Claim</button>
+  <!-- Eligibility modal -->
+  <div class="modal-backdrop" id="ins-modal-elig">
+    <div class="modal-box" style="max-width:560px;max-height:86vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="font-size:16px;"><i class="fas fa-clipboard-check" style="color:var(--ins-teal);"></i> Eligibility Check</h3>
+        <button onclick="InsuranceApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
       </div>
-      <div id="claims-list">
-        <div style="text-align:center;padding:40px 20px;">
-          <div class="skeleton-loader" style="height:20px;width:200px;margin:0 auto 10px;border-radius:8px;"></div>
-          <div class="skeleton-loader" style="height:14px;width:160px;margin:0 auto;border-radius:8px;"></div>
+      <div id="ins-elig-product-name" style="font-size:18px;font-weight:800;color:var(--ins-teal);margin-bottom:4px;">--</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;" id="ins-elig-product-provider">--</div>
+      <input type="hidden" id="ins-elig-product-id">
+      <div id="ins-elig-form">
+        <div class="ins-form-group">
+          <label class="ins-form-label req" for="ins-elig-product">Insurance Plan</label>
+          <select class="ins-form-select" id="ins-elig-product"><option value="">Select product</option></select>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== LOANS TAB ===== -->
-  <div class="tab-content" id="tab-loans">
-    <div class="ins-section">
-      <div class="ins-section-title"><i class="fas fa-university" style="color:var(--ins-blue);"></i> Loan Options</div>
-      <div style="display:grid;gap:10px;margin-bottom:16px;">
-        <div class="ins-loan-option" onclick="fillLoanForm('KCC')">
-          <div class="ins-loan-option-icon"><i class="fas fa-seedling"></i></div>
-          <div><h4>Kisan Credit Card (KCC)</h4><p>Up to &#x20B9;3,00,000 at 7% p.a.</p></div>
-        </div>
-        <div class="ins-loan-option" onclick="fillLoanForm('Farm Loan')">
-          <div class="ins-loan-option-icon"><i class="fas fa-tractor"></i></div>
-          <div><h4>Farm Loan</h4><p>Up to &#x20B9;10,00,000 at 8% p.a.</p></div>
-        </div>
-        <div class="ins-loan-option" onclick="fillLoanForm('Equipment Loan')">
-          <div class="ins-loan-option-icon"><i class="fas fa-tools"></i></div>
-          <div><h4>Equipment Loan</h4><p>Up to &#x20B9;5,00,000 at 9% p.a.</p></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="ins-section">
-      <div class="ins-section-title"><i class="fas fa-list" style="color:var(--ins-blue);"></i> My Loan Applications</div>
-      <div id="loans-list">
-        <div style="text-align:center;padding:40px 20px;">
-          <div class="skeleton-loader" style="height:20px;width:200px;margin:0 auto 10px;border-radius:8px;"></div>
-          <div class="skeleton-loader" style="height:14px;width:160px;margin:0 auto;border-radius:8px;"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="ins-section">
-      <div class="ins-section-title"><i class="fas fa-file-signature" style="color:var(--ins-blue);"></i> Apply for Loan</div>
-      <div class="card-premium">
-        <form id="loan-form" onsubmit="submitLoanForm(event)">
+        <div class="ins-form-row">
           <div class="ins-form-group">
-            <label class="ins-form-label">Loan Type</label>
-            <select class="ins-form-select" id="loan-type" required>
-              <option value="">Select loan type</option>
-              <option value="KCC">Kisan Credit Card (KCC)</option>
-              <option value="Farm Loan">Farm Loan</option>
-              <option value="Equipment Loan">Equipment Loan</option>
+            <label class="ins-form-label req" for="ins-elig-state">State</label>
+            <select class="ins-form-select" id="ins-elig-state"></select>
+          </div>
+          <div class="ins-form-group">
+            <label class="ins-form-label" for="ins-elig-district">District</label>
+            <input class="ins-form-input" id="ins-elig-district" placeholder="e.g. Nagpur">
+          </div>
+        </div>
+        <div class="ins-form-group">
+          <label class="ins-form-label req" for="ins-elig-crop">Primary Crop / Cover</label>
+          <input class="ins-form-input" id="ins-elig-crop" placeholder="e.g. Paddy, Wheat, Jowar">
+        </div>
+        <div class="ins-form-row">
+          <div class="ins-form-group">
+            <label class="ins-form-label req" for="ins-elig-season">Season</label>
+            <select class="ins-form-select" id="ins-elig-season">
+              <option value="">Select season</option>
+              <option value="Kharif">Kharif (Monsoon)</option>
+              <option value="Rabi">Rabi (Winter)</option>
+              <option value="Zaid">Zaid (Summer)</option>
+              <option value="Annual">Annual</option>
             </select>
           </div>
           <div class="ins-form-group">
-            <label class="ins-form-label">Full Name</label>
-            <input class="ins-form-input" id="loan-name" placeholder="Enter your full name" required>
+            <label class="ins-form-label" for="ins-elig-farm">Farm Size (acres)</label>
+            <input class="ins-form-input" id="ins-elig-farm" type="number" min="0" step="0.1" placeholder="e.g. 2.5">
+          </div>
+        </div>
+        <div class="ins-form-group">
+          <label class="ins-form-label req" for="ins-elig-insurance-type">Insurance Type</label>
+          <select class="ins-form-select" id="ins-elig-insurance-type">
+            <option value="">Select type</option>
+            <option value="crop">Crop</option>
+            <option value="livestock">Livestock</option>
+            <option value="asset">Asset / Machinery</option>
+          </select>
+        </div>
+        <div class="ins-form-group" id="ins-elig-livestock-group" style="display:none;">
+          <label class="ins-form-label" for="ins-elig-livestock">Livestock Type</label>
+          <select class="ins-form-select" id="ins-elig-livestock">
+            <option value="">Select livestock</option>
+            <option value="cattle">Cattle</option>
+            <option value="buffalo">Buffalo</option>
+            <option value="goat">Goat</option>
+            <option value="sheep">Sheep</option>
+            <option value="poultry">Poultry</option>
+            <option value="pig">Pig</option>
+          </select>
+        </div>
+        <button class="ins-btn ins-btn-primary" id="ins-elig-submit" onclick="InsuranceApp.runEligibility()"><i class="fas fa-search"></i> Check Now</button>
+      </div>
+      <div id="ins-elig-result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Apply modal -->
+  <div class="modal-backdrop" id="ins-modal-apply">
+    <div class="modal-box" style="max-width:620px;max-height:88vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
+        <div>
+          <h3 style="font-size:16px;"><i class="fas fa-paper-plane" style="color:var(--ins-teal);"></i> Apply for Insurance</h3>
+          <div id="ins-apply-product" style="font-size:13px;font-weight:700;color:var(--ins-teal-dark);margin-top:4px;">--</div>
+          <div id="ins-apply-calc" style="font-size:11px;color:var(--text-muted);margin-top:2px;">--</div>
+        </div>
+        <button onclick="InsuranceApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+      <input type="hidden" id="ins-apply-product-id">
+      <input type="hidden" id="ins-apply-premium-rate">
+      <div class="ins-steps" id="ins-apply-steps">
+        <div class="ins-step-dot active" data-ins-step="1">1</div>
+        <div class="ins-step-dot" data-ins-step="2">2</div>
+        <div class="ins-step-dot" data-ins-step="3">3</div>
+      </div>
+      <div class="ins-pane" id="ins-apply-step-1">
+        <div class="ins-sec">
+          <h4><i class="fas fa-user"></i> Your Details</h4>
+          <div class="ins-form-group">
+            <label class="ins-form-label req" for="ins-apply-name">Full Name</label>
+            <input class="ins-form-input" id="ins-apply-name" placeholder="As per Aadhaar">
+          </div>
+          <div class="ins-form-row">
+            <div class="ins-form-group">
+              <label class="ins-form-label req" for="ins-apply-phone">Phone Number</label>
+              <input class="ins-form-input" id="ins-apply-phone" type="tel" maxlength="13" placeholder="10-13 digit mobile">
+            </div>
+            <div class="ins-form-group">
+              <label class="ins-form-label" for="ins-apply-aadhaar">Aadhaar Number</label>
+              <input class="ins-form-input" id="ins-apply-aadhaar" maxlength="12" placeholder="12-digit Aadhaar">
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button class="ins-btn ins-btn-ghost" onclick="InsuranceApp.closeModal()">Cancel</button>
+          <button class="ins-btn ins-btn-primary" onclick="InsuranceApp.applyNext(2)">Continue <i class="fas fa-arrow-right"></i></button>
+        </div>
+      </div>
+      <div class="ins-pane" id="ins-apply-step-2" style="display:none;">
+        <div class="ins-sec">
+          <h4><i class="fas fa-map-location-dot"></i> Farm Location</h4>
+          <div class="ins-form-row">
+            <div class="ins-form-group">
+              <label class="ins-form-label req" for="ins-apply-state">State</label>
+              <select class="ins-form-select" id="ins-apply-state"></select>
+            </div>
+            <div class="ins-form-group">
+              <label class="ins-form-label" for="ins-apply-district">District</label>
+              <input class="ins-form-input" id="ins-apply-district" placeholder="e.g. Nagpur">
+            </div>
           </div>
           <div class="ins-form-group">
-            <label class="ins-form-label">Loan Amount (&#x20B9;)</label>
-            <input class="ins-form-input" type="number" id="loan-amount" placeholder="Enter amount" required>
+            <label class="ins-form-label" for="ins-apply-farm">Farm Size (acres)</label>
+            <input class="ins-form-input" id="ins-apply-farm" type="number" min="0" step="0.1">
+          </div>
+        </div>
+        <div class="ins-sec">
+          <h4><i class="fas fa-seedling"></i> What to Insure</h4>
+          <div class="ins-form-row">
+            <div class="ins-form-group">
+              <label class="ins-form-label" for="ins-apply-crop">Crop</label>
+              <input class="ins-form-input" id="ins-apply-crop" placeholder="e.g. Paddy">
+            </div>
+            <div class="ins-form-group">
+              <label class="ins-form-label" for="ins-apply-season">Season</label>
+              <select class="ins-form-select" id="ins-apply-season">
+                <option value="">Select season</option>
+                <option value="Kharif">Kharif (Monsoon)</option>
+                <option value="Rabi">Rabi (Winter)</option>
+                <option value="Zaid">Zaid (Summer)</option>
+                <option value="Annual">Annual</option>
+              </select>
+            </div>
+          </div>
+          <div class="ins-form-row">
+            <div class="ins-form-group">
+              <label class="ins-form-label" for="ins-apply-livestock">Livestock Type</label>
+              <input class="ins-form-input" id="ins-apply-livestock" placeholder="e.g. Cattle">
+            </div>
+            <div class="ins-form-group">
+              <label class="ins-form-label" for="ins-apply-asset">Asset Type</label>
+              <input class="ins-form-input" id="ins-apply-asset" placeholder="e.g. Tractor">
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button class="ins-btn ins-btn-ghost" onclick="InsuranceApp.applyNext(1)"><i class="fas fa-arrow-left"></i> Back</button>
+          <button class="ins-btn ins-btn-primary" onclick="InsuranceApp.applyNext(3)">Continue <i class="fas fa-arrow-right"></i></button>
+        </div>
+      </div>
+      <div class="ins-pane" id="ins-apply-step-3" style="display:none;">
+        <div class="ins-sec">
+          <h4><i class="fas fa-coins"></i> Coverage &amp; Premium</h4>
+          <div class="ins-form-group">
+            <label class="ins-form-label req" for="ins-apply-coverage">Sum Insured (Coverage)</label>
+            <input class="ins-form-input" id="ins-apply-coverage" type="number" min="0" placeholder="e.g. 100000">
+          </div>
+          <div class="ins-premium-box">
+            <div class="ins-premium-amount" id="ins-apply-premium">&#x20B9;--</div>
+            <div class="ins-premium-lbl">Estimated annual premium</div>
           </div>
           <div class="ins-form-group">
-            <label class="ins-form-label">Purpose</label>
-            <input class="ins-form-input" id="loan-purpose" placeholder="e.g. Crop cultivation, equipment purchase">
+            <label class="ins-form-label" for="ins-apply-notes">Notes</label>
+            <textarea class="ins-form-textarea" id="ins-apply-notes" rows="2" placeholder="Any additional information"></textarea>
           </div>
-          <button type="submit" class="btn-primary" style="width:100%;background:var(--ins-blue);"><i class="fas fa-paper-plane"></i> Submit Application</button>
-        </form>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button class="ins-btn ins-btn-ghost" onclick="InsuranceApp.applyNext(2)"><i class="fas fa-arrow-left"></i> Back</button>
+          <button class="ins-btn ins-btn-primary" id="ins-apply-submit" onclick="InsuranceApp.submitApplication()"><i class="fas fa-paper-plane"></i> Submit Application</button>
+        </div>
       </div>
     </div>
   </div>
-</main>
 
-<!-- Apply Insurance Modal -->
-<div class="modal-backdrop" id="apply-modal">
-  <div class="modal-box" style="max-width:480px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-      <h3 style="font-size:18px;"><i class="fas fa-shield-halved" style="color:var(--ins-blue);"></i> Apply for Insurance</h3>
-      <button onclick="closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
-    </div>
-    <form id="insurance-form" onsubmit="submitInsuranceForm(event)">
+  <!-- Application documents modal -->
+  <div class="modal-backdrop" id="ins-modal-appdocs">
+    <div class="modal-box" style="max-width:480px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="font-size:16px;"><i class="fas fa-file-upload" style="color:var(--ins-teal);"></i> Upload Document</h3>
+        <button onclick="InsuranceApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;" id="ins-appdocs-ref">--</div>
+      <input type="hidden" id="ins-appdocs-id">
       <div class="ins-form-group">
-        <label class="ins-form-label">Insurance Type</label>
-        <select class="ins-form-select" id="ins-type" required onchange="updatePremiumEstimate()">
-          <option value="">Select type</option>
-          <option value="Crop Insurance">Crop Insurance</option>
-          <option value="Farm Insurance">Farm Insurance</option>
-          <option value="Equipment Insurance">Equipment Insurance</option>
+        <label class="ins-form-label req" for="ins-appdocs-type">Document Type</label>
+        <select class="ins-form-select" id="ins-appdocs-type">
+          <option value="land_record">Land Record</option>
+          <option value="identity_proof">Identity Proof</option>
+          <option value="crop_report">Crop Report</option>
+          <option value="other">Other</option>
         </select>
       </div>
       <div class="ins-form-group">
-        <label class="ins-form-label">Crop / Farm Name</label>
-        <input class="ins-form-input" id="ins-name" placeholder="e.g. Paddy Field, Tractor" required>
+        <label class="ins-form-label req" for="ins-appdocs-file">File</label>
+        <input class="ins-form-input" type="file" id="ins-appdocs-file">
       </div>
-      <div class="ins-form-group">
-        <label class="ins-form-label">Coverage Amount (&#x20B9;)</label>
-        <input class="ins-form-input" type="number" id="ins-coverage" placeholder="Enter amount" required oninput="updatePremiumEstimate()">
-      </div>
-      <div class="ins-premium-box">
-        <div class="ins-premium-amount" id="ins-premium-display">&#x20B9; --</div>
-        <div class="ins-premium-lbl">Estimated Annual Premium (2.5%)</div>
-      </div>
-      <button type="submit" class="btn-primary" style="width:100%;background:var(--ins-blue);"><i class="fas fa-check-circle"></i> Apply Now</button>
-    </form>
-  </div>
-</div>
-
-<!-- File Claim Modal -->
-<div class="modal-backdrop" id="claim-modal">
-  <div class="modal-box" style="max-width:480px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-      <h3 style="font-size:18px;"><i class="fas fa-file-invoice" style="color:var(--ins-blue);"></i> File a Claim</h3>
-      <button onclick="closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      <button class="ins-btn ins-btn-primary" id="ins-appdocs-submit" onclick="InsuranceApp.uploadAppDoc()" style="width:100%;"><i class="fas fa-cloud-arrow-up"></i> Upload</button>
     </div>
-    <form id="claim-form" onsubmit="submitClaimForm(event)">
-      <div class="ins-form-group">
-        <label class="ins-form-label">Policy</label>
-        <select class="ins-form-select" id="claim-policy" required></select>
-      </div>
-      <div class="ins-form-group">
-        <label class="ins-form-label">Claim Amount (&#x20B9;)</label>
-        <input class="ins-form-input" type="number" id="claim-amount" placeholder="Enter claim amount" required>
-      </div>
-      <div class="ins-form-group">
-        <label class="ins-form-label">Description / Reason</label>
-        <textarea class="ins-form-input" id="claim-desc" rows="3" placeholder="Describe the loss/damage" required></textarea>
-      </div>
-      <button type="submit" class="btn-primary" style="width:100%;background:var(--ins-blue);"><i class="fas fa-paper-plane"></i> Submit Claim</button>
-    </form>
   </div>
-</div>
+
+  <!-- Pay premium modal -->
+  <div class="modal-backdrop" id="ins-modal-pay">
+    <div class="modal-box" style="max-width:440px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="font-size:16px;"><i class="fas fa-money-bill-wave" style="color:var(--ins-teal);"></i> Pay Premium</h3>
+        <button onclick="InsuranceApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+      <input type="hidden" id="ins-pay-policy-id">
+      <div class="ins-premium-box">
+        <div class="ins-premium-amount" id="ins-pay-amount">&#x20B9;--</div>
+        <div class="ins-premium-lbl" id="ins-pay-policy-label">--</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg-card-soft);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:13px;font-size:12px;">
+        <i class="fas fa-wallet" style="color:var(--ins-teal);"></i>
+        <span style="color:var(--text-muted);">Wallet balance:</span>
+        <strong id="ins-pay-balance">--</strong>
+      </div>
+      <div class="ins-form-group">
+        <label class="ins-form-label req" for="ins-pay-pin">Wallet PIN</label>
+        <input class="ins-form-input" id="ins-pay-pin" type="password" inputmode="numeric" maxlength="6" placeholder="Your 6-digit wallet PIN">
+      </div>
+      <button class="ins-btn ins-btn-primary" id="ins-pay-submit" onclick="InsuranceApp.payPremium()" style="width:100%;"><i class="fas fa-lock"></i> Pay Now</button>
+    </div>
+  </div>
+
+  <!-- Renew modal -->
+  <div class="modal-backdrop" id="ins-modal-renew">
+    <div class="modal-box" style="max-width:440px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="font-size:16px;"><i class="fas fa-rotate-right" style="color:var(--ins-teal);"></i> Renew Policy</h3>
+        <button onclick="InsuranceApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+      <input type="hidden" id="ins-renew-policy-id">
+      <div class="ins-premium-box">
+        <div class="ins-premium-amount" id="ins-renew-amount">&#x20B9;--</div>
+        <div class="ins-premium-lbl" id="ins-renew-policy-label">--</div>
+      </div>
+      <div class="ins-form-group">
+        <label class="ins-form-label req" for="ins-renew-pin">Wallet PIN</label>
+        <input class="ins-form-input" id="ins-renew-pin" type="password" inputmode="numeric" maxlength="6" placeholder="Your 6-digit wallet PIN">
+      </div>
+      <button class="ins-btn ins-btn-primary" id="ins-renew-submit" onclick="InsuranceApp.renewPolicy()" style="width:100%;"><i class="fas fa-lock"></i> Renew Now</button>
+    </div>
+  </div>
+
+  <!-- Payments modal -->
+  <div class="modal-backdrop" id="ins-modal-payments">
+    <div class="modal-box" style="max-width:540px;max-height:86vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="font-size:16px;"><i class="fas fa-credit-card" style="color:var(--ins-teal);"></i> Payment History</h3>
+        <button onclick="InsuranceApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="ins-payments-body"></div>
+    </div>
+  </div>
+
+  <!-- Claim modal -->
+  <div class="modal-backdrop" id="ins-modal-claim">
+    <div class="modal-box" style="max-width:580px;max-height:88vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="font-size:16px;"><i class="fas fa-file-invoice" style="color:var(--ins-teal);"></i> File a Claim</h3>
+        <button onclick="InsuranceApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="ins-form-group">
+        <label class="ins-form-label req" for="ins-claim-policy">Policy</label>
+        <select class="ins-form-select" id="ins-claim-policy"><option value="">Select active policy</option></select>
+      </div>
+      <div class="ins-form-group">
+        <label class="ins-form-label req" for="ins-claim-reason">Reason</label>
+        <select class="ins-form-select" id="ins-claim-reason">
+          <option value="">Select reason</option>
+          <option value="crop_loss">Crop Loss</option>
+          <option value="natural_disaster">Natural Disaster</option>
+          <option value="livestock_death">Livestock Death</option>
+          <option value="livestock_disease">Livestock Disease</option>
+          <option value="asset_damage">Asset / Machinery Damage</option>
+          <option value="fire">Fire</option>
+          <option value="theft">Theft</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="ins-form-group">
+        <label class="ins-form-label req" for="ins-claim-date">Incident Date</label>
+        <input class="ins-form-input" type="date" id="ins-claim-date">
+      </div>
+      <div class="ins-form-group">
+        <label class="ins-form-label" for="ins-claim-location">Incident Location</label>
+        <input class="ins-form-input" id="ins-claim-location" placeholder="Village / Taluka / District">
+      </div>
+      <div class="ins-form-row">
+        <div class="ins-form-group">
+          <label class="ins-form-label req" for="ins-claim-loss">Estimated Loss (&#x20B9;)</label>
+          <input class="ins-form-input" id="ins-claim-loss" type="number" min="0" placeholder="e.g. 60000">
+        </div>
+        <div class="ins-form-group">
+          <label class="ins-form-label" for="ins-claim-amount">Claim Amount (&#x20B9;)</label>
+          <input class="ins-form-input" id="ins-claim-amount" type="number" min="0" placeholder="Up to sum insured">
+        </div>
+      </div>
+      <div class="ins-form-group">
+        <label class="ins-form-label" for="ins-claim-desc">Description</label>
+        <textarea class="ins-form-textarea" id="ins-claim-desc" rows="3" placeholder="Describe what happened"></textarea>
+      </div>
+      <button class="ins-btn ins-btn-primary" id="ins-claim-submit" onclick="InsuranceApp.submitClaim()" style="width:100%;"><i class="fas fa-paper-plane"></i> Submit Claim</button>
+    </div>
+  </div>
+
+  <!-- Claim detail modal -->
+  <div class="modal-backdrop" id="ins-modal-claimdetail">
+    <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
+        <div>
+          <h3 style="font-size:16px;" id="ins-cd-title">--</h3>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;" id="ins-cd-ref">--</div>
+        </div>
+        <button onclick="InsuranceApp.closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="ins-cd-body"></div>
+    </div>
+  </div>
+
+</main>
+
+<div id="ins-toasts" style="position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:92vw;"></div>
 
 <script src="js/services.js"></script>
 <script src="js/userStore.js"></script>
@@ -256,314 +616,1228 @@
 (function () {
   'use strict';
 
-  var formatters = {
+  if (!window.API || !window.API.Insurance || !localStorage.getItem('fa-auth-token')) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  var Ins = window.API.Insurance;
+  var Wallet = window.API.Wallet;
+
+  var STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman & Nicobar Islands','Chandigarh','Delhi','Jammu & Kashmir','Ladakh','Lakshadweep','Puducherry'];
+
+  var st = {
     inr: function (amount) {
-      var num = parseFloat(amount) || 0;
-      var parts = num.toFixed(2).split('.');
-      var intPart = parts[0];
-      var lastThree = intPart.substring(intPart.length - 3);
-      var otherNums = intPart.substring(0, intPart.length - 3);
-      if (otherNums !== '') lastThree = ',' + lastThree;
-      var formatted = otherNums.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
-      return '\u20B9' + formatted;
+      if (amount === null || amount === undefined || amount === '') return 'Not specified';
+      var n = parseFloat(amount);
+      if (isNaN(n)) return 'Not specified';
+      return '\u20B9' + n.toLocaleString('en-IN', { maximumFractionDigits: n % 1 === 0 ? 0 : 2 });
     },
     inrShort: function (amount) {
-      var num = parseFloat(amount) || 0;
-      if (num >= 10000000) return '\u20B9' + (num / 10000000).toFixed(1) + ' Cr';
-      if (num >= 100000) return '\u20B9' + (num / 100000).toFixed(1) + ' L';
-      return formatters.inr(num);
+      var n = parseFloat(amount);
+      if (isNaN(n)) return 'Not specified';
+      if (n >= 10000000) return '\u20B9' + (n / 10000000).toFixed(1) + ' Cr';
+      if (n >= 100000) return '\u20B9' + (n / 100000).toFixed(1) + ' L';
+      if (n >= 1000) return '\u20B9' + (n / 1000).toFixed(1) + ' K';
+      return st.inr(n);
     },
     date: function (d) {
-      if (!d) return '';
-      return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      if (!d) return 'Not specified';
+      var dt = new Date(d);
+      if (isNaN(dt.getTime())) return d;
+      return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    },
+    pct: function (v) {
+      if (v === null || v === undefined || v === '') return 'Not specified';
+      var n = parseFloat(v);
+      if (isNaN(n)) return 'Not specified';
+      return n.toFixed(2) + '%';
     }
   };
 
-  /* ---- Mock Data ---- */
-  var mockPolicies = [
-    { policy_id: 'POL-001', name: 'PMFBY Crop Insurance', number: 'PMFBY/2026/KA/0241', crop: 'Paddy (Kharif)', coverage: 250000, premium: 6250, start_date: '2026-06-01', end_date: '2026-12-31', status: 'active' },
-    { policy_id: 'POL-002', name: 'Weather Index Insurance', number: 'WII/2026/AP/0192', crop: 'Cotton', coverage: 180000, premium: 5400, start_date: '2026-04-15', end_date: '2026-10-15', status: 'active' },
-    { policy_id: 'POL-003', name: 'Farm Structure Insurance', number: 'FSI/2026/MH/0088', crop: 'Farm Shed & Equipment', coverage: 350000, premium: 10500, start_date: '2025-01-01', end_date: '2026-09-30', status: 'expiring' },
-    { policy_id: 'POL-004', name: 'Livestock Insurance', number: 'LI/2026/RJ/0054', crop: '2x Milch Buffaloes', coverage: 120000, premium: 3600, start_date: '2025-11-01', end_date: '2026-10-31', status: 'active' },
-    { policy_id: 'POL-005', name: 'Equipment Insurance', number: 'EI/2024/UP/0110', crop: 'Tractor (Mahindra 575)', coverage: 400000, premium: 8000, start_date: '2024-01-01', end_date: '2025-12-31', status: 'expired' }
-  ];
-
-  var mockClaims = [
-    { claim_id: 'CLM-101', policy_name: 'PMFBY Crop Insurance', date_filed: '2026-07-10', amount: 85000, status: 'approved' },
-    { claim_id: 'CLM-102', policy_name: 'Weather Index Insurance', date_filed: '2026-07-15', amount: 45000, status: 'review' },
-    { claim_id: 'CLM-103', policy_name: 'Farm Structure Insurance', date_filed: '2026-07-20', amount: 120000, status: 'pending' }
-  ];
-
-  var mockLoans = [
-    { loan_id: 'LN-001', type: 'KCC', amount: 150000, date: '2026-05-10', status: 'approved' },
-    { loan_id: 'LN-002', type: 'Farm Loan', amount: 500000, date: '2026-06-22', status: 'pending' },
-    { loan_id: 'LN-003', type: 'Equipment Loan', amount: 300000, date: '2026-07-05', status: 'review' }
-  ];
-
-  /* ---- Render Functions ---- */
-  function renderPolicies() {
-    var container = document.getElementById('policies-list');
-    UIState.loading(container);
-
-    var p = API.Government.listInsurance().then(function (data) {
-      var items = data;
-      if (items && items.items) items = items.items;
-      if (!Array.isArray(items)) items = [];
-      if (items.length === 0) return mockPolicies;
-      return items;
-    }).catch(function () {
-      return mockPolicies;
-    });
-
-    p.then(function (items) {
-      var html = '';
-      items.forEach(function (p) {
-        var status = p.status || 'active';
-        var statusLabel = { active: 'Active', expiring: 'Expiring Soon', expired: 'Expired' }[status] || 'Active';
-        var badgeClass = { active: 'active', expiring: 'expiring', expired: 'expired' }[status] || 'active';
-        var iconColor = { active: '#059669', expiring: '#D97706', expired: '#6B7280' }[status] || '#059669';
-        var iconBg = { active: 'rgba(5,150,105,0.1)', expiring: 'rgba(245,158,11,0.1)', expired: 'rgba(107,114,128,0.1)' }[status] || 'rgba(5,150,105,0.1)';
-
-        html += '<div class="price-card" style="flex-wrap:wrap;">' +
-          '<div class="price-info">' +
-            '<div class="price-icon" style="background:' + iconBg + ';color:' + iconColor + ';"><i class="fas fa-shield-halved"></i></div>' +
-            '<div>' +
-              '<div class="price-crop">' + (p.name || 'Untitled Policy') + '</div>' +
-              '<div style="font-size:10px;color:var(--text-muted);">' + (p.number || '') + ' &bull; ' + formatters.date(p.start_date) + ' - ' + formatters.date(p.end_date) + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
-            '<div style="text-align:right;">' +
-              '<div style="font-size:13px;font-weight:700;">' + formatters.inr(p.coverage) + '</div>' +
-              '<div style="font-size:9px;color:var(--text-muted);">Coverage</div>' +
-            '</div>' +
-            '<span class="ins-badge ' + badgeClass + '">' + statusLabel + '</span>' +
-            '<button class="btn-primary btn-sm" style="font-size:10px;padding:5px 10px;border-radius:8px;background:var(--ins-blue);" onclick="showToast(\'Policy ' + p.policy_id + ' details loading...\',\'info\')">View</button>' +
-          '</div>' +
-          '<div style="width:100%;display:flex;gap:16px;padding-top:8px;margin-top:8px;border-top:1px solid var(--border-light);font-size:11px;color:var(--text-muted);">' +
-            '<span><strong>Premium:</strong> ' + formatters.inr(p.premium) + '</span>' +
-            '<span><strong>Crop:</strong> ' + (p.crop || 'N/A') + '</span>' +
-          '</div>' +
-        '</div>';
-      });
-      container.innerHTML = html;
-      updateSummary(items);
-    });
+  function esc(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function updateSummary(policies) {
-    var active = policies.filter(function (p) { return p.status === 'active' || p.status === 'expiring'; });
-    document.getElementById('summary-policies').textContent = active.length;
-    var totalCoverage = active.reduce(function (s, p) { return s + (parseFloat(p.coverage) || 0); }, 0);
-    document.getElementById('summary-coverage').textContent = formatters.inrShort(totalCoverage);
-    var totalPremium = active.reduce(function (s, p) { return s + (parseFloat(p.premium) || 0); }, 0);
-    document.getElementById('summary-premium').textContent = formatters.inrShort(totalPremium);
-  }
-
-  function renderClaims() {
-    var container = document.getElementById('claims-list');
-    UIState.loading(container);
-
-    var p = API.Government.listClaims().then(function (data) {
-      var items = data;
-      if (items && items.items) items = items.items;
-      if (!Array.isArray(items)) items = [];
-      if (items.length === 0) return mockClaims;
-      return items;
-    }).catch(function () {
-      return mockClaims;
-    });
-
-    p.then(function (items) {
-      var pendingCount = 0;
-      var html = '';
-      items.forEach(function (c) {
-        var status = c.status || 'pending';
-        var statusLabel = { approved: 'Approved', pending: 'Pending', review: 'Under Review' }[status] || 'Pending';
-        var badgeClass = { approved: 'approved', pending: 'pending', review: 'review' }[status] || 'pending';
-        var iconColor = { approved: '#059669', pending: '#D97706', review: '#1E40AF' }[status] || '#D97706';
-        if (status === 'pending' || status === 'review') pendingCount++;
-
-        html += '<div class="price-card">' +
-          '<div class="price-info">' +
-            '<div class="price-icon" style="background:rgba(37,99,235,0.1);color:' + iconColor + ';"><i class="fas fa-file-invoice"></i></div>' +
-            '<div>' +
-              '<div class="price-crop">' + (c.claim_id || 'N/A') + ' - ' + (c.policy_name || 'Unknown Policy') + '</div>' +
-              '<div style="font-size:10px;color:var(--text-muted);">Filed: ' + formatters.date(c.date_filed) + ' &bull; Amount: ' + formatters.inr(c.amount) + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<span class="ins-badge ' + badgeClass + '">' + statusLabel + '</span>' +
-        '</div>';
-      });
-      if (!html) {
-        UIState.empty(container, 'No claims filed yet', 'fa-file-invoice');
-      } else {
-        container.innerHTML = html;
-      }
-      document.getElementById('summary-claims').textContent = pendingCount;
-    });
-  }
-
-  function renderLoans() {
-    var container = document.getElementById('loans-list');
-    UIState.loading(container);
-    setTimeout(function () {
-      var html = '';
-      mockLoans.forEach(function (l) {
-        var statusLabel = { approved: 'Approved', pending: 'Pending', review: 'Under Review' }[l.status] || 'Pending';
-        var badgeClass = { approved: 'approved', pending: 'pending', review: 'review' }[l.status] || 'pending';
-        html += '<div class="ins-loan-card">' +
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
-            '<div>' +
-              '<div style="font-size:14px;font-weight:700;">' + l.type + '</div>' +
-              '<div style="font-size:11px;color:var(--text-muted);">' + l.loan_id + ' &bull; ' + formatters.date(l.date) + '</div>' +
-            '</div>' +
-            '<span class="ins-badge ' + badgeClass + '">' + statusLabel + '</span>' +
-          '</div>' +
-          '<div class="ins-loan-amount" style="margin-top:8px;">' + formatters.inr(l.amount) + '</div>' +
-          '<div class="ins-loan-lbl">Loan Amount</div>' +
-        '</div>';
-      });
-      container.innerHTML = html;
-    }, 400);
-  }
-
-  /* ---- Modal ---- */
-  window.openModal = function (id) {
-    var el = document.getElementById(id);
-    if (el) el.classList.add('active');
-  };
-
-  window.closeModal = function () {
-    document.querySelectorAll('.modal-backdrop.active').forEach(function (el) { el.classList.remove('active'); });
-  };
-
-  /* ---- Insurance Form ---- */
-  window.updatePremiumEstimate = function () {
-    var coverage = parseFloat(document.getElementById('ins-coverage').value) || 0;
-    var display = document.getElementById('ins-premium-display');
-    if (coverage > 0) {
-      var premium = coverage * 0.025;
-      display.textContent = formatters.inr(premium) + '/yr';
-    } else {
-      display.textContent = '\u20B9 --';
+  function firstDef(arr) {
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] !== null && arr[i] !== undefined && arr[i] !== '') return arr[i];
     }
-  };
+    return null;
+  }
 
-  window.submitInsuranceForm = function (e) {
-    e.preventDefault();
-    var data = {
-      type: document.getElementById('ins-type').value,
-      name: document.getElementById('ins-name').value,
-      coverage: parseFloat(document.getElementById('ins-coverage').value)
+  function prodId(p) { return p.id || p.product_id || p.insurance_id; }
+
+  function prodRate(p) {
+    var r = parseFloat(p.premium_rate);
+    if (!isNaN(r)) return r;
+    if (p.premium_amount && p.coverage_amount) {
+      var ca = parseFloat(p.coverage_amount);
+      if (ca > 0) return (parseFloat(p.premium_amount) / ca) * 100;
+    }
+    return null;
+  }
+
+  function catIcon(c) {
+    var s = String(c || '').toLowerCase();
+    if (/crop|paddy|wheat|kharif|rabi/.test(s)) return 'fa-wheat-awn';
+    if (/live|animal|cattle|buffalo|goat|poultry/.test(s)) return 'fa-cow';
+    if (/asset|machin|tractor|equipment|tool/.test(s)) return 'fa-tractor';
+    if (/weather|calam|flood|drought|rain/.test(s)) return 'fa-cloud-sun-rain';
+    if (/health|disease|insurance/.test(s)) return 'fa-shield-halved';
+    return 'fa-leaf';
+  }
+
+  function statusMeta(s) {
+    var m = {
+      active: { label: 'Active', cls: 'active', icon: 'fa-circle-check' },
+      pending_verification: { label: 'Pending Verification', cls: 'pending_verification', icon: 'fa-clock' },
+      pending: { label: 'Pending', cls: 'pending', icon: 'fa-clock' },
+      under_review: { label: 'Under Review', cls: 'under_review', icon: 'fa-file-pen' },
+      submitted: { label: 'Submitted', cls: 'submitted', icon: 'fa-paper-plane' },
+      in_review: { label: 'In Review', cls: 'in_review', icon: 'fa-file-pen' },
+      approved: { label: 'Approved', cls: 'approved', icon: 'fa-circle-check' },
+      approving: { label: 'Approving', cls: 'approving', icon: 'fa-hourglass-half' },
+      rejected: { label: 'Rejected', cls: 'rejected', icon: 'fa-circle-xmark' },
+      withdrawn: { label: 'Withdrawn', cls: 'withdrawn', icon: 'fa-ban' },
+      cancelled: { label: 'Cancelled', cls: 'cancelled', icon: 'fa-ban' },
+      failed: { label: 'Failed', cls: 'failed', icon: 'fa-circle-xmark' },
+      expired: { label: 'Expired', cls: 'expired', icon: 'fa-clock' },
+      expiring: { label: 'Expiring Soon', cls: 'expiring', icon: 'fa-hourglass-half' },
+      paid: { label: 'Paid', cls: 'paid', icon: 'fa-check' },
+      success: { label: 'Success', cls: 'success', icon: 'fa-check' }
     };
-    var btn = e.target.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+    var meta = m[s];
+    if (meta) return meta;
+    return { label: (String(s || 'unknown')).replace(/_/g, ' '), cls: 'default', icon: 'fa-circle-question' };
+  }
 
-    API.Government.createInsurance(data).then(function () {
-      showToast('Insurance application submitted successfully!', 'success');
-      closeModal();
-      e.target.reset();
-      document.getElementById('ins-premium-display').textContent = '\u20B9 --';
-      renderPolicies();
+  function skeletonCards(n) {
+    var h = '<div class="ins-skel-grid">';
+    for (var i = 0; i < n; i++) {
+      h += '<div class="ins-skel-card">' +
+        '<div class="skeleton-loader" style="height:44px;width:44px;border-radius:12px;margin-bottom:12px;"></div>' +
+        '<div class="skeleton-loader" style="height:14px;width:70%;margin-bottom:8px;"></div>' +
+        '<div class="skeleton-loader" style="height:11px;width:45%;margin-bottom:14px;"></div>' +
+        '<div class="skeleton-loader" style="height:30px;margin-bottom:12px;"></div>' +
+        '<div class="skeleton-loader" style="height:46px;"></div>' +
+      '</div>';
+    }
+    return h + '</div>';
+  }
+
+  function skeletonRows(n) {
+    var h = '';
+    for (var i = 0; i < n; i++) {
+      h += '<div class="ins-row-card">' +
+        '<div style="display:flex;gap:12px;">' +
+        '<div class="skeleton-loader" style="height:44px;width:44px;border-radius:12px;"></div>' +
+        '<div style="flex:1;">' +
+        '<div class="skeleton-loader" style="height:14px;width:55%;margin-bottom:8px;"></div>' +
+        '<div class="skeleton-loader" style="height:11px;width:35%;"></div>' +
+        '</div></div></div>';
+    }
+    return h;
+  }
+
+  function emptyState(msg, sub) {
+    return '<div style="text-align:center;padding:44px 20px;">' +
+      '<div style="font-size:46px;color:var(--text-muted);margin-bottom:14px;opacity:0.5;"><i class="fas fa-shield-halved"></i></div>' +
+      '<h4 style="font-size:15px;color:var(--text-secondary);margin-bottom:6px;">' + esc(msg) + '</h4>' +
+      (sub ? '<p style="font-size:12px;color:var(--text-muted);">' + esc(sub) + '</p>' : '') +
+    '</div>';
+  }
+
+  function errorState(msg, retryFn) {
+    var el = document.createElement('div');
+    el.style.cssText = 'text-align:center;padding:44px 20px;';
+    el.innerHTML = '<div style="font-size:46px;color:var(--danger);margin-bottom:14px;opacity:0.5;"><i class="fas fa-exclamation-triangle"></i></div>' +
+      '<h4 style="font-size:15px;color:var(--text-secondary);margin-bottom:10px;">' + esc(msg) + '</h4>' +
+      '<button class="btn-primary" style="padding:10px 24px;font-size:12px;border-radius:11px;">Retry</button>';
+    var btn = el.querySelector('button');
+    if (btn) btn.addEventListener('click', retryFn);
+    return el;
+  }
+
+  function showToast(msg, type) {
+    var wrap = document.getElementById('ins-toasts');
+    if (!wrap) return;
+    var el = document.createElement('div');
+    var bg = type === 'error' ? 'rgba(220,38,38,0.95)' : (type === 'info' ? 'rgba(30,64,175,0.95)' : 'rgba(15,118,110,0.95)');
+    el.style.cssText = 'background:' + bg + ';color:#fff;padding:11px 18px;border-radius:11px;font-size:12px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,0.18);max-width:100%;';
+    el.textContent = msg;
+    wrap.appendChild(el);
+    setTimeout(function () {
+      el.style.transition = 'opacity 0.4s';
+      el.style.opacity = '0';
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+    }, 3200);
+  }
+
+  function openModal(id) {
+    var m = document.getElementById(id);
+    if (!m) return;
+    m.classList.add('active');
+    document.body.classList.add('ins-modal-open');
+  }
+
+  function resetInsuranceOverlays() {
+    document.querySelectorAll('.modal-backdrop').forEach(function (el) {
+      el.classList.remove('active');
+    });
+    document.body.classList.remove('ins-modal-open');
+  }
+
+  window.InsuranceApp = {
+    closeModal: function () {
+      resetInsuranceOverlays();
+    }
+  };
+
+  /* ================= Overview ================= */
+  function loadOverview() {
+    var wrap = document.getElementById('ins-ov');
+    wrap.innerHTML = '';
+    for (var i = 0; i < 7; i++) {
+      wrap.appendChild(Object.assign(document.createElement('div'), { className: 'ins-ov-card' }));
+    }
+    Ins.overview().then(function (data) {
+      data = data || {};
+      var ov = [
+        { label: 'Active Policies', value: String(data.active_policies_count || 0), sub: (data.total_policies || 0) + ' total', icon: 'fa-shield-halved' },
+        { label: 'Total Coverage', value: st.inrShort(data.total_coverage), sub: 'sum insured', icon: 'fa-umbrella' },
+        { label: 'Premium Paid', value: st.inrShort(data.total_premium_paid), sub: 'lifetime', icon: 'fa-money-bill-wave' },
+        { label: 'Premium Due', value: st.inrShort(data.total_premium_due), sub: data.next_premium_due_date ? 'next: ' + st.date(data.next_premium_due_date) : 'fully paid', icon: 'fa-hourglass-half' },
+        { label: 'Open Claims', value: String(data.open_claims_count || 0), sub: (data.total_claims || 0) + ' filed', icon: 'fa-file-invoice' },
+        { label: 'Applications', value: String(data.applications_count || 0), sub: 'submitted', icon: 'fa-file-signature' },
+        { label: 'Saved Plans', value: String(data.saved_count || 0), sub: 'shortlisted', icon: 'fa-bookmark' }
+      ];
+      var h = '';
+      for (var j = 0; j < ov.length; j++) {
+        var special = j === 0;
+        h += '<div class="ins-ov-card' + (special ? ' special' : '') + '">' +
+          '<div class="ins-ov-label">' + ov[j].label + '</div>' +
+          '<div class="ins-ov-value">' + ov[j].value + '</div>' +
+          '<div class="ins-ov-sub"><i class="fas ' + ov[j].icon + '"></i> ' + esc(ov[j].sub) + '</div>' +
+        '</div>';
+      }
+      wrap.innerHTML = h;
     }).catch(function () {
-      showToast('Submitted for review (offline mode). You will be notified.', 'info');
-      closeModal();
-      e.target.reset();
-      document.getElementById('ins-premium-display').textContent = '\u20B9 --';
-      renderPolicies();
+      wrap.innerHTML = '';
+      wrap.appendChild(errorState('Unable to load your insurance summary.', loadOverview));
+    });
+  }
+
+  /* ================= Catalog ================= */
+  var catalogState = { query: '', page: 1, pageSize: 8, total: 0, totalPages: 1, items: [] };
+  var appsState = { page: 1, pageSize: 8 };
+  var policiesState = { page: 1, pageSize: 8 };
+  var claimsState = { page: 1, pageSize: 8 };
+
+  function productCard(p) {
+    var rate = prodRate(p);
+    var tags = '';
+    if (p.category) tags += '<span class="ins-tag cat">' + esc(p.category) + '</span>';
+    if (p.government_backed || p.scheme_name) tags += '<span class="ins-tag gov"><i class="fas fa-building-columns"></i> ' + esc(p.scheme_name || 'Govt') + '</span>';
+    var coverage = firstDef([p.coverage_amount, p.max_coverage, p.coverage]);
+    var duration = firstDef([p.policy_duration_text, p.policy_duration_months]);
+    var saved = p.is_saved;
+    return '<div class="ins-card">' +
+      '<div class="ins-card-top">' +
+        '<div class="ins-card-icon"><i class="fas ' + catIcon(p.category) + '"></i></div>' +
+        '<div style="min-width:0;">' +
+          '<div class="ins-card-name">' + esc(p.name || p.product_name) + '</div>' +
+          '<div class="ins-card-provider">' + esc(firstDef([p.provider, p.provider_id, p.insurance_id])) + '</div>' +
+        '</div>' +
+        '<button class="ins-save-btn ' + (saved ? 'saved' : '') + '" onclick="InsuranceApp.toggleSave(\'' + prodId(p) + '\')" title="Save"><i class="fas ' + (saved ? 'bookmark' : 'bookmark-regular') + '"></i></button>' +
+      '</div>' +
+      '<div class="ins-card-tags">' + tags + '</div>' +
+      '<div class="ins-card-desc">' + esc(firstDef([p.short_description, p.description, p.eligibility])) + '</div>' +
+      '<div class="ins-stats">' +
+        '<div class="ins-stat"><div class="ins-stat-num">' + (coverage != null ? st.inrShort(coverage) : '&mdash;') + '</div><div class="ins-stat-label">Coverage</div></div>' +
+        '<div class="ins-stat"><div class="ins-stat-num">' + (rate != null ? st.pct(rate) : '&mdash;') + '</div><div class="ins-stat-label">Rate</div></div>' +
+        '<div class="ins-stat"><div class="ins-stat-num">' + (duration != null ? esc(duration.toString() + (typeof p.policy_duration_months === 'number' ? ' mo' : '')) : '&mdash;') + '</div><div class="ins-stat-label">Term</div></div>' +
+      '</div>' +
+      '<div class="ins-card-actions">' +
+        '<button class="ins-btn ins-btn-ghost" onclick="InsuranceApp.openDetail(\'' + prodId(p) + '\')"><i class="fas fa-eye"></i> Details</button>' +
+        '<button class="ins-btn ins-btn-primary" onclick="InsuranceApp.openApply(\'' + prodId(p) + '\')"><i class="fas fa-paper-plane"></i> Apply</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderPagination(elId, page, totalPages, fn) {
+    var el = document.getElementById(elId);
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    el.innerHTML = '<button class="ins-page-btn" ' + (page <= 1 ? 'disabled' : '') + ' onclick="' + fn + '(' + (page - 1) + ')"><i class="fas fa-chevron-left"></i> Prev</button>' +
+      '<span class="ins-page-info">Page ' + page + ' of ' + totalPages + '</span>' +
+      '<button class="ins-page-btn" ' + (page >= totalPages ? 'disabled' : '') + ' onclick="' + fn + '(' + (page + 1) + ')">Next <i class="fas fa-chevron-right"></i></button>';
+  }
+
+  function loadCatalog() {
+    var grid = document.getElementById('ins-catalog');
+    grid.innerHTML = skeletonCards(6);
+    var query = catalogState.query.trim();
+    var params = { page: catalogState.page, limit: catalogState.pageSize };
+
+    var promise = query ? Ins.search(query) : Ins.products(params);
+
+    promise.then(function (res) {
+      var raw = res || {};
+      var items = raw.items || (Array.isArray(raw) ? raw : []);
+      catalogState.total = (typeof raw.total === 'number') ? raw.total : items.length;
+      catalogState.items = items;
+
+      var totalPages = raw.total_pages || Math.max(1, Math.ceil(items.length / catalogState.pageSize));
+      catalogState.totalPages = totalPages;
+      var pageItems = query ? items.slice((catalogState.page - 1) * catalogState.pageSize, catalogState.page * catalogState.pageSize) : items;
+
+      if (!items.length) {
+        grid.innerHTML = emptyState(query ? 'No plans match "' + esc(query) + '"' : 'No insurance plans found', query ? 'Try a different search term.' : 'Check back soon, we are adding more plans regularly.');
+        document.getElementById('ins-catalog-pg').innerHTML = '';
+        return;
+      }
+      var h = '';
+      pageItems.forEach(function (p) { h += productCard(p); });
+      grid.innerHTML = h;
+      renderPagination('ins-catalog-pg', catalogState.page, totalPages, 'InsuranceApp.setCatalogPage');
+    }).catch(function (err) {
+      grid.innerHTML = '';
+      grid.appendChild(errorState((err && err.message) || 'Unable to load insurance plans.', loadCatalog));
+      document.getElementById('ins-catalog-pg').innerHTML = '';
+    });
+  }
+
+  /* ================= Saved ================= */
+  function loadSaved() {
+    var grid = document.getElementById('ins-saved');
+    grid.innerHTML = skeletonCards(3);
+    Ins.savedProducts().then(function (res) {
+      var raw = res || {};
+      var items = raw.items || (Array.isArray(raw) ? raw : []);
+      if (!items.length) {
+        grid.innerHTML = emptyState('No saved plans yet', 'Tap the bookmark icon on any plan to save it for later.');
+        return;
+      }
+      var h = '';
+      items.forEach(function (p) { h += productCard(p); });
+      grid.innerHTML = h;
+    }).catch(function (err) {
+      grid.innerHTML = '';
+      grid.appendChild(errorState((err && err.message) || 'Unable to load saved plans.', loadSaved));
+    });
+  }
+
+  /* ================= Eligibility ================= */
+  var currentProduct = null;
+  var currentClaimId = null;
+  var eligProducts = [];
+
+  function fillStateSelects() {
+    var selApply = document.getElementById('ins-apply-state');
+    var selElig = document.getElementById('ins-elig-state');
+    var opts = '<option value="">Select state</option>';
+    STATES.forEach(function (s) { opts += '<option value="' + esc(s) + '">' + esc(s) + '</option>'; });
+    if (selApply) selApply.innerHTML = opts;
+    if (selElig) selElig.innerHTML = opts;
+  }
+
+  function loadEligProducts(selectedId) {
+    var sel = document.getElementById('ins-elig-product');
+    Ins.products({ page: 1, limit: 50 }).then(function (res) {
+      var raw = res || {};
+      eligProducts = raw.items || (Array.isArray(raw) ? raw : []);
+      var h = '<option value="">Select product</option>';
+      eligProducts.forEach(function (p) {
+        h += '<option value="' + esc(prodId(p)) + '">' + esc(p.name || p.product_name) + '</option>';
+      });
+      sel.innerHTML = h;
+      if (selectedId) sel.value = selectedId;
+      updateEligLabels();
+    }).catch(function () {
+      sel.innerHTML = '<option value="">Unable to load products</option>';
+    });
+  }
+
+  function updateEligLabels() {
+    var sel = document.getElementById('ins-elig-product');
+    var prod = null;
+    for (var i = 0; i < eligProducts.length; i++) {
+      if (prodId(eligProducts[i]) === sel.value) { prod = eligProducts[i]; break; }
+    }
+    document.getElementById('ins-elig-product-name').textContent = prod ? (prod.name || prod.product_name) : '--';
+    document.getElementById('ins-elig-product-provider').textContent = prod ? prod.provider : '--';
+    document.getElementById('ins-elig-product-id').value = sel.value;
+  }
+
+  function toggleEligLivestock() {
+    var t = document.getElementById('ins-elig-insurance-type').value;
+    document.getElementById('ins-elig-livestock-group').style.display = (t === 'livestock') ? 'block' : 'none';
+  }
+
+  function renderEligResult(res) {
+    var box = document.getElementById('ins-elig-result');
+    var result = res.result || {};
+    var verdict = result.verdict || '';
+    var cls = 'review';
+    var label = 'Review Required';
+    if (verdict === 'likely' || verdict === 'likely_eligible') { cls = 'likely'; label = 'Likely Eligible'; }
+    else if (verdict === 'not_likely' || verdict === 'not') { cls = 'notlikely'; label = 'Not Likely Eligible'; }
+    else if (verdict === 'maybe' || verdict === 'conditional') { cls = 'review'; label = 'Conditional'; }
+
+    var h = '<div class="ins-elig-result ' + cls + '">' +
+      '<div class="ins-elig-label"><i class="fas ' + (cls === 'likely' ? 'fa-circle-check' : (cls === 'notlikely' ? 'fa-circle-xmark' : 'fa-circle-info')) + '"></i> ' + esc(result.status_label || label) + '</div>' +
+      (result.headline ? '<div class="ins-elig-headline">' + esc(result.headline) + '</div>' : '') +
+    '</div>';
+
+    var matched = result.matched || [];
+    var missing = result.missing || [];
+    var warnings = result.warnings || [];
+
+    if (matched.length) {
+      h += '<div class="ins-result-group"><h5>Meets requirements</h5><ul>';
+      matched.forEach(function (m) { h += '<li class="ok"><i class="fas fa-check"></i> ' + esc(m) + '</li>'; });
+      h += '</ul></div>';
+    }
+    if (missing.length) {
+      h += '<div class="ins-result-group"><h5>Additional requirements</h5><ul>';
+      missing.forEach(function (m) { h += '<li class="miss"><i class="fas fa-triangle-exclamation"></i> ' + esc(m) + '</li>'; });
+      h += '</ul></div>';
+    }
+    if (warnings.length) {
+      h += '<div class="ins-result-group"><h5>Notes</h5><ul>';
+      warnings.forEach(function (m) { h += '<li class="warn"><i class="fas fa-circle-exclamation"></i> ' + esc(m) + '</li>'; });
+      h += '</ul></div>';
+    }
+    if (result.disclaimer) h += '<div class="ins-disclaimer">' + esc(result.disclaimer) + '</div>';
+    h += '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">' +
+      '<button class="ins-btn ins-btn-subtle" onclick="InsuranceApp.closeModal()"><i class="fas fa-rotate-left"></i> Back</button>' +
+      '<button class="ins-btn ins-btn-primary" onclick="InsuranceApp.openApply()"><i class="fas fa-paper-plane"></i> Apply Now</button>' +
+    '</div>';
+
+    box.innerHTML = h;
+    box.style.display = 'block';
+    document.getElementById('ins-elig-form').style.display = 'none';
+  }
+
+  window.InsuranceApp.openEligibility = function (productId) {
+    document.getElementById('ins-elig-form').style.display = 'block';
+    document.getElementById('ins-elig-result').style.display = 'none';
+    hideEligErrors();
+    fillStateSelects();
+    if (!productId && currentProduct) productId = prodId(currentProduct);
+    loadEligProducts(productId || '');
+    openModal('ins-modal-elig');
+  };
+
+  function hideEligErrors() {
+    var els = document.querySelectorAll('.ins-form-err');
+    els.forEach(function (el) { el.classList.remove('show'); });
+  }
+
+  function showFieldErr(inputId, msg) {
+    var input = document.getElementById(inputId);
+    if (!input) return false;
+    var err = input.parentNode.querySelector('.ins-form-err');
+    if (!err) { err = document.createElement('div'); err.className = 'ins-form-err'; input.parentNode.appendChild(err); }
+    err.textContent = msg;
+    err.classList.add('show');
+    return false;
+  }
+
+  window.InsuranceApp.runEligibility = function () {
+    hideEligErrors();
+    var insurance_id = document.getElementById('ins-elig-product-id').value;
+    var state = document.getElementById('ins-elig-state').value;
+    var crop = document.getElementById('ins-elig-crop').value.trim();
+    var season = document.getElementById('ins-elig-season').value;
+    var insurance_type = document.getElementById('ins-elig-insurance-type').value;
+    var farmSize = document.getElementById('ins-elig-farm').value;
+    var livestock = document.getElementById('ins-elig-livestock').value;
+
+    if (!insurance_id) return showFieldErr('ins-elig-product', 'Please select an insurance plan.');
+    if (!state) return showFieldErr('ins-elig-state', 'Please select a state.');
+    if (!crop) return showFieldErr('ins-elig-crop', 'Please enter your primary crop.');
+    if (!season) return showFieldErr('ins-elig-season', 'Please select a season.');
+    if (!insurance_type) return showFieldErr('ins-elig-insurance-type', 'Please select an insurance type.');
+
+    var payload = {
+      insurance_id: insurance_id,
+      state: state,
+      district: document.getElementById('ins-elig-district').value.trim(),
+      crop: crop,
+      season: season,
+      farm_size_acres: farmSize ? parseFloat(farmSize) : undefined,
+      livestock_type: livestock || undefined,
+      insurance_type: insurance_type
+    };
+
+    var btn = document.getElementById('ins-elig-submit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+
+    Ins.checkEligibility(payload).then(function (res) {
+      renderEligResult(res || {});
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Could not check eligibility.', 'error');
     }).finally(function () {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-check-circle"></i> Apply Now';
+      btn.innerHTML = '<i class="fas fa-search"></i> Check Now';
     });
   };
 
-  /* ---- Claim Form ---- */
-  function populateClaimPolicies() {
-    var select = document.getElementById('claim-policy');
-    var activePolicies = mockPolicies.filter(function (p) { return p.status !== 'expired'; });
-    select.innerHTML = '<option value="">Select policy</option>';
-    activePolicies.forEach(function (p) {
-      var opt = document.createElement('option');
-      opt.value = p.policy_id;
-      opt.textContent = p.name + ' (' + p.number + ')';
-      select.appendChild(opt);
-    });
+  /* ================= Apply ================= */
+  window.InsuranceApp.openApply = function (productId) {
+    if (!productId && currentProduct) productId = prodId(currentProduct);
+    if (!productId) { showToast('Please select an insurance plan first.', 'info'); return; }
+
+    var p = currentProduct;
+    if (!p || prodId(p) !== productId) {
+      showToast('Loading plan...', 'info');
+      Ins.getProduct(productId).then(function (detail) {
+        currentProduct = detail || p;
+        openApplyModal();
+      }).catch(function () {
+        showToast('Could not load the selected plan.', 'error');
+      });
+      return;
+    }
+    openApplyModal();
+  };
+
+  function openApplyModal() {
+    var p = currentProduct;
+    document.getElementById('ins-apply-product-id').value = prodId(p);
+    document.getElementById('ins-apply-product').textContent = p.name || p.product_name;
+    document.getElementById('ins-apply-calc').textContent = 'Provider: ' + (p.provider || '') + ' | Rate: ' + (prodRate(p) != null ? st.pct(prodRate(p)) : '&mdash;');
+    var rate = prodRate(p);
+    document.getElementById('ins-apply-premium-rate').value = rate != null ? rate : '';
+    document.getElementById('ins-apply-coverage').value = '';
+    document.getElementById('ins-apply-premium').textContent = '\u20B9--';
+    document.getElementById('ins-apply-name').value = '';
+    document.getElementById('ins-apply-phone').value = '';
+    document.getElementById('ins-apply-aadhaar').value = '';
+    document.getElementById('ins-apply-district').value = '';
+    document.getElementById('ins-apply-farm').value = '';
+    document.getElementById('ins-apply-crop').value = '';
+    document.getElementById('ins-apply-season').value = '';
+    document.getElementById('ins-apply-livestock').value = '';
+    document.getElementById('ins-apply-asset').value = '';
+    document.getElementById('ins-apply-notes').value = '';
+    fillStateSelects();
+    applyNext(1);
+    openModal('ins-modal-apply');
   }
 
-  window.submitClaimForm = function (e) {
-    e.preventDefault();
-    var data = {
-      policy_id: document.getElementById('claim-policy').value,
-      amount: parseFloat(document.getElementById('claim-amount').value),
-      description: document.getElementById('claim-desc').value
+  window.InsuranceApp.applyNext = function (n) {
+    [1, 2, 3].forEach(function (i) {
+      document.getElementById('ins-apply-step-' + i).style.display = (i === n) ? 'block' : 'none';
+      var dot = document.querySelector('[data-ins-step="' + i + '"]');
+      if (dot) {
+        dot.classList.toggle('active', i === n);
+        dot.classList.toggle('done', i < n);
+      }
+    });
+  };
+
+  function updatePremium() {
+    var coverage = parseFloat(document.getElementById('ins-apply-coverage').value) || 0;
+    var rate = parseFloat(document.getElementById('ins-apply-premium-rate').value);
+    var disp = document.getElementById('ins-apply-premium');
+    if (coverage > 0 && rate > 0) {
+      disp.textContent = st.inr((coverage * rate) / 100) + '/yr';
+    } else {
+      disp.textContent = '\u20B9--';
+    }
+  }
+
+  window.InsuranceApp.submitApplication = function () {
+    var name = document.getElementById('ins-apply-name').value.trim();
+    var phone = document.getElementById('ins-apply-phone').value.trim();
+    var state = document.getElementById('ins-apply-state').value;
+    var coverage = parseFloat(document.getElementById('ins-apply-coverage').value) || 0;
+    if (!name) { showToast('Please enter your full name.', 'error'); return; }
+    if (!/^\d{10,13}$/.test(phone)) { showToast('Please enter a valid 10-13 digit phone number.', 'error'); return; }
+    if (!state) { showToast('Please select your state.', 'error'); return; }
+    if (coverage <= 0) { showToast('Please enter the sum insured.', 'error'); return; }
+
+    var payload = {
+      insurance_id: document.getElementById('ins-apply-product-id').value,
+      applicant_name: name,
+      phone_number: phone,
+      aadhaar_number: document.getElementById('ins-apply-aadhaar').value.trim() || undefined,
+      state: state,
+      district: document.getElementById('ins-apply-district').value.trim() || undefined,
+      farm_size: document.getElementById('ins-apply-farm').value ? parseFloat(document.getElementById('ins-apply-farm').value) : undefined,
+      crop: document.getElementById('ins-apply-crop').value.trim() || undefined,
+      livestock_type: document.getElementById('ins-apply-livestock').value.trim() || undefined,
+      asset_type: document.getElementById('ins-apply-asset').value.trim() || undefined,
+      coverage_requested: coverage,
+      season: document.getElementById('ins-apply-season').value || undefined,
+      notes: document.getElementById('ins-apply-notes').value.trim() || undefined
     };
-    var btn = e.target.querySelector('button[type="submit"]');
+
+    var btn = document.getElementById('ins-apply-submit');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
 
-    API.Government.createClaim(data).then(function () {
-      showToast('Claim filed successfully!', 'success');
-      closeModal();
-      e.target.reset();
-      renderClaims();
+    Ins.createApplication(payload).then(function (res) {
+      var ref = res && (res.reference_number || res.application_id);
+      showToast('Application submitted successfully' + (ref ? ' (' + ref + ')' : '') + '.', 'success');
+      InsuranceApp.closeModal();
+      loadOverview();
+      loadApplications();
+      loadPolicies();
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Could not submit application.', 'error');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Application';
+    });
+  };
+
+  /* ================= Applications ================= */
+  function loadApplications() {
+    var list = document.getElementById('ins-apps');
+    list.innerHTML = skeletonRows(3);
+    Ins.applications({ page: appsState.page, limit: appsState.pageSize }).then(function (res) {
+      var raw = res || {};
+      var items = raw.items || (Array.isArray(raw) ? raw : []);
+      if (!items.length) {
+        list.innerHTML = emptyState('No applications yet', 'Apply for your first insurance plan to see it here.');
+        document.getElementById('ins-apps-pg').innerHTML = '';
+        return;
+      }
+      var h = '';
+      items.forEach(function (a) {
+        var meta = statusMeta(a.status);
+        var docs = a.documents || [];
+        h += '<div class="ins-row-card">' +
+          '<div class="ins-row-main">' +
+            '<div class="ins-row-icon"><i class="fas fa-file-signature"></i></div>' +
+            '<div class="ins-row-info">' +
+              '<div class="ins-row-title">' + esc(firstDef([a.product_name, a.insurance_name, a.name, a.reference_number])) + '</div>' +
+              '<div class="ins-row-sub">Ref: ' + esc(a.reference_number || a.application_id || '--') + ' &bull; Filed: ' + esc(st.date(firstDef([a.created_at, a.date_created, a.applied_on]))) + '</div>' +
+              '<div class="ins-row-sub" style="margin-top:4px;">' +
+                '<span class="ins-badge ' + meta.cls + '"><i class="fas ' + meta.icon + '"></i> ' + esc(meta.label) + '</span>' +
+                (a.coverage_requested ? ' <span style="margin-left:8px;">Coverage: <strong>' + st.inr(a.coverage_requested) + '</strong></span>' : '') +
+                (docs.length ? ' <span style="margin-left:8px;"><i class="fas fa-paperclip"></i> ' + docs.length + ' doc' + (docs.length > 1 ? 's' : '') + '</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="ins-row-right" style="flex-direction:column;align-items:flex-end;gap:6px;">' +
+              '<button class="ins-btn-outline" onclick="InsuranceApp.openAppDoc(\'' + (a.application_id || a.id) + '\')"><i class="fas fa-file-upload"></i> Documents</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      });
+      list.innerHTML = h;
+      renderPagination('ins-apps-pg', appsState.page, Math.max(1, Math.ceil((raw.total || items.length) / appsState.pageSize)), 'InsuranceApp.setAppsPage');
+    }).catch(function (err) {
+      list.innerHTML = '';
+      list.appendChild(errorState((err && err.message) || 'Unable to load applications.', loadApplications));
+      document.getElementById('ins-apps-pg').innerHTML = '';
+    });
+  }
+
+  window.InsuranceApp.setAppsPage = function (page) {
+    appsState.page = page;
+    loadApplications();
+  };
+
+  window.InsuranceApp.openAppDoc = function (appId) {
+    if (!appId) return;
+    var accordion = document.getElementById('ins-appdocs-ref');
+    accordion.textContent = 'Upload supporting documents for application ' + appId;
+    document.getElementById('ins-appdocs-id').value = appId;
+    document.getElementById('ins-appdocs-file').value = '';
+    document.getElementById('ins-appdocs-type').value = 'land_record';
+    openModal('ins-modal-appdocs');
+  };
+
+  window.InsuranceApp.uploadAppDoc = function () {
+    var id = document.getElementById('ins-appdocs-id').value;
+    var file = document.getElementById('ins-appdocs-file').files[0];
+    var type = document.getElementById('ins-appdocs-type').value;
+    if (!file) { showToast('Please choose a file first.', 'error'); return; }
+    var btn = document.getElementById('ins-appdocs-submit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    Ins.uploadApplicationDocument(id, file, type).then(function () {
+      showToast('Document uploaded.', 'success');
+      InsuranceApp.closeModal();
+      loadApplications();
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Upload failed.', 'error');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Upload';
+    });
+  };
+
+  /* ================= Policies ================= */
+  function loadPolicies() {
+    var list = document.getElementById('ins-policies');
+    list.innerHTML = skeletonRows(3);
+    Ins.policies({ page: policiesState.page, limit: policiesState.pageSize }).then(function (res) {
+      var raw = res || {};
+      var items = raw.items || (Array.isArray(raw) ? raw : []);
+      if (!items.length) {
+        list.innerHTML = emptyState('No policies yet', 'Apply for insurance and your policies will appear here.');
+        document.getElementById('ins-policies-pg').innerHTML = '';
+        return;
+      }
+      var h = '';
+      items.forEach(function (p) {
+        var meta = statusMeta(p.status || p.raw_status);
+        var canPay = (p.status === 'pending_verification') || (parseFloat(p.premium_due) > 0);
+        var canRenew = (p.status === 'active') || (p.status === 'expiring');
+        h += '<div class="ins-row-card">' +
+          '<div class="ins-row-main">' +
+            '<div class="ins-row-icon"><i class="fas fa-file-contract"></i></div>' +
+            '<div class="ins-row-info">' +
+              '<div class="ins-row-title">' + esc(firstDef([p.product_name, p.name, p.insurance_type])) + '</div>' +
+              '<div class="ins-row-sub">Policy: ' + esc(p.policy_id || p.reference_number || p.number || '--') +
+                (p.scheme_name ? ' &bull; ' + esc(p.scheme_name) : '') + '</div>' +
+              '<div class="ins-row-sub" style="margin-top:4px;">' +
+                '<span class="ins-badge ' + meta.cls + '"><i class="fas ' + meta.icon + '"></i> ' + esc(meta.label) + '</span>' +
+                ' <span style="margin-left:8px;">Coverage: <strong>' + st.inr(p.coverage_amount) + '</strong></span>' +
+                ' <span style="margin-left:8px;">Premium: <strong>' + st.inr(p.premium_paid || p.premium) + '</strong></span>' +
+              '</div>' +
+              '<div class="ins-row-sub" style="margin-top:4px;">' +
+                '<i class="fas fa-calendar-day"></i> ' + esc(st.date(p.start_date)) + ' &rarr; ' + esc(st.date(p.end_date)) +
+                (typeof p.renewal_count === 'number' && p.renewal_count > 0 ? ' &bull; Renewed ' + p.renewal_count + 'x' : '') +
+                (p.claims_count ? ' &bull; Claims: ' + p.claims_count : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="ins-row-right" style="flex-direction:column;align-items:flex-end;gap:6px;">' +
+              (canPay ? '<button class="btn-primary btn-sm" onclick="InsuranceApp.openPay(\'' + p.policy_id + '\')"><i class="fas fa-money-bill-wave"></i> Pay Premium</button>' : '') +
+              (canRenew ? '<button class="btn-secondary btn-sm" onclick="InsuranceApp.openRenew(\'' + p.policy_id + '\')"><i class="fas fa-rotate-right"></i> Renew</button>' : '') +
+              '<button style="background:none;border:none;color:var(--ins-teal);font-size:11px;font-weight:600;cursor:pointer;padding:4px 0;" onclick="InsuranceApp.openPayments(\'' + p.policy_id + '\')">Payment History <i class="fas fa-chevron-right"></i></button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      });
+      list.innerHTML = h;
+      renderPagination('ins-policies-pg', policiesState.page, Math.max(1, Math.ceil((raw.total || items.length) / policiesState.pageSize)), 'InsuranceApp.setPoliciesPage');
+    }).catch(function (err) {
+      list.innerHTML = '';
+      list.appendChild(errorState((err && err.message) || 'Unable to load your policies.', loadPolicies));
+      document.getElementById('ins-policies-pg').innerHTML = '';
+    });
+  }
+
+  window.InsuranceApp.setPoliciesPage = function (page) {
+    policiesState.page = page;
+    loadPolicies();
+  };
+
+  function setModalPolicy(modalPrefix, policy) {
+    var amountEl = document.getElementById(modalPrefix + '-amount');
+    var due = parseFloat(policy.premium_due) || 0;
+    if (modalPrefix === 'ins-pay') {
+      amountEl.textContent = due > 0 ? st.inr(due) : st.inr(policy.premium || policy.premium_paid || 0);
+      document.getElementById('ins-pay-policy-label').textContent = 'Premium due for ' + esc(policy.policy_id) + ' (' + esc(policy.product_name || '') + ')';
+      setPayBalance();
+    } else {
+      var renewAmt = parseFloat(policy.premium_due) || parseFloat(policy.premium) || 0;
+      amountEl.textContent = renewAmt > 0 ? st.inr(renewAmt) : st.inr(0);
+      document.getElementById('ins-renew-policy-label').textContent = 'Renewal premium for ' + esc(policy.policy_id) + ' (' + esc(policy.product_name || '') + ')';
+    }
+  }
+
+  function setPayBalance() {
+    var balEl = document.getElementById('ins-pay-balance');
+    balEl.textContent = '--';
+    if (Wallet && Wallet.get) {
+      Wallet.get().then(function (w) {
+        if (w && typeof w.balance === 'number') balEl.textContent = st.inr(w.balance);
+      }).catch(function () {
+        balEl.textContent = 'unavailable';
+      });
+    }
+  }
+
+  window.InsuranceApp.openPay = function (policyId) {
+    Ins.getPolicy(policyId).then(function (p) {
+      document.getElementById('ins-pay-policy-id').value = policyId;
+      document.getElementById('ins-pay-pin').value = '';
+      setModalPolicy('ins-pay', p || { policy_id: policyId });
+      openModal('ins-modal-pay');
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Could not load policy.', 'error');
+    });
+  };
+
+  window.InsuranceApp.payPremium = function () {
+    var id = document.getElementById('ins-pay-policy-id').value;
+    var pin = document.getElementById('ins-pay-pin').value.trim();
+    if (!pin) { showToast('Please enter your wallet PIN.', 'error'); return; }
+    var amount = parseFloat(document.getElementById('ins-pay-amount').textContent.replace(/[^\d.]/g, '')) || undefined;
+    var btn = document.getElementById('ins-pay-submit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    Ins.payPremium(id, amount, pin).then(function (res) {
+      var policy = res && res.policy;
+      var message = policy && policy.status === 'active'
+        ? 'Premium paid and policy activated.'
+        : 'Premium payment confirmed. Any remaining balance is still due.';
+      showToast(message, 'success');
+      InsuranceApp.closeModal();
+      loadPolicies();
+      loadOverview();
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Payment failed.', 'error');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-lock"></i> Pay Now';
+    });
+  };
+
+  window.InsuranceApp.openRenew = function (policyId) {
+    Ins.getPolicy(policyId).then(function (p) {
+      document.getElementById('ins-renew-policy-id').value = policyId;
+      document.getElementById('ins-renew-pin').value = '';
+      setModalPolicy('ins-renew', p || { policy_id: policyId });
+      openModal('ins-modal-renew');
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Could not load policy.', 'error');
+    });
+  };
+
+  window.InsuranceApp.renewPolicy = function () {
+    var id = document.getElementById('ins-renew-policy-id').value;
+    var pin = document.getElementById('ins-renew-pin').value.trim();
+    if (!pin) { showToast('Please enter your wallet PIN.', 'error'); return; }
+    var btn = document.getElementById('ins-renew-submit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Renewing...';
+    Ins.renewPolicy(id, pin).then(function () {
+      showToast('Policy renewed successfully.', 'success');
+      InsuranceApp.closeModal();
+      loadPolicies();
+      loadOverview();
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Renewal failed.', 'error');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-lock"></i> Renew Now';
+    });
+  };
+
+  window.InsuranceApp.openPayments = function (policyId) {
+    var body = document.getElementById('ins-payments-body');
+    body.innerHTML = '<div style="text-align:center;padding:24px;"><div class="skeleton-loader" style="height:16px;width:200px;margin:0 auto;"></div></div>';
+    Ins.policyPayments(policyId).then(function (res) {
+      var raw = res || {};
+      var items = raw.items || (Array.isArray(raw) ? raw : []);
+      var pol = raw.policy || {};
+      if (!items.length) {
+        body.innerHTML = emptyState('No payments yet', 'Premium payments for this policy will appear here.');
+        openModal('ins-modal-payments');
+        return;
+      }
+      var h = '';
+      items.forEach(function (pm) {
+        var meta = statusMeta(pm.status);
+        h += '<div class="ins-row-card" style="margin-bottom:8px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
+            '<div><div style="font-size:14px;font-weight:700;">' + esc(pm.payment_id || pm.reference_number || 'Payment') + '</div>' +
+            '<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">' + esc(st.date(pm.payment_date)) + ' &bull; ' + esc(pm.method || '') + '</div></div>' +
+            '<div style="text-align:right;"><div style="font-size:16px;font-weight:800;color:var(--ins-teal);">' + st.inr(pm.amount) + '</div>' +
+            '<span class="ins-badge ' + meta.cls + '">' + esc(meta.label) + '</span></div>' +
+          '</div>' +
+        '</div>';
+      });
+      body.innerHTML = h;
+      openModal('ins-modal-payments');
+    }).catch(function (err) {
+      body.innerHTML = '';
+      body.appendChild(errorState((err && err.message) || 'Unable to load payments.', function () { InsuranceApp.openPayments(policyId); }));
+      openModal('ins-modal-payments');
+    });
+  };
+
+  /* ================= Claims ================= */
+  function loadClaims() {
+    var list = document.getElementById('ins-claims');
+    list.innerHTML = skeletonRows(3);
+    Ins.claims({ page: claimsState.page, limit: claimsState.pageSize }).then(function (res) {
+      var raw = res || {};
+      var items = raw.items || (Array.isArray(raw) ? raw : []);
+      if (!items.length) {
+        list.innerHTML = emptyState('No claims yet', 'If the unexpected happens, file a claim from here.');
+        document.getElementById('ins-claims-pg').innerHTML = '';
+        return;
+      }
+      var h = '';
+      items.forEach(function (c) {
+        var meta = statusMeta(c.status);
+        h += '<div class="ins-row-card" style="cursor:pointer;" onclick="InsuranceApp.openClaimDetail(\'' + (c.claim_id || c.id) + '\')">' +
+          '<div class="ins-row-main">' +
+            '<div class="ins-row-icon"><i class="fas fa-file-invoice"></i></div>' +
+            '<div class="ins-row-info">' +
+              '<div class="ins-row-title">' + esc(firstDef([c.reason, c.claim_type, 'Claim'])) + '</div>' +
+              '<div class="ins-row-sub">Claim: ' + esc(c.claim_number || c.reference_number || '--') + ' &bull; Filed: ' + esc(st.date(firstDef([c.created_at, c.date_filed, c.filed_on]))) + '</div>' +
+              '<div class="ins-row-sub" style="margin-top:4px;">' +
+                '<span class="ins-badge ' + meta.cls + '"><i class="fas ' + meta.icon + '"></i> ' + esc(meta.label) + '</span>' +
+                (c.estimated_loss || c.amount ? ' <span style="margin-left:8px;">Loss: <strong>' + st.inr(firstDef([c.estimated_loss, c.amount])) + '</strong></span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="ins-row-right"><i class="fas fa-chevron-right" style="color:var(--text-muted);"></i></div>' +
+          '</div>' +
+        '</div>';
+      });
+      list.innerHTML = h;
+      renderPagination('ins-claims-pg', claimsState.page, Math.max(1, Math.ceil((raw.total || items.length) / claimsState.pageSize)), 'InsuranceApp.setClaimsPage');
+    }).catch(function (err) {
+      list.innerHTML = '';
+      list.appendChild(errorState((err && err.message) || 'Unable to load claims.', loadClaims));
+      document.getElementById('ins-claims-pg').innerHTML = '';
+    });
+  }
+
+  window.InsuranceApp.setClaimsPage = function (page) {
+    claimsState.page = page;
+    loadClaims();
+  };
+
+  window.InsuranceApp.openClaim = function () {
+    var sel = document.getElementById('ins-claim-policy');
+    sel.innerHTML = '<option value="">Loading policies...</option>';
+    Ins.policies({ limit: 100 }).then(function (res) {
+      var raw = res || {};
+      var items = raw.items || (Array.isArray(raw) ? raw : []);
+      var eligible = items.filter(function (p) { return p.status === 'active' || p.status === 'expiring'; });
+      if (!eligible.length) {
+        sel.innerHTML = '<option value="">No active policies</option>';
+        showToast('You need an active policy to file a claim.', 'info');
+        return;
+      }
+      var h = '<option value="">Select policy</option>';
+      eligible.forEach(function (p) {
+        h += '<option value="' + esc(p.policy_id) + '">' + esc(p.product_name || p.policy_id) + ' (' + esc(p.policy_id) + ')</option>';
+      });
+      sel.innerHTML = h;
     }).catch(function () {
-      showToast('Claim submitted (offline mode). We will review it shortly.', 'info');
-      closeModal();
-      e.target.reset();
-      renderClaims();
+      sel.innerHTML = '<option value="">Unable to load policies</option>';
+    });
+    document.getElementById('ins-claim-reason').value = '';
+    document.getElementById('ins-claim-date').value = '';
+    document.getElementById('ins-claim-location').value = '';
+    document.getElementById('ins-claim-loss').value = '';
+    document.getElementById('ins-claim-amount').value = '';
+    document.getElementById('ins-claim-desc').value = '';
+    openModal('ins-modal-claim');
+  };
+
+  window.InsuranceApp.submitClaim = function () {
+    var policy_id = document.getElementById('ins-claim-policy').value;
+    var reason = document.getElementById('ins-claim-reason').value;
+    var date = document.getElementById('ins-claim-date').value;
+    var loss = parseFloat(document.getElementById('ins-claim-loss').value) || 0;
+    if (!policy_id) { showToast('Please select a policy.', 'error'); return; }
+    if (!reason) { showToast('Please select a reason.', 'error'); return; }
+    if (!date) { showToast('Please enter the incident date.', 'error'); return; }
+    if (loss <= 0) { showToast('Please enter the estimated loss.', 'error'); return; }
+
+    var payload = {
+      policy_id: policy_id,
+      reason: reason,
+      description: document.getElementById('ins-claim-desc').value.trim() || undefined,
+      incident_date: date,
+      incident_location: document.getElementById('ins-claim-location').value.trim() || undefined,
+      estimated_loss: loss,
+      claim_amount: parseFloat(document.getElementById('ins-claim-amount').value) || loss
+    };
+
+    var btn = document.getElementById('ins-claim-submit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+    Ins.createClaim(payload).then(function (res) {
+      var num = res && (res.claim_number || res.reference_number);
+      showToast('Claim filed successfully' + (num ? ' (' + num + ')' : '') + '.', 'success');
+      InsuranceApp.closeModal();
+      loadClaims();
+      loadOverview();
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Could not file claim.', 'error');
     }).finally(function () {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Claim';
     });
   };
 
-  /* ---- Loan Form ---- */
-  window.fillLoanForm = function (type) {
-    document.getElementById('loan-type').value = type;
-    document.getElementById('tab-loans').scrollIntoView({ behavior: 'smooth', block: 'end' });
+  function claimTimeline(status) {
+    var steps = [
+      { key: 'filed', label: 'Filed' },
+      { key: 'submitted', label: 'Submitted' },
+      { key: 'under_review', label: 'Under Review' },
+      { key: 'approved', label: 'Approved' },
+      { key: 'paid', label: 'Compensated' }
+    ];
+    var current = status || 'filed';
+    var idx = 0;
+    for (var i = 0; i < steps.length; i++) {
+      if (steps[i].key === current) idx = i;
+    }
+    var h = '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
+    steps.forEach(function (s, i) {
+      var state = i < idx ? 'done' : (i === idx ? 'active' : '');
+      h += '<div style="display:flex;align-items:center;gap:10px;">' +
+        '<div class="ins-step-dot ' + (state === 'done' ? 'done' : (state === 'active' ? 'active' : '')) + '" style="width:26px;height:26px;font-size:11px;">' +
+        (state === 'done' || (state === 'active' && idx === steps.length - 1) ? '<i class="fas fa-check"></i>' : (i + 1)) +
+        '</div><span style="font-size:12px;' + (state ? 'font-weight:700;' : '') + 'color:' + (state ? 'var(--ins-teal-dark)' : 'var(--text-muted)') + ';">' + s.label + '</span>' +
+      '</div>';
+    });
+    return h + '</div>';
+  }
+
+  window.InsuranceApp.openClaimDetail = function (claimId) {
+    if (!claimId) { showToast('Invalid claim reference.', 'error'); return; }
+    currentClaimId = claimId;
+    var body = document.getElementById('ins-cd-body');
+    var title = document.getElementById('ins-cd-title');
+    var ref = document.getElementById('ins-cd-ref');
+    title.textContent = 'Claim';
+    ref.textContent = claimId;
+    body.innerHTML = '<div style="text-align:center;padding:24px;"><div class="skeleton-loader" style="height:16px;width:200px;margin:0 auto;"></div></div>';
+    Ins.getClaim(claimId).then(function (res) {
+      var c = res || {};
+      title.textContent = firstDef([c.reason, c.claim_type, 'Claim']);
+      ref.textContent = firstDef([c.claim_number, c.reference_number, c.policy_number]);
+      var meta = statusMeta(c.status);
+      var docs = c.documents || [];
+      var docHtml = '';
+      if (docs.length) {
+        docHtml = '<div class="ins-sec"><h4><i class="fas fa-paperclip"></i> Documents</h4>';
+        docs.forEach(function (d) {
+          var did = d.id || d.document_id;
+          var fname = d.filename || d.file_name || did;
+          docHtml += '<div class="ins-doc-tag"><i class="fas fa-file"></i> ' + esc(fname) +
+            ' <a href="#" onclick="InsuranceApp.viewDoc(\'claim\',\'' + claimId + '\',\'' + did + '\');return false;" title="View"><i class="fas fa-eye"></i></a>' +
+            ' <a href="#" onclick="InsuranceApp.downloadDoc(\'claim\',\'' + claimId + '\',\'' + did + '\');return false;" title="Download"><i class="fas fa-download"></i></a></div>';
+        });
+        docHtml += '</div>';
+      }
+      var addDoc = '<div class="ins-sec"><h4><i class="fas fa-file-upload"></i> Add Document</h4>' +
+        '<div class="ins-form-row">' +
+          '<div class="ins-form-group"><select class="ins-form-select" id="ins-cd-doctype">' +
+            '<option value="crop_loss_evidence">Crop Loss Evidence</option>' +
+            '<option value="incident_report">Incident Report</option>' +
+            '<option value="identity_proof">Identity Proof</option>' +
+            '<option value="insurance_policy">Insurance Policy</option>' +
+            '<option value="other">Other</option></select></div>' +
+          '<div class="ins-form-group"><input class="ins-form-input" type="file" id="ins-cd-file"></div>' +
+        '</div>' +
+        '<button class="ins-btn ins-btn-subtle" style="width:100%;" onclick="InsuranceApp.uploadClaimDoc()"><i class="fas fa-cloud-arrow-up"></i> Upload</button>' +
+      '</div>';
+
+      var desc = firstDef([c.description, c.details, c.claim_description]);
+      var loss = firstDef([c.estimated_loss, c.claim_amount, c.amount]);
+
+      body.innerHTML =
+        '<div class="ins-elig-result ' + (meta.cls === 'submitted' || meta.cls === 'under_review' || meta.cls === 'pending' ? 'review' : (meta.cls === 'approved' || meta.cls === 'paid' ? 'likely' : (meta.cls === 'rejected' ? 'notlikely' : 'review'))) + '">' +
+          '<div class="ins-elig-label"><i class="fas ' + meta.icon + '"></i> ' + meta.label + '</div>' +
+          (c.status === 'under_review' ? '<div class="ins-elig-headline">Your claim is being assessed by the insurer.</div>' : '') +
+        '</div>' +
+        claimTimeline(c.status) +
+        '<div class="ins-sec">' +
+          '<div class="ins-detail-row"><span class="lbl">Claim Number</span><span class="val">' + esc(firstDef([c.claim_number, c.reference_number])) + '</span></div>' +
+          '<div class="ins-detail-row"><span class="lbl">Policy Number</span><span class="val">' + esc(firstDef([c.policy_number, c.policy_id])) + '</span></div>' +
+          '<div class="ins-detail-row"><span class="lbl">Reason</span><span class="val">' + esc(firstDef([c.reason, c.claim_type])) + '</span></div>' +
+          '<div class="ins-detail-row"><span class="lbl">Incident Date</span><span class="val">' + esc(st.date(firstDef([c.incident_date, c.date_of_loss]))) + '</span></div>' +
+          '<div class="ins-detail-row"><span class="lbl">Location</span><span class="val">' + esc(firstDef([c.incident_location, c.location])) + '</span></div>' +
+          (loss ? '<div class="ins-detail-row"><span class="lbl">Estimated Loss</span><span class="val">' + st.inr(loss) + '</span></div>' : '') +
+          (desc ? '<div class="ins-detail-row"><span class="lbl">Description</span><span class="val">' + esc(desc) + '</span></div>' : '') +
+          '<div class="ins-detail-row"><span class="lbl">Filed On</span><span class="val">' + esc(st.date(firstDef([c.created_at, c.filed_on]))) + '</span></div>' +
+        '</div>' +
+        docHtml +
+        addDoc;
+      openModal('ins-modal-claimdetail');
+    }).catch(function (err) {
+      body.innerHTML = '';
+      body.appendChild(errorState((err && err.message) || 'Unable to load claim details.', function () { InsuranceApp.openClaimDetail(claimId); }));
+      openModal('ins-modal-claimdetail');
+    });
   };
 
-  window.submitLoanForm = function (e) {
-    e.preventDefault();
-    var type = document.getElementById('loan-type').value;
-    var name = document.getElementById('loan-name').value;
-    var amount = document.getElementById('loan-amount').value;
-    showToast('Loan application for ' + type + ' (' + formatters.inr(amount) + ') submitted! We will contact ' + name + ' shortly.', 'success');
-    e.target.reset();
+  window.InsuranceApp.uploadClaimDoc = function () {
+    if (!currentClaimId) return;
+    var file = document.getElementById('ins-cd-file').files[0];
+    var type = document.getElementById('ins-cd-doctype').value;
+    if (!file) { showToast('Please choose a file first.', 'error'); return; }
+    Ins.uploadClaimDocument(currentClaimId, file, type).then(function () {
+      showToast('Document uploaded.', 'success');
+      InsuranceApp.openClaimDetail(currentClaimId);
+      loadClaims();
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Upload failed.', 'error');
+    });
   };
 
-  /* ---- Tab Switching ---- */
-  function initTabs() {
-    var btns = document.querySelectorAll('.ins-tab-btn');
-    btns.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        btns.forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        document.querySelectorAll('.tab-content').forEach(function (t) { t.classList.remove('active'); });
-        var tabId = 'tab-' + btn.dataset.tab;
-        var tab = document.getElementById(tabId);
-        if (tab) tab.classList.add('active');
-        if (btn.dataset.tab === 'claims') renderClaims();
-        if (btn.dataset.tab === 'loans') renderLoans();
-      });
+  function docAction(type, ownerId, docId, download) {
+    var fetcher = type === 'claim' ? Ins.fetchClaimDocument : Ins.fetchApplicationDocument;
+    fetcher(ownerId, docId, download).then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.download = download ? 'document' : '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Could not fetch document.', 'error');
     });
   }
 
-  /* ---- Close modal on backdrop click ---- */
-  document.addEventListener('click', function (e) {
-    if (e.target.classList.contains('modal-backdrop')) closeModal();
-  });
+  window.InsuranceApp.viewDoc = function (type, ownerId, docId) {
+    docAction(type, ownerId, docId, false);
+  };
 
-  /* ---- Init ---- */
-  document.addEventListener('DOMContentLoaded', function () {
-    initTabs();
-    renderPolicies();
-    renderClaims();
-    renderLoans();
-    populateClaimPolicies();
-  });
+  window.InsuranceApp.downloadDoc = function (type, ownerId, docId) {
+    docAction(type, ownerId, docId, true);
+  };
+
+  /* ================= Save ================= */
+  window.InsuranceApp.toggleSave = function (pid) {
+    Ins.getProduct(pid).then(function (p) {
+      if (p && p.is_saved) {
+        return Ins.unsaveProduct(pid).then(function () { showToast('Removed from saved plans.', 'success'); });
+      }
+      return Ins.saveProduct(pid).then(function () { showToast('Plan saved for later.', 'success'); });
+    }).then(function () {
+      loadCatalog();
+      loadSaved();
+      loadOverview();
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Could not update saved plans.', 'error');
+    });
+  };
+
+  /* ================= Detail ================= */
+  window.InsuranceApp.openDetail = function (pid) {
+    Ins.getProduct(pid).then(function (p) {
+      currentProduct = p;
+      var rate = prodRate(p);
+      document.getElementById('ins-det-icon').innerHTML = '<i class="fas ' + catIcon(p.category) + '"></i>';
+      document.getElementById('ins-det-name').textContent = p.name || p.product_name;
+      document.getElementById('ins-det-provider').textContent = p.provider || p.insurance_id || '';
+      var tags = '';
+      if (p.category) tags += '<span class="ins-tag cat">' + esc(p.category) + '</span>';
+      if (p.government_backed || p.scheme_name) tags += '<span class="ins-tag gov"><i class="fas fa-building-columns"></i> ' + esc(p.scheme_name || 'Govt Backed') + '</span>';
+      if (p.state) tags += '<span class="ins-tag state">' + esc(p.state) + '</span>';
+      document.getElementById('ins-det-tags').innerHTML = tags;
+
+      var rows = function (arr) {
+        var h = '';
+        arr.forEach(function (r) {
+          if (r.v === null || r.v === undefined || r.v === '') return;
+          h += '<div class="ins-detail-row"><span class="lbl">' + r.l + '</span><span class="val">' + r.v + '</span></div>';
+        });
+        return h;
+      };
+
+      var coverage = firstDef([p.coverage_amount, p.max_coverage, p.coverage]);
+      var dur = firstDef([p.policy_duration_text, p.policy_duration_months]);
+      var body = '<div class="ins-sec"><h4><i class="fas fa-circle-info"></i> Overview</h4>' +
+        rows([
+          { l: 'Provider', v: esc(p.provider) },
+          { l: 'Type', v: esc(p.type) },
+          { l: 'Category', v: esc(p.category) },
+          { l: 'Sum Insured', v: coverage != null ? st.inr(coverage) : null },
+          { l: 'Premium Rate', v: rate != null ? st.pct(rate) : null },
+          { l: 'Premium (per ₹1 lakh)', v: p.premium_amount != null ? st.inr(p.premium_amount) : null },
+          { l: 'Duration', v: dur != null ? esc(dur.toString()) : null },
+          { l: 'State', v: esc(p.state) },
+          { l: 'Scheme', v: esc(p.scheme_name) }
+        ]) + '</div>';
+
+      if (p.coverage) body += '<div class="ins-sec"><h4><i class="fas fa-umbrella"></i> Coverage</h4><div style="font-size:12px;line-height:1.6;color:var(--text-secondary);">' + esc(p.coverage) + '</div></div>';
+      if (p.exclusions) body += '<div class="ins-sec"><h4><i class="fas fa-ban"></i> Exclusions</h4><div style="font-size:12px;line-height:1.6;color:var(--text-secondary);">' + esc(p.exclusions) + '</div></div>';
+      if (p.eligibility) body += '<div class="ins-sec"><h4><i class="fas fa-clipboard-check"></i> Eligibility</h4><div style="font-size:12px;line-height:1.6;color:var(--text-secondary);">' + esc(p.eligibility) + '</div></div>';
+      if (p.premium_information) body += '<div class="ins-sec"><h4><i class="fas fa-coins"></i> Premium Info</h4><div style="font-size:12px;line-height:1.6;color:var(--text-secondary);">' + esc(p.premium_information) + '</div></div>';
+      if (p.required_documents) body += '<div class="ins-sec"><h4><i class="fas fa-folder-open"></i> Required Documents</h4><div style="font-size:12px;line-height:1.6;color:var(--text-secondary);">' + esc(p.required_documents) + '</div></div>';
+      if (p.official_url || p.source_url) body += '<div class="ins-sec"><h4><i class="fas fa-globe"></i> Official Source</h4>' +
+        rows([
+          { l: 'Official', v: p.official_url ? '<a href="' + esc(p.official_url) + '" target="_blank">' + esc(p.official_url) + '</a>' : null },
+          { l: 'Source', v: p.source_url ? '<a href="' + esc(p.source_url) + '" target="_blank">' + esc(p.source_url) + '</a>' : null }
+        ]) + '</div>';
+
+      document.getElementById('ins-det-body').innerHTML = body;
+      document.getElementById('ins-det-disclaimer').textContent = 'Rates, coverage and premium figures are indicative. Please confirm details with the provider before confirming your application.';
+      openModal('ins-modal-details');
+    }).catch(function (err) {
+      showToast((err && err.message) || 'Could not load plan details.', 'error');
+    });
+  };
+
+  /* ================= Tabs ================= */
+  window.InsuranceApp.switchTab = function (name) {
+    document.querySelectorAll('.ins-tab-btn').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-ins-tab') === name);
+    });
+    document.querySelectorAll('.ins-pane').forEach(function (p) { p.style.display = 'none'; });
+    var pane = document.getElementById('ins-pane-' + name);
+    if (pane) pane.style.display = 'block';
+    if (name === 'explore') loadCatalog();
+    else if (name === 'saved') loadSaved();
+    else if (name === 'apps') { appsState.page = 1; loadApplications(); }
+    else if (name === 'policies') { policiesState.page = 1; loadPolicies(); }
+    else if (name === 'claims') { claimsState.page = 1; loadClaims(); }
+  };
+
+  window.InsuranceApp.scrollToCatalog = function () {
+    InsuranceApp.switchTab('explore');
+    var el = document.getElementById('ins-pane-explore');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  window.InsuranceApp.setCatalogPage = function (page) {
+    if (page < 1) return;
+    var totalPages = Math.max(1, catalogState.totalPages || Math.ceil(catalogState.items.length / catalogState.pageSize));
+    if (page > totalPages) return;
+    catalogState.page = page;
+    loadCatalog();
+  };
+
+  /* ================= Events ================= */
+  var searchTimer = null;
+  function bindEvents() {
+    var searchInput = document.getElementById('ins-search-input');
+    searchInput.addEventListener('keyup', function () {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        catalogState.query = searchInput.value;
+        catalogState.page = 1;
+        loadCatalog();
+      }, 350);
+    });
+
+    var coverageInput = document.getElementById('ins-apply-coverage');
+    if (coverageInput) coverageInput.addEventListener('input', updatePremium);
+
+    var typeSelect = document.getElementById('ins-elig-insurance-type');
+    if (typeSelect) typeSelect.addEventListener('change', toggleEligLivestock);
+
+    var selElig = document.getElementById('ins-elig-product');
+    if (selElig) selElig.addEventListener('change', updateEligLabels);
+
+    document.addEventListener('click', function (e) {
+      if (e.target.classList && e.target.classList.contains('modal-backdrop')) InsuranceApp.closeModal();
+    });
+  }
+
+  /* ================= Init ================= */
+  fillStateSelects();
+  bindEvents();
+  resetInsuranceOverlays();
+  window.addEventListener('pageshow', resetInsuranceOverlays);
+  loadOverview();
+  loadCatalog();
+  loadSaved();
 })();
 </script>
 </body>

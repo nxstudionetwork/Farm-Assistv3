@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Orders - Farm Assist</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root{--mo-p:#2D8659;--mo-d:#1B5E3F;--mo-bg:#F4F9F5;--mo-line:#E4EFE7}
+    .page-container{max-width:920px}
+    .mo-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+    .mo-head .back{display:inline-flex;align-items:center;gap:6px;color:var(--mo-p);font-size:13px;font-weight:600;text-decoration:none}
+    .mo-head .back:hover{color:var(--mo-d)}
+    .mo-tabs{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 14px;-webkit-overflow-scrolling:touch}
+    .mo-tab{flex:0 0 auto;border:1px solid var(--mo-line);background:#fff;color:#516;border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s}
+    .mo-tab:hover{border-color:var(--mo-p);color:var(--mo-p)}
+    .mo-tab.active{background:var(--mo-p);border-color:var(--mo-p);color:#fff}
+    .mo-list{display:flex;flex-direction:column;gap:14px}
+    .mo-skel{height:150px;border-radius:14px;background:linear-gradient(90deg,#eef4ef, #f8fbf8, #eef4ef);background-size:200% 100%;animation:moSh 1.2s infinite}
+    @keyframes moSh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .mo-card{background:#fff;border:1px solid var(--mo-line);border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(27,94,63,.06)}
+    .mo-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .mo-id{font-weight:700;font-size:14.5px;color:#1a231c}
+    .mo-id .ico{color:var(--mo-p);margin-right:6px}
+    .mo-date{font-size:12px;color:#7d8a80}
+    .mo-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .mo-chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px}
+    .mo-chip.pay-pending{background:#FFF7E6;color:#9A6B00}
+    .mo-chip.pay-paid{background:#E8F6EE;color:#1B7A45}
+    .mo-chip.pay-failed{background:#FDECEC;color:#B42318}
+    .mo-chip.pay-refunded{background:#EEF1F6;color:#5A6B85}
+    .mo-chip.st-pending{background:#FFF7E6;color:#9A6B00}
+    .mo-chip.st-confirmed{background:#E8F3FB;color:#175CD3}
+    .mo-chip.st-processing{background:#EEF1F6;color:#5A6B85}
+    .mo-chip.st-shipped{background:#F0EBFB;color:#6927DA}
+    .mo-chip.st-delivered{background:#E8F6EE;color:#1B7A45}
+    .mo-chip.st-cancelled{background:#FDECEC;color:#B42318}
+    .mo-items{margin:14px 0 12px;padding:12px 14px;background:var(--mo-bg);border-radius:10px;font-size:12.5px;color:#38433b;line-height:1.7}
+    .mo-items .row{display:flex;gap:8px}
+    .mo-items .row span{color:#7d8a80}
+    .mo-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px dashed var(--mo-line);padding-top:12px}
+    .mo-total{font-size:14px;color:#2a352c}.mo-total b{font-size:15.5px;color:var(--mo-d)}
+    .mo-actions{display:flex;gap:8px}
+    .mo-btn{border:1px solid var(--mo-line);background:#fff;color:#3a463d;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+    .mo-btn:hover{border-color:var(--mo-p);color:var(--mo-p)}
+    .mo-btn.ghost:hover{border-color:#E3A3A0;color:#B42318}
+    .mo-btn.primary{background:var(--mo-p);border-color:var(--mo-p);color:#fff}
+    .mo-btn.primary:hover{background:var(--mo-d)}
+    .mo-empty{text-align:center;padding:60px 20px;color:#7d8a80}
+    .mo-empty i{font-size:46px;color:#BFD9C8;display:block;margin-bottom:14px}
+    .mo-empty h3{margin:0 0 6px;color:#2a352c;font-size:16px}
+    .mo-empty p{margin:0 0 18px;font-size:13px}
+    /* modal */
+    .mo-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10000;background:rgba(12,20,15,.55);padding:16px;opacity:0;pointer-events:none;transition:opacity .2s}
+    .mo-modal.open{opacity:1;pointer-events:auto}
+    .mo-dialog{background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;transform:translateY(12px);transition:transform .2s}
+    .mo-modal.open .mo-dialog{transform:translateY(0)}
+    .mo-dialog-head{position:sticky;top:0;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--mo-line);z-index:2}
+    .mo-dialog-head h3{margin:0;font-size:16px;color:#1a231c}
+    .mo-dialog-head .mo-close{border:none;background:#F1F5F2;color:#5a6b5d;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px}
+    .mo-dialog-body{padding:16px 18px 20px}
+    .mo-sec{margin-bottom:16px}
+    .mo-sec h4{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#9aa59d;margin:0 0 8px}
+    .mo-ili{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed var(--mo-line);font-size:13px;color:#38433b}
+    .mo-ili:last-child{border-bottom:none}
+    .mo-ili .q{background:#EAF3EE;color:var(--mo-d);font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:8px}
+    .mo-ili .p{font-weight:600;color:#2a352c;white-space:nowrap}
+    .mo-kv{display:flex;justify-content:space-between;gap:14px;font-size:13px;padding:6px 0;color:#3a463d}
+    .mo-kv span:first-child{color:#9aa59d}
+    .mo-kv span:last-child{text-align:right;color:#2a352c}
+    .mo-footer{display:flex;gap:10px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--mo-line);margin-top:14px}
+    .mo-footer .spacer{flex:1}
+    .mo-cancel{border-color:#E3A3A0;color:#B42318;background:#fff}
+    .mo-cancel:hover{background:#B42318;border-color:#B42318;color:#fff}
+    /* tracking timeline */
+    .mo-track{display:flex;align-items:flex-start;padding:8px 0}
+    .mo-track-node{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0}
+    .mo-track-ic{width:34px;height:34px;border-radius:50%;background:#EAF0EC;border:2px solid #D7E3DA;color:#9faea2;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:1}
+    .mo-track-node.done .mo-track-ic{background:var(--mo-p);border-color:var(--mo-p);color:#fff}
+    .mo-track-node.cur .mo-track-ic{background:#fff;border-color:var(--mo-p);color:var(--mo-p);box-shadow:0 0 0 4px rgba(45,134,89,.15)}
+    .mo-track-label{font-size:10.5px;margin-top:6px;color:#9aa59d;text-align:center;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .mo-track-node.done .mo-track-label,.mo-track-node.cur .mo-track-label{color:var(--mo-d)}
+    .mo-track-line{flex:1;height:2px;background:#E0E9E2;margin-top:16px}
+    .mo-track-line.fill{background:var(--mo-p)}
+    .mo-cancel-banner{background:#FDECEC;border:1px solid #F5C6C3;color:#B42318;border-radius:10px;padding:12px 14px;font-size:13px;display:flex;gap:10px;align-items:center}
+    @media(max-width:560px){.mo-actions{width:100%}.mo-actions .mo-btn{flex:1;justify-content:center}}
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-box" style="color:var(--mo-p);margin-right:6px"></i> My Orders</h1>
+        <p>Track, review and manage every order placed from the store</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary btn-sm" onclick="location.href='input-store.html'"><i class="fas fa-store"></i> Back to Store</button>
+        <button class="btn-primary btn-sm" onclick="location.href='marketplace.html'"><i class="fas fa-basket-shopping"></i> Marketplace</button>
+      </div>
+    </div>
+
+    <div class="mo-head">
+      <div class="mo-tabs" id="mo-tabs"></div>
+    </div>
+    <div id="mo-meta" style="font-size:12px;color:#9aa59d;margin:-8px 2px 14px;display:none"></div>
+
+    <div class="mo-list" id="mo-list"></div>
+    <div class="mo-empty" id="mo-empty" style="display:none">
+      <i class="fa-regular fa-folder-open"></i>
+      <h3>You haven't placed any orders yet</h3>
+      <p>Explore the farm store and place your first order.</p>
+      <button class="btn-primary" onclick="location.href='input-store.html'"><i class="fas fa-store"></i> Shop now</button>
+    </div>
+  </main>
+
+  <!-- Order detail modal -->
+  <div class="mo-modal" id="detail-modal">
+    <div class="mo-dialog">
+      <div class="mo-dialog-head"><h3 id="d-head">Order details</h3><button class="mo-close" data-close="detail-modal"><i class="fas fa-xmark"></i></button></div>
+      <div class="mo-dialog-body" id="d-body"></div>
+    </div>
+  </div>
+
+  <!-- Track modal -->
+  <div class="mo-modal" id="track-modal">
+    <div class="mo-dialog">
+      <div class="mo-dialog-head"><h3>Track order</h3><button class="mo-close" data-close="track-modal"><i class="fas fa-xmark"></i></button></div>
+      <div class="mo-dialog-body" id="t-body"></div>
+    </div>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  (function(){
+  'use strict';
+
+  var BASE_URL=(window.API&&API.config&&API.config.BASE_URL)||'http://localhost:8000/api/v1';
+  var isAuthed=function(){return !!(localStorage.getItem('fa-auth-token')&&localStorage.getItem('fa-auth')==='true');};
+
+  function aq(method,path,body){
+    var token=localStorage.getItem('fa-auth-token');
+    var opts={method:method,headers:{}};
+    if(!(body instanceof FormData))opts.headers['Content-Type']='application/json';
+    if(token)opts.headers['Authorization']='Bearer '+token;
+    if(body&&method!=='GET')opts.body=JSON.stringify(body);
+    return fetch(BASE_URL+path,opts).then(function(r){
+      return r.json().catch(function(){return{}}).then(function(d){
+        if(!r.ok){
+          if(r.status===401){localStorage.removeItem('fa-auth-token');localStorage.removeItem('fa-auth');window.location.href='login.html';}
+          var e=new Error((d&&d.detail)||('HTTP '+r.status));e.status=r.status;e.data=d;throw e;
+        }
+        return d;
+      });
+    });
+  }
+
+  var S={status:'',orders:[],detailCache:{},page:1,loading:false};
+  var $=function(x){return document.getElementById(x)};
+  var fmtPrice=function(v){return'₹'+Number(v||0).toLocaleString('en-IN',{maximumFractionDigits:2})};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+
+  function toast(msg,type){
+    if(window.showToast&&typeof window.showToast==='function'){window.showToast(msg,type);return;}
+    var t=document.createElement('div');t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a231c;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;z-index:99999;box-shadow:0 6px 18px rgba(0,0,0,.2);max-width:84vw;text-align:center';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},3200);
+  }
+
+  var STATUS_FLOW=['pending','confirmed','processing','shipped','delivered'];
+  var ST_META={
+    pending:{label:'Payment Pending',icon:'fa-clock'},
+    confirmed:{label:'Confirmed',icon:'fa-check-circle'},
+    processing:{label:'Processing',icon:'fa-gears'},
+    shipped:{label:'Shipped',icon:'fa-truck'},
+    delivered:{label:'Delivered',icon:'fa-house-circle-check'},
+    cancelled:{label:'Cancelled',icon:'fa-circle-xmark'}
+  };
+  var PAY_META={pending:'Payment Pending',paid:'Paid',failed:'Payment Failed',refunded:'Refunded'};
+
+  function chip(cls,icon,label){return'<span class="mo-chip '+cls+'"><i class="fas '+icon+'"></i>'+esc(label)+'</span>'}
+  function fmtDate(s){
+    if(!s)return'';
+    var d=new Date(String(s).replace(' ','T'));
+    if(isNaN(d))return s;
+    return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' · '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  }
+  function firstItems(items){
+    if(!items||!items.length)return'';
+    return items.slice(0,3).map(function(o){return o.product_name||'Item'+(o.quantity?' (x'+o.quantity+')':'')}).join(', ')+(items.length>3?' +'+(items.length-3)+' more':'');
+  }
+
+  function renderTabs(){
+    var tabs=[{v:'',l:'All'},{v:'pending',l:'Payment Pending'},{v:'confirmed',l:'Confirmed'},{v:'processing',l:'Processing'},{v:'shipped',l:'Shipped'},{v:'delivered',l:'Delivered'},{v:'cancelled',l:'Cancelled'}];
+    $('mo-tabs').innerHTML=tabs.map(function(t){
+      return'<button class="mo-tab'+(S.status===t.v?' active':'')+'" data-st="'+t.v+'">'+t.l+'</button>';
+    }).join('');
+    $('mo-tabs').addEventListener('click',function(e){
+      var b=e.target.closest('.mo-tab');if(!b)return;
+      if(S.status===b.dataset.st)return;
+      S.status=b.dataset.st;S.page=1;S.detailCache={};
+      renderTabs();loadOrders();
+    });
+  }
+
+  function skels(){var h='';for(var i=0;i<4;i++)h+='<div class="mo-skel"></div>';$('mo-list').innerHTML=h;}
+
+  function loadOrders(){
+    if(S.loading)return;S.loading=true;
+    $('mo-empty').style.display='none';
+    var all=[],page=1;
+    function next(){
+      return aq('GET','/orders?page='+page+'&limit=100'+(S.status?'&status='+encodeURIComponent(S.status):'')).then(function(res){
+        var d=res&&res.data!==undefined?res.data:res;
+        var items=(d&&d.items)||[];
+        all=all.concat(items);
+        if((d&&d.total)>all.length&&page<1000){page++;return next();}
+        S.orders=all;S.loading=false;render();
+      }).catch(function(e){
+        S.loading=false;
+        $('mo-list').innerHTML='<div class="mo-empty" style="padding:40px"><i class="fas fa-plug-circle-xmark"></i><h3>Could not load orders</h3><p>'+esc(e.message)+'</p><button class="btn-primary btn-sm" onclick="window.loadOrders()">Retry</button></div>';
+      });
+    }
+    skels();next();
+  }
+  window.loadOrders=loadOrders;
+
+  function prefetchDetails(){
+    S.orders.forEach(function(o){
+      if(!S.detailCache[o.order_id]){
+        aq('GET','/orders/'+encodeURIComponent(o.order_id)).then(function(res){
+          var d=res&&res.data!==undefined?res.data:res;
+          if(d&&d.order_id){
+            S.detailCache[o.order_id]=d;
+            var el=document.querySelector('[data-oid="'+CSS.escape(o.order_id)+'"] .mo-items');
+            if(el)el.innerHTML=itemsHTML(d);
+          }
+        }).catch(function(){});
+      }
+    });
+  }
+
+  function itemsHTML(d){
+    var items=(d.items||[]);
+    if(!items.length)return'<div><i class="fas fa-box-open"></i> No items on record</div>';
+    return items.map(function(it){
+      return'<div class="row"><i class="fas fa-seedling" style="color:var(--mo-p);margin-top:3px"></i><div>'+esc(it.product_name||it.product||'Item')+' <span>× '+Number(it.quantity||1)+'</span></div><b style="margin-left:auto">'+fmtPrice(it.total_price||(it.unit_price*it.quantity))+'</b></div>';
+    }).join('');
+  }
+
+  function canCancel(o){
+    var s=(o.status||'').toLowerCase();
+    return s!=='delivered'&&s!=='cancelled'&&!o.cancelled;
+  }
+
+  function stCls(st){
+    if(st==='cancelled')return'st-cancelled';
+    if(st==='pending')return'st-pending';
+    if(st==='confirmed')return'st-confirmed';
+    if(st==='processing')return'st-processing';
+    if(st==='shipped')return'st-shipped';
+    return'st-delivered';
+  }
+
+  function render(){
+    var list=$('mo-list');
+    if(!S.orders.length){
+      list.innerHTML='';$('mo-empty').style.display='block';
+      $('mo-meta').style.display='none';return;
+    }
+    $('mo-empty').style.display='none';
+    $('mo-meta').style.display='';
+    $('mo-meta').textContent=S.orders.length+' order'+(S.orders.length>1?'s':'')+(S.status?' · '+(ST_META[S.status]?ST_META[S.status].label:S.status):'');
+    list.innerHTML=S.orders.map(function(o){
+      var st=(o.status||'pending').toLowerCase();
+      var m=ST_META[st]||{label:st,icon:'fa-box'};
+      var pay=(o.payment_status||'pending').toLowerCase();
+      var payCls2='pay-'+pay;
+      var stCls2=stCls(st);
+      var delv=st==='delivered'?'Delivered':(st==='shipped'?'In Transit':(st==='cancelled'?'Cancelled':'Not yet shipped'));
+      var itemsHtml=S.detailCache[o.order_id]?itemsHTML(S.detailCache[o.order_id]):'<div style="color:#9aa59d"><i class="fas fa-spinner fa-spin"></i> Loading items…</div>';
+      var canC=canCancel(o);
+      return'<div class="mo-card">'
+        +'<div class="mo-card-top"><div><div class="mo-id"><i class="fas fa-receipt ico"></i>'+esc(o.order_id)+'</div><div class="mo-date"><i class="far fa-calendar"></i> '+fmtDate(o.created_at)+'</div></div>'
+        +'<div class="mo-chips">'+chip(payCls2,'fa-circle'+((pay==='paid'||pay==='refunded')?'-check':'')+'',PAY_META[pay]||pay)+chip(stCls2,m.icon,m.label)+'</div></div>'
+        +'<div class="mo-items" data-oid="'+esc(o.order_id)+'">'+itemsHtml+'</div>'
+        +'<div class="mo-card-bottom"><div class="mo-total">Total <b>'+fmtPrice(o.total_amount)+'</b></div>'
+        +'<div class="mo-actions">'
+        +'<button class="mo-btn" data-track="'+esc(o.order_id)+'"><i class="fas fa-truck-fast"></i> Track</button>'
+        +'<button class="mo-btn" data-detail="'+esc(o.order_id)+'"><i class="fas fa-receipt"></i> Details</button>'
+        +(canC?'<button class="mo-btn ghost" data-cancel="'+esc(o.order_id)+'"><i class="fas fa-ban"></i> Cancel</button>':'')
+        +'</div></div>'
+        +'<div style="font-size:11.5px;color:#9aa59d;margin-top:10px"><i class="fas fa-box"></i> Delivery: '+delv+'</div>'
+        +'</div>';
+    }).join('');
+    prefetchDetails();
+  }
+
+  function ensureDetail(oid, cb){
+    if(S.detailCache[oid]&&S.detailCache[oid].id){cb(S.detailCache[oid]);return;}
+    toast('Loading order…');
+    aq('GET','/orders/'+encodeURIComponent(oid)).then(function(res){
+      var d=res&&res.data!==undefined?res.data:res;
+      if(!d||!d.id){throw new Error('Order not found');}
+      S.detailCache[oid]=d;cb(d);
+    }).catch(function(e){toast(e.message||'Could not load order','error')});
+  }
+
+  /* ─── DETAIL MODAL ─── */
+  function openDetail(oid){
+    ensureDetail(oid,function(o){
+      renderDetail(o);
+    });
+  }
+  function renderDetail(o){
+    var st=(o.status||'').toLowerCase(),m=ST_META[st]||{label:st||'',icon:'fa-box'};
+    var pay=(o.payment_status||'').toLowerCase();
+    var delv=st==='delivered'?'Delivered':(st==='shipped'?'In Transit':(st==='cancelled'?'Cancelled':'Not yet shipped'));
+    $('d-head').textContent='Order '+o.order_id;
+    $('d-body').innerHTML=
+      '<div class="mo-chips" style="margin-bottom:14px">'+chip('pay-'+pay,pay==='paid'||pay==='refunded'?'fa-circle-check':'fa-circle',PAY_META[pay]||pay)+chip(stCls(st),m.icon||'fa-box',m.label||st)+'</div>'
+      +'<div class="mo-sec"><h4>Items ('+((o.items||[]).length)+')</h4><div>'+itemsHTML(o)+'</div></div>'
+      +'<div class="mo-sec"><h4>Summary</h4>'
+      +'<div class="mo-kv"><span>Order date</span><span>'+fmtDate(o.created_at)+'</span></div>'
+      +'<div class="mo-kv"><span>Payment method</span><span>'+esc(o.payment_method||'—')+'</span></div>'
+      +'<div class="mo-kv"><span>Payment status</span><span>'+esc(PAY_META[pay]||pay)+'</span></div>'
+      +'<div class="mo-kv"><span>Delivery status</span><span>'+delv+'</span></div>'
+      +'<div class="mo-kv"><span>Total amount</span><b style="color:var(--mo-d)">'+fmtPrice(o.total_amount)+'</b></div>'
+      +(o.notes?'<div class="mo-kv"><span>Notes</span><span>'+esc(o.notes)+'</span></div>':'')
+      +'</div>'
+      +'<div class="mo-sec"><h4>Delivery details</h4>'
+      +'<div class="mo-kv"><span>Name</span><span>'+esc(o.delivery_name||'—')+'</span></div>'
+      +'<div class="mo-kv"><span>Phone</span><span>'+esc(o.delivery_phone||'—')+'</span></div>'
+      +'<div class="mo-kv"><span>Address</span><span>'+esc(o.delivery_address||'—')+'</span></div>'
+      +'</div>'
+      +(canCancel(o)?'<div class="mo-footer"><span class="spacer"></span><button class="mo-btn mo-cancel" data-cancel-detail="'+esc(oid)+'"><i class="fas fa-ban"></i> Cancel order</button></div>':'');
+    openModal('detail-modal');
+  }
+  /* ─── TRACK MODAL ─── */
+  function openTrack(oid){
+    ensureDetail(oid,function(o){
+      var st=(o.status||'').toLowerCase();
+      $('t-body').innerHTML=trackHTML(o);
+      openModal('track-modal');
+    });
+  }
+  function trackHTML(o){
+    var st=(o.status||'').toLowerCase();
+    var title=esc(o.order_id)+' · <b>'+fmtPrice(o.total_amount)+'</b>';
+    var head='<div style="font-size:14px;margin-bottom:4px">'+title+'</div>'
+      +'<div style="font-size:12px;color:#9aa59d">Placed '+fmtDate(o.created_at)+'</div>';
+    if(st==='cancelled'){
+      return head
+        +'<div class="mo-cancel-banner" style="margin:14px 0"><i class="fas fa-circle-xmark"></i><div>This order was <b>cancelled</b>. No payment was collected.</div></div>'
+        +'<div class="mo-sec"><h4>Progress</h4><div style="opacity:.5">'+timelineHTML(-1)+'</div></div>';
+    }
+    var idx=STATUS_FLOW.indexOf(st);
+    if(idx<0)idx=0;
+    return head
+      +'<div style="margin-top:8px">'+timelineHTML(idx)+'</div>'
+      +'<div style="font-size:12.5px;color:#7d8a80;margin-top:14px;line-height:1.6"><i class="fas fa-info-circle"></i> '
+      +(st==='pending'?'Your order is awaiting payment confirmation.':st==='confirmed'?'Order confirmed by the seller.':st==='processing'?'Seller is preparing your items.':st==='shipped'?'Your items are on the way.':st==='delivered'?'Order delivered. Thank you for shopping with us!':'')+'</div>';
+  }
+  function timelineHTML(idx){
+    var labels=['Placed','Confirmed','Processing','Shipped','Delivered'];
+    var html='<div class="mo-track">';
+    for(var i=0;i<labels.length;i++){
+      if(i>0)html+='<div class="mo-track-line'+(i<=idx?' fill':'')+'"></div>';
+      html+='<div class="mo-track-node'+(i<idx?' done':(i===idx?' cur':''))+'"><div class="mo-track-ic"><i class="fas '+(i<idx?'fa-check':(i===2?'fa-gears':i===3?'fa-truck':i===4?'fa-house-circle-check':'fa-circle-check'))+'"></i></div><div class="mo-track-label">'+labels[i]+'</div></div>';
+    }
+    return html+'</div>';
+  }
+
+  function openModal(id){$(id).classList.add('open')}
+  function closeModal(id){$(id).classList.remove('open')}
+
+  function cancelOrder(oid){
+    if(!window.confirm('Cancel order '+oid+'? This cannot be undone.'))return;
+    aq('PUT','/orders/'+encodeURIComponent(oid)+'?status=cancelled').then(function(res){
+      toast('Order '+oid+' cancelled','success');
+      $('detail-modal').classList.remove('open');
+      S.detailCache={};S.orders=[];S.page=1;loadOrders();
+    }).catch(function(e){toast(e.message||'Could not cancel order','error')});
+  }
+
+  /* ─── EVENTS ─── */
+  function delegate(){
+    $('mo-list').addEventListener('click',function(e){
+      var d=e.target.closest('[data-detail]');if(d){openDetail(d.getAttribute('data-detail'));return;}
+      var t=e.target.closest('[data-track]');if(t){openTrack(t.getAttribute('data-track'));return;}
+      var c=e.target.closest('[data-cancel]');if(c){cancelOrder(c.getAttribute('data-cancel'));return;}
+    });
+    $('d-body').addEventListener('click',function(e){
+      var c=e.target.closest('[data-cancel-detail]');if(c){cancelOrder(c.getAttribute('data-cancel-detail'));return;}
+    });
+    document.querySelectorAll('.mo-modal').forEach(function(m){
+      m.addEventListener('click',function(e){if(e.target===m)closeModal(m.id)});
+      var c=m.querySelector('.mo-close');if(c)c.addEventListener('click',function(){closeModal(m.id)});
+    });
+  }
+
+  function boot(){
+    if(!isAuthed())return;
+    delegate();renderTabs();loadOrders();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  })();
+  </script>
+</body>
+</html>
