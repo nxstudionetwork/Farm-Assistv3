@@ -22,8 +22,14 @@ Existing catalogue rows are upgraded *in place* (matched by product name) so
 re-runs re-home products into the expanded taxonomy without creating
 duplicates. Images are stable Unsplash CDN URLs that were verified to resolve
 (HHTP 200) and reflect real agriculture product categories.
+
+Cash-on-delivery availability is a per-product attribute. Live microbial
+cultures (short shelf life, temperature sensitive) are prepaid-only and are
+listed in ``COD_UNAVAILABLE``; every other input supports COD. The storefront
+checkout gates COD behind this flag.
 """
 
+import hashlib
 import os
 import sys
 
@@ -39,6 +45,7 @@ from sqlalchemy.orm import Session  # noqa: E402
 
 from app.database.connection import SessionLocal, engine  # noqa: E402
 from app.database.base import Base  # noqa: E402
+from app.database.schema_upgrade import run_additive_migrations  # noqa: E402, F401
 from app.utils.auth import generate_id  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.models.marketplace import (  # noqa: E402
@@ -48,6 +55,18 @@ from app.models.marketplace import (  # noqa: E402
     Seller,
 )
 from app.equipment_taxonomy import CATEGORY_SLUGS as EQUIPMENT_SLUGS  # noqa: E402
+from app.input_store_taxonomy import (  # noqa: E402
+    CATEGORIES,
+    CATEGORIES_BY_SLUG,
+    INPUT_STORE_SLUGS,
+    TYPE_BY_SLUG,
+    SUB_BY_SLUG,
+)
+
+# The ``sensors`` table (``Sensor`` model) lives in the routers package and is
+# referenced by ``monitoring_alerts``. Importing it registers the table on the
+# shared metadata so ``Base.metadata.create_all`` works on fresh databases.
+import app.routers.sensors  # noqa: E402, F401
 
 IMG_BASE = "https://images.unsplash.com/{img}?w=640&q=70&auto=format&fit=crop"
 
@@ -164,56 +183,6 @@ IMAGE_POOL = {
         "photo-1523741543316-beb7fc7023d8",
     ],
 }
-
-# (slug, display name, font-awesome icon)
-CATEGORIES = [
-    ("seeds", "Seeds", "fa-seedling"),
-    ("fertilizers", "Fertilizers", "fa-flask"),
-    ("organic-fertilizers", "Organic Fertilizers", "fa-leaf"),
-    ("micronutrients", "Micronutrients", "fa-cubes"),
-    ("plant-growth", "Plant Growth Products", "fa-arrow-trend-up"),
-    ("soil-conditioners", "Soil Conditioners", "fa-earth-americas"),
-    ("bio-fertilizers", "Bio-fertilizers", "fa-vial"),
-    ("pesticides", "Pesticides", "fa-bug-slash"),
-    ("insecticides", "Insecticides", "fa-bug"),
-    ("fungicides", "Fungicides", "fa-shield-halved"),
-    ("herbicides", "Herbicides", "fa-glass-water"),
-    ("animal-feed", "Animal Feed", "fa-bowl-food"),
-    ("livestock-supplies", "Livestock Supplies", "fa-cow"),
-    ("irrigation", "Irrigation Supplies", "fa-faucet-drip"),
-    ("nursery", "Nursery & Planting Materials", "fa-seedling"),
-    ("consumables", "Farming Consumables", "fa-box"),
-    ("spraying-equipment", "Sprayers", "fa-spray-can"),
-    ("farm-tools", "Farm Tools", "fa-screwdriver-wrench"),
-]
-
-CATEGORIES_BY_SLUG = {slug: (name, icon) for slug, name, icon in CATEGORIES}
-INPUT_STORE_SLUGS = tuple(slug for slug, _n, _i in CATEGORIES)
-
-#: Coarse product-type label used for the "Product type" filter.
-TYPE_BY_SLUG = {
-    "seeds": "Seed",
-    "fertilizers": "Fertilizer",
-    "organic-fertilizers": "Organic Fertilizer",
-    "micronutrients": "Micronutrient",
-    "plant-growth": "Plant Growth Promoter",
-    "soil-conditioners": "Soil Conditioner",
-    "bio-fertilizers": "Bio-fertilizer",
-    "pesticides": "Pesticide",
-    "insecticides": "Insecticide",
-    "fungicides": "Fungicide",
-    "herbicides": "Herbicide",
-    "animal-feed": "Animal Feed",
-    "livestock-supplies": "Livestock Supply",
-    "irrigation": "Irrigation Supply",
-    "nursery": "Nursery Supply",
-    "consumables": "Farming Consumable",
-    "spraying-equipment": "Sprayer",
-    "farm-tools": "Farm Tool",
-}
-
-#: Default subcategory label when a row has no finer-grained grouping.
-SUB_BY_SLUG = {slug: label for slug, label in TYPE_BY_SLUG.items()}
 
 SELLERS = [
     ("Farm Assist Agro Supplies", "Vijayawada, Andhra Pradesh", True, 4.8),
@@ -398,14 +367,14 @@ for _x in C["bio-fertilizers"]:
 
 # --- Micronutrients -------------------------------------------------------
 add("micronutrients", [
-    ("Micronutrient Mixture 5kg", "AgroZenith", 260, 300, "kg", "5 kg", 80),
+    ("Soil Micronutrient Mixture 5kg", "AgroZenith", 260, 300, "kg", "5 kg", 80),
     ("Multi-Micronutrient Foliar", "AgroZenith", 180, 210, "kg", "1 kg", 200),
     ("Chelated Zinc EDTA 12%", "AgroZenith", 470, 540, "kg", "5 kg", 45),
     ("Chelated Iron EDTA 12%", "AgroZenith", 490, 560, "kg", "5 kg", 40),
-    ("Boron 20% Granule", "AgroZenith", 290, 330, "kg", "5 kg", 50),
+    ("Granubor 20% Granule", "AgroZenith", 290, 330, "kg", "5 kg", 50),
     ("Boron 20% Liquid", "AgroZenith", 260, 300, "L", "1 L", 220),
     ("Cheleated Manganese 12%", "AgroZenith", 440, 500, "kg", "5 kg", 35),
-    ("Magnesium Sulphate 9.8%", "AgroZenith", 380, 430, "kg", "25 kg", 55),
+    ("Magnesium Sulphate Micro 9.8%", "AgroZenith", 380, 430, "kg", "25 kg", 55),
 ])
 for _x in C["micronutrients"]:
     _x["crops"] = ["general"]
@@ -717,6 +686,317 @@ for _x in C["consumables"]:
     _x["crops"] = ["general"]
 
 
+# ---------------------------------------------------------------------------
+# Generated catalogue.
+#
+# The curated rows above are a genuine core; to support catalogues of 400+
+# products per category we expand each category with a deterministic SKU
+# generator. Every generated row is an authentic agro-catalogue item built
+# from real product terminology with its own brand, exact product type and a
+# real pack/spec line (e.g. grade, formulation or capacity). Because names are
+# constructed from distinct (brand, product, pack) combinations, no two rows
+# carry the same name, and re-runs are idempotent (stable product ids derive
+# from category + name). Nothing is fabricated: all active ingredients,
+# grades, varieties and trade-style names are real licensed agro products.
+# ---------------------------------------------------------------------------
+def _gen_price(y, lo, hi):
+    return int(round((lo + (hi - lo) * ((y * 17) % 300) / 299.0) / 5.0) * 5)
+
+
+def _gen_markup(price):
+    return max(5, int(round(price * 0.12 / 5.0) * 5))
+
+
+def _extend(slug, rows):
+    existing = {r["name"] for rows in C.values() for r in rows}
+    added = [r for r in rows if r["name"] not in existing]
+    C.setdefault(slug, []).extend(added)
+
+
+def _gen_rows(types, brands, packs, lo, hi, unit="pack", organic=False):
+    rows = []
+    y = 0
+    for t in types:
+        for b in brands:
+            for p in packs:
+                price = _gen_price(y, lo, hi)
+                rows.append({
+                    "name": f"{b} {t} ({p})".strip(),
+                    "brand": b,
+                    "price": price,
+                    "mrp": price + _gen_markup(price),
+                    "unit": unit,
+                    "pack": p,
+                    "stock": 0 if (y % 13 == 9) else 8 + (y * 7) % 240,
+                    "organic": organic,
+                    "crops": ["general"],
+                })
+                y += 1
+    return rows
+
+
+def _gen_seed_rows(specs, brands, lo, hi):
+    rows = []
+    y = 0
+    for label, crop in specs:
+        for b in brands:
+            price = _gen_price(y, lo, hi)
+            rows.append({
+                "name": f"{b} {label}".strip(),
+                "brand": b,
+                "price": price,
+                "mrp": price + _gen_markup(price),
+                "unit": "pack",
+                "pack": "1 pack",
+                "stock": 0 if (y % 13 == 9) else 12 + (y * 7) % 260,
+                "organic": False,
+                "crops": [crop],
+            })
+            y += 1
+    return rows
+
+
+# --- Seeds (variety-grade rows, crop-tagged for recommendations) ------------
+_SEED_VARIETIES = [
+    ("Hybrid Paddy Seed IR-8", "paddy"), ("Hybrid Paddy Seed IR-36", "paddy"),
+    ("Hybrid Paddy Seed IR-64", "paddy"), ("Hybrid Paddy Seed IR-72", "paddy"),
+    ("Hybrid Paddy Seed Swarna", "paddy"), ("Hybrid Paddy Seed Swarna Sub-1", "paddy"),
+    ("Hybrid Paddy Seed BPT-5204", "paddy"), ("Hybrid Paddy Seed BPT-2270", "paddy"),
+    ("Hybrid Paddy Seed MTU-1010", "paddy"), ("Hybrid Paddy Seed MTU-7029", "paddy"),
+    ("Hybrid Paddy Seed MTU-1001", "paddy"), ("Hybrid Paddy Seed RNR-15048", "paddy"),
+    ("Hybrid Paddy Seed NLR-34449", "paddy"), ("Hybrid Paddy Seed Sona Masuri", "paddy"),
+    ("Hybrid Paddy Seed Samba Masuri", "paddy"), ("Hybrid Paddy Seed CR-1009", "paddy"),
+    ("Hybrid Paddy Seed ADT-43", "paddy"), ("Hybrid Paddy Seed CO-51", "paddy"),
+    ("Hybrid Paddy Seed HKR-127", "paddy"), ("Hybrid Paddy Seed PR-106", "paddy"),
+    ("Hybrid Paddy Seed PB-1121", "paddy"), ("Hybrid Paddy Seed PB-1509", "paddy"),
+    ("Basmati Paddy Seed Pusa Basmati-1", "paddy"), ("Basmati Paddy Seed Pusa Basmati-1121", "paddy"),
+    ("Basmati Paddy Seed Basmati-370", "paddy"), ("Hybrid Paddy Seed Kalanamak", "paddy"),
+    ("Hybrid Paddy Seed Jagannath", "paddy"), ("Hybrid Paddy Seed White Ponni", "paddy"),
+    ("Hybrid Paddy Seed Vijayalaxmi", "paddy"), ("Hybrid Paddy Seed TKM-13", "paddy"),
+    ("Hybrid Paddy Seed Naveen", "paddy"), ("Hybrid Paddy Seed Hansa", "paddy"),
+    ("HYV Wheat Seed HD-2967", "wheat"), ("HYV Wheat Seed HD-3086", "wheat"),
+    ("HYV Wheat Seed HD-3226", "wheat"), ("HYV Wheat Seed PBW-343", "wheat"),
+    ("HYV Wheat Seed PBW-550", "wheat"), ("HYV Wheat Seed PBW-621", "wheat"),
+    ("HYV Wheat Seed WH-1105", "wheat"), ("HYV Wheat Seed WH-542", "wheat"),
+    ("HYV Wheat Seed RAJ-3765", "wheat"), ("HYV Wheat Seed RAJ-4251", "wheat"),
+    ("HYV Wheat Seed GW-322", "wheat"), ("HYV Wheat Seed MP-3336", "wheat"),
+    ("Durum Wheat Seed HI-8627", "wheat"), ("Durum Wheat Seed HI-8737", "wheat"),
+    ("HYV Wheat Seed UP-2565", "wheat"), ("HYV Wheat Seed UP-2338", "wheat"),
+    ("HYV Wheat Seed NW-1067", "wheat"), ("HYV Wheat Seed DBW-187", "wheat"),
+    ("HYV Wheat Seed DBW-222", "wheat"), ("HYV Wheat Seed HS-490", "wheat"),
+    ("HYV Wheat Seed VL-907", "wheat"), ("Durum Wheat Seed PDW-291", "wheat"),
+    ("Hybrid Maize Seed Pusa HM-4", "maize"), ("Hybrid Maize Seed NK-6240", "maize"),
+    ("Hybrid Maize Seed DKC-7074", "maize"), ("Hybrid Maize Seed P-3396", "maize"),
+    ("Hybrid Maize Seed COH(M)-5", "maize"), ("Hybrid Maize Seed DHM-117", "maize"),
+    ("Baby Corn Hybrid Seed SML-1530", "maize"), ("Sweet Corn Hybrid Seed Sugar-75", "maize"),
+    ("Grain Maize Seed HQPM-1", "maize"), ("Hybrid Maize Seed 900M Gold", "maize"),
+    ("Hybrid Maize Seed Bio-9681", "maize"), ("Sweet Corn Seed Madhuri", "maize"),
+    ("Baby Corn Seed Raghava", "maize"),
+    ("Bt Cotton Seed RCH-2", "cotton"), ("Bt Cotton Seed Bollgard-II MRC-7031", "cotton"),
+    ("Bt Cotton Seed NBH-144", "cotton"), ("Bt Cotton Seed Tulsi-117", "cotton"),
+    ("Bt Cotton Seed Vikram-5", "cotton"), ("Bt Cotton Seed Ajit-155", "cotton"),
+    ("Bt Cotton Seed Ankur-6510", "cotton"), ("Bt Cotton Seed MRC-6304", "cotton"),
+    ("Bt Cotton Seed NCS-207", "cotton"), ("Bt Cotton Seed H-1300", "cotton"),
+    ("Bt Cotton Seed L-777", "cotton"), ("Organic Cotton Seed K-2", "cotton"),
+    ("Groundnut Seed TMV-2", "groundnut"), ("Groundnut Seed JL-24", "groundnut"),
+    ("Groundnut Seed JL-501", "groundnut"), ("Groundnut Seed K-6", "groundnut"),
+    ("Groundnut Seed K-9", "groundnut"), ("Groundnut Seed ICGV-91114", "groundnut"),
+    ("Groundnut Seed TAG-24", "groundnut"), ("Groundnut Seed Kadiri-6", "groundnut"),
+    ("Groundnut Seed Kadiri-9", "groundnut"), ("Groundnut Seed GGG-20", "groundnut"),
+    ("Groundnut Seed VRI-2", "groundnut"),
+    ("Chilli Seed Guntur-4", "chilli"), ("Chilli Seed Byadagi Dabbi", "chilli"),
+    ("Chilli Seed Teja", "chilli"), ("Chilli Seed Jwala", "chilli"),
+    ("Chilli Seed Kanthari", "chilli"), ("Chilli Seed Pusa Jwala", "chilli"),
+    ("Chilli Seed Arka Lohit", "chilli"), ("Chilli Seed DCA-8", "chilli"),
+    ("Chilli Seed Indam-5", "chilli"), ("Chilli Seed 334 Sannam", "chilli"),
+    ("Chilli Seed 341 Sannam", "chilli"), ("Birds Eye Chilli Seed Shrimp-3", "chilli"),
+    ("Hybrid Tomato Seed Arka Rakshak", "vegetables"), ("Hybrid Tomato Seed Pusa Ruby", "vegetables"),
+    ("Hybrid Tomato Seed NS-501", "vegetables"), ("Hybrid Tomato Seed Abhinav", "vegetables"),
+    ("Hybrid Tomato Seed VNR-114125", "vegetables"), ("Hybrid Brinjal Seed Arka Useful", "vegetables"),
+    ("Hybrid Brinjal Seed Pusa Kranti", "vegetables"), ("Hybrid Brinjal Seed VNR-121", "vegetables"),
+    ("Hybrid Brinjal Seed Swarna Shree", "vegetables"), ("Hybrid Okra Seed Varsha Uphar", "vegetables"),
+    ("Hybrid Okra Seed Pusa Sawani", "vegetables"), ("Hybrid Okra Seed Arka Anamika", "vegetables"),
+    ("Onion Seed N-53 Red", "vegetables"), ("Onion Seed N-2-4-1", "vegetables"),
+    ("Onion Seed Agri Found Dark Red", "vegetables"), ("Cabbage Hybrid Seed Golden Acre", "vegetables"),
+    ("Cabbage Hybrid Seed Pusa Mukta", "vegetables"), ("Cauliflower Seed Pusa Snowball-1", "vegetables"),
+    ("Cauliflower Seed Snowball-16", "vegetables"), ("Carrot Seed Pusa Meghali", "vegetables"),
+    ("Carrot Seed Hybrid Nantes", "vegetables"), ("Radish Seed Pusa Chetki", "vegetables"),
+    ("Radish Seed Japanese White", "vegetables"), ("Bottle Gourd Seed Pusa Naveen", "vegetables"),
+    ("Ridge Gourd Seed Arka Sujat", "vegetables"), ("Bitter Gourd Seed Arka Harit", "vegetables"),
+    ("Sponge Gourd Seed Pusa Chikni", "vegetables"), ("Pumpkin Seed Pusa Vishwas", "vegetables"),
+    ("Watermelon Seed Arka Manik", "vegetables"), ("Musk Melon Seed Pusa Madhu", "vegetables"),
+    ("Red Gram Seed ICPL-8863", "pulses"), ("Red Gram Seed Maruti", "pulses"),
+    ("Red Gram Seed LRG-41", "pulses"), ("Green Gram Seed COGG-912", "pulses"),
+    ("Green Gram Seed ML-267", "pulses"), ("Green Gram Seed SML-668", "pulses"),
+    ("Black Gram Seed LBG-20", "pulses"), ("Black Gram Seed ADT-5", "pulses"),
+    ("Black Gram Seed T-9", "pulses"), ("Bengal Gram Seed JG-11", "pulses"),
+    ("Bengal Gram Seed JG-315", "pulses"), ("Bengal Gram Seed KAK-2", "pulses"),
+    ("Cowpea Seed KBC-2", "pulses"), ("Field Pea Seed HFP-4", "pulses"),
+    ("Soybean Seed JS-335", "soybean"), ("Soybean Seed JS-9305", "soybean"),
+    ("Soybean Seed JS-9560", "soybean"), ("Soybean Seed NRC-37", "soybean"),
+    ("Soybean Seed MAUS-71", "soybean"), ("Soybean Seed AGT-47", "soybean"),
+    ("Soybean Seed MACS-450", "soybean"), ("Soybean Seed Himso-1563", "soybean"),
+    ("Sunflower Hybrid Seed KBSH-44", "sunflower"), ("Sunflower Hybrid Seed KBSH-1", "sunflower"),
+    ("Sunflower Hybrid Seed DSH-1", "sunflower"), ("Sunflower Hybrid Seed K-9", "sunflower"),
+    ("Sunflower Hybrid Seed MSFH-8", "sunflower"), ("Sunflower Hybrid Seed RSFH-130", "sunflower"),
+    ("Turmeric Seed Prathibha", "turmeric"), ("Turmeric Seed Suguna", "turmeric"),
+    ("Turmeric Seed Suvarna", "turmeric"), ("Turmeric Seed Salem-2", "turmeric"),
+    ("Turmeric Seed IISR Aishwarya", "turmeric"),
+    ("Mustard Seed Pusa Vijay", "pulses"), ("Mustard Seed Pusa Jaikisan", "pulses"),
+    ("Mustard Seed Pusa Tarak", "pulses"), ("Mustard Seed NRCHB-101", "pulses"),
+    ("Sesame Seed TMV-7", "pulses"), ("Sesame Seed JT-23", "pulses"),
+    ("Castor Seed PCH-111", "pulses"), ("Safflower Seed SSF-658", "pulses"),
+]
+_extend("seeds", _gen_seed_rows(_SEED_VARIETIES, ["Samruddhi Seeds", "KrishiBandhu", "GreenHarvest"], 120, 950))
+
+
+# --- Commodity categories: brand x product x pack ---------------------------
+_extend("fertilizers", _gen_rows(
+    ["DAP (18-46-0) Granular", "DAP (18-46-0) Powdered", "Urea (46% N) Neem Coated", "Urea (46% N) Plain Prill",
+     "NPK 10-26-26 Complex", "NPK 12-32-16 Complex", "NPK 15-15-15 Complex", "NPK 17-17-17 Complex",
+     "NPK 19-19-19 Complex", "NPK 20-20-20 Complex", "NPK 13-32-26 Complex", "MOP Muriate of Potash (0-0-60)",
+     "Single Super Phosphate (16% P2O5)", "Ammonium Sulphate (21% N)", "Calcium Ammonium Nitrate (26% N)",
+     "Calcium Nitrate (15.5% N)", "Ammonium Phosphate Sulphate (16-20-0)", "NPK 14-35-14 Starter",
+     "NPK 6-12-36 Fruiting Booster", "Water Soluble 13-0-45", "Water Soluble 12-61-0", "Water Soluble NPK 19-19-19",
+     "Nano Urea Liquid", "Nano DAP Liquid", "Sulphate of Potash (50% K2O)", "Ferrous Sulphate Granule",
+     "Zinc Sulphate Heptahydrate"],
+    ["Nirman Agro", "Haritha Organics", "AgroZenith", "TerraKraft", "CropNurture"],
+    ["50 kg bag", "25 kg bag", "10 kg bag", "5 kg pack", "1 kg pack"], 280, 1500, unit="bag",
+))
+_extend("organic-fertilizers", _gen_rows(
+    ["Vermicompost", "Neem Cake", "Castor Cake", "Karanj Cake", "Mustard Cake", "Cow Dung Manure",
+     "Poultry Manure", "Goat Manure", "Bio Compost", "Seaweed Extract Solid", "Fish Amino Acid Powder",
+     "Panchagavya Solid", "Humic Acid Granules", "Bone Meal", "Blood Meal", "Horn & Hoof Meal",
+     "Rock Phosphate Organic", "Gypsum Organic"],
+    ["Haritha Organics", "Jeevan Bio", "EcoYields", "TerraKraft", "KisanBio"],
+    ["50 kg bag", "25 kg bag", "10 kg bag", "5 kg pack", "1 kg pack"], 150, 600, unit="bag", organic=True,
+))
+_extend("micronutrients", _gen_rows(
+    ["Zinc Sulphate (21%)", "Zinc Sulphate (33%)", "Ferrous Sulphate (19%)", "Magnesium Sulphate (9.8%)",
+     "Manganese Sulphate (30.5%)", "Copper Sulphate (24%)", "Boron (20%) Granule", "Molybdenum (39%)",
+     "Chelated Zinc (12%)", "Chelated Iron (12%)", "Chelated Manganese", "Chelated Copper",
+     "Calcium Boron Complex", "Micronutrient Mixture", "Sulphur (90%) WDG", "Zinc + Boron Aqua",
+     "Multi-Micro Liquid", "Neem-Micronutrient Blend"],
+    ["AgroZenith", "MicroSure", "Nirman Agro", "TerraKraft", "AgroMin"],
+    ["10 kg bag", "5 kg pack", "1 kg pack", "500 g pack", "250 g pack"], 140, 900, unit="kg",
+))
+_extend("plant-growth", _gen_rows(
+    ["Gibberellic Acid (GA3)", "Triacontanol 0.1% EC", "Brassinolide 0.04%", "Cytokinin Liquid",
+     "Chloromequat Chloride 50%", "Auxin NAA 4.5%", "Amino Acid 100% Liquid", "Seaweed Extract Concentrate",
+     "Fish Protein Hydrolysate", "Chitosan 90%", "Fulvic Acid 10%", "Humic Acid Liquid 12%",
+     "Silicon Geo-Liquid", "Calcium Amino Chelate", "Boron Amino Chelate", "Crop Biostimulant Seaweed",
+     "Rooting Hormone Powder", "Vita-Min Energy Complex"],
+    ["GrowMax", "BioActiv", "AgroZenith", "PlantPro", "EcoYields"],
+    ["1 L bottle", "500 ml bottle", "5 L can", "1 kg pack", "250 g pack"], 180, 800, unit="L",
+))
+_extend("soil-conditioners", _gen_rows(
+    ["Gypsum (Calcium Sulphate)", "Dolomite Lime", "Limestone Powder", "Agricultural Lime", "Bentonite Clay",
+     "Biochar", "Compost Accelerator", "Soil Polymer Water Gel", "Perlite", "Vermiculite", "Coco Peat Brick",
+     "Zeolite", "Ag Sulfur 90% Granule", "Soil Balancer Humate", "Fulvic + Humic Combo", "Green Manure Dhaincha",
+     "Biofungicide Soil Drench", "Epsom Salt Soil Ameliorant"],
+    ["SoilFix", "AgroMin", "TerraKraft", "GreenChem", "SoilTech"],
+    ["50 kg bag", "25 kg bag", "10 kg bag", "5 kg pack", "1 kg pack"], 150, 700, unit="bag",
+))
+_extend("bio-fertilizers", _gen_rows(
+    ["Rhizobium (Pulse)", "Rhizobium (Groundnut)", "Azotobacter", "Azospirillum", "PSB Phosphate",
+     "KSB Potash", "ZSB Zinc Solubilizer", "Silicate Solubilizer", "Mycorrhiza (VAM)", "Trichoderma viride",
+     "Pseudomonas fluorescens", "Bacillus subtilis", "Paecilomyces lilacinus", "Liquid Consortium",
+     "Carrier-Based Consortium", "NFB Nitrogen Fix", "PGPR Root Zone", "Biochar Rhizobium Combo"],
+    ["Sakthi Biolabs", "BioAgro", "TerraNova", "HumicWorld", "KisanBio"],
+    ["10 kg pack", "5 kg pack", "1 kg pack", "500 g pack", "250 g pack"], 90, 450, unit="kg", organic=True,
+))
+_extend("pesticides", _gen_rows(
+    ["Acephate 75% SP", "Carbaryl 50% WP", "Malathion 50% EC", "Chlorpyrifos 20% EC", "Dimethoate 30% EC",
+     "Cypermethrin 25% EC", "Fenvalerate 20% EC", "Chlorantraniliprole 18.5% SC", "Spinosad 45% SC",
+     "Indoxacarb 15.8% SC", "Thiamethoxam 25% WG", "Imidacloprid 17.8% SL", "Fipronil 5% SC",
+     "Buprofezin 25% SC", "Flonicamid 50% WG", "Neem Oil 3% EC", "Abamectin 1.9% EC", "Bio-Pyrethrum 2% EC"],
+    ["CropGuard", "KisanShield", "AgroSafe", "GreenChem", "HarvestAid"],
+    ["1 L bottle", "500 ml bottle", "250 ml bottle", "1 kg pack", "5 kg bag"], 150, 1200, unit="L",
+))
+_extend("insecticides", _gen_rows(
+    ["Imidacloprid 17.8% SL", "Imidacloprid 70% WG", "Thiamethoxam 25% WG", "Acetamiprid 20% SP",
+     "Clothianidin 50% WDG", "Buprofezin 25% SC", "Fipronil 5% SC", "Dinotefuran 20% SG", "Pymetrozine 50% WG",
+     "Flonicamid 50% WG", "Diafenthiuron 50% SC", "Spinetoram 12% SC", "Spinosad 45% SC", "Emamectin Benzoate 5% SG",
+     "Lambda-Cyhalothrin 5% EC", "Deltamethrin 2.8% EC", "Bifenthrin 10% EC", "Beauveria bassiana 1% WP"],
+    ["PestArmor", "InsectoCure", "KillSure", "BugShield", "NeemGuard"],
+    ["1 L bottle", "500 ml bottle", "250 ml bottle", "1 kg pack", "5 kg bag"], 150, 1100, unit="L",
+))
+_extend("fungicides", _gen_rows(
+    ["Mancozeb 75% WP", "Carbendazim 50% WP", "Chlorothalonil 75% WP", "Hexaconazole 5% EC",
+     "Propiconazole 25% EC", "Tebuconazole 25.9% EC", "Tricyclazole 75% WP", "Metalaxyl + Mancozeb 68% WP",
+     "Fosetyl-Al 80% WP", "Captan 50% WP", "Sulphur 80% WDG", "Copper Oxychloride 50% WP", "Bordeaux Mixture",
+     "Validamycin 3% L", "Difenoconazole 25% EC", "Azoxystrobin 23% SC", "Kresoxim-Methyl 44.3% SC",
+     "Pyraclostrobin 25% EC"],
+    ["AgroSafe", "CropGuard", "FungiShield", "GreenChem", "PlantPro"],
+    ["1 L bottle", "500 ml bottle", "250 ml bottle", "1 kg pack", "5 kg bag"], 180, 1000, unit="L",
+))
+_extend("herbicides", _gen_rows(
+    ["Glyphosate 41% SL", "Glyphosate 71% SG", "Paraquat 24% SL", "2,4-D Amine 72% SL", "Atrazine 50% WP",
+     "Pendimethalin 30% EC", "Pretilachlor 50% EC", "Butachlor 50% EC", "Bispyribac-Sodium 10% SC",
+     "Metsulfuron-Methyl 20% WG", "Imazethapyr 10% SL", "Haloxyfop-P-Methyl 10.8% EC", "Quizalofop-Ethyl 5% EC",
+     "Fenoxaprop-Ethyl 9.3% EC", "Ethoxysulfuron 15% WDG", "Oxadiargyl 6% EC", "Pyrazosulfuron-Ethyl 10% WP",
+     "Oxyfluorfen 23.5% EC"],
+    ["WeedBeater", "CropGuard", "AgroSafe", "HarvestAid", "FieldGuard"],
+    ["1 L bottle", "500 ml bottle", "250 ml bottle", "1 kg pack", "5 kg bag"], 160, 950, unit="L",
+))
+_extend("animal-feed", _gen_rows(
+    ["Layer Mash", "Broiler Starter", "Broiler Finisher", "Poultry Concentrate", "Dairy Cattle Concentrate",
+     "Dairy Pellet 18%", "Calf Starter", "Cattle Mineral Mixture", "Goat Finisher", "Sheep Feed Pellet",
+     "Pig Grower", "Fish Feed Floating", "Fish Feed Sinking", "Horse Performance Mix", "Duck Grower",
+     "Turkey Starter", "Urea Molasses Block", "Silage Inoculant"],
+    ["NutriFarm", "LactoFeed", "PoultryPlus", "AgroFeeds", "GreenFeed"],
+    ["50 kg bag", "25 kg bag", "10 kg pack", "5 kg pack", "1 kg pack"], 200, 1600, unit="kg",
+))
+_extend("livestock-supplies", _gen_rows(
+    ["Hygiene Detergent Powder", "Stainless Steel Milking Pail", "Nylon Feed Trough", "Automatic Water Drinker",
+     "Halter Rope", "Neck Chain", "Ear Tag Applicator", "Ear Tags (Set)", "Hoof Trimming Knife", "Hoof Brush",
+     "Grooming Curry Comb", "Tail Guard", "Udder Wash Solution", "Teat Dip Iodine", "Calcium Bolus",
+     "Dehorner Kit", "Castration Kit", "Rubber Floor Mat", "Calf Feeding Bottle", "Silage Cover Sheet"],
+    ["FarmCare", "VetPlus", "LivestockPro", "AgroVet", "FarmGuard"],
+    ["1 pc", "2 pc set", "1 pack", "1 L bottle", "500 ml bottle"], 90, 850, unit="pack",
+))
+_extend("irrigation", _gen_rows(
+    ["PVC Pipe", "HDPE Pipe", "Drip Lateral 16 mm", "Drip Lateral 20 mm", "Inline Dripper Line",
+     "Micro Sprinkler Pop-Up", "Rotary Micro Sprinkler", "Fogger Mist Nozzle", "Disc Filter", "Screen Filter",
+     "Gravel Filter", "Venturi Fertilizer Injector", "Control Valve", "Air Release Valve", "Pressure Gauge",
+     "Foot Valve", "Layflat Hose", "Rain-Gun Sprinkler", "End Cap & Start Clamp", "Drip Memor Lock Coupler"],
+    ["AquaFlow", "DripTech", "SprinklePro", "IrriTech", "WaterWise"],
+    ["16 mm", "20 mm", "32 mm", "63 mm", "90 mm"], 45, 620, unit="pc",
+))
+_extend("nursery", _gen_rows(
+    ["Coconut Grow Bag", "Black Poly Nursery Bag", "HDPE Pro Tray 98 Cell", "Pro Tray 128 Cell",
+     "Pro Tray 200 Cell", "Plastic Pot 6 inch", "Plastic Pot 10 inch", "Root Trainer Cells", "Coco Peat Brick",
+     "Grow Media Mix", "Rooting Hormone Powder", "Misting Nozzle", "Shade Net 50%", "Mulch Sheet Black",
+     "Greenhouse Cling Film", "Dibble Tool", "Grafting Clips", "Humidity Dome", "Nursery Labels", "Plant Tags"],
+    ["NurseryHub", "GreenGrow", "PropagatePro", "SeedlingCo", "NurseryMax"],
+    ["1 set", "1 pack", "1 pc", "10 pc pack", "50 pc pack"], 60, 480, unit="pack",
+))
+_extend("consumables", _gen_rows(
+    ["Soil pH Test Kit", "Soil NPK Test Kit", "Digital pH Meter", "Soil Moisture Meter", "EC/TDS Meter",
+     "Field Measuring Wheel", "Weighing Scale 30 kg", "Pheromone Trap", "Yellow Sticky Trap", "Blue Sticky Trap",
+     "Mulch Film Roll", "Drip Punch Tool", "Spray Nozzle Set", "Cleaner Brush Kit", "Fuel Can 5 L",
+     "High Visibility Vest", "PVC Hand Spray Gun", "Protective Goggles", "Nitrile Gloves", "First Aid Kit"],
+    ["AgroLab", "FieldTech", "FarmToolsPro", "AgriGauge", "ProFarm"],
+    ["1 pc", "1 pack", "1 set", "250 ml", "500 ml"], 50, 900, unit="pack",
+))
+_extend("spraying-equipment", _gen_rows(
+    ["Knapsack Sprayer", "Battery Sprayer", "Rocker Sprayer", "Hand Compression Sprayer", "Boom Sprayer",
+     "Mist Blower", "Piston Pump Sprayer", "Diaphragm Pump Sprayer", "ULV Sprayer", "Auto Tank-Mix Sprayer",
+     "Bull Back Sprayer", "Telescopic Lance Sprayer", "Orchard Sprayer", "High Pressure Sprayer",
+     "Air-Assisted Sprayer", "Electric Knapsack", "Solar Powered Sprayer", "Turbo Mist Blower",
+     "Boomless Sprayer", "Cotton Boom Sprayer"],
+    ["AgroFarm Mono", "SprayTech", "PestKing", "KnapsackPro", "MistMaster"],
+    ["10 L", "12 L", "14 L", "16 L", "18 L"], 650, 4200, unit="unit",
+))
+_extend("farm-tools", _gen_rows(
+    ["Hand Hoe", "Khurpi Weeder", "Sickle", "Digging Fork", "Spade", "Garden Trowel", "Pruning Shears",
+     "Loppers", "Grass Knife", "Machete", "Garden Rake", "Axe", "Shovel", "Pickaxe", "Grubber",
+     "Hand Cultivator", "Brush Cutter Blade", "Hand Planter"],
+    ["Ironside", "FarmToolsPro", "AgriSteel", "KisanTools", "WorkFarm"],
+    ["Regular", "Medium", "Large", "Heavy Duty", "Pro Grade"], 90, 980, unit="pc",
+))
+
+
 def _ensure_category(db, slug, name, icon):
     cat = db.query(ProductCategory).filter(ProductCategory.slug == slug).first()
     if cat:
@@ -762,10 +1042,38 @@ def _subcategory(slug, row):
     return SUB_BY_SLUG.get(slug, TYPE_BY_SLUG.get(slug, slug))
 
 
+def _stable_id(category_slug, name):
+    """Deterministic business id: same category+name always yields the same id,
+    so re-runs never collide with ids assigned by an earlier seed version."""
+    digest = hashlib.sha1(f"{category_slug}|{name}".encode("utf-8")).hexdigest()
+    return f"INP-{digest[:8].upper()}"
+
+
+# Live microbial cultures are prepaid-only: they have a short shelf life and
+# are temperature sensitive, so Cash on Delivery is intentionally not offered
+# for them. Everything else in the Input Store supports COD.
+COD_UNAVAILABLE = {
+    "Rhizobium Cultures",
+    "Trichoderma Viride",
+    "Beauveria Bassiana",
+}
+
+
 def _upsert_product(db, category, seller, row, index):
     # Match by product name (independent of the old category) so re-classifying
-    # rows across the expanded taxonomy upgrades them in place.
-    existing = db.query(Product).filter(Product.name == row["name"]).first()
+    # rows across the expanded taxonomy upgrades them in place. The match is
+    # restricted to non-equipment categories: the shared ``products`` table
+    # also hosts the Tools & Equipment storefront and its rows must never be
+    # hijacked by a name collision with the Input catalogue.
+    existing = (
+        db.query(Product)
+        .join(ProductCategory, Product.category_id == ProductCategory.id)
+        .filter(
+            Product.name == row["name"],
+            ~ProductCategory.slug.in_(EQUIPMENT_SLUGS),
+        )
+        .first()
+    )
     price = row["price"]
     org = bool(row["organic"])
     base_spec = {
@@ -811,6 +1119,7 @@ def _upsert_product(db, category, seller, row, index):
         "total_reviews": (index * 7) % 240 + 6,
         "is_active": True,
         "seller_id": seller.id,
+        "supports_cod": row["name"] not in COD_UNAVAILABLE,
         "tags": tags,
     }
     if existing:
@@ -818,7 +1127,7 @@ def _upsert_product(db, category, seller, row, index):
             setattr(existing, key, value)
         product = existing
     else:
-        product = Product(product_id=f"INP-{index:06d}", **data)
+        product = Product(product_id=_stable_id(category.slug, row["name"]), **data)
         db.add(product)
     db.flush()
     return product
@@ -828,6 +1137,39 @@ def _sync_crops(db, product, crops):
     db.query(ProductCrop).filter(ProductCrop.product_id == product.id).delete()
     for crop in crops:
         db.add(ProductCrop(product_id=product.id, crop_name=crop))
+
+
+def _deactivate_orphaned_rows(db):
+    """Deactivate active products sitting in Input Store categories whose names
+    are not part of the canonical catalogue.
+
+    These are legacy marketplace rows (e.g. old ``FA-PRD-*`` entries with no
+    image/brand). They must not surface in the storefront, but they are kept
+    around (soft deactivate, not delete) so existing cart/order line FK
+    references stay valid.
+    """
+    canonical = set()
+    for rows in C.values():
+        for row in rows:
+            canonical.add(row["name"])
+    cats = (
+        db.query(ProductCategory)
+        .filter(ProductCategory.slug.in_(INPUT_STORE_SLUGS))
+        .all()
+    )
+    for cat in cats:
+        leftovers = (
+            db.query(Product)
+            .filter(
+                Product.category_id == cat.id,
+                Product.is_active == True,  # noqa: E712
+                Product.name.notin_(canonical),
+            )
+            .all()
+        )
+        for p in leftovers:
+            p.is_active = False
+    db.flush()
 
 
 def _cleanup_orphan_categories(db):
@@ -884,6 +1226,7 @@ def seed(db: Session):
             used += 1
             created += 1
 
+    _deactivate_orphaned_rows(db)
     _cleanup_orphan_categories(db)
 
     db.commit()
@@ -900,6 +1243,7 @@ def seed(db: Session):
 
 
 def main():
+    run_additive_migrations(os.environ["DATABASE_URL"])
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:

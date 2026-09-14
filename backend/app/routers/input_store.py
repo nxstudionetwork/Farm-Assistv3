@@ -6,12 +6,18 @@ database. It reuses the same ``products``, ``product_categories`` and
 ``sellers`` tables and talks to the shared cart / wishlist / order APIs in
 ``marketplace.py``.
 
-Everything here is scoped to the authenticated farmer (``get_current_user``)
-and only exposes *active* products. All filters, sort options and search are
-executed in SQL so the full catalogue is never shipped to the frontend.
+Everything here is scoped to the authenticated farmer (``get_current_user``),
+only exposes *active* products, and is further restricted to the Input Store
+category whitelist (``app.input_store_taxonomy.INPUT_STORE_SLUGS``). Tools &
+Equipment rows live in the same ``products`` table under different slugs and
+are therefore completely isolated from this storefront. All filters, sort
+options and search are executed in SQL so the full catalogue is never shipped
+to the frontend.
 """
 
 from typing import Optional
+import re
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -24,6 +30,11 @@ from app.models.marketplace import (
     ProductCategory,
     Seller,
     ProductCrop,
+)
+from app.input_store_taxonomy import (
+    INPUT_STORE_SLUGS,
+    TYPE_BY_SLUG,
+    SUB_BY_SLUG,
 )
 
 router = APIRouter(prefix="/api/v1/input-store", tags=["Input Store"])
@@ -45,6 +56,16 @@ CROP_ALIASES = {
 }
 
 
+def _input_category_ids(db: Session) -> list:
+    """Ids of the Input Store category whitelist."""
+    return [
+        c.id
+        for c in db.query(ProductCategory.id)
+        .filter(ProductCategory.slug.in_(INPUT_STORE_SLUGS))
+        .all()
+    ]
+
+
 def _normalise_crop(name: str) -> str:
     if not name:
         return ""
@@ -55,6 +76,24 @@ def _normalise_crop(name: str) -> str:
         if token in aliases:
             return canonical
     return token
+
+
+def _crop_family(token: str) -> list:
+    """Expand a crop keyword to every stored crop name it refers to.
+
+    Stored crop names are the canonical values ("paddy", "maize", ...).
+    A farmer typing "rice" therefore matches products tagged "paddy"
+    because "rice" is an alias of "paddy".
+    """
+    token = (token or "").strip().lower()
+    if not token:
+        return []
+    members = [
+        canonical
+        for canonical, aliases in CROP_ALIASES.items()
+        if canonical == token or token in aliases
+    ]
+    return members or [token]
 
 
 def _category_payload(db: Session, category_id: Optional[str]) -> Optional[dict]:
@@ -116,9 +155,15 @@ def _stock_status(product: Product) -> str:
     return "in"
 
 
+def _default_delivery_estimate(days: int = 5) -> str:
+    return (datetime.utcnow() + timedelta(days=days)).strftime("%Y-%m-%d")
+
+
 def _product_payload(db: Session, product: Product) -> dict:
     tags = _tags(product)
     crops = sorted({crop.crop_name for crop in product.crops}) if product.crops else []
+    category = _category_payload(db, product.category_id)
+    slug = (category or {}).get("slug")
     payload = {
         "id": product.id,
         "product_id": product.product_id,
@@ -130,10 +175,13 @@ def _product_payload(db: Session, product: Product) -> dict:
         "discount": _discount(product),
         "unit": product.unit,
         "pack_size": tags.get("pack_size") or tags.get("pack") or None,
+        "product_type": tags.get("product_type") or TYPE_BY_SLUG.get(slug),
+        "subcategory": tags.get("subcategory") or SUB_BY_SLUG.get(slug),
         "stock_quantity": product.stock_quantity,
         "stock_status": _stock_status(product),
         "in_stock": float(product.stock_quantity or 0) > 0,
         "min_order_quantity": product.min_order_quantity,
+        "expected_delivery": _default_delivery_estimate(),
         "image_url": product.image_url,
         "images": product.images or [product.image_url] if product.image_url else [],
         "brand": product.brand,
@@ -149,11 +197,20 @@ def _product_payload(db: Session, product: Product) -> dict:
         "manufacturer": tags.get("manufacturer"),
         "certification": tags.get("certification"),
         "specifications": tags.get("specifications"),
-        "category": _category_payload(db, product.category_id),
+        "category": category,
         "seller": _seller_payload(db, product.seller_id),
         "created_at": str(product.created_at) if product.created_at else None,
     }
     return payload
+
+
+def _escape_like(value: str) -> str:
+    return (
+        value.replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+        .replace('"', '\\"')
+    )
 
 
 def _apply_filters(
@@ -168,34 +225,61 @@ def _apply_filters(
     in_stock: Optional[bool],
     organic: Optional[bool],
     min_rating: Optional[float],
+    product_type: Optional[str],
     db: Session,
 ):
     q = q.filter(Product.is_active == True)
+    input_ids = _input_category_ids(db)
+    if input_ids:
+        q = q.filter(Product.category_id.in_(input_ids))
     if search:
-        term = f"%{search}%"
-        conditions = [
-            Product.name.ilike(term),
-            Product.brand.ilike(term),
-            Product.description.ilike(term),
-        ]
-        # Category + seller joins for search
-        cat_ids = [
-            c.id for c in db.query(ProductCategory).filter(ProductCategory.name.ilike(term)).all()
-        ]
-        if cat_ids:
-            conditions.append(Product.category_id.in_(cat_ids))
-        seller_ids = [
-            s.id for s in db.query(Seller).filter(or_(Seller.shop_name.ilike(term), Seller.location.ilike(term))).all()
-        ]
-        if seller_ids:
-            conditions.append(Product.seller_id.in_(seller_ids))
-        q = q.filter(or_(*conditions))
+        tokens = [t for t in re.split(r"[,\s]+", search.strip().lower()) if t]
+        for tok in tokens:
+            term = f"%{tok}%"
+            conditions = [
+                Product.name.ilike(term),
+                Product.brand.ilike(term),
+                Product.description.ilike(term),
+            ]
+            cat_ids = [
+                c.id
+                for c in db.query(ProductCategory)
+                .filter(
+                    or_(ProductCategory.name.ilike(term), ProductCategory.slug.ilike(term))
+                )
+                .all()
+            ]
+            if cat_ids:
+                conditions.append(Product.category_id.in_(cat_ids))
+            seller_ids = [
+                s.id
+                for s in db.query(Seller)
+                .filter(
+                    or_(Seller.shop_name.ilike(term), Seller.location.ilike(term))
+                )
+                .all()
+            ]
+            if seller_ids:
+                conditions.append(Product.seller_id.in_(seller_ids))
+            crop_pids = [
+                pid
+                for (pid,) in db.query(ProductCrop.product_id)
+                .filter(ProductCrop.crop_name.in_(_crop_family(tok)))
+                .all()
+            ]
+            if crop_pids:
+                conditions.append(Product.id.in_(crop_pids))
+            q = q.filter(or_(*conditions))
     if category_id:
         q = q.filter(Product.category_id == category_id)
     if crop:
-        crop_tokens = [_normalise_crop(t) for t in crop.replace(",", " ").split() if _normalise_crop(t)]
+        crop_tokens = []
+        for t in crop.replace(",", " ").split():
+            crop_tokens.extend(_crop_family(t))
         if crop_tokens:
-            sub = db.query(ProductCrop.product_id).filter(ProductCrop.crop_name.in_(crop_tokens))
+            sub = db.query(ProductCrop.product_id).filter(
+                ProductCrop.crop_name.in_(crop_tokens)
+            )
             q = q.filter(Product.id.in_(sub))
     if brand:
         q = q.filter(Product.brand == brand)
@@ -217,7 +301,49 @@ def _apply_filters(
         )
     if min_rating is not None:
         q = q.filter(Product.rating >= min_rating)
+    if product_type:
+        escaped = _escape_like(product_type)
+        q = q.filter(Product.tags.isnot(None))
+        q = q.filter(
+            or_(
+                Product.tags.like('%"product_type": "' + escaped + '"%'),
+                Product.tags.like('%"product_type":"' + escaped + '"%'),
+            )
+        )
     return q
+
+
+def _tag_values(db: Session, input_ids: list, key: str) -> list:
+    """Distinct values of ``key`` across the input products' tags."""
+    import json
+
+    rows = (
+        db.query(Product.tags)
+        .filter(Product.is_active == True, Product.category_id.in_(input_ids))
+        .all()
+    )
+    values = set()
+    for (raw,) in rows:
+        tags = raw
+        if isinstance(raw, str):
+            try:
+                tags = json.loads(raw)
+            except Exception:
+                continue
+        if isinstance(tags, dict):
+            value = tags.get(key)
+            if isinstance(value, str) and value.strip():
+                values.add(value.strip())
+    cats = (
+        db.query(ProductCategory)
+        .filter(ProductCategory.slug.in_(INPUT_STORE_SLUGS), ProductCategory.id.in_(input_ids))
+        .all()
+    )
+    for cat in cats:
+        label = TYPE_BY_SLUG.get(cat.slug) or SUB_BY_SLUG.get(cat.slug)
+        if label:
+            values.add(label)
+    return sorted(values)
 
 
 @router.get("/products")
@@ -234,6 +360,7 @@ def list_products(
     in_stock: bool = False,
     organic: bool = False,
     min_rating: Optional[float] = None,
+    product_type: Optional[str] = None,
     sort_by: str = Query("relevance", pattern="^(relevance|price|rating|created_at|name)$"),
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
@@ -251,6 +378,7 @@ def list_products(
         in_stock=in_stock,
         organic=organic,
         min_rating=min_rating,
+        product_type=product_type,
         db=db,
     )
 
@@ -309,10 +437,11 @@ def list_categories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    input_ids = _input_category_ids(db)
     rows = (
         db.query(ProductCategory, Product.id)
         .join(Product, Product.category_id == ProductCategory.id)
-        .filter(Product.is_active == True)
+        .filter(ProductCategory.id.in_(input_ids), Product.is_active == True)
         .all()
     )
     grouped = {}
@@ -332,10 +461,16 @@ def list_filters(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    input_ids = _input_category_ids(db)
     brands = [
         r[0]
         for r in db.query(Product.brand)
-        .filter(Product.is_active == True, Product.brand.isnot(None), Product.brand != "")
+        .filter(
+            Product.is_active == True,
+            Product.category_id.in_(input_ids),
+            Product.brand.isnot(None),
+            Product.brand != "",
+        )
         .distinct()
         .order_by(Product.brand)
         .all()
@@ -348,25 +483,43 @@ def list_filters(
             "is_verified": bool(s.is_verified),
         }
         for s in db.query(Seller)
-        .filter(Seller.id.in_(db.query(Product.seller_id).filter(Product.is_active == True)))
+        .filter(
+            Seller.id.in_(
+                db.query(Product.seller_id)
+                .filter(Product.is_active == True, Product.category_id.in_(input_ids))
+            )
+        )
         .order_by(Seller.shop_name)
         .all()
     ]
     crops = [
         r[0]
         for r in db.query(ProductCrop.crop_name)
+        .join(Product, Product.id == ProductCrop.product_id)
+        .filter(Product.is_active == True, Product.category_id.in_(input_ids))
         .distinct()
         .order_by(ProductCrop.crop_name)
         .all()
     ]
-    min_price = db.query(Product.price).filter(Product.is_active == True).order_by(Product.price.asc()).first()
-    max_price = db.query(Product.price).filter(Product.is_active == True).order_by(Product.price.desc()).first()
+    min_price = (
+        db.query(Product.price)
+        .filter(Product.is_active == True, Product.category_id.in_(input_ids))
+        .order_by(Product.price.asc())
+        .first()
+    )
+    max_price = (
+        db.query(Product.price)
+        .filter(Product.is_active == True, Product.category_id.in_(input_ids))
+        .order_by(Product.price.desc())
+        .first()
+    )
     return {
         "status": "success",
         "data": {
             "brands": brands or [],
             "sellers": sellers or [],
             "crops": [c.title() for c in (crops or [])],
+            "product_types": _tag_values(db, input_ids, "product_type"),
             "price_range": {
                 "min": min_price[0] if min_price else 0,
                 "max": max_price[0] if max_price else 0,
@@ -381,10 +534,11 @@ def get_product(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    input_ids = _input_category_ids(db)
     product = db.query(Product).filter(Product.id == product_id, Product.is_active == True).first()
     if not product:
         product = db.query(Product).filter(Product.product_id == product_id, Product.is_active == True).first()
-    if not product:
+    if not product or product.category_id not in input_ids:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"status": "success", "data": _product_payload(db, product)}
 
@@ -401,6 +555,7 @@ def recommended(
     farmer's registered farm location to prefer local sellers. Only crops that
     actually exist in the catalogue contribute matches - no random/fake picks.
     """
+    input_ids = _input_category_ids(db)
     profile = db.query(FarmerProfile).filter(FarmerProfile.user_id == current_user.id).first()
     crops = []
     if profile and profile.preferred_crops:
@@ -417,7 +572,11 @@ def recommended(
         db.query(ProductCrop.product_id)
         .filter(ProductCrop.crop_name.in_(crops))
         .join(Product, Product.id == ProductCrop.product_id)
-        .filter(Product.is_active == True, Product.stock_quantity > 0)
+        .filter(
+            Product.is_active == True,
+            Product.stock_quantity > 0,
+            Product.category_id.in_(input_ids),
+        )
         .distinct()
         .all()
     )

@@ -31,7 +31,7 @@ from .routers import (
     services, farmbuzz, messages, support, feedback, wallet, documents,
     learning, techniques, emergency, market_prices,
     insurance, calendar, input_store, tools_equipment,
-    marketplace_seller,
+    marketplace_seller, monitoring, livestock,
 )
 
 
@@ -99,8 +99,10 @@ app.include_router(techniques.router)
 app.include_router(emergency.router)
 app.include_router(market_prices.router)
 app.include_router(calendar.router)
+app.include_router(monitoring.router)
 app.include_router(tools_equipment.router, prefix="/api/equipment")
 app.include_router(tools_equipment.router, prefix="/api/v1/tools-equipment")
+app.include_router(livestock.router)
 
 
 
@@ -143,36 +145,80 @@ async def startup():
     from app.database.connection import SessionLocal
     from app.database.seed_communities import seed_communities
     from app.database.seed_community_demo import seed_demo
-    db = SessionLocal()
-    try:
-        created = seed_communities(db)
-        demo_summary = seed_demo(db)
+    from sqlalchemy.exc import OperationalError
+    import time
 
-        from app.database.seed_marketplace import seed_marketplace_categories
-        mkt_seeded = seed_marketplace_categories(db)
+    def _run_seed_suite():
+        db = SessionLocal()
+        try:
+            created = seed_communities(db)
+            demo_summary = seed_demo(db)
 
-        from sqlalchemy import func
-        from app.models.market_price import MarketPrice
-        has_market_data = db.query(func.count(MarketPrice.id)).scalar() or 0
-        market_seeded = 0
-        eq_summary = None
-        if not has_market_data:
-            try:
-                from seed_market_prices import import_msp_prices
-            except ImportError:
-                _backend_dir = Path(__file__).resolve().parent.parent
-                if str(_backend_dir) not in sys.path:
-                    sys.path.insert(0, str(_backend_dir))
-                from seed_market_prices import import_msp_prices
-            market_seeded = import_msp_prices(db)
+            from app.database.seed_marketplace import seed_marketplace_categories
+            mkt_seeded = seed_marketplace_categories(db)
 
-        from app.models.marketplace import EquipmentMetadata
-        has_equipment = db.query(func.count(EquipmentMetadata.id)).scalar() or 0
-        if not has_equipment:
-            from app.database.seed_equipment import seed_equipment
-            eq_summary = seed_equipment(db)
-    finally:
-        db.close()
+            from sqlalchemy import func
+            from app.models.market_price import MarketPrice
+            has_market_data = db.query(func.count(MarketPrice.id)).scalar() or 0
+            market_seeded = 0
+            eq_summary = None
+            if not has_market_data:
+                try:
+                    from seed_market_prices import import_msp_prices
+                except ImportError:
+                    _backend_dir = Path(__file__).resolve().parent.parent
+                    if str(_backend_dir) not in sys.path:
+                        sys.path.insert(0, str(_backend_dir))
+                    from seed_market_prices import import_msp_prices
+                market_seeded = import_msp_prices(db)
+
+            from app.models.marketplace import EquipmentMetadata
+            has_equipment = db.query(func.count(EquipmentMetadata.id)).scalar() or 0
+            if not has_equipment:
+                from app.database.seed_equipment import seed_equipment
+                eq_summary = seed_equipment(db)
+
+            from app.input_store_taxonomy import INPUT_STORE_SLUGS
+            from app.models.marketplace import Product, ProductCategory
+            input_products = (
+                db.query(func.count(Product.id))
+                .join(ProductCategory, Product.category_id == ProductCategory.id)
+                .filter(ProductCategory.slug.in_(INPUT_STORE_SLUGS), Product.is_active == True)  # noqa: E712
+                .scalar()
+                or 0
+            )
+            input_summary = None
+            if input_products < 400:
+                from app.database.seed_input_store import seed as seed_input_store
+                input_summary = seed_input_store(db)
+        finally:
+            db.close()
+        return {
+            "created": created,
+            "demo": demo_summary,
+            "mkt": mkt_seeded,
+            "market": market_seeded,
+            "eq": eq_summary,
+            "input": input_summary,
+        }
+
+    created = demo_summary = mkt_seeded = market_seeded = input_summary = None
+    eq_summary = None
+    for _attempt in range(1, 5):
+        try:
+            _report = _run_seed_suite()
+            created = _report["created"]
+            demo_summary = _report["demo"]
+            mkt_seeded = _report["mkt"]
+            market_seeded = _report["market"]
+            eq_summary = _report["eq"]
+            input_summary = _report["input"]
+            break
+        except OperationalError as _exc:
+            print(f"Startup seeding attempt {_attempt} aborted (database busy: {_exc}); retrying...")
+            time.sleep(2 * _attempt)
+    if eq_summary is None and market_seeded is None:
+        print("WARNING: startup seeding did not fully complete after retries; API remains available.")
 
     print(f"{settings.APP_NAME} v{settings.APP_VERSION} started. DB tables created.")
     if created:
@@ -187,6 +233,8 @@ async def startup():
         print(f"Seeded marketplace sell categories (created {mkt_seeded['categories_created']}, total {mkt_seeded['total']}).")
     if eq_summary:
         print(f"Seeded {eq_summary['products_seeded']} tools & equipment products and {eq_summary['rentals_seeded']} rental machinery.")
+    if input_summary:
+        print(f"Seeded Input Store catalogue: {input_summary['products']} products in {input_summary['categories']} categories.")
 
 
 
@@ -316,8 +364,25 @@ if frontend_dir.exists():
         return RedirectResponse(url="/expert.html", status_code=301)
 
     @app.get("/{full_path:path}")
+    @app.post("/{full_path:path}")
+    @app.put("/{full_path:path}")
+    @app.patch("/{full_path:path}")
+    @app.delete("/{full_path:path}")
     async def serve_frontend(full_path: str):
+        # API calls that reach the catch-all mean the route does not exist on
+        # this backend build. Return JSON (never the SPA HTML) so the frontend
+        # can surface a precise error instead of "unexpected response".
+        if full_path == "api" or full_path.startswith("api/"):
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "code": "route_not_found", "detail": f"API endpoint not found: /{full_path}"},
+            )
         file_path = frontend_dir / full_path
         if file_path.exists() and file_path.is_file():
+            # Never cache HTML/JS/CSS so browser + service-worker updates are
+            # picked up immediately after deployment.
+            name = file_path.name.lower()
+            if name.endswith('.html') or name.endswith('.js') or name.endswith('.css'):
+                return FileResponse(file_path, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
             return FileResponse(file_path)
-        return FileResponse(frontend_dir / "index.html")
+        return FileResponse(frontend_dir / "index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
