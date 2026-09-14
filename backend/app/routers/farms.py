@@ -111,7 +111,10 @@ def list_farms(
     farms = db.query(Farm).filter(Farm.user_id == current_user.id, Farm.is_active == True).all()
     return {
         "status": "success",
-        "data": [_farm_dict(f) for f in farms],
+        "data": [
+            dict(_farm_dict(f), plots=[_plot_dict(p) for p in f.plots if p.is_active])
+            for f in farms
+        ],
     }
 
 
