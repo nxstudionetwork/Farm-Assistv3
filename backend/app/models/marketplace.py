@@ -53,6 +53,7 @@ class Product(Base):
     rating = Column(Float, default=0.0)
     total_reviews = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
+    supports_cod = Column(Boolean, default=True)
     tags = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -125,11 +126,15 @@ class MarketplaceOrder(Base):
     delivery_phone = Column(String(15), nullable=True)
     estimated_delivery = Column(String(10), nullable=True)
     notes = Column(Text, nullable=True)
+    received_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="orders")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    tracking = relationship("DeliveryTracking", back_populates="order", cascade="all, delete-orphan", order_by="DeliveryTracking.timestamp")
+    contact = relationship("DeliveryContact", back_populates="order", cascade="all, delete-orphan", uselist=False)
 
 
 class OrderItem(Base):
@@ -187,11 +192,36 @@ class DeliveryTracking(Base):
     __tablename__ = "delivery_tracking"
 
     id = Column(String(36), primary_key=True, default=gen_uuid)
-    order_id = Column(String(36), ForeignKey("marketplace_orders.id"), nullable=False)
+    order_id = Column(String(36), ForeignKey("marketplace_orders.id"), nullable=False, index=True)
     status = Column(String(50), nullable=False)
     location = Column(String(200), nullable=True)
     notes = Column(Text, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+    order = relationship("MarketplaceOrder", back_populates="tracking")
+
+
+class DeliveryContact(Base):
+    """Responsible person assigned by the company/delivery partner for an order.
+
+    Populated only with real data supplied by the fulfilment provider. When no
+    contact has been assigned (the common case), the API returns ``null`` and the
+    UI shows ``Person in charge has not been assigned yet.``
+    """
+
+    __tablename__ = "delivery_contacts"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    order_id = Column(String(36), ForeignKey("marketplace_orders.id"), nullable=False, unique=True, index=True)
+    name = Column(String(200), nullable=True)
+    role = Column(String(100), nullable=True)
+    company = Column(String(200), nullable=True)
+    phone = Column(String(20), nullable=True)
+    email = Column(String(200), nullable=True)
+    availability_status = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    order = relationship("MarketplaceOrder", back_populates="contact")
 
 
 class EquipmentMetadata(Base):

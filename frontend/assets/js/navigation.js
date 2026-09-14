@@ -23,7 +23,6 @@
     { type: 'separator' },
     { type: 'header', label: 'FARM MANAGEMENT' },
     { type: 'item', label: 'My Farm', icon: 'fa-tractor', href: 'farm.html' },
-    { type: 'item', label: 'Farm Operations', icon: 'fa-seedling', href: 'farm.html#operations' },
     { type: 'item', label: 'Farm Calendar', icon: 'fa-calendar-days', href: 'farm-calendar.html' },
     { type: 'item', label: 'Tasks', icon: 'fa-list-check', href: 'tasks.html' },
     { type: 'item', label: 'Crop Health', icon: 'fa-leaf', href: 'crop-health.html' },

@@ -85,17 +85,6 @@ window.AppMockData = (function () {
   };
 
   // ======================================================================
-  // FARM OPERATIONS
-  // ======================================================================
-  data.operations = [
-    { id: 'op1', type: 'Irrigation', crop: 'Wheat', date: '2026-07-28', status: 'completed', notes: 'Drip irrigation for 2 hours', assignedTo: 'Self' },
-    { id: 'op2', type: 'Fertilizer', crop: 'Cotton', date: '2026-07-29', status: 'scheduled', notes: 'NPK 20-20-20 application', assignedTo: 'Raju (Worker)' },
-    { id: 'op3', type: 'Pesticide', crop: 'Cotton', date: '2026-07-25', status: 'completed', notes: 'Neem oil spray - pest prevention', assignedTo: 'Self' },
-    { id: 'op4', type: 'Harvesting', crop: 'Tomato', date: '2026-08-10', status: 'planned', notes: 'First harvest of the season', assignedTo: 'Hire 3 workers' },
-    { id: 'op5', type: 'Weeding', crop: 'Wheat', date: '2026-07-22', status: 'completed', notes: 'Manual weeding, Plot A', assignedTo: 'Self + 2 workers' }
-  ];
-
-  // ======================================================================
   // TASKS
   // ======================================================================
   data.tasks = [

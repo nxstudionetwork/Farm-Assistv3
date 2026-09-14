@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Drone Monitoring</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .dm-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+    .dm-head .dm-title { font-size:17px; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
+    .dm-head .dm-ctx { font-size:12px; color:var(--text-muted); }
+    .dm-grid { display:grid; grid-template-columns:1.6fr 1fr; gap:16px; align-items:start; }
+    .dm-video { position:relative; width:100%; aspect-ratio:16/9; background:#0f2118; border-radius:var(--radius-lg); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+    .dm-video .dm-placeholder { text-align:center; color:#cfe3d6; padding:24px; }
+    .dm-video .dm-placeholder i { font-size:52px; color:#3f7d5c; margin-bottom:12px; display:block; }
+    .dm-video .dm-placeholder .dm-state { font-size:15px; font-weight:700; margin-bottom:6px; }
+    .dm-video .dm-placeholder .dm-sub { font-size:12px; color:#9db8a8; }
+    .dm-live-tag { position:absolute; top:12px; left:12px; display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,.45); color:#fff; font-size:11px; font-weight:700; padding:5px 12px; border-radius:20px; }
+    .dm-live-tag.live .pulse { width:8px; height:8px; border-radius:50%; background:#ff4b4b; animation:pulse 1.2s infinite; }
+    .dm-demo-tag { position:absolute; top:12px; right:12px; background:rgba(255,214,107,.9); color:#4a3800; font-size:10px; font-weight:800; padding:4px 10px; border-radius:16px; }
+    @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(255,75,75,.6);} 100% { box-shadow:0 0 0 6px rgba(255,75,75,0);} }
+    .dm-info-card { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; margin-bottom:14px; box-shadow:var(--shadow-sm); }
+    .dm-info-card h4 { font-size:13px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px; color:var(--primary-green); }
+    .dm-kv { display:flex; justify-content:space-between; gap:10px; font-size:12px; padding:7px 0; border-bottom:1px dashed var(--border-light); }
+    .dm-kv:last-child { border-bottom:none; }
+    .dm-kv .k { color:var(--text-muted); }
+    .dm-kv .v { font-weight:600; text-align:right; }
+    .dm-map { width:100%; background:#f2f6f0; border:1px solid var(--border-light); border-radius:var(--radius-md); }
+    .dm-map svg { width:100%; height:auto; display:block; }
+    .dm-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    @media(max-width:820px){ .dm-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+  <main class="page-container">
+
+    <div class="dm-head">
+      <button class="btn-secondary" onclick="window.location.href='monitoring.html'"><i class="fas fa-arrow-left"></i> Back</button>
+      <div>
+        <div class="dm-title"><i class="fas fa-plane-drone" style="color:var(--premium-green)"></i> Drone Monitoring</div>
+        <div class="dm-ctx" id="dm-context-line">Loading farm context...</div>
+      </div>
+      <span class="status-pill connecting" id="dm-status-pill" style="margin-left:auto;"><i class="fas fa-circle" style="font-size:6px"></i> Connecting</span>
+    </div>
+
+    <div class="dm-grid">
+      <!-- Video / Live feed area -->
+      <div>
+        <div class="dm-video" id="dm-video">
+          <span class="dm-live-tag" id="dm-live-tag"><span class="pulse"></span> <span id="dm-live-txt">Connecting to drone feed...</span></span>
+          <div class="dm-placeholder" id="dm-placeholder">
+            <i class="fas fa-satellite-dish"></i>
+            <div class="dm-state">Connecting to drone feed...</div>
+            <div class="dm-sub">Authorizing your farm connection</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Farm / plot info + map + monitoring -->
+      <div>
+        <div class="dm-info-card">
+          <h4><i class="fas fa-tractor"></i> Farm &amp; Plot</h4>
+          <div class="dm-kv"><span class="k">Farm</span><span class="v" id="dm-farm">-</span></div>
+          <div class="dm-kv"><span class="k">Plot</span><span class="v" id="dm-plot">-</span></div>
+          <div class="dm-kv"><span class="k">Area</span><span class="v" id="dm-area">-</span></div>
+          <div class="dm-kv"><span class="k">Soil type</span><span class="v" id="dm-soil">-</span></div>
+          <div class="dm-kv"><span class="k">Location</span><span class="v" id="dm-loc">-</span></div>
+        </div>
+
+        <div class="dm-info-card">
+          <h4><i class="fas fa-seedling"></i> Crop</h4>
+          <div class="dm-kv"><span class="k">Crop</span><span class="v" id="dm-crop">-</span></div>
+          <div class="dm-kv"><span class="k">Variety</span><span class="v" id="dm-variety">-</span></div>
+        </div>
+
+        <div class="dm-info-card">
+          <h4><i class="fas fa-map"></i> Farm Boundary</h4>
+          <div class="dm-map" id="dm-map"><p style="padding:16px;font-size:12px;color:var(--text-muted);margin:0;">Loading map...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dm-actions">
+      <button class="btn-primary" id="dm-retry" onclick="loadContext()"><i class="fas fa-rotate"></i> Retry</button>
+      <button class="btn-secondary" onclick="window.location.href='monitoring.html'"><i class="fas fa-house"></i> Return to Smart Monitoring</button>
+    </div>
+
+  </main>
+
+  <!-- DRONE UNAVAILABLE DIALOG -->
+  <div class="modal-backdrop" id="drone-gate-modal">
+    <div class="modal-box" style="text-align:center;">
+      <div style="font-size:44px; margin-bottom:10px;">🛸</div>
+      <h3 style="margin-bottom:8px;">Drone Monitoring Unavailable</h3>
+      <p style="font-size:13px; color:var(--text-muted);" id="drone-gate-msg">Drone operations are available from 9:00 AM to 5:00 PM.</p>
+      <div class="modal-actions" style="justify-content:center;">
+        <button class="btn-secondary" onclick="window.location.href='monitoring.html'"><i class="fas fa-moon"></i> Try Tomorrow</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    function escapeHtml(str) {
+      if (str == null) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(String(str)));
+      return div.innerHTML;
+    }
+    function esc(s) { return escapeHtml(String(s == null ? '' : s)); }
+    function qs(name) { try { return new URLSearchParams(window.location.search).get(name) || ''; } catch (e) { return ''; } }
+
+    function setVideo(state, text) {
+      var tag = document.getElementById('dm-live-tag');
+      var ph = document.getElementById('dm-placeholder');
+      var statusPill = document.getElementById('dm-status-pill');
+      tag.className = 'dm-live-tag' + (state === 'live' ? ' live' : '');
+      document.getElementById('dm-live-txt').textContent = text || '';
+      if (state === 'live') {
+        statusPill.className = 'status-pill connected';
+        statusPill.innerHTML = '<i class="fas fa-circle" style="font-size:6px"></i> Live';
+      } else if (state === 'empty') {
+        statusPill.className = 'status-pill offline';
+        statusPill.innerHTML = '<i class="fas fa-circle" style="font-size:6px"></i> No stream';
+        tag.style.opacity = 0.6;
+      } else if (state === 'error') {
+        statusPill.className = 'status-pill error';
+        statusPill.innerHTML = '<i class="fas fa-circle" style="font-size:6px"></i> Disconnected';
+      } else {
+        statusPill.className = 'status-pill connecting';
+        statusPill.innerHTML = '<i class="fas fa-circle" style="font-size:6px"></i> Connecting';
+      }
+      if (ph) {
+        ph.innerHTML = '<i class="fas fa-satellite-dish"></i><div class="dm-state">';
+        if (state === 'empty') {
+          ph.innerHTML = '<i class="fas fa-video-slash"></i><div class="dm-state">Live drone feed is not currently configured.</div><div class="dm-sub">Streams connect to an authorized drone/camera once paired with your account. Retry below to re-check.</div>';
+        } else if (state === 'error') {
+          ph.innerHTML = '<i class="fas fa-plug-circle-xmark"></i><div class="dm-state">Drone feed disconnected.</div><div class="dm-sub">Click Retry to reconnect.</div>';
+        } else {
+          ph.innerHTML = '<i class="fas fa-satellite-dish"></i><div class="dm-state">Connecting to drone feed...</div><div class="dm-sub">Authorizing your farm connection</div>';
+        }
+      }
+    }
+
+    function drawMap(farm, plot) {
+      var wrap = document.getElementById('dm-map');
+      var pts = null;
+      if (plot && plot.boundary_coordinates && Array.isArray(plot.boundary_coordinates) && plot.boundary_coordinates.length >= 3) {
+        pts = plot.boundary_coordinates.map(function (p) {
+          return { lat: parseFloat(p.latitude != null ? p.latitude : p.lat), lon: parseFloat(p.longitude != null ? p.longitude : p.lng) };
+        }).filter(function (p) { return !isNaN(p.lat) && !isNaN(p.lon); });
+      }
+      var lat = plot && plot.latitude, lon = plot && plot.longitude;
+      if ((!pts || pts.length < 3) && lat != null) {
+        lat = parseFloat(lat); lon = parseFloat(lon);
+        pts = [
+          { lat: lat + 0.0012, lon: lon - 0.0015 },
+          { lat: lat + 0.0012, lon: lon + 0.0015 },
+          { lat: lat - 0.0012, lon: lon + 0.0015 },
+          { lat: lat - 0.0012, lon: lon - 0.0015 }
+        ];
+      }
+      if (!pts || pts.length < 3) {
+        wrap.innerHTML = '<p style="padding:16px;font-size:12px;color:var(--text-muted);margin:0;">Farm map requires plot coordinates or a recorded boundary.</p>';
+        return;
+      }
+      var lats = pts.map(function (p) { return p.lat; });
+      var lons = pts.map(function (p) { return p.lon; });
+      var minLa = Math.min.apply(null, lats), maxLa = Math.max.apply(null, lats);
+      var minLo = Math.min.apply(null, lons), maxLo = Math.max.apply(null, lons);
+      var pad = 6, W = 320, H = 200;
+      function fx(lon) { return pad + ((lon - minLo) / (maxLo - minLo || 1)) * (W - pad * 2); }
+      function fy(lat) { return pad + (1 - (lat - minLa) / (maxLa - minLa || 1)) * (H - pad * 2); }
+      var poly = pts.map(function (p) { return fx(p.lon).toFixed(1) + ',' + fy(p.lat).toFixed(1); }).join(' ');
+      wrap.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Farm boundary map">' +
+        '<rect width="' + W + '" height="' + H + '" fill="#f2f6f0"/>' +
+        '<polygon points="' + poly + '" fill="rgba(46,158,91,.18)" stroke="#2e9e5b" stroke-width="2"/>' +
+        '<circle cx="' + fx(pts[0].lon).toFixed(1) + '" cy="' + fy(pts[0].lat).toFixed(1) + '" r="4" fill="#2e9e5b"/>' +
+        '<text x="8" y="18" font-size="10" fill="#4b5563">' + esc(plot ? plot.plot_name : 'Plot') + '</text>' +
+        '</svg>';
+    }
+
+    function loadContext() {
+      var farmId = qs('farm_id');
+      if (!farmId) { setVideo('error', 'Missing farm in the link'); return; }
+      setVideo('loading', 'Connecting to drone feed...');
+      window.API.Monitoring.droneContext(farmId, qs('plot_id') || undefined)
+        .then(function (d) {
+          var farm = d.farm || {};
+          var plot = d.plot || null;
+          var crop = d.crop || {};
+          var window2 = d.window || {};
+          document.getElementById('dm-context-line').textContent = (farm.farm_name || 'Farm') + (plot ? ' \u00B7 ' + plot.plot_name : ' \u00B7 all plots');
+          document.getElementById('dm-farm').textContent = farm.farm_name || '-';
+          document.getElementById('dm-plot').textContent = plot ? (plot.plot_name || '-') : 'All plots';
+          document.getElementById('dm-area').textContent = plot && plot.area ? plot.area + ' (Acres)' : (farm.total_area ? farm.total_area + ' ' + (farm.area_unit || 'Acres') : '-');
+          document.getElementById('dm-soil').textContent = (plot && plot.soil_type) || (farm && farm.soil_type) || '-';
+          document.getElementById('dm-loc').textContent = [farm.village, farm.district].filter(Boolean).join(', ') || '-';
+          document.getElementById('dm-crop').textContent = crop.name || 'No active crop cycle';
+          document.getElementById('dm-variety').textContent = crop.variety || '-';
+          drawMap(farm, plot);
+          var st = d.stream || {};
+          if (!st.configured) {
+            setVideo('empty', 'No stream configured');
+          } else {
+            setVideo('live', 'LIVE');
+          }
+        })
+        .catch(function (e) {
+          var detail = (e && e.message) || '';
+          if (detail.indexOf('9:00 AM') !== -1 || detail.indexOf('9:00') !== -1 || detail.indexOf('available') !== -1) {
+            document.getElementById('drone-gate-msg').textContent = detail + ' [' + new Date().toLocaleTimeString() + ']';
+            openModal('drone-gate-modal');
+            setVideo('empty', 'Outside operating hours');
+          } else if (e && e.status === 401) {
+            setVideo('error', 'Authentication required');
+          } else {
+            setVideo('error', 'Drone feed disconnected.');
+          }
+        });
+    }
+
+    function openModal(id) { var el = document.getElementById(id); if (el) el.classList.add('active'); }
+    function closeModal(id) { var el = document.getElementById(id); if (el) el.classList.remove('active'); }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!(window.UserStore && UserStore.isLoggedIn())) {
+        setVideo('error', 'Please log in');
+        document.getElementById('dm-context-line').textContent = 'Login required';
+        return;
+      }
+      loadContext();
+    });
+  </script>
+</body>
+</html>

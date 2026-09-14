@@ -45,6 +45,7 @@ MAX_IMAGES = 5
 UNITS = ["kg", "g", "quintal", "tonne", "bag", "pack", "bundle", "piece", "set", "unit", "litre", "dozen"]
 PRICING_TYPES = ["fixed", "negotiable"]
 CONTACT_METHODS = ["in-app", "phone", "whatsapp"]
+ENQUIRY_STATUSES = ["new", "replied", "accepted", "completed", "rejected"]
 
 
 # ---------------------------------------------------------------------------
@@ -544,6 +545,7 @@ def list_listings(
     condition_type: Optional[str] = None,
     availability: Optional[str] = None,
     group: Optional[str] = Query(None, pattern="^(produce|items)$"),
+    sort: Optional[str] = Query(None, pattern="^(newest|price_asc|price_desc)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -588,7 +590,12 @@ def list_listings(
         )
 
     total = q.count()
-    rows = q.order_by(MarketplaceListing.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    order_by = MarketplaceListing.created_at.desc()
+    if sort == "price_asc":
+        order_by = MarketplaceListing.price.asc()
+    elif sort == "price_desc":
+        order_by = MarketplaceListing.price.desc()
+    rows = q.order_by(order_by).offset((page - 1) * limit).limit(limit).all()
 
     return {
         "status": "success",
@@ -850,6 +857,7 @@ def list_sales(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     status: Optional[str] = None,
+    category_id: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -862,6 +870,17 @@ def list_sales(
         if status not in SALE_STATUSES:
             raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(SALE_STATUSES)}")
         q = q.filter(MarketplaceSale.status == status)
+    if category_id:
+        cat = _owner_seller(category_id, db)
+        if not cat:
+            raise HTTPException(status_code=400, detail="Invalid category")
+        ids = [r[0] for r in db.query(MarketplaceListing.id).filter(
+            MarketplaceListing.user_id == current_user.id,
+            MarketplaceListing.category_id == cat.id,
+        ).all()]
+        if not ids:
+            return {"status": "success", "data": {"total": 0, "page": page, "limit": limit, "total_pages": 0, "items": []}}
+        q = q.filter(MarketplaceSale.listing_id.in_(ids))
 
     total = q.count()
     rows = q.order_by(MarketplaceSale.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
@@ -972,7 +991,7 @@ def update_sale(
 def list_enquiries(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    status: Optional[str] = Query(None, description="new|replied|accepted|rejected"),
+    status: Optional[str] = Query(None, description="new|replied|accepted|completed|rejected"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -982,7 +1001,7 @@ def list_enquiries(
 
     q = db.query(MarketplaceEnquiry).filter(MarketplaceEnquiry.listing_id.in_(listing_ids))
     if status:
-        if status not in ["new", "replied", "accepted", "rejected"]:
+        if status not in ENQUIRY_STATUSES:
             raise HTTPException(status_code=400, detail="Invalid enquiry status")
         q = q.filter(MarketplaceEnquiry.status == status)
 
@@ -1104,7 +1123,7 @@ def update_enquiry_status(
     if not listing or listing.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Enquiry not found")
 
-    if payload.status not in ["new", "replied", "accepted", "rejected"]:
+    if payload.status not in ENQUIRY_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid enquiry status")
     enquiry.status = payload.status
     enquiry.updated_at = datetime.utcnow()

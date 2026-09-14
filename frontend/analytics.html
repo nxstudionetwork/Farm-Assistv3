@@ -1,149 +1,490 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Farm Assist - Analytics Center</title>
+  <title>Farm Assist - Farm Intelligence Center</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* ============ Farm Intelligence Center ============ */
+    .an-hero .an-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .an-hero select.form-select, .an-hero input.form-input {
+      padding:8px 12px; border-radius:var(--radius-sm);
+      border:1px solid rgba(255,255,255,0.3); font-size:13px;
+      background:rgba(255,255,255,0.15); color:#fff; min-width:140px;
+    }
+    .an-hero select.form-select option { color:#222; }
+    .an-hero input.form-input::-webkit-calendar-picker-indicator { filter:invert(1); }
+    .an-hero .btn-soft-white {
+      background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4);
+      color:#fff; border-radius:var(--radius-sm); padding:8px 14px; font-size:13px;
+      cursor:pointer; font-weight:600; transition:background .2s;
+    }
+    .an-hero .btn-soft-white:hover { background:rgba(255,255,255,0.3); }
+    .an-hero .an-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .an-hero .an-meta .an-chip {
+      background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3);
+      border-radius:999px; padding:4px 12px; font-size:11px; color:#fff; font-weight:600;
+    }
+    .an-section-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+    .an-section-head h3 { font-size:16px; margin:0; }
+    .an-section-head .an-hint { font-size:11px; color:var(--text-muted); }
+    .an-note { font-size:11px; color:var(--text-muted); margin-top:10px; font-style:italic; }
+
+    .stat-box .stat-quick { font-size:16px; font-weight:800; margin-top:4px; color:var(--text-primary); }
+    .stat-box .stat-quick .unit { font-size:10px; color:var(--text-muted); font-weight:600; }
+
+    .an-performance-hero { display:flex; align-items:center; gap:24px; flex-wrap:wrap; }
+    .score-ring {
+      width:112px; height:112px; border-radius:50%; flex:0 0 auto;
+      display:flex; align-items:center; justify-content:center;
+      background: conic-gradient(var(--premium-green) calc(var(--p)*1%), var(--border-light) 0);
+      position:relative;
+    }
+    .score-ring::before {
+      content:""; position:absolute; inset:9px; border-radius:50%; background:var(--bg-card);
+    }
+    .score-ring .score-val { position:relative; font-size:26px; font-weight:800; color:var(--premium-green); }
+    .score-breakdown { flex:1 1 260px; min-width:220px; }
+    .score-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; font-size:12px; }
+    .score-row .score-label { width:170px; color:var(--text-secondary); font-weight:600; }
+    .score-row .bar { flex:1; height:8px; background:var(--border-light); border-radius:4px; overflow:hidden; }
+    .score-row .bar i { display:block; height:100%; background:var(--premium-green); border-radius:4px; }
+    .score-row .score-pct { width:42px; text-align:right; color:var(--text-muted); font-weight:600; }
+    .an-formula-toggle { font-size:11px; color:var(--primary-green); cursor:pointer; font-weight:700; background:none; border:none; }
+    .an-formula { margin-top:12px; background:var(--bg-card); border:1px solid var(--border-light); border-radius:12px; padding:14px; font-size:12px; color:var(--text-secondary); line-height:1.7; }
+
+    .an-bars { display:flex; align-items:flex-end; gap:10px; min-height:180px; padding-top:10px; }
+    .an-bar-group { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; }
+    .an-bars-inner { display:flex; align-items:flex-end; gap:4px; height:150px; width:100%; justify-content:center; }
+    .an-bar { width:16px; border-radius:4px 4px 0 0; min-height:2px; transition:height .4s; }
+    .an-bar.label { font-size:10px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+    .an-legend { display:flex; justify-content:center; gap:18px; font-size:10px; margin-top:10px; font-weight:600; flex-wrap:wrap; }
+
+    .kv-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; }
+    .kv-box { background:var(--bg-card); border:1px solid var(--border-light); border-radius:14px; padding:12px 14px; }
+    .kv-box .k { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; font-weight:700; }
+    .kv-box .v { font-size:16px; font-weight:800; margin-top:4px; color:var(--text-primary); }
+    .kv-box .v.pos { color:var(--premium-green); }
+    .kv-box .v.neg { color:#d64545; }
+
+    .an-cat-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; font-size:12px; }
+    .an-cat-row .name { width:140px; color:var(--text-secondary); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .an-cat-row .bar { flex:1; height:10px; background:var(--border-light); border-radius:5px; overflow:hidden; }
+    .an-cat-row .bar i { display:block; height:100%; background:var(--premium-green); border-radius:5px; }
+    .an-cat-row .val { width:96px; text-align:right; color:var(--text-muted); font-weight:600; }
+
+    .an-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .an-table th { text-align:left; padding:10px 8px; font-weight:700; color:var(--text-muted); font-size:10px; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border-light); }
+    .an-table td { padding:10px 8px; border-bottom:1px solid var(--border-light); }
+    .an-table tr:hover td { background:var(--bg-card-soft); }
+
+    .pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+    .pill.green { background:rgba(46,164,79,.12); color:#2ea44f; }
+    .pill.orange { background:rgba(217,119,35,.14); color:#d97706; }
+    .pill.red { background:rgba(214,69,69,.12); color:#d64545; }
+    .pill.gray { background:rgba(90,100,110,.12); color:#5a646e; }
+    .pill.blue { background:rgba(45,107,196,.12); color:#2d6bc4; }
+
+    .insight-item { display:flex; gap:14px; padding:14px; border:1px solid var(--border-light); border-radius:14px; margin-bottom:12px; background:var(--bg-card); }
+    .insight-item i.ins-ic { font-size:18px; color:var(--premium-green); padding-top:2px; }
+    .insight-item .ins-title { font-size:13px; font-weight:700; color:var(--text-primary); }
+    .insight-item .ins-detail { font-size:12px; color:var(--text-secondary); margin-top:3px; line-height:1.6; }
+
+    .risk-banner { display:flex; align-items:center; gap:16px; border-radius:16px; padding:18px; background:var(--bg-card); border:1px solid var(--border-light); flex-wrap:wrap; }
+    .risk-banner .risk-icon { width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff; flex:0 0 auto; }
+    .risk-banner.low .risk-icon { background:#2ea44f; }
+    .risk-banner.moderate .risk-icon { background:#d97706; }
+    .risk-banner.high .risk-icon { background:#e67e22; }
+    .risk-banner.critical .risk-icon { background:#d64545; }
+    .risk-reason { display:flex; gap:10px; align-items:flex-start; font-size:12px; padding:8px 0; border-bottom:1px solid var(--border-light); }
+
+    .comp-wrap { display:flex; align-items:center; gap:22px; flex-wrap:wrap; }
+    .comp-gauge { flex:0 0 auto; text-align:center; }
+    .comp-gauge .gauge-num { font-size:34px; font-weight:800; color:var(--premium-green); }
+    .comp-list { flex:1 1 260px; min-width:220px; }
+    .comp-item { display:flex; align-items:center; gap:10px; margin-bottom:9px; font-size:12px; }
+    .comp-item .comp-name { width:160px; color:var(--text-secondary); font-weight:600; }
+    .comp-item .bar { flex:1; height:8px; background:var(--border-light); border-radius:4px; overflow:hidden; }
+    .comp-item .bar i { display:block; height:100%; background:var(--premium-green); border-radius:4px; }
+    .comp-item .comp-state { width:34px; text-align:right; font-weight:700; }
+    .comp-item .comp-state.ok { color:#2ea44f; }
+    .comp-item .comp-state.no { color:#d64545; }
+
+    .ai-box .ai-sec { margin-bottom:14px; }
+    .ai-box .ai-sec h4 { font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.4px; }
+    .ai-analysis { background:var(--bg-card); border:1px solid var(--border-light); border-radius:12px; padding:14px; font-size:12px; line-height:1.7; white-space:pre-wrap; color:var(--text-secondary); max-height:320px; overflow:auto; }
+    .ai-known { list-style:none; margin:0; padding:0; }
+    .ai-known li { font-size:12px; padding:7px 0 7px 20px; position:relative; color:var(--text-secondary); }
+    .ai-known li::before { content:"\f058"; font-family:"Font Awesome 6 Free"; font-weight:900; position:absolute; left:0; top:7px; color:#2ea44f; font-size:12px; }
+    .ai-unknown li::before { content:"\f059"; color:#d97706; }
+
+    .an-report-list .report-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px; border:1px solid var(--border-light); border-radius:14px; margin-bottom:10px; background:var(--bg-card); flex-wrap:wrap; }
+    .report-item .rep-title { font-size:13px; font-weight:700; color:var(--text-primary); }
+    .report-item .rep-meta { font-size:11px; color:var(--text-muted); margin-top:3px; }
+
+    .modal-box.wide { max-width:680px; max-height:90vh; overflow:auto; }
+    .an-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .an-form-grid label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; display:block; margin-bottom:5px; }
+    .an-check-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+    .an-check-grid label { text-transform:none; font-size:12px; font-weight:600; color:var(--text-secondary); display:flex; align-items:center; gap:8px; }
+
+    /* Report preview / print */
+    #report-print-root { display:none; }
+    @media print {
+      body.printing-report #report-print-root { display:block; }
+      body.printing-report .page-container, body.printing-report .modal-backdrop, body.printing-report .top-bar, body.printing-report .sidebar, body.printing-report .sidebar-backdrop, body.printing-report .mobile-nav { display:none !important; }
+    }
+    .rep-paper { font-family:"Segoe UI",Arial,sans-serif; color:#222; }
+    .rep-paper .rep-head { border-bottom:3px solid var(--primary-green); padding-bottom:12px; margin-bottom:14px; }
+    .rep-paper .rep-head h1 { font-size:20px; margin:0 0 4px; }
+    .rep-paper .rep-head h2 { font-size:13px; font-weight:400; color:#555; margin:0; }
+    .rep-paper h3 { font-size:14px; margin:18px 0 8px; color:var(--primary-green); }
+    .rep-paper p, .rep-paper li { font-size:12px; color:#333; line-height:1.6; }
+    .rep-paper .kv-line { font-size:12px; color:#333; padding:3px 0; }
+    .rep-paper ul { margin:6px 0 6px 20px; padding:0; }
+    .rep-paper table { width:100%; border-collapse:collapse; font-size:11px; margin:8px 0; }
+    .rep-paper th, .rep-paper td { border:1px solid #ddd; padding:6px 8px; text-align:left; }
+    .rep-paper th { background:#f3f7f2; }
+
+    .sk-line { display:block; height:12px; border-radius:6px; background:linear-gradient(90deg,var(--border-light) 25%,#ececec 50%,var(--border-light) 75%); background-size:200% 100%; animation:sk 1.2s infinite; margin-bottom:12px; }
+    @keyframes sk { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .sk-row { display:flex; gap:12px; margin-bottom:10px; }
+    .sk-row .sk-line { flex:1; margin-bottom:0; }
+
+    .an-empty { text-align:center; padding:34px 16px; }
+    .an-empty i { font-size:40px; color:var(--text-muted); opacity:.45; margin-bottom:10px; }
+    .an-empty h4 { font-size:14px; color:var(--text-secondary); margin-bottom:6px; }
+    .an-empty p { font-size:12px; color:var(--text-muted); }
+    .an-err { text-align:center; padding:24px 16px; color:#d64545; font-size:13px; }
+    .an-err button { margin-top:10px; }
+    .an-err-page { text-align:center; padding:60px 20px; color:var(--text-secondary); }
+    .an-err-page i { font-size:52px; color:#d64545; margin-bottom:16px; }
+  </style>
 </head>
 <body>
 
   <main class="page-container">
 
-    <section class="hero-dashboard" style="background:var(--gradient-primary); margin-bottom:25px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <!-- Fatal / unauthenticated error -->
+    <section class="card-premium" id="an-error-banner" hidden>
+      <div class="an-err-page">
+        <i class="fas fa-triangle-exclamation"></i>
+        <h3 style="margin-bottom:8px;">Analytics could not be loaded</h3>
+        <p style="font-size:13px; color:var(--text-secondary);" id="an-error-text">Please sign in to Farm Assist to view your farm intelligence.</p>
+        <div style="margin-top:18px;">
+          <button class="btn-primary" onclick="location.href='login.html'"><i class="fas fa-right-to-bracket"></i> Sign In</button>
+          <button class="btn-secondary" onclick="AnPage.init()" style="margin-left:8px;"><i class="fas fa-rotate-right"></i> Retry</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="hero-dashboard" style="background:var(--gradient-primary); margin-bottom:25px;" id="an-hero" hidden>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px;">
         <div>
-          <h2><i class="fas fa-chart-pie"></i> Analytics Center</h2>
+          <h2><i class="fas fa-chart-line"></i> Farm Intelligence Center</h2>
           <p style="font-size:13px; color:rgba(255,255,255,0.9); margin-top:5px;">
-            Visualise productivity scores, revenue aggregates, temperature fluctuations, and soil moisture levels in interactive graphs.
+            Real farm analytics computed from your records - overview, performance, crops, finances,
+            weather, market, risk and report generation. No mock numbers.
           </p>
+          <div class="an-meta">
+            <span class="an-chip"><i class="fas fa-user"></i> <span id="an-chip-farmer">Farmer</span></span>
+            <span class="an-chip"><i class="fas fa-warehouse"></i> <span id="an-chip-farms">-</span></span>
+            <span class="an-chip"><i class="fas fa-clock"></i> <span id="an-chip-updated">-</span></span>
+          </div>
         </div>
-        <div style="display:flex; gap:8px;">
-          <select class="form-select" id="analytics-farm-selector" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,0.3); font-size:13px; background:rgba(255,255,255,0.15); color:white; min-width:140px;" onchange="updateAnalyticsFarm()">
-            <option value="all" style="color:black;">All Farms</option>
-            <option value="Green Acre" style="color:black;">Green Acre</option>
-            <option value="Saraswati" style="color:black;">Saraswati</option>
-            <option value="Deccan" style="color:black;">Deccan</option>
-          </select>
-          <button class="btn-primary btn-sm" onclick="generateReport('pdf')" style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); color:white;">
-            <i class="fas fa-file-pdf"></i> PDF
-          </button>
-          <button class="btn-primary btn-sm" onclick="generateReport('csv')" style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); color:white;">
-            <i class="fas fa-file-csv"></i> CSV
-          </button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-soft-white" onclick="AnPage.aiNow()"><i class="fas fa-wand-magic-sparkles"></i> Analyze My Farm</button>
+          <button class="btn-soft-white" onclick="AnPage.openReportModal()" style="background:rgba(255,255,255,.32);"><i class="fas fa-file-circle-plus"></i> Generate Report</button>
         </div>
+      </div>
+      <div class="an-toolbar" style="margin-top:18px;">
+        <select class="form-select" id="an-farm-select" onchange="AnPage.onFarmChange()">
+          <option value="all">All Farms</option>
+        </select>
+        <select class="form-select" id="an-period-select" onchange="AnPage.onPeriodChange()">
+          <option value="today">Today</option>
+          <option value="7d">7 Days</option>
+          <option value="30d" selected>30 Days</option>
+          <option value="season">This Season</option>
+          <option value="year">This Year</option>
+          <option value="custom">Custom Range</option>
+        </select>
+        <span style="display:inline-flex; gap:6px; align-items:center;" id="an-custom-range" hidden>
+          <input type="date" class="form-input" id="an-dfrom" style="background:rgba(255,255,255,.15); color:#fff;">
+          <span style="color:#fff; font-size:12px;">to</span>
+          <input type="date" class="form-input" id="an-dto" style="background:rgba(255,255,255,.15); color:#fff;">
+          <button class="btn-soft-white" onclick="AnPage.applyCustom()">Apply</button>
+        </span>
+        <button class="btn-soft-white" onclick="AnPage.refresh()" title="Refresh analytics"><i class="fas fa-rotate-right"></i> Refresh</button>
       </div>
     </section>
 
-    <section class="card-premium">
-      <h3 style="font-size:16px; margin-bottom:12px;"><i class="fas fa-database" style="color:var(--premium-green); margin-right:8px;"></i> Your Farm Analytics <span id="analytics-live-badge" style="font-size:9px;font-weight:600;color:var(--text-muted);"></span></h3>
-      <div class="stats-card-grid" id="analytics-live-stats">
-        <div class="stat-box"><i class="fas fa-warehouse" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Farms</div></div>
-        <div class="stat-box"><i class="fas fa-seedling" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Active Crops</div></div>
-        <div class="stat-box"><i class="fas fa-receipt" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Transactions</div></div>
-        <div class="stat-box"><i class="fas fa-users-gear" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Worker Bookings</div></div>
-        <div class="stat-box"><i class="fas fa-cart-shopping" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">Orders</div></div>
-        <div class="stat-box"><i class="fas fa-robot" style="color:var(--premium-green); font-size:16px;"></i><div style="font-size:16px; font-weight:800; margin-top:4px;">--</div><div style="font-size:9px; color:var(--text-muted);">AI Conversations</div></div>
-      </div>
-    </section>
+    <div id="an-content">
 
-    <section class="card-premium">
-      <h3 style="font-size:16px; margin-bottom:12px;"><i class="fas fa-bolt" style="color:var(--premium-green); margin-right:8px;"></i> Overall Performance Indices</h3>
-      <div class="stats-card-grid">
-        <div class="stat-box" onclick="highlightGraph('yield')">
-          <i class="fas fa-weight-hanging" style="color:var(--premium-green); font-size:16px;"></i>
-          <div style="font-size:16px; font-weight:800; margin-top:4px;">94%</div>
-          <div style="font-size:9px; color:var(--text-muted);">Yield Rate</div>
+      <!-- Overview -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-gauge-high" style="color:var(--premium-green); margin-right:8px;"></i> Farm Overview</h3>
+          <span class="an-hint" id="an-overview-scope"></span>
         </div>
-        <div class="stat-box" onclick="highlightGraph('profit')">
-          <i class="fas fa-wallet" style="color:var(--premium-green); font-size:16px;"></i>
-          <div style="font-size:16px; font-weight:800; margin-top:4px;">₹1.2L</div>
-          <div style="font-size:9px; color:var(--text-muted);">Net Profit</div>
+        <div id="an-overview"></div>
+      </section>
+
+      <!-- Performance score -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-medal" style="color:var(--premium-green); margin-right:8px;"></i> Farm Performance Score</h3>
+          <span class="an-hint">Transparent, fully calculated from your data</span>
         </div>
-        <div class="stat-box" onclick="highlightGraph('water')">
-          <i class="fas fa-droplet" style="color:var(--premium-green); font-size:16px;"></i>
-          <div style="font-size:16px; font-weight:800; margin-top:4px;">88%</div>
-          <div style="font-size:9px; color:var(--text-muted);">Water Efficiency</div>
+        <div id="an-performance"></div>
+      </section>
+
+      <!-- Crop performance + comparison -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-seedling" style="color:var(--premium-green); margin-right:8px;"></i> Crop Performance &amp; Comparison</h3>
         </div>
-      </div>
-    </section>
+        <div id="an-crops"></div>
+      </section>
 
-    <section class="card-premium">
-      <h3 style="font-size:16px; margin-bottom:15px;"><i class="fas fa-chart-column" style="color:var(--premium-green); margin-right:8px;"></i> Monthly Cash Flow (Income vs Expense)</h3>
-      <div style="background:var(--bg-card); border-radius:16px; padding:15px;">
-        <svg class="chart-svg" viewBox="0 0 400 200">
-          <line x1="40" y1="30" x2="380" y2="30" stroke="var(--border-light)" stroke-width="1" />
-          <line x1="40" y1="80" x2="380" y2="80" stroke="var(--border-light)" stroke-width="1" />
-          <line x1="40" y1="130" x2="380" y2="130" stroke="var(--border-light)" stroke-width="1" />
-          <line x1="40" y1="180" x2="380" y2="180" stroke="var(--text-muted)" stroke-width="1" />
-          <text x="10" y="35" font-size="9" fill="var(--text-secondary)">₹1.5L</text>
-          <text x="10" y="85" font-size="9" fill="var(--text-secondary)">₹1.0L</text>
-          <text x="10" y="135" font-size="9" fill="var(--text-secondary)">₹50K</text>
-          <text x="25" y="185" font-size="9" fill="var(--text-secondary)">0</text>
-          <rect x="65" y="60" width="18" height="120" class="chart-bar" />
-          <rect x="85" y="110" width="18" height="70" class="chart-bar-alt" />
-          <rect x="145" y="50" width="18" height="130" class="chart-bar" />
-          <rect x="165" y="120" width="18" height="60" class="chart-bar-alt" />
-          <rect x="225" y="40" width="18" height="140" class="chart-bar" />
-          <rect x="245" y="135" width="18" height="45" class="chart-bar-alt" />
-          <rect x="305" y="70" width="18" height="110" class="chart-bar" />
-          <rect x="325" y="150" width="18" height="30" class="chart-bar-alt" />
-          <text x="75" y="195" font-size="10" fill="var(--text-secondary)" text-anchor="middle">March</text>
-          <text x="155" y="195" font-size="10" fill="var(--text-secondary)" text-anchor="middle">April</text>
-          <text x="235" y="195" font-size="10" fill="var(--text-secondary)" text-anchor="middle">May</text>
-          <text x="315" y="195" font-size="10" fill="var(--text-secondary)" text-anchor="middle">June</text>
-        </svg>
-      </div>
-      <div style="display:flex; justify-content:center; gap:20px; font-size:10px; margin-top:10px; font-weight:600;">
-        <span><i class="fas fa-square" style="color:var(--premium-green);"></i> Sales Revenue</span>
-        <span><i class="fas fa-square" style="color:var(--mud-accent);"></i> Capital Overhead</span>
-      </div>
-    </section>
-
-    <section class="card-premium">
-      <h3 style="font-size:16px; margin-bottom:15px;"><i class="fas fa-cloud-sun-rain" style="color:var(--premium-green); margin-right:8px;"></i> Soil Moisture vs Temperature Trends</h3>
-      <div style="background:var(--bg-card); border-radius:16px; padding:15px;">
-        <svg class="chart-svg" viewBox="0 0 400 200">
-          <line x1="30" y1="180" x2="380" y2="180" stroke="var(--text-muted)" stroke-width="1" />
-          <line x1="30" y1="30" x2="30" y2="180" stroke="var(--text-muted)" stroke-width="1" />
-          <path d="M 50 180 L 50 110 L 110 70 L 170 120 L 230 60 L 290 90 L 350 40 L 350 180 Z" class="chart-area" />
-          <path d="M 50 110 L 110 70 L 170 120 L 230 60 L 290 90 L 350 40" class="chart-line" />
-          <path d="M 50 140 L 110 130 L 170 100 L 230 110 L 290 80 L 350 70" fill="none" stroke="var(--warning)" stroke-width="3" stroke-dasharray="4" />
-          <text x="50" y="195" font-size="9" fill="var(--text-secondary)" text-anchor="middle">Day 1</text>
-          <text x="170" y="195" font-size="9" fill="var(--text-secondary)" text-anchor="middle">Day 3</text>
-          <text x="290" y="195" font-size="9" fill="var(--text-secondary)" text-anchor="middle">Day 5</text>
-          <text x="350" y="195" font-size="9" fill="var(--text-secondary)" text-anchor="middle">Day 7</text>
-          <text x="20" y="115" font-size="9" fill="var(--premium-green)">50%</text>
-          <text x="20" y="45" font-size="9" fill="var(--premium-green)">80%</text>
-        </svg>
-      </div>
-      <div style="display:flex; justify-content:center; gap:20px; font-size:10px; margin-top:10px; font-weight:600;">
-        <span><i class="fas fa-minus" style="color:var(--premium-green); font-weight:bold;"></i> Moisture Content (%)</span>
-        <span><i class="fas fa-ellipsis-h" style="color:var(--warning);"></i> Mean Air Temp (°C)</span>
-      </div>
-    </section>
-
-    <section class="card-premium">
-      <h3 style="font-size:16px; margin-bottom:15px;"><i class="fas fa-chart-pie" style="color:var(--premium-green); margin-right:8px;"></i> Profitability Breakdown (by Crop Type)</h3>
-      <div style="background:var(--bg-card); border-radius:16px; padding:15px; display:flex; align-items:center; justify-content:center; gap:30px;">
-        <svg width="150" height="150" viewBox="0 0 42 42">
-          <circle cx="21" cy="21" r="15.915" fill="var(--bg-card-solid)" stroke="var(--border-light)" stroke-width="5" />
-          <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--premium-green)" stroke-width="5" stroke-dasharray="55 45" stroke-dashoffset="25" class="chart-pie-slice" onclick="showChartValue('Rice Segment: 55% Net Shares')" />
-          <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--mud-accent)" stroke-width="5" stroke-dasharray="25 75" stroke-dashoffset="70" class="chart-pie-slice" onclick="showChartValue('Cotton Segment: 25% Net Shares')" />
-          <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--light-green)" stroke-width="5" stroke-dasharray="20 80" stroke-dashoffset="45" class="chart-pie-slice" onclick="showChartValue('Vegetables Segment: 20% Net Shares')" />
-          <circle cx="21" cy="21" r="12" fill="var(--bg-card-solid)" />
-        </svg>
-        <div style="font-size:12px; line-height:1.8;">
-          <div style="color:var(--premium-green); font-weight:700;"><i class="fas fa-circle"></i> Basmati Rice (55%)</div>
-          <div style="color:var(--mud-accent); font-weight:700;"><i class="fas fa-circle"></i> Cotton (25%)</div>
-          <div style="color:var(--light-green); font-weight:700;"><i class="fas fa-circle"></i> Vegetables (20%)</div>
+      <!-- Yield analysis -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-weight-hanging" style="color:var(--premium-green); margin-right:8px;"></i> Yield Analysis</h3>
+          <span class="an-hint">Yield per acre vs your own crop benchmark</span>
         </div>
-      </div>
-      <div id="chart-pie-value" style="font-size:11px; text-align:center; font-weight:700; color:var(--premium-green); height:16px; margin-top:10px;">Tap segments to inspect margins</div>
-    </section>
+        <div id="an-yield"></div>
+      </section>
 
+      <!-- Production analysis -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-boxes-stacked" style="color:var(--premium-green); margin-right:8px;"></i> Production Analysis</h3>
+        </div>
+        <div id="an-production"></div>
+      </section>
+
+      <!-- Farm finances -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-hand-holding-dollar" style="color:var(--premium-green); margin-right:8px;"></i> Farm Finances</h3>
+          <span class="an-hint">Farm accounts only - personal wallet money is excluded</span>
+        </div>
+        <div id="an-financial"></div>
+      </section>
+
+      <!-- Expense analysis -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-receipt" style="color:var(--premium-green); margin-right:8px;"></i> Expense Analysis</h3>
+        </div>
+        <div id="an-expenses"></div>
+      </section>
+
+      <!-- Income analysis -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-sack-dollar" style="color:var(--premium-green); margin-right:8px;"></i> Income Analysis</h3>
+        </div>
+        <div id="an-income"></div>
+      </section>
+
+      <!-- Profitability -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-chart-pie" style="color:var(--premium-green); margin-right:8px;"></i> Profitability</h3>
+        </div>
+        <div id="an-profit"></div>
+      </section>
+
+      <!-- Farm activity / tasks -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-list-check" style="color:var(--premium-green); margin-right:8px;"></i> Farm Activity (Tasks)</h3>
+        </div>
+        <div id="an-tasks"></div>
+      </section>
+
+      <!-- Calendar -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-calendar-days" style="color:var(--premium-green); margin-right:8px;"></i> Farm Calendar Analysis</h3>
+        </div>
+        <div id="an-calendar"></div>
+      </section>
+
+      <!-- Weather -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-cloud-sun-rain" style="color:var(--premium-green); margin-right:8px;"></i> Weather for Your Farm</h3>
+        </div>
+        <div id="an-weather"></div>
+      </section>
+
+      <!-- Market -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-store" style="color:var(--premium-green); margin-right:8px;"></i> Market Price Analysis</h3>
+          <span class="an-hint">Estimated potential revenue is marked as an estimate</span>
+        </div>
+        <div id="an-market"></div>
+      </section>
+
+      <!-- Sustainability -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-leaf" style="color:var(--premium-green); margin-right:8px;"></i> Sustainability</h3>
+        </div>
+        <div id="an-sustain"></div>
+      </section>
+
+      <!-- Risk -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-triangle-exclamation" style="color:var(--premium-green); margin-right:8px;"></i> Farm Risk Analysis</h3>
+        </div>
+        <div id="an-risks"></div>
+      </section>
+
+      <!-- Insurance -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-shield-halved" style="color:var(--premium-green); margin-right:8px;"></i> Insurance Protection</h3>
+        </div>
+        <div id="an-insurance"></div>
+      </section>
+
+      <!-- Data completeness -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-clipboard-check" style="color:var(--premium-green); margin-right:8px;"></i> Data Completeness</h3>
+          <span class="an-hint">Higher data coverage = smarter analytics</span>
+        </div>
+        <div id="an-completeness"></div>
+      </section>
+
+      <!-- Smart insights -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-lightbulb" style="color:var(--premium-green); margin-right:8px;"></i> Smart Insights</h3>
+        </div>
+        <div id="an-insights"></div>
+      </section>
+
+      <!-- Recommendations -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-list-check" style="color:var(--premium-green); margin-right:8px;"></i> Recommended Next Steps</h3>
+          <span class="an-hint">Generated from your analytics and insights</span>
+        </div>
+        <div id="an-recs"></div>
+      </section>
+
+      <!-- AI Analysis -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-wand-magic-sparkles" style="color:var(--premium-green); margin-right:8px;"></i> AI Farm Analysis</h3>
+          <button class="btn-primary btn-sm" onclick="AnPage.aiNow()"><i class="fas fa-wand-magic-sparkles"></i> Analyze My Farm</button>
+        </div>
+        <div id="an-ai"></div>
+      </section>
+
+      <!-- My Reports -->
+      <section class="card-premium" style="margin-bottom:20px;">
+        <div class="an-section-head">
+          <h3><i class="fas fa-folder-open" style="color:var(--premium-green); margin-right:8px;"></i> My Reports</h3>
+          <button class="btn-primary btn-sm" onclick="AnPage.openReportModal()"><i class="fas fa-file-circle-plus"></i> New Report</button>
+        </div>
+        <div id="an-reports"></div>
+      </section>
+
+    </div>
   </main>
+
+  <!-- REPORT GENERATION MODAL -->
+  <div class="modal-backdrop" id="an-report-modal">
+    <div class="modal-box wide" role="dialog" aria-modal="true" aria-label="Generate farm report">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <h3 style="margin:0; font-size:16px;"><i class="fas fa-file-circle-plus" style="color:var(--premium-green); margin-right:8px;"></i> Generate Farm Report</h3>
+        <button class="btn-ghost" style="border:none; background:none; font-size:18px; cursor:pointer; color:var(--text-muted);" onclick="AnPage.closeModal('an-report-modal')" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="an-form-grid">
+        <div>
+          <label>Report type</label>
+          <select class="form-select" id="an-rpt-type" style="width:100%;">
+            <option value="Farm Performance">Farm Performance</option>
+            <option value="Crop">Crop Analysis</option>
+            <option value="Yield">Yield Report</option>
+            <option value="Financial">Financial Report</option>
+            <option value="Expense">Expense Report</option>
+            <option value="Income">Income Report</option>
+            <option value="Profitability">Profitability Report</option>
+            <option value="Weather">Weather Report</option>
+            <option value="Market">Market Report</option>
+            <option value="Complete">Complete Farm Report</option>
+          </select>
+        </div>
+        <div>
+          <label>Title (optional)</label>
+          <input type="text" class="form-input" id="an-rpt-title" placeholder="e.g. Kharif 2026 review" style="width:100%;">
+        </div>
+        <div>
+          <label>Farm scope</label>
+          <select class="form-select" id="an-rpt-farm" style="width:100%;"></select>
+        </div>
+        <div>
+          <label>Period</label>
+          <select class="form-select" id="an-rpt-period" style="width:100%;">
+            <option value="7d">Last 7 days</option>
+            <option value="30d" selected>Last 30 days</option>
+            <option value="season">This season</option>
+            <option value="year">This year</option>
+            <option value="all">All recorded data</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; display:block; margin-bottom:8px;">Include in report</label>
+        <div class="an-check-grid" id="an-rpt-includes"></div>
+      </div>
+      <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn-secondary" onclick="AnPage.closeModal('an-report-modal')">Cancel</button>
+        <button class="btn-primary" id="an-rpt-generate" onclick="AnPage.generateReport()"><i class="fas fa-wand-magic-sparkles"></i> Generate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT PREVIEW MODAL -->
+  <div class="modal-backdrop" id="an-preview-modal">
+    <div class="modal-box wide" role="dialog" aria-modal="true" aria-label="Report preview">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0; font-size:16px;"><i class="fas fa-file-lines" style="color:var(--premium-green); margin-right:8px;"></i> <span id="an-pv-title">Report</span></h3>
+        <button class="btn-ghost" style="border:none; background:none; font-size:18px; cursor:pointer; color:var(--text-muted);" onclick="AnPage.closeModal('an-preview-modal')" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="an-preview-body"></div>
+      <div style="margin-top:18px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+        <button class="btn-secondary" onclick="AnPage.previewCsv()"><i class="fas fa-file-csv"></i> Download CSV</button>
+        <button class="btn-secondary" onclick="AnPage.previewShare()"><i class="fas fa-share-nodes"></i> Share</button>
+        <button class="btn-primary" onclick="AnPage.previewPdf()"><i class="fas fa-file-pdf"></i> Generate PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ANALYSIS MODAL -->
+  <div class="modal-backdrop" id="an-ai-modal">
+    <div class="modal-box wide" role="dialog" aria-modal="true" aria-label="AI farm analysis">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0; font-size:16px;"><i class="fas fa-wand-magic-sparkles" style="color:var(--premium-green); margin-right:8px;"></i> Analyze My Farm</h3>
+        <button class="btn-ghost" style="border:none; background:none; font-size:18px; cursor:pointer; color:var(--text-muted);" onclick="AnPage.closeModal('an-ai-modal')" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="an-ai-body"></div>
+    </div>
+  </div>
+
+  <!-- PRINT ROOT -->
+  <div id="report-print-root"></div>
 
   <script src="js/database.js"></script>
   <script src="js/services.js"></script>
@@ -152,68 +493,1013 @@
   <script src="assets/js/app.js"></script>
   <script src="js/script.js"></script>
   <script>
-    function showChartValue(val) { document.getElementById("chart-pie-value").textContent = val; showToast(val, "success"); }
-    function highlightGraph(type) { showToast(`Selected metrics highlights: ${type.toUpperCase()}`, "success"); }
+  (function () {
+    var SV = window.AnalyticsService || window.API.Analytics;
+    if (!SV) return;
 
-    // Farm selection for Analytics
-    function updateAnalyticsFarm() {
-      var selectedFarm = document.getElementById('analytics-farm-selector').value;
-      showToast('Loading analytics for: ' + (selectedFarm === 'all' ? 'All Farms' : selectedFarm), 'info');
-      
-      // In a real implementation, this would fetch farm-specific analytics data
-      if (window.API && localStorage.getItem('fa-auth-token')) {
-        console.log('Fetching analytics data for farm:', selectedFarm);
-        // API call to get farm-specific analytics would go here
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function money(v) {
+      if (v == null || isNaN(v)) return 'â‚¹0';
+      return 'â‚¹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+    function money2(v) {
+      if (v == null || isNaN(v)) return 'â‚¹0';
+      return 'â‚¹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+    function num(v, d) {
+      if (v == null || isNaN(v)) return '0';
+      return Number(v).toLocaleString('en-IN', { maximumFractionDigits: (d == null ? 0 : d) });
+    }
+    function pct(v, d) {
+      if (v == null || isNaN(v)) return '--';
+      return num(v, d == null ? 1 : d) + '%';
+    }
+    function isNull(v) { return v == null || isNaN(v); }
+    function fmtDate(v) {
+      if (!v) return '--';
+      var d = new Date(v);
+      if (isNaN(d.getTime())) return String(v);
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    function toast(msg, type) {
+      if (window.showToast) window.showToast(msg, type || 'info');
+    }
+    function skeleton(rows) {
+      var h = '';
+      for (var r = 0; r < rows; r++) {
+        h += '<div class="sk-row">';
+        for (var c = 0; c < 3; c++) h += '<span class="sk-line"></span>';
+        h += '</div>';
       }
+      return h;
+    }
+    function loaderHtml() { return '<div class="an-empty"><i class="fas fa-circle-notch fa-spin"></i><h4>Loading analytics...</h4><p>Computing from your latest records.</p></div>'; }
+    function errorHtml(msg, key) {
+      return '<div class="an-err"><i class="fas fa-circle-exclamation"></i> ' + esc(msg) +
+        '<br><button class="btn-secondary btn-sm" style="margin-top:10px;" onclick="AnPage.reloadSection(\'' + key + '\')">Retry</button></div>';
     }
 
-    // Report generation
-    function generateReport(format) {
-      var selectedFarm = document.getElementById('analytics-farm-selector').value;
-      var farmName = selectedFarm === 'all' ? 'All Farms' : selectedFarm;
-      
-      showToast('Generating ' + format.toUpperCase() + ' report for: ' + farmName, 'info');
-      
-      // In a real implementation, this would generate and download the report
-      if (window.API && localStorage.getItem('fa-auth-token')) {
-        console.log('Generating', format, 'report for farm:', selectedFarm);
-        // API call to generate report would go here
-      }
-      
-      // Simulate report generation delay
-      setTimeout(function() {
-        showToast(format.toUpperCase() + ' report generated successfully!', 'success');
-      }, 1500);
-    }
-
-    (function () {
-      if (!window.API || !localStorage.getItem('fa-auth-token')) return;
-      var statsEl = document.getElementById('analytics-live-stats');
-      var badgeEl = document.getElementById('analytics-live-badge');
-      API.Analytics.dashboard().then(function (res) {
-        var d = res || {};
-        var map = [
-          ['Farms', d.farms],
-          ['Active Crops', d.active_crops],
-          ['Transactions', d.transactions],
-          ['Worker Bookings', d.worker_bookings],
-          ['Orders', d.orders],
-          ['AI Conversations', d.ai_conversations]
-        ];
-        if (!statsEl) return;
-        var boxes = statsEl.querySelectorAll('.stat-box');
-        for (var i = 0; i < boxes.length && i < map.length; i++) {
-          var valEl = boxes[i].querySelector('div');
-          if (valEl) valEl.textContent = (map[i][1] != null ? map[i][1] : '0');
+    function barHtml(labels, seriesA, seriesB, colors) {
+      var max = 0;
+      for (var i = 0; i < seriesA.length; i++) max = Math.max(max, seriesA[i] || 0, (seriesB && seriesB[i]) || 0);
+      if (max <= 0) max = 1;
+      var h = '<div class="an-bars">';
+      for (var i = 0; i < labels.length; i++) {
+        var ha = Math.max(((seriesA[i] || 0) / max) * 100, 1);
+        h += '<div class="an-bar-group">';
+        h += '<div class="an-bars-inner">';
+        h += '<div class="an-bar" style="height:' + ha + '%; background:' + colors[0] + ';" title="' + esc(labels[i]) + ': ' + money(seriesA[i]) + '"></div>';
+        if (seriesB) {
+          var hb = Math.max(((seriesB[i] || 0) / max) * 100, 1);
+          h += '<div class="an-bar" style="height:' + hb + '%; background:' + colors[1] + ';" title="' + esc(labels[i]) + ': ' + money(seriesB[i]) + '"></div>';
         }
-        if (badgeEl) badgeEl.textContent = 'LIVE';
-      }).catch(function () {});
-      if (window.API.Analytics.usage) {
-        API.Analytics.usage(30).then(function (u) {
-          if (u && badgeEl) badgeEl.textContent = '30-day usage: ' + (u.logins || 0) + ' logins • ' + (u.transactions || 0) + ' transactions';
-        }).catch(function () {});
+        h += '</div>';
+        h += '<div class="an-bar label">' + esc(labels[i]) + '</div>';
+        h += '</div>';
       }
-    })();
+      h += '</div>';
+      return h;
+    }
+
+    function catRows(rows, maxLabel) {
+      if (!rows || !rows.length) return '';
+      var top = rows.slice(0, 8);
+      var max = top[0].amount || 0;
+      var h = '';
+      for (var i = 0; i < top.length; i++) {
+        var w = max > 0 ? ((top[i].amount / max) * 100) : 0;
+        h += '<div class="an-cat-row">' +
+          '<div class="name" title="' + esc(top[i].category) + '">' + esc(top[i].category) + '</div>' +
+          '<div class="bar"><i style="width:' + w.toFixed(1) + '%"></i></div>' +
+          '<div class="val">' + money(top[i].amount) + '</div></div>';
+      }
+      return h;
+    }
+
+    function state() {
+      return {
+        farm_id: window.AnPage && window.AnPage.scope ? window.AnPage.scope.farm_id : undefined,
+        plot_id: window.AnPage && window.AnPage.scope ? window.AnPage.scope.plot_id : undefined,
+        date_from: window.AnPage && window.AnPage.scope ? window.AnPage.scope.from : undefined,
+        date_to: window.AnPage && window.AnPage.scope ? window.AnPage.scope.to : undefined
+      };
+    }
+    function fetchSections(sectionKeys) {
+      var out = {};
+      var jobs = sectionKeys.map(function (k) {
+        return SV[k](state()).then(function (r) { out[k] = r; }).catch(function (e) { out[k] = null; });
+      });
+      return Promise.all(jobs).then(function () { return out; });
+    }
+
+    function riskPillClass(level) {
+      var l = String(level || '').toLowerCase();
+      if (l === 'critical') return 'red';
+      if (l === 'high') return 'red';
+      if (l === 'moderate') return 'orange';
+      if (l === 'low') return 'green';
+      return 'gray';
+    }
+    function statusPill(st) {
+      var s = String(st || '').toLowerCase();
+      if (s === 'completed') return '<span class="pill green">Completed</span>';
+      if (s === 'pending') return '<span class="pill orange">Pending</span>';
+      if (s === 'in progress' || s === 'in_progress') return '<span class="pill blue">In progress</span>';
+      if (s === 'overdue') return '<span class="pill red">Overdue</span>';
+      return '<span class="pill gray">' + esc(st || '--') + '</span>';
+    }
+
+    window.AnPage = {
+      scope: { farm_id: undefined, plot_id: undefined, from: undefined, to: undefined },
+      _partial: null,
+      init: function () {
+        if (!localStorage.getItem('fa-auth-token')) {
+          this.showFatal('Please sign in to Farm Assist to view your farm intelligence.');
+          return;
+        }
+        SV.context().then(function (res) {
+          var d = res && res.data ? res.data : res;
+          window.AnPage.ctx = d;
+          window.AnPage.fillContext(d);
+        }).catch(function (e) {
+          if (e && (e.status === 401 || (e.detail && String(e.detail).indexOf('expired') > -1) || String(e.message || '').indexOf('401') > -1)) {
+            window.AnPage.showFatal('Your session has expired. Please sign in again.');
+          } else {
+            var dbgExtra = '';
+            try { dbgExtra = ' || STACK: ' + ((e && e.stack) || 'none').split('\n').slice(0, 6).join('\n'); } catch (e9) {}
+            window.AnPage.showFatal('Could not reach the analytics service. ' + (e && e.message ? e.message : String(e)) + dbgExtra);
+          }
+        });
+      },
+      showFatal: function (msg) {
+        var b = document.getElementById('an-error-banner');
+        if (b) { b.hidden = false; }
+        var t = document.getElementById('an-error-text');
+        if (t) t.textContent = msg;
+        var h = document.getElementById('an-hero');
+        if (h) h.hidden = true;
+        var c = document.getElementById('an-content');
+        if (c) c.hidden = true;
+      },
+      fillContext: function (d) {
+        var farmerEl = document.getElementById('an-chip-farmer');
+        if (farmerEl && d.farmer) farmerEl.textContent = d.farmer.name || 'Farmer';
+        var farmsEl = document.getElementById('an-chip-farms');
+        if (farmsEl && d.farms) farmsEl.textContent = d.farms.length + (d.single_farm ? ' farm reported' : ' farms reported');
+        var upEl = document.getElementById('an-chip-updated');
+        if (upEl) upEl.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        this.buildFarmSelect(d);
+        var hero = document.getElementById('an-hero');
+        if (hero) hero.hidden = false;
+        var self = this;
+        this.loadAll(function () { self.loadReports(); });
+      },
+      buildFarmSelect: function (d) {
+        var sel = document.getElementById('an-farm-select');
+        var html = '<option value="all">' + (d.single_farm ? d.farms[0].farm_name : 'All Farms') + '</option>';
+        var firstFarmId = null;
+        (d.farms || []).forEach(function (f, fi) {
+          if (firstFarmId == null) firstFarmId = f.id;
+          html += '<option value="farm:' + f.id + '">' + esc(f.farm_name) + '</option>';
+          (f.plots || []).forEach(function (p) {
+            html += '<option value="plot:' + p.id + '">&#8627; ' + esc(f.farm_name) + ' / ' + esc(p.plot_name) + '</option>';
+          });
+        });
+        sel.innerHTML = html;
+        if (d.single_farm && d.farms && d.farms.length === 1) {
+          sel.value = 'farm:' + d.farms[0].id;
+          this.scope.farm_id = d.farms[0].id;
+          var ov = document.getElementById('an-overview-scope');
+          if (ov) ov.textContent = 'Scope: ' + d.farms[0].farm_name;
+        } else {
+          this.scope.farm_id = undefined;
+        }
+      },
+      onFarmChange: function () {
+        var v = document.getElementById('an-farm-select').value;
+        if (v.indexOf('plot:') === 0) { this.scope.farm_id = v.substr(5); this.scope.plot_id = v.substr(5); }
+        else if (v.indexOf('farm:') === 0) { this.scope.farm_id = v.substr(5); this.scope.plot_id = undefined; }
+        else { this.scope.farm_id = undefined; this.scope.plot_id = undefined; }
+        this.refresh();
+      },
+      onPeriodChange: function () {
+        var v = document.getElementById('an-period-select').value;
+        var cr = document.getElementById('an-custom-range');
+        if (cr) cr.hidden = (v !== 'custom');
+        if (v !== 'custom') this.applyRange();
+      },
+      applyRange: function () {
+        var v = document.getElementById('an-period-select').value;
+        var r = this.computeRange(v);
+        this.scope.from = r.from;
+        this.scope.to = r.to;
+        this.refresh();
+      },
+      applyCustom: function () {
+        var f = document.getElementById('an-dfrom').value;
+        var t = document.getElementById('an-dto').value;
+        this.scope.from = f || undefined;
+        this.scope.to = t || undefined;
+        this.refresh();
+      },
+      computeRange: function (period) {
+        function pad(n) { return n < 10 ? '0' + n : '' + n; }
+        function fmt(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+        var now = new Date();
+        if (period === 'today') return { from: fmt(now), to: fmt(now) };
+        if (period === '7d') { var s = new Date(now); s.setDate(s.getDate() - 6); return { from: fmt(s), to: fmt(now) }; }
+        if (period === '30d') { var s2 = new Date(now); s2.setDate(s2.getDate() - 29); return { from: fmt(s2), to: fmt(now) }; }
+        if (period === 'season') {
+          var m = now.getMonth();
+          var st = new Date(now.getFullYear(), (m >= 5 ? 5 : 0), 1);
+          return { from: fmt(st), to: fmt(now) };
+        }
+        if (period === 'year') return { from: now.getFullYear() + '-01-01', to: fmt(now) };
+        return { from: undefined, to: undefined };
+      },
+      refresh: function () {
+        var self = this;
+        this.loadAll(function () { self.loadReports(); });
+      },
+      reloadSection: function (key) {
+        var self = this;
+        var block = { overview: this.renderOverview, performance: this.renderPerformance, crops: this.renderCrops, yield: this.renderYield, production: this.renderProduction, financial: this.renderFinancial, expenses: this.renderExpenses, income: this.renderIncome, profit: this.renderProfit, tasks: this.renderTasks, calendar: this.renderCalendar, weather: this.renderWeather, market: this.renderMarket, sustainability: this.renderSustain, risks: this.renderRisks, insurance: this.renderInsurance, completeness: this.renderCompleteness, insights: this.renderInsights, recs: this.renderRecs, ai: this.renderAi };
+        var fn = block[key];
+        if (!fn) return;
+        var el = document.getElementById('an-' + key);
+        this._partial = { fn: fn, el: el, key: key };
+        SV[key](state()).then(function (d) { el.innerHTML = fn.call(self, d); }).catch(function (e) { el.innerHTML = errorHtml('Something went wrong loading this section.', key); });
+      },
+      loadAll: function (done) {
+        var els = { overview: 'an-overview', performance: 'an-performance', crops: 'an-crops', yield: 'an-yield', production: 'an-production', financial: 'an-financial', expenses: 'an-expenses', income: 'an-income', profit: 'an-profit', tasks: 'an-tasks', calendar: 'an-calendar', weather: 'an-weather', market: 'an-market', sustain: 'an-sustain', risks: 'an-risks', insurance: 'an-insurance', completeness: 'an-completeness', insights: 'an-insights', recs: 'an-recs', ai: 'an-ai' };
+        var self = this;
+        var keys = Object.keys(els);
+        keys.forEach(function (k) {
+          var el = document.getElementById(els[k]);
+          if (el) el.innerHTML = loaderHtml();
+        });
+        fetchSections(['overview', 'performance', 'crops', 'yield', 'production', 'financial', 'tasks', 'calendar', 'weather', 'market', 'sustainability', 'risks', 'insurance', 'completeness', 'insights']).then(function (r) {
+          var map = {
+            overview: self.renderOverview, performance: self.renderPerformance, crops: self.renderCrops,
+            yield: self.renderYield, production: self.renderProduction, financial: self.renderFinancial,
+            tasks: self.renderTasks, calendar: self.renderCalendar, weather: self.renderWeather,
+            market: self.renderMarket, sustain: self.renderSustain, risks: self.renderRisks,
+            insurance: self.renderInsurance, completeness: self.renderCompleteness, insights: self.renderInsights
+          };
+          Object.keys(map).forEach(function (k) {
+            var el = document.getElementById(els[k]);
+            if (!el) return;
+            if (r[k] == null) { el.innerHTML = errorHtml('Something went wrong loading this section.', k); }
+            else el.innerHTML = map[k].call(self, r[k]);
+          });
+          var recEl = document.getElementById('an-recs');
+          if (recEl) recEl.innerHTML = self.renderRecs(r);
+          if (done) done();
+        }).catch(function () {
+          keys.forEach(function (k) {
+            var el = document.getElementById(els[k]);
+            if (el) el.innerHTML = errorHtml('Something went wrong loading this section.', k);
+          });
+          if (done) done();
+        });
+      },
+
+      /* ---- section renderers ---- */
+      renderOverview: function (d) {
+        d = d || {};
+        if (!d.has_data && d.farms === 0) return emptyHtml('No farm data yet');
+        var units = ' kg';
+        var yieldV = '--';
+        function statBox(ic, icn, unit, v, label) {
+          return '<div class="stat-box"><i class="' + ic + '" style="color:var(--premium-green); font-size:16px;"></i>' +
+            '<div class="stat-quick">' + (v == null || isNaN(v) && typeof v !== 'number' ? '--' : num(v)) + (unit ? '<span class="unit"> ' + unit + '</span>' : '') + '</div>' +
+            '<div style="font-size:9px; color:var(--text-muted);">' + label + '</div></div>';
+        }
+        var h = '<div class="stats-card-grid">';
+        h += statBox('fas fa-warehouse', null, null, d.farms, 'Farms');
+        h += statBox('fas fa-border-all', null, null, d.plots, 'Plots');
+        h += statBox('fas fa-ruler', 'ac', null, d.total_area_acres, 'Area (' + (d.area_unit || 'Acres') + ')');
+        h += statBox('fas fa-seedling', null, null, d.active_cycles, 'Active Crops');
+        h += statBox('fas fa-database', null, null, d.cycles, 'Total Cycles');
+        h += statBox('fas fa-diagram-project', null, null, d.harvested_cycles, 'Harvested');
+        h += statBox('fas fa-microchip', null, null, d.sensors, 'Sensors');
+        h += statBox('fas fa-tasks', null, null, d.tasks_total, 'Farm Tasks');
+        h += statBox('fas fa-check-circle', null, null, d.tasks_completed, 'Tasks Done');
+        h += statBox('fas fa-sack-dollar', null, null, money(d.income), 'Income');
+        h += statBox('fas fa-receipt', null, null, money(d.expenses), 'Expenses');
+        h += statBox('fas fa-chart-simple', null, null, money(d.net_profit), 'Net Farm Profit');
+        h += '</div>';
+        if (d.crop_names && d.crop_names.length) {
+          h += '<div class="an-note"><i class="fas fa-seedling"></i> Crops in this season: ' + esc(d.crop_names.join(', ')) + '</div>';
+        }
+        return h;
+      },
+      renderPerformance: function (d) {
+        d = d || {};
+        if (!d.score && d.score !== 0) return emptyHtml('Performance data unavailable');
+        var c = d.components || {};
+        var rows = [
+          ['Data foundation', c.foundation, 25],
+          ['Crop activity', c.crop_activity, 30],
+          ['Task completion', c.task_completion, 20],
+          ['Financial health', c.financial_health, 15],
+          ['Monitoring & planning', c.monitoring_planning, 10]
+        ];
+        var bw = '';
+        rows.forEach(function (r) {
+          bw += '<div class="score-row"><div class="score-label">' + r[0] + '</div>' +
+            '<div class="bar"><i style="width:' + (r[1] || 0) + '%"></i></div>' +
+            '<div class="score-pct">' + pct(r[1]) + '</div></div>';
+        });
+        var h = '<div class="an-performance-hero">' +
+          '<div class="score-ring" style="--p:' + (d.score || 0) + ';"><div class="score-val">' + (d.score || 0) + '</div></div>' +
+          '<div class="score-breakdown">' + bw + '</div>' +
+          '<div style="flex:1 1 200px; min-width:180px;">' +
+          (d.sufficient_data ? '<span class="pill green">Sufficient data</span>' : '<span class="pill orange">Partial data</span>') +
+          '<div style="font-size:12px; color:var(--text-muted); margin-top:10px; line-height:1.7;">' +
+          'Score = Data foundation (25) + Crop activity (30) + Task completion (20) + Financial health (15) + Monitoring &amp; planning (10). ' +
+          'Only real, recorded information is scored.</div>' +
+          '<button class="an-formula-toggle" onclick="AnPage.toggleFormula()"><i class="fas fa-calculator"></i> How is my score calculated?</button>' +
+          '</div></div>' +
+          '<div class="an-formula" id="an-formula-box" hidden>' +
+          '<strong>Transparent scoring formula</strong><br>' +
+          '<b>Data foundation (25):</b> farm + plots + sensors coverage.<br>' +
+          '<b>Crop activity (30):</b> crop cycles recorded and their stage/status.<br>' +
+          '<b>Task completion (20):</b> completed farm activities / total activities.<br>' +
+          '<b>Financial health (15):</b> income vs recorded expenses.<br>' +
+          '<b>Monitoring &amp; planning (10):</b> active sensors and weather insight availability.<br>' +
+          'Each component is capped at its maximum weight; the total is scaled to 100. No hidden or estimated figures are used.</div>';
+        return h;
+      },
+      toggleFormula: function () {
+        var b = document.getElementById('an-formula-box');
+        if (b) b.hidden = !b.hidden;
+      },
+      renderCrops: function (d) {
+        d = d || {};
+        var crops = d.crops || [];
+        if (!crops.length) return emptyHtml('No crop cycles recorded yet', 'Add a crop cycle to analyse yield, stage and expected harvest.');
+        var h = '<div class="responsive-table"><table class="an-table"><thead><tr>' +
+          '<th>Crop</th><th>Farm / Plot</th><th>Sown</th><th>Harvest (exp.)</th><th>Stage</th><th>Status</th><th>Yield</th><th>Per Acre</th><th>Revenue</th></tr></thead><tbody>';
+        crops.forEach(function (c) {
+          h += '<tr>' +
+            '<td><b>' + esc(c.crop_name) + '</b>' + (c.variety ? '<div style="font-size:10px; color:var(--text-muted);">' + esc(c.variety) + '</div>' : '') + '</td>' +
+            '<td>' + esc(c.farm_name || '--') + (c.plot_name ? ' / ' + esc(c.plot_name) : '') + '</td>' +
+            '<td>' + fmtDate(c.sowing_date) + '</td>' +
+            '<td>' + fmtDate(c.expected_harvest_date) + (c.actual_harvest_date ? '<div style="font-size:10px; color:#2ea44f;">done ' + fmtDate(c.actual_harvest_date) + '</div>' : '') + '</td>' +
+            '<td>' + esc(c.current_stage || '--') + '</td>' +
+            '<td>' + statusPill(c.status) + '</td>' +
+            '<td>' + (c.yield_quantity != null ? num(c.yield_quantity) + ' ' + esc(c.yield_unit || 'kg') : '--') + '</td>' +
+            '<td>' + (c.yield_per_acre != null ? num(c.yield_per_acre, 1) : '--') + '</td>' +
+            '<td>' + (c.revenue != null ? money(c.revenue) : '--') + '</td></tr>';
+        });
+        h += '</tbody></table></div>';
+        if (d.note) h += '<div class="an-note">' + esc(d.note) + '</div>';
+        return h;
+      },
+      renderYield: function (d) {
+        d = d || {};
+        var series = d.series || [];
+        if (!series.length) return emptyHtml('No yield data recorded', d.note || 'Recorded harvests appear here.');
+        var h = '<div class="responsive-table"><table class="an-table"><thead><tr>' +
+          '<th>Crop</th><th>Farm</th><th>Harvested</th><th>Yield</th><th>Per Acre</th><th>Benchmark</th><th>vs Benchmark</th></tr></thead><tbody>';
+        series.forEach(function (s) {
+          var dev = s.deviation_pct;
+          var devHtml = dev == null ? '--' : '<span style="color:' + (dev >= 0 ? '#2ea44f' : '#d64545') + ';">' + (dev >= 0 ? '+' : '') + num(dev, 1) + '%</span>';
+          h += '<tr>' +
+            '<td><b>' + esc(s.crop_name) + '</b></td>' +
+            '<td>' + esc(s.farm_name || '--') + '</td>' +
+            '<td>' + fmtDate(s.actual_harvest_date || s.expected_harvest_date) + '</td>' +
+            '<td>' + (s.yield_quantity != null ? num(s.yield_quantity) + ' ' + esc(s.yield_unit || 'kg') : '--') + '</td>' +
+            '<td>' + (s.yield_per_acre != null ? num(s.yield_per_acre, 1) : '--') + '</td>' +
+            '<td>' + (s.benchmark_per_acre != null ? num(s.benchmark_per_acre, 1) : '--') + '</td>' +
+            '<td>' + devHtml + '</td></tr>';
+        });
+        h += '</tbody></table></div>';
+        h += '<div class="an-note">' + esc(d.note || '') + '</div>';
+        return h;
+      },
+      renderProduction: function (d) {
+        d = d || {};
+        var monthly = d.monthly || [];
+        var byCrop = d.by_crop || [];
+        if (!monthly.length && !byCrop.length) {
+          return emptyHtml('No production recorded yet', d.note || 'Derived from recorded harvests only.');
+        }
+        var h = '';
+        if (monthly.length) {
+          h += '<div class="an-section-head" style="margin-top:6px;"><h3 style="font-size:14px;">Monthly production</h3></div>';
+          var labels = monthly.map(function (m) { return m.label || m.key; });
+          var vals = monthly.map(function (m) { return m.total || 0; });
+          var max = 0; monthly.forEach(function (m) { max = Math.max(max, m.total || 0); });
+          h += '<div class="an-bars">';
+          for (var i = 0; i < labels.length; i++) {
+            var w = max > 0 ? ((monthly[i].total || 0) / max) * 100 : 1;
+            h += '<div class="an-bar-group"><div class="an-bars-inner"><div class="an-bar" style="height:' + Math.max(w, 1) + '%; background:var(--premium-green);" title="' + esc(labels[i]) + ': ' + num(monthly[i].total) + ' ' + esc(monthly[i].unit || 'kg') + '"></div></div><div class="an-bar label">' + esc(labels[i]) + '</div></div>';
+          }
+          h += '</div>';
+          h += '<div class="an-note">Unit: ' + esc((monthly[0] && monthly[0].unit) || 'kg') + ' per month</div>';
+        }
+        if (byCrop.length) {
+          h += '<div class="an-section-head" style="margin-top:16px;"><h3 style="font-size:14px;">Production by crop</h3></div>';
+          h += '<div class="responsive-table"><table class="an-table"><thead><tr><th>Crop</th><th>Total production</th><th>Units</th><th>Cycles</th></tr></thead><tbody>';
+          byCrop.forEach(function (c) {
+            h += '<tr><td><b>' + esc(c.crop_name) + '</b></td><td>' + num(c.total) + '</td><td>' + esc(c.unit || 'kg') + '</td><td>' + (c.count || 0) + '</td></tr>';
+          });
+          h += '</tbody></table></div>';
+        }
+        h += '<div class="an-note">' + esc(d.note || '') + '</div>';
+        return h;
+      },
+      renderFinancial: function (d) {
+        d = d || {};
+        var monthly = d.monthly || [];
+        var has = d.income || d.expenses;
+        if (!has) return emptyHtml('No farm income or expenses recorded yet', 'Add income/expense records to see cash flow.');
+        var h = '<div class="kv-grid">' +
+          '<div class="kv-box"><div class="k">Total Income</div><div class="v pos">' + money(d.income) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Total Expenses</div><div class="v neg">' + money(d.expenses) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Net Farm Profit</div><div class="v ' + ((d.net_profit || 0) >= 0 ? 'pos' : 'neg') + '">' + money(d.net_profit) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Profit Margin</div><div class="v">' + (d.profit_ratio_pct == null ? '--' : pct(d.profit_ratio_pct)) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Profit / Acre</div><div class="v">' + (d.profit_per_acre == null ? '--' : money(d.profit_per_acre)) + '</div></div>' +
+          '</div>';
+        if (monthly.length) {
+          h += '<div class="an-section-head" style="margin-top:16px;"><h3 style="font-size:14px;">Monthly cash flow</h3></div>';
+          var labels = monthly.map(function (m) { return m.month; });
+          var inc = monthly.map(function (m) { return m.income; });
+          var exp = monthly.map(function (m) { return m.expenses; });
+          h += barHtml(labels, inc, exp, ['var(--premium-green)', 'var(--mud-accent)']);
+          h += '<div class="an-legend"><span><i class="fas fa-square" style="color:var(--premium-green);"></i> Income</span><span><i class="fas fa-square" style="color:var(--mud-accent);"></i> Expenses</span></div>';
+        }
+        return h;
+      },
+      renderExpenses: function (d) {
+        d = d || {};
+        var rows = d.expense_by_category || [];
+        if (!d.expenses) return emptyHtml('No expense records yet', 'Record farm expenses to analyse your spending.');
+        var h = '<div class="responsive-table"><table class="an-table"><thead><tr><th>Category</th><th>Amount</th><th>Share</th></tr></thead><tbody>';
+        var total = d.expenses || 0;
+        (rows.slice(0, 10)).forEach(function (r) {
+          var share = total > 0 ? ((r.amount / total) * 100).toFixed(1) : '0';
+          h += '<tr><td>' + esc(r.category) + '</td><td>' + money(r.amount) + '</td><td>' + share + '%</td></tr>';
+        });
+        h += '</tbody></table></div>';
+        return h;
+      },
+      renderIncome: function (d) {
+        d = d || {};
+        var rows = d.income_by_category || [];
+        if (!d.income) return emptyHtml('No income records yet', 'Record farm income to analyse earnings.');
+        var h = '<div class="responsive-table"><table class="an-table"><thead><tr><th>Category</th><th>Amount</th><th>Share</th></tr></thead><tbody>';
+        var total = d.income || 0;
+        (rows.slice(0, 10)).forEach(function (r) {
+          var share = total > 0 ? ((r.amount / total) * 100).toFixed(1) : '0';
+          h += '<tr><td>' + esc(r.category) + '</td><td>' + money(r.amount) + '</td><td>' + share + '%</td></tr>';
+        });
+        h += '</tbody></table></div>';
+        return h;
+      },
+      renderProfit: function (d) {
+        d = d || {};
+        var byCrop = d.profit_by_crop || [];
+        if (!byCrop.length && d.net_profit == null) return emptyHtml('Profitability can be shown once income and expenses are recorded.');
+        var h = '<div class="kv-grid" style="margin-bottom:16px;">' +
+          '<div class="kv-box"><div class="k">Net Profit</div><div class="v ' + ((d.net_profit || 0) >= 0 ? 'pos' : 'neg') + '">' + money(d.net_profit) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Profit / Acre</div><div class="v">' + (d.profit_per_acre == null ? '--' : money(d.profit_per_acre)) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Profit Margin</div><div class="v">' + (d.profit_ratio_pct == null ? '--' : pct(d.profit_ratio_pct)) + '</div></div>' +
+          '</div>';
+        if (byCrop.length) {
+          h += '<div class="an-section-head"><h3 style="font-size:14px;">Profitability by crop</h3></div>';
+          h += '<div class="responsive-table"><table class="an-table"><thead><tr><th>Crop</th><th>Income</th><th>Expenses</th><th>Net</th><th>Per Acre</th></tr></thead><tbody>';
+          byCrop.forEach(function (c) {
+            h += '<tr><td><b>' + esc(c.crop_name) + '</b></td><td>' + money(c.income) + '</td><td>' + money(c.expenses) + '</td>' +
+              '<td style="color:' + ((c.net_profit || 0) >= 0 ? '#2ea44f' : '#d64545') + '; font-weight:700;">' + money(c.net_profit) + '</td>' +
+              '<td>' + (c.profit_per_acre != null ? money(c.profit_per_acre) : '--') + '</td></tr>';
+          });
+          h += '</tbody></table></div>';
+        }
+        return h;
+      },
+      renderTasks: function (d) {
+        d = d || {};
+        if (!d.total) return emptyHtml('No farm activities recorded yet', 'Record tasks to track farm operations.');
+        var comp = d.completion_pct || 0;
+        var h = '<div class="kv-grid" style="margin-bottom:16px;">' +
+          '<div class="kv-box"><div class="k">Total Tasks</div><div class="v">' + d.total + '</div></div>' +
+          '<div class="kv-box"><div class="k">Completed</div><div class="v pos">' + (d.tasks_completed != null ? d.tasks_completed : d.by_status && d.by_status.completed || 0) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Overdue</div><div class="v neg">' + (d.overdue_count || 0) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Completion</div><div class="v">' + pct(comp) + '</div></div>' +
+          '</div>';
+        h += '<div class="progress-bar"><div class="progress-fill" style="width:' + Math.min(comp, 100) + '%;"></div></div>';
+        if (d.recent && d.recent.length) {
+          h += '<div class="an-section-head" style="margin-top:16px;"><h3 style="font-size:14px;">Recent activities</h3></div>';
+          h += '<div class="responsive-table"><table class="an-table"><thead><tr><th>Task</th><th>Category</th><th>Crop</th><th>Due</th><th>Status</th><th>Priority</th></tr></thead><tbody>';
+          d.recent.slice(0, 15).forEach(function (t) {
+            h += '<tr><td>' + esc(t.title) + '</td><td>' + esc(t.category || '--') + '</td><td>' + esc(t.crop_name || '--') + '</td>' +
+              '<td>' + fmtDate(t.due_date) + '</td><td>' + statusPill(t.status) + '</td>' +
+              '<td><span class="pill ' + ((t.priority || '').toLowerCase() === 'high' ? 'red' : (t.priority || '').toLowerCase() === 'medium' ? 'orange' : 'blue') + '">' + esc(t.priority || '--') + '</span></td></tr>';
+          });
+          h += '</tbody></table></div>';
+        }
+        return h;
+      },
+      renderCalendar: function (d) {
+        d = d || {};
+        var events = d.events || [];
+        if (!d.total) return emptyHtml('No calendar events yet', d.note || '');
+        var h = '<div class="kv-grid" style="margin-bottom:16px;"><div class="kv-box"><div class="k">Events</div><div class="v">' + d.total + '</div></div></div>';
+        h += '<div class="responsive-table"><table class="an-table"><thead><tr><th>Event</th><th>Status</th><th>When</th></tr></thead><tbody>';
+        events.forEach(function (ev) {
+          h += '<tr><td>' + esc(ev.title || ev.activity || 'Event') + '</td><td>' + statusPill(ev.status) + '</td>' +
+            '<td>' + fmtDate(ev.start || ev.date || ev.due_date) + (ev.event_type ? ' <span class="pill gray">' + esc(ev.event_type) + '</span>' : '') + '</td></tr>';
+        });
+        h += '</tbody></table></div>';
+        if (d.note) h += '<div class="an-note">' + esc(d.note) + '</div>';
+        return h;
+      },
+      renderWeather: function (d) {
+        d = d || {};
+        var c = d.current;
+        if (!c) return emptyHtml('Weather unavailable for your farm', 'Attach a location to your farm to get live weather.');
+        var desc = c.description || '--';
+        var temp = c.temperature != null ? num(c.temperature, 1) + 'Â°C' : '--';
+        var h = '<div class="an-performance-hero" style="gap:20px;">' +
+          '<div style="flex:0 0 auto; text-align:center; min-width:150px;">' +
+          '<i class="fas fa-cloud-sun" style="font-size:42px; color:var(--premium-green);"></i>' +
+          '<div style="font-size:28px; font-weight:800; margin-top:6px;">' + temp + '</div>' +
+          '<div style="font-size:12px; color:var(--text-muted);">' + esc(desc) + '</div>' +
+          '</div>' +
+          '<div class="kv-grid" style="flex:1 1 300px; grid-template-columns:repeat(auto-fit,minmax(130px,1fr));">' +
+          '<div class="kv-box"><div class="k">Humidity</div><div class="v">' + (c.humidity != null ? pct(c.humidity, 0) : '--') + '</div></div>' +
+          '<div class="kv-box"><div class="k">Rain</div><div class="v">' + (c.rain != null ? num(c.rain, 1) + ' mm' : '--') + '</div></div>' +
+          '<div class="kv-box"><div class="k">Wind</div><div class="v">' + (c.wind_speed != null ? num(c.wind_speed, 1) + ' km/h' : '--') + '</div></div>' +
+          '<div class="kv-box"><div class="k">Location</div><div class="v" style="font-size:13px;">' + esc(d.location || '--') + '</div></div>' +
+          '</div></div>';
+        if (c.forecast && c.forecast.length) {
+          h += '<div class="an-section-head" style="margin-top:16px;"><h3 style="font-size:14px;">Forecast</h3></div>';
+          h += '<div class="an-bars" style="min-height:60px; align-items:stretch;">';
+          c.forecast.forEach(function (f) {
+            h += '<div class="an-bar-group"><div style="font-size:14px; font-weight:700; color:var(--text-primary);">' + Math.round(f.max_temp || 0) + 'Â°</div>' +
+              '<div style="font-size:10px; color:var(--text-muted);">' + f.min_temp + 'Â°</div>' +
+              '<div style="font-size:10px; color:var(--text-muted);">' + esc(f.description || '') + '</div>' +
+              '<div class="an-bar label" style="font-weight:700; color:var(--text-secondary);">' + fmtDate(f.date) + '</div></div>';
+          });
+          h += '</div>';
+        }
+        if (d.note) h += '<div class="an-note">' + esc(d.note) + '</div>';
+        return h;
+      },
+      renderMarket: function (d) {
+        d = d || {};
+        var crops = d.crops || [];
+        if (!crops.length) return emptyHtml('No market data for your crops', 'Prices need registered crops on your farm.');
+        var h = '<div class="responsive-table"><table class="an-table"><thead><tr>' +
+          '<th>Crop</th><th>Market Price</th><th>Market</th><th>Price Date</th><th class="an-approx">Estimated Potential Revenue<br><span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:9px;">at today\u2019s market price</span></th></tr></thead><tbody>';
+        crops.forEach(function (c) {
+          var priceHtml = c.available ? (money(c.modal_price) + (c.unit ? ' / ' + esc(c.unit) : '')) : '<span class="pill gray">No price</span>';
+          var est = c.available ? (c.estimated_potential_revenue != null ? money(c.estimated_potential_revenue) : '<span class="pill blue">No yields recorded</span>') : '--';
+          h += '<tr><td><b>' + esc(c.crop_name) + '</b></td><td>' + priceHtml + '</td><td>' + esc(c.market || '--') + '</td>' +
+            '<td>' + (c.price_date ? fmtDate(c.price_date) : '--') + '</td>' +
+            '<td>' + est + '</td></tr>';
+        });
+        h += '</tbody></table></div>';
+        if (d.note) h += '<div class="an-note">' + esc(d.note) + '</div>';
+        var cropShares = crops.filter(function (c) { return c.available; });
+        if (cropShares.length) {
+          h += '<div class="an-note"><i class="fas fa-circle-info"></i> Show the market tab and line items on the report marked as "estimated at today\u2019s price" \u2014 prices move daily.</div>';
+        }
+        return h;
+      },
+      renderSustain: function (d) {
+        d = d || {};
+        var items = d.items || [];
+        if (!items.length) {
+          return emptyHtml('Sustainability data not available yet', (d.notes && d.notes[0]) || 'Add soil tests, irrigation practices or farm journal activities to enable this analysis.');
+        }
+        var h = '<div class="responsive-table"><table class="an-table"><thead><tr><th>Practice</th><th>Detail</th></tr></thead><tbody>';
+        items.forEach(function (it) {
+          h += '<tr><td><b>' + esc(it.label || it.kind || 'Record') + '</b></td><td>' + esc(it.detail || '') + '</td></tr>';
+        });
+        h += '</tbody></table></div>';
+        return h;
+      },
+      renderRisks: function (d) {
+        d = d || {};
+        var reasons = d.reasons || [];
+        var lvl = String(d.level || '').toLowerCase();
+        if (!reasons.length) return emptyHtml('No active risks detected', d.note || '');
+        var cls = lvl === 'critical' ? 'critical' : (lvl === 'high' ? 'high' : (lvl === 'moderate' ? 'moderate' : 'low'));
+        var icons = { critical: 'fa-skull-crossbones', high: 'fa-triangle-exclamation', moderate: 'fa-circle-exclamation', low: 'fa-circle-check' };
+        var h = '<div class="risk-banner ' + cls + '">' +
+          '<div class="risk-icon"><i class="fas ' + icons[cls] + '"></i></div>' +
+          '<div><div style="font-size:16px; font-weight:800; color:var(--text-primary);">' + esc(String(d.level || 'Unknown').toUpperCase()) + ' RISK</div>' +
+          '<div style="font-size:12px; color:var(--text-muted);">' + (d.counts ? ('Low ' + (d.counts.low || 0) + ' / Moderate ' + (d.counts.moderate || 0) + ' / High ' + (d.counts.high || 0) + ' / Critical ' + (d.counts.critical || 0)) : '') + '</div></div></div>';
+        h += '<div style="margin-top:16px;">';
+        reasons.forEach(function (r) {
+          h += '<div class="risk-reason"><span class="pill ' + riskPillClass(r.severity) + '">' + esc(r.severity) + '</span>' +
+            '<span style="color:var(--text-secondary);">' + esc(r.text) + '</span></div>';
+        });
+        h += '</div>';
+        if (d.note) h += '<div class="an-note">' + esc(d.note) + '</div>';
+        return h;
+      },
+      renderInsurance: function (d) {
+        d = d || {};
+        if (!d.available) return emptyHtml('No insurance policies yet', (d.message || 'Protect your farm with an insurance plan.') + ' <a href="insurance.html">Explore insurance</a>');
+        var h = '<div class="kv-grid" style="margin-bottom:16px;">' +
+          '<div class="kv-box"><div class="k">Policies</div><div class="v">' + (d.count || 0) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Active</div><div class="v pos">' + (d.active || 0) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Total Coverage</div><div class="v">' + money(d.total_coverage) + '</div></div>' +
+          '<div class="kv-box"><div class="k">Premium Paid</div><div class="v">' + money(d.total_premium_paid) + '</div></div>' +
+          '</div>';
+        h += '<div class="responsive-table"><table class="an-table"><thead><tr><th>Policy</th><th>Type</th><th>Provider</th><th>Coverage</th><th>Premium</th><th>Status</th><th>Period</th></tr></thead><tbody>';
+        (d.policies || []).forEach(function (p) {
+          h += '<tr><td>' + esc(p.policy_id) + '</td><td>' + esc(p.policy_type || '--') + '</td><td>' + esc(p.provider || '--') + '</td>' +
+            '<td>' + (p.coverage != null ? money(p.coverage) : '--') + '</td><td>' + (p.premium != null ? money(p.premium) : '--') + '</td>' +
+            '<td>' + statusPill(p.status) + '</td><td>' + fmtDate(p.start_date) + ' &rarr; ' + fmtDate(p.end_date) + '</td></tr>';
+        });
+        h += '</tbody></table></div>';
+        return h;
+      },
+      renderCompleteness: function (d) {
+        d = d || {};
+        var sections = d.sections || [];
+        var pctVal = d.percent || 0;
+        var comp = '';
+        sections.forEach(function (s) {
+          comp += '<div class="comp-item"><div class="comp-name">' + esc(s.label) + '</div>' +
+            '<div class="bar"><i style="width:' + (s.present ? 100 : 0) + '%"></i></div>' +
+            '<div class="comp-state ' + (s.present ? 'ok' : 'no') + '">' + (s.present ? 'YES' : 'NO') + '</div></div>';
+        });
+        var h = '<div class="comp-wrap">' +
+          '<div class="comp-gauge"><div class="gauge-num">' + pctVal.toFixed(0) + '%</div>' +
+          '<div style="font-size:11px; color:var(--text-muted);">' + d.present + ' of ' + d.total + ' data areas covered</div></div>' +
+          '<div class="comp-list">' + comp + '</div></div>';
+        return h;
+      },
+      renderInsights: function (d) {
+        d = d || {};
+        var insights = d.insights || [];
+        if (!insights.length) return emptyHtml('No insights yet');
+        var h = '';
+        insights.forEach(function (i) {
+          h += '<div class="insight-item"><i class="' + esc(i.icon || 'fas fa-lightbulb') + ' ins-ic"></i>' +
+            '<div><div class="ins-title">' + esc(i.title) + '</div><div class="ins-detail">' + esc(i.detail) + '</div></div></div>';
+        });
+        if (d.note) h += '<div class="an-note">' + esc(d.note) + '</div>';
+        return h;
+      },
+      renderRecs: function (all) {
+        var recs = [];
+        var tasks = all.tasks;
+        var risks = all.risks;
+        var comp = all.completeness;
+        var insights = all.insights;
+        if (tasks && tasks.overdue_count) recs.push({ icon: 'fas fa-clock', text: 'Complete ' + (tasks.overdue_count || 0) + ' overdue farm activity/activities to protect this season.' });
+        if (tasks && tasks.total && tasks.completion_pct != null && tasks.completion_pct < 100) recs.push({ icon: 'fas fa-list-check', text: 'Bring your task completion to 100%: ' + pct(tasks.completion_pct) + ' complete right now.' });
+        if (risks && risks.level && String(risks.level).toLowerCase() === 'high') recs.push({ icon: 'fas fa-triangle-exclamation', text: 'High risk detected. Review the active sensor alerts and hedge with insurance.' });
+        if (risks && risks.level && String(risks.level).toLowerCase() === 'critical') recs.push({ icon: 'fas fa-skull-crossbones', text: 'Critical risk detected. Act on your alerts today and consider loss protection.' });
+        if (comp && comp.present < comp.total) recs.push({ icon: 'fas fa-clipboard-check', text: 'Improve data completeness (' + comp.percent.toFixed(0) + '%). Missing: ' + (comp.sections || []).filter(function (s) { return !s.present; }).map(function (s) { return s.label; }).join(', ') + '.' });
+        if (Array.isArray(insights)) insights.forEach(function (i) { if (i.type === 'finance') recs.push({ icon: 'fas fa-wallet', text: i.detail }); });
+        if (!recs.length) recs.push({ icon: 'fas fa-circle-check', text: 'You are on track. Keep records current to maintain accurate analytics.' });
+        var hasNothing = !all.overview || (all.overview.farms === 0 && all.overview.cycles === 0);
+        if (hasNothing) recs = [{ icon: 'fas fa-plus', text: 'Start with your farm setup: add your farm, plots and first crop cycle.' }];
+        var h = '';
+        recs.forEach(function (r) {
+          h += '<div class="insight-item"><i class="' + r.icon + ' ins-ic"></i>' +
+            '<div><div class="ins-detail">' + esc(r.text) + '</div></div></div>';
+        });
+        h += '<div style="margin-top:6px; text-align:right;"><button class="an-formula-toggle" onclick="AnPage.aiNow()"><i class="fas fa-wand-magic-sparkles"></i> Ask Farm Assist AI for a full custom analysis</button></div>';
+        return h;
+      },
+      renderAi: function (d) {
+        d = d || {};
+        var h = '<div class="an-empty"><i class="fas fa-wand-magic-sparkles"></i><h4>Get a personalised analysis</h4>' +
+          '<p>Ask Farm Assist AI to read your records and explain what they mean for your farm.</p>' +
+          '<button class="btn-primary" style="margin-top:8px;" onclick="AnPage.aiNow()"><i class="fas fa-wand-magic-sparkles"></i> Analyze My Farm</button></div>';
+        return h;
+      },
+
+      /* ---- AI ---- */
+      aiNow: function () {
+        this.openModal('an-ai-modal');
+        var body = document.getElementById('an-ai-body');
+        if (!body) return;
+        body.innerHTML = loaderHtml();
+        var self = this;
+        SV.ai(state()).then(function (r) {
+          var d = r && r.data ? r.data : r;
+          var h = '';
+          h += '<div class="ai-box">';
+          h += '<div class="ai-sec"><h4>What we know (real records only)</h4><ul class="ai-known">' +
+            (d.known || []).map(function (k) { return '<li>' + esc(k) + '</li>'; }).join('') + '</ul></div>';
+          h += '<div class="ai-sec"><h4>Analysis</h4><div class="ai-analysis">' + esc(d.analysis || 'No analysis returned.') + '</div></div>';
+          if (d.suggestions && d.suggestions.length) {
+            h += '<div class="ai-sec"><h4>Suggestions</h4><ul class="ai-known">' +
+              d.suggestions.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></div>';
+          }
+          if (d.unknown && d.unknown.length) {
+            h += '<div class="ai-sec"><h4>What would improve this analysis</h4><ul class="ai-known ai-unknown">' +
+              d.unknown.map(function (u) { return '<li>' + esc(u) + '</li>'; }).join('') + '</ul></div>';
+          }
+          h += '<div class="an-note">Model: ' + esc(d.model || 'local') + ' &middot; generated ' + (d.generated_at ? new Date(d.generated_at).toLocaleString('en-IN') : 'just now') + '</div>';
+          h += '</div>';
+          body.innerHTML = h;
+        }).catch(function (e) {
+          body.innerHTML = errorHtml('The AI analysis could not be produced right now. Please retry.', 'aiNow');
+        });
+      },
+
+      /* ---- Reports ---- */
+      loadReports: function () {
+        var el = document.getElementById('an-reports');
+        if (!el) return;
+        var self = this;
+        SV.reportsList().then(function (r) {
+          var reports = (r && r.data && r.data.reports) || [];
+          if (!reports.length) {
+            el.innerHTML = '<div class="an-empty"><i class="fas fa-folder-open"></i><h4>No reports yet</h4>' +
+              '<p>Generate a report to save and share your farm intelligence.</p>' +
+              '<button class="btn-primary" style="margin-top:8px;" onclick="AnPage.openReportModal()"><i class="fas fa-file-circle-plus"></i> Generate my first report</button></div>';
+            return;
+          }
+          var h = '<div class="an-report-list">';
+          reports.forEach(function (rpt) {
+            h += '<div class="report-item">' +
+              '<div style="flex:1 1 260px;"><div class="rep-title"><i class="fas fa-file-lines" style="color:var(--premium-green); margin-right:6px;"></i>' + esc(rpt.title || (rpt.report_type + ' Report')) + '</div>' +
+              '<div class="rep-meta">' + esc(rpt.report_type) + ' &middot; ' + esc(rpt.farm_name || 'All farms') + ' &middot; ' + fmtDate(rpt.date_from) + ' &rarr; ' + fmtDate(rpt.date_to) + '</div>' +
+              '<div class="rep-meta">' + esc(rpt.report_id) + ' &middot; generated ' + fmtDate(rpt.created_at) + '</div></div>' +
+              '<div style="display:flex; gap:8px;">' +
+              '<button class="btn-secondary btn-sm" onclick="AnPage.viewReport(\'' + esc(rpt.report_id) + '\')"><i class="fas fa-eye"></i> View</button>' +
+              '<button class="btn-secondary btn-sm" onclick="AnPage.downloadCsv(\'' + esc(rpt.report_id) + '\')"><i class="fas fa-file-csv"></i></button>' +
+              '<button class="btn-danger btn-sm" onclick="AnPage.deleteReport(\'' + esc(rpt.report_id) + '\')"><i class="fas fa-trash"></i></button>' +
+              '</div></div>';
+          });
+          h += '</div>';
+          el.innerHTML = h;
+        }).catch(function () {
+          el.innerHTML = '<div class="an-empty"><i class="fas fa-folder-open"></i><h4>Could not load reports</h4>' +
+            '<p><button class="btn-secondary btn-sm" onclick="AnPage.loadReports()">Retry</button></p></div>';
+        });
+      },
+      openReportModal: function () {
+        var self = this;
+        var farmSel = document.getElementById('an-rpt-farm');
+        var d = this.ctx || { farms: [] };
+        var h = '<option value="">All farms</option>';
+        (d.farms || []).forEach(function (f) {
+          h += '<option value="' + f.id + '">' + esc(f.farm_name) + '</option>';
+        });
+        farmSel.innerHTML = h;
+        var includes = document.getElementById('an-rpt-includes');
+        var checks = [
+          ['inc-overview', 'Overview'], ['inc-crops', 'Crop analysis'], ['inc-yield', 'Yield'], ['inc-production', 'Production'],
+          ['inc-financial', 'Finances'], ['inc-tasks', 'Farm activity'], ['inc-calendar', 'Calendar'], ['inc-weather', 'Weather'],
+          ['inc-market', 'Market'], ['inc-sustainability', 'Sustainability'], ['inc-risks', 'Risk'], ['inc-insurance', 'Insurance'],
+          ['inc-insights', 'Insights']];
+        includes.innerHTML = checks.map(function (c) {
+          return '<label><input type="checkbox" id="' + c[0] + '"' + (c[0] === 'inc-market' ? '' : ' checked') + '> ' + c[1] + '</label>';
+        }).join('');
+        if (window.AnPage.scope.farm_id && farmSel.querySelector('option[value="' + window.AnPage.scope.farm_id + '"]')) farmSel.value = window.AnPage.scope.farm_id;
+        this.openModal('an-report-modal');
+      },
+      closeModal: function (id) {
+        var m = document.getElementById(id);
+        if (m) m.classList.remove('active');
+      },
+      openModal: function (id) {
+        var m = document.getElementById(id);
+        if (m) m.classList.add('active');
+      },
+      generateReport: function () {
+        var self = this;
+        var type = document.getElementById('an-rpt-type').value;
+        var title = document.getElementById('an-rpt-title').value.trim();
+        var farmId = document.getElementById('an-rpt-farm').value;
+        var period = document.getElementById('an-rpt-period').value;
+        var range = period === 'all' ? {} : (period === 'season' || period === 'year' ? this.computeRange(period) : (period === '7d' || period === '30d' ? this.computeRange(period) : {}));
+        var params = { farm_id: farmId || undefined };
+        if (range.from) params.date_from = range.from;
+        if (range.to) params.date_to = range.to;
+        var include = {
+          'inc-overview': 'overview', 'inc-crops': 'crops', 'inc-yield': 'yield', 'inc-production': 'production',
+          'inc-financial': 'financial', 'inc-tasks': 'tasks', 'inc-calendar': 'calendar', 'inc-weather': 'weather',
+          'inc-market': 'market', 'inc-sustainability': 'sustainability', 'inc-risks': 'risks', 'inc-insurance': 'insurance', 'inc-insights': 'insights'
+        };
+        var selected = {};
+        Object.keys(include).forEach(function (idk) {
+          var cb = document.getElementById(idk);
+          if (cb && cb.checked) selected[include[idk]] = true;
+        });
+        var keys = Object.keys(selected);
+        if (!keys.length) { toast('Select at least one section to include.', 'info'); return; }
+        var btn = document.getElementById('an-rpt-generate');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...'; }
+        fetchSections(keys, params).then(function (r) {
+          var snapshot = {};
+          keys.forEach(function (k) { snapshot[k] = r[k]; });
+          var summary = self.buildSummary(type, range, selected, snapshot);
+          var payload = {
+            report_type: type,
+            title: title || (type + ' Report'),
+            farm_id: farmId || undefined,
+            date_from: range.from || undefined,
+            date_to: range.to || undefined,
+            summary: summary,
+            data: snapshot
+          };
+          return SV.reportCreate(payload).then(function (cr) {
+            var d = cr && cr.data ? cr.data : cr;
+            self.closeModal('an-report-modal');
+            self.openPreview(d);
+            self.loadReports();
+          });
+        }).catch(function (e) {
+          toast('Report generation failed. Please try again.', 'error');
+        }).then(function () {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate'; }
+        });
+      },
+      buildSummary: function (type, range, selected, snap) {
+        var pts = [];
+        var o = snap.overview;
+        if (o) pts.push(o.cycles + ' crop cycle(s), ' + o.tasks_total + ' activities, income ' + money(o.income) + ', expenses ' + money(o.expenses));
+        var f = snap.financial;
+        if (f) pts.push('net profit ' + money(f.net_profit) + (f.profit_per_acre != null ? ' (' + money(f.profit_per_acre) + '/acre)' : ''));
+        var rk = snap.risks;
+        if (rk && rk.level) pts.push('risk level: ' + rk.level.toLowerCase());
+        var p = snap.performance;
+        if (p && p.score != null) pts.push('performance score ' + p.score + '/100');
+        if (range.from) pts.push('period ' + range.from + ' to ' + (range.to || 'today'));
+        return 'Farm ' + (type || 'performance') + ' report: ' + (pts.join('; ') || 'overview of your farm records.');
+      },
+      openPreview: function (rpt) {
+        this._currentReport = rpt;
+        var titleEl = document.getElementById('an-pv-title');
+        if (titleEl) titleEl.textContent = rpt.title || 'Report';
+        var body = document.getElementById('an-preview-body');
+        if (body) body.innerHTML = this.renderPaper(rpt);
+        this.openModal('an-preview-modal');
+      },
+      renderPaper: function (rpt) {
+        var d = rpt.data || {};
+        function kv(k, v) { return '<div class="kv-line"><b>' + esc(k) + ':</b> ' + esc(v) + '</div>'; }
+        function sec(title, body) { return '<h3>' + esc(title) + '</h3>' + body; }
+        function list(arr) { return (arr || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join(''); }
+        function catTbl(rows, moneyFmt) {
+          if (!rows || !rows.length) return '<p>No records.</p>';
+          return '<table><thead><tr><th>Category</th><th>Amount</th></tr></thead><tbody>' +
+            rows.map(function (r) { return '<tr><td>' + esc(r.category) + '</td><td>' + money(r.amount) + '</td></tr>'; }).join('') + '</tbody></table>';
+        }
+        var h = '<div class="rep-paper">';
+        h += '<div class="rep-head"><h1>' + esc(rpt.title || 'Farm report') + '</h1>' +
+          '<h2>' + esc(rpt.report_type) + ' &middot; Report ID ' + esc(rpt.report_id) + ' &middot; Farm: ' + esc(rpt.farm_name || 'All farms') +
+          (rpt.plot_name ? ' / ' + esc(rpt.plot_name) : '') + ' &middot; Period: ' + (rpt.date_from || 'all') + ' &rarr; ' + (rpt.date_to || 'today') + '</h2>' +
+          '<h2>Generated: ' + fmtDate(rpt.created_at) + '</h2></div>';
+        if (rpt.summary) h += '<p><b>Summary:</b> ' + esc(rpt.summary) + '</p>';
+        var o = d.overview;
+        if (o) h += sec('Overview', '<div class="kv-line">' +
+          ['Cycles', o.cycles, 'Active', o.active_cycles, 'Harvested', o.harvested_cycles, 'Tasks', o.tasks_total, 'Sensors', o.sensors, 'Crops', (o.crop_names || []).join(', ')].map(function (x) { return esc(x == null ? '' : x) + ' '; }).join(' &middot; ') + '</div>' +
+          kv('Income', money(o.income)) + kv('Expenses', money(o.expenses)) + kv('Farm net', money(o.net_profit)));
+        var cc = d.crops;
+        if (cc && cc.crops && cc.crops.length) h += sec('Crops', '<table><thead><tr><th>Crop</th><th>Farm</th><th>Sown</th><th>Harvest</th><th>Yield</th><th>Revenue</th></tr></thead><tbody>' +
+          cc.crops.map(function (c) { return '<tr><td>' + esc(c.crop_name) + '</td><td>' + esc(c.farm_name) + '</td><td>' + esc(c.sowing_date) + '</td><td>' + esc(c.expected_harvest_date) + '</td><td>' + (c.yield_quantity != null ? c.yield_quantity + ' ' + esc(c.yield_unit || 'kg') : '--') + '</td><td>' + (c.revenue != null ? money(c.revenue) : '--') + '</td></tr>'; }).join('') + '</tbody></table>');
+        var fin = d.financial;
+        if (fin) h += sec('Finances', kv('Income', money(fin.income)) + kv('Expenses', money(fin.expenses)) + kv('Net profit', money(fin.net_profit)) + kv('Profit / acre', fin.profit_per_acre != null ? money(fin.profit_per_acre) : '--') + '<h3 style="margin-top:10px;">Income by category</h3>' + catTbl(fin.income_by_category) + '<h3 style="margin-top:10px;">Expense by category</h3>' + catTbl(fin.expense_by_category));
+        var tk = d.tasks;
+        if (tk) h += sec('Farm activity', kv('Tasks', tk.total) + kv('Completed', tk.tasks_completed != null ? tk.tasks_completed : (tk.by_status && tk.by_status.completed) || 0) + kv('Completion', pct(tk.completion_pct)) + kv('Overdue', tk.overdue_count || 0) + (tk.recent && tk.recent.length ? list(tk.recent.slice(0, 10).map(function (t) { return t.title + (t.due_date ? ' (due ' + t.due_date + ')' : ''); })) : ''));
+        var w = d.weather;
+        if (w && w.current) h += sec('Weather', kv('Location', w.location) + kv('Temperature', w.current.temperature + 'Â°C') + kv('Conditions', w.current.description) + kv('Humidity', pct(w.current.humidity, 0)) + kv('Rain', w.current.rain + ' mm') + kv('Wind', w.current.wind_speed + ' km/h'));
+        var mk = d.market;
+        if (mk && mk.crops) h += sec('Market prices', '<table><thead><tr><th>Crop</th><th>Price</th><th>Market</th><th>Estimated potential revenue</th></tr></thead><tbody>' +
+          mk.crops.map(function (c) { return '<tr><td>' + esc(c.crop_name) + '</td><td>' + (c.available ? money(c.modal_price) + ' / ' + esc(c.unit || '') : 'n/a') + '</td><td>' + esc(c.market || '--') + '</td><td>' + (c.estimated_potential_revenue != null ? money(c.estimated_potential_revenue) : '--') + '</td></tr>'; }).join('') + '</tbody></table>' +
+          '<p class="rep-note" style="font-size:10px; color:#888;">"Estimated potential revenue" is based on today\u2019s market price and your recorded yields. It is an estimate.</p>');
+        var rk = d.risks;
+        if (rk) h += sec('Risk assessment', kv('Level', rk.level) + (rk.reasons || []).map(function (r) { return '<div class="kv-line">- ' + esc(r.severity) + ': ' + esc(r.text) + '</div>'; }).join(''));
+        var inr = d.insurance;
+        if (inr && inr.available) h += sec('Insurance', kv('Policies', inr.count) + kv('Total coverage', money(inr.total_coverage)) + kv('Premium paid', money(inr.total_premium_paid)));
+        var ins = d.insights;
+        if (ins && ins.insights && ins.insights.length) h += sec('Insights', list(ins.insights.map(function (i) { return i.title + ' - ' + i.detail; })));
+        h += '</div>';
+        return h;
+      },
+      previewPdf: function () {
+        var rpt = this._currentReport;
+        if (!rpt) return;
+        var root = document.getElementById('report-print-root');
+        if (root) root.innerHTML = '<div class="rep-paper">' + (rpt._paperHtml || this.renderPaper(rpt)) + '<div style="margin-top:22px; font-size:10px; color:#888;">Generated by Farm Assist on ' + new Date().toLocaleString('en-IN') + '</div></div>';
+        document.body.classList.add('printing-report');
+        var self = this;
+        setTimeout(function () {
+          window.print();
+          document.body.classList.remove('printing-report');
+        }, 60);
+      },
+      previewCsv: function () {
+        var rpt = this._currentReport;
+        if (!rpt) return;
+        this.downloadCsvFor(rpt);
+      },
+      previewShare: function () {
+        var rpt = this._currentReport;
+        if (!rpt) return;
+        var text = 'Farm Assist report: ' + rpt.title + '\n' + rpt.summary + '\nReport ID: ' + rpt.report_id;
+        if (navigator.share) {
+          navigator.share({ title: rpt.title, text: text }).catch(function () {});
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { toast('Report summary copied to clipboard', 'success'); });
+        } else {
+          toast('Sharing not supported on this device', 'info');
+        }
+      },
+      viewReport: function (id) {
+        var self = this;
+        SV.reportGet(id).then(function (r) {
+          var d = r && r.data ? r.data : r;
+          self.openPreview(d);
+        }).catch(function () { toast('Could not load the report.', 'error'); });
+      },
+      downloadCsv: function (id) {
+        var self = this;
+        SV.reportGet(id).then(function (r) {
+          self.downloadCsvFor(r && r.data ? r.data : r);
+        }).catch(function () { toast('Could not load the report.', 'error'); });
+      },
+      downloadCsvFor: function (rpt) {
+        var rows = [['Farm Assist Report']];
+        rows.push([rpt.title]);
+        rows.push(['Report ID', rpt.report_id, 'Type', rpt.report_type, 'Farm', rpt.farm_name || 'All farms', 'Period', (rpt.date_from || 'all') + ' to ' + (rpt.date_to || 'today')]);
+        rows.push([]);
+        var d = rpt.data || {};
+        if (d.overview) rows.push(['OVERVIEW', 'Cycles', d.overview.cycles, 'Active', d.overview.active_cycles, 'Tasks', d.overview.tasks_total, 'Sensors', d.overview.sensors]);
+        if (d.crops && d.crops.crops) {
+          rows.push([]); rows.push(['CROPS', 'Farm', 'Sown', 'Harvest', 'Yield(' + 'unit)', 'Revenue']);
+          d.crops.crops.forEach(function (c) { rows.push([c.crop_name, c.farm_name, c.sowing_date, c.actual_harvest_date || c.expected_harvest_date, c.yield_quantity ? c.yield_quantity + ' ' + (c.yield_unit || 'kg') : '', c.revenue != null ? c.revenue : '']); });
+        }
+        if (d.financial) {
+          rows.push([]); rows.push(['FINANCES', 'Income', d.financial.income, 'Expenses', d.financial.expenses, 'Net', d.financial.net_profit]);
+          if (d.financial.income_by_category) { rows.push(['INCOME BY CATEGORY', 'Category', 'Amount']); d.financial.income_by_category.forEach(function (c) { rows.push(['', c.category, c.amount]); }); }
+          if (d.financial.expense_by_category) { rows.push(['EXPENSE BY CATEGORY', 'Category', 'Amount']); d.financial.expense_by_category.forEach(function (c) { rows.push(['', c.category, c.amount]); }); }
+        }
+        if (d.tasks) { rows.push([]); rows.push(['FARM ACTIVITY', 'Total', d.tasks.total, 'Completed', d.tasks.completed == null ? (d.tasks.by_status && d.tasks.by_status.completed) || 0 : d.tasks.completed, 'Overdue', d.tasks.overdue_count || 0]); }
+        var csv = rows.map(function (r) {
+          return r.map(function (v) {
+            var s = String(v == null ? '' : v).replace(/"/g, '""');
+            return (s.indexOf(',') > -1 || s.indexOf('"') > -1 || s.indexOf('\n') > -1) ? '"' + s + '"' : s;
+          }).join(',');
+        }).join('\r\n');
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (rpt.report_id || 'report') + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+      },
+      deleteReport: function (id) {
+        var self = this;
+        if (!window.confirm('Delete this report? This cannot be undone.')) return;
+        SV.reportDelete(id).then(function () {
+          toast('Report deleted', 'success');
+          self.loadReports();
+        }).catch(function () { toast('Could not delete the report.', 'error'); });
+      }
+    };
+
+    function emptyHtml(title, sub) {
+      return '<div class="an-empty"><i class="fas fa-circle-info"></i><h4>' + esc(title) + '</h4>' +
+        '<p>' + (sub || 'This section is empty because no matching farm data has been recorded yet.') + '</p></div>';
+    }
+
+    /* fetchSections override that accepts explicit params */
+    var origFetch = fetchSections;
+    fetchSections = function (keys, params) {
+      var out = {};
+      var jobs = keys.map(function (k) {
+        if (!SV[k]) {
+          out[k] = null;
+          try { window.__anMissing = window.__anMissing || []; window.__anMissing.push(String(k)); } catch (e3) {}
+          return Promise.resolve();
+        }
+        var p = params || state();
+        try { window.__anPerf = window.__anPerf || {}; window.__anPerf[String(k)] = ['start', Date.now()]; } catch (e0) {}
+        return SV[k](p).then(function (r) {
+          try { window.__anPerf[String(k)] = ['ok', Date.now()]; } catch (e0) {}
+          out[k] = r;
+        }).catch(function (e) {
+          try { window.__anPerf[String(k)] = ['err', Date.now()]; } catch (e0) {}
+          out[k] = null;
+        });
+      });
+      return Promise.all(jobs).then(function () { return out; });
+    };
+
+    window.AnPage.init();
+  })();
   </script>
 </body>
 </html>

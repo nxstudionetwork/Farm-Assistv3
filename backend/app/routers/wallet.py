@@ -82,6 +82,13 @@ class ChangePinRequest(BaseModel):
     confirm_pin: str
 
 
+class WithdrawRequest(BaseModel):
+    bank_account_id: str
+    amount: float
+    wallet_pin: str
+    idempotency_key: Optional[str] = None
+
+
 def _get_wallet(db: Session, user_id: str) -> Optional[Wallet]:
     return db.query(Wallet).filter(Wallet.user_id == user_id).first()
 
@@ -114,6 +121,10 @@ def _wallet_to_dict(wallet: Wallet) -> dict:
         "is_active": bool(wallet.is_active),
         "is_setup_complete": bool(wallet.is_setup_complete),
         "upi_id": wallet.upi_id,
+        "limits": {
+            "single_deposit": round(float(getattr(settings, "WALLET_MAX_SINGLE_DEPOSIT", 50000.0)), 2),
+            "daily_deposit": round(float(getattr(settings, "WALLET_MAX_DAILY_DEPOSITS", 100000.0)), 2),
+        },
         "created_at": str(wallet.created_at) if wallet.created_at else None,
     }
 
@@ -1053,20 +1064,18 @@ def list_money_requests(
         "status": "success",
         "data": {
             "total": total,
-            "items": [_money_request_to_dict(r) for r in items],
+            "items": [_money_request_to_dict(r, db) for r in items],
         },
     }
 
 
-def _money_request_to_dict(req: MoneyRequest) -> dict:
-    return {
+def _money_request_to_dict(req: MoneyRequest, db: Optional[Session] = None) -> dict:
+    data = {
         "request_id": req.request_id,
         "sender_user_id": req.sender_user_id,
         "receiver_user_id": req.receiver_user_id,
         "sender_farmer_id": req.sender_farmer_id,
         "receiver_farmer_id": req.receiver_farmer_id,
-        "sender_name": req.sender.full_name if req.sender else None,
-        "receiver_name": req.receiver.full_name if req.receiver else None,
         "amount": round(float(req.amount or 0), 2),
         "note": req.note,
         "status": req.status,
@@ -1074,6 +1083,17 @@ def _money_request_to_dict(req: MoneyRequest) -> dict:
         "created_at": str(req.created_at) if req.created_at else None,
         "updated_at": str(req.updated_at) if req.updated_at else None,
     }
+
+    if db:
+        # Load sender and receiver info
+        sender = db.query(User).filter(User.id == req.sender_user_id).first()
+        receiver = db.query(User).filter(User.id == req.receiver_user_id).first()
+        if sender:
+            data["sender_name"] = sender.full_name
+        if receiver:
+            data["receiver_name"] = receiver.full_name
+
+    return data
 
 
 @router.post("/wallet/money-requests")
@@ -1107,6 +1127,27 @@ def create_money_request(
     db.add(req)
     db.commit()
     db.refresh(req)
+
+    # Notify recipient about the money request
+    try:
+        create_notification(
+            db=db,
+            user_id=recipient.id,
+            title="Money Request Received",
+            message=(
+                f"{current_user.full_name} ({current_user.farmer_id}) has requested ₹{amount:,.2f} from you. "
+                f"Note: {payload.note or 'No note provided'}. Ref: {reference_id}"
+            ),
+            notification_type="wallet",
+            reference_id=req.request_id,
+            reference_type="money_request",
+            icon="fa-hand-holding-dollar",
+            action_url="wallet.html",
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return {
         "status": "success",
         "message": f"Money request of ₹{amount:,.2f} sent to {recipient.full_name}",
@@ -1245,6 +1286,26 @@ def decline_money_request(
         raise HTTPException(status_code=404, detail="Request not found")
     req.status = "declined"
     db.commit()
+
+    # Notify the request creator that their request was declined
+    try:
+        create_notification(
+            db=db,
+            user_id=req.receiver_user_id,
+            title="Money Request Declined",
+            message=(
+                f"Your money request of ₹{req.amount:,.2f} to {current_user.full_name} ({current_user.farmer_id}) has been declined."
+            ),
+            notification_type="wallet",
+            reference_id=req.request_id,
+            reference_type="money_request",
+            icon="fa-hand-holding-dollar",
+            action_url="wallet.html",
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return {"status": "success", "message": "Request declined"}
 
 
@@ -1484,5 +1545,146 @@ def wallet_security_info(
             "last_30_days_activity": recent_count,
             "upi_id": wallet.upi_id if wallet else None,
             "farmer_id": current_user.farmer_id,
+        },
+    }
+
+
+@router.post("/wallet/withdraw")
+def withdraw_money(
+    payload: WithdrawRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    amount = round(float(payload.amount or 0), 2)
+    if amount <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Amount must be greater than zero",
+        )
+
+    wallet = _get_wallet(db, current_user.id)
+    if not wallet:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Wallet not found",
+        )
+    if not wallet.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Wallet is inactive",
+        )
+    if not wallet.is_setup_complete or not wallet.wallet_pin_hash:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Complete wallet setup before withdrawing money",
+        )
+
+    # Verify PIN
+    if not verify_password((payload.wallet_pin or "").strip(), wallet.wallet_pin_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid wallet PIN",
+        )
+
+    # Check bank account
+    bank_account = db.query(BankAccount).filter(
+        BankAccount.account_id == payload.bank_account_id,
+        BankAccount.user_id == current_user.id,
+        BankAccount.is_active == True,
+    ).first()
+    if not bank_account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bank account not found",
+        )
+
+    # Check balance
+    current_balance = round(float(wallet.balance or 0), 2)
+    if current_balance < amount:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Insufficient wallet balance",
+        )
+
+    # Idempotency check
+    idem_key = (payload.idempotency_key or "").strip()
+    if idem_key:
+        existing = (
+            db.query(WalletTransaction)
+            .filter(
+                WalletTransaction.user_id == current_user.id,
+                WalletTransaction.reference_id == idem_key,
+                WalletTransaction.transaction_type == "debit",
+                WalletTransaction.status == "completed",
+            )
+            .first()
+        )
+        if existing:
+            return {
+                "status": "success",
+                "message": f"₹{amount:,.2f} withdrawal request processed successfully",
+                "data": {
+                    "wallet": _wallet_to_dict(wallet),
+                    "transaction": _txn_to_dict(existing, db),
+                    "idempotent": True,
+                },
+            }
+
+    try:
+        new_balance = round(current_balance - amount, 2)
+        reference_id = idem_key or _generate_reference()
+
+        # Create withdrawal transaction
+        txn = WalletTransaction(
+            transaction_id=generate_id("FA-WTX", db, WalletTransaction),
+            wallet_id=wallet.id,
+            user_id=current_user.id,
+            transaction_type="debit",
+            amount=amount,
+            balance_after=new_balance,
+            description=f"Withdrawal to {bank_account.bank_name} account {bank_account.masked_account_number}",
+            reference_id=reference_id,
+            payment_method="bank_withdrawal",
+            status="completed",
+        )
+        db.add(txn)
+        
+        # Update wallet balance
+        wallet.balance = new_balance
+        
+        # Create notification
+        create_notification(
+            db=db,
+            user_id=current_user.id,
+            title="Money Withdrawn",
+            message=(
+                f"₹{amount:,.2f} has been withdrawn from your wallet to {bank_account.bank_name} account. "
+                f"New balance: ₹{new_balance:,.2f}. Ref: {reference_id}"
+            ),
+            notification_type="wallet",
+            reference_id=txn.transaction_id,
+            reference_type="transaction",
+            icon="fa-wallet",
+            action_url="wallet.html",
+        )
+        
+        db.commit()
+        db.refresh(txn)
+        db.refresh(wallet)
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Withdrawal failed, please try again",
+        )
+
+    return {
+        "status": "success",
+        "message": f"₹{amount:,.2f} withdrawn successfully",
+        "data": {
+            "wallet": _wallet_to_dict(wallet),
+            "transaction": _txn_to_dict(txn, db),
+            "bank_account": _bank_account_to_dict(bank_account),
         },
     }

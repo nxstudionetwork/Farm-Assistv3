@@ -203,7 +203,6 @@ _EXTRA_LINES = (
     ("Agricultural Engineering", "MTech Power Systems", "Timmapur"),
     ("Mechanisation Consultant", "BTech Agricultural Engineering", "Basara"),
     ("Farm Management", "MBA Agri Business", "Shankarpally"),
-    ("Farm Operations", "MSc Agricultural Management", "Kutbullapur"),
     ("Farm Management", "MBA Agri Management", "Palvoncha"),
     ("Farm Planning & Budgeting", "MSc Farm Management", "Zaffargadh"),
     ("Agri Business", "MBA Agri Business", "Cherial"),

@@ -66,7 +66,6 @@
 
     <div class="filter-tabs" role="tablist" aria-label="Farm sections">
       <button class="filter-tab active" data-tab="farm" onclick="switchTab('farm')"><i class="fas fa-tractor"></i> My Farm</button>
-      <button class="filter-tab" data-tab="operations" onclick="switchTab('operations')"><i class="fas fa-seedling"></i> Farm Operations</button>
     </div>
 
     <div id="tab-farm" class="tab-content">
@@ -132,56 +131,6 @@
 
     </div>
 
-    <div id="tab-operations" class="tab-content" style="display:none">
-
-      <div class="grid-4" style="margin-bottom:16px">
-        <div class="stat-box"><i class="fas fa-users" style="color:#4caf50"></i><div class="stat-box-num" id="op-workers">6</div><div class="stat-box-label">Workers on Site</div></div>
-        <div class="stat-box"><i class="fas fa-toolbox" style="color:#2196f3"></i><div class="stat-box-num" id="op-machinery">4</div><div class="stat-box-label">Machinery in Use</div></div>
-        <div class="stat-box"><i class="fas fa-list-check" style="color:#ff9800"></i><div class="stat-box-num" id="op-tasks-today">8</div><div class="stat-box-label">Today's Tasks</div></div>
-        <div class="stat-box"><i class="fas fa-water" style="color:#9c27b0"></i><div class="stat-box-num" id="op-irrigation">3</div><div class="stat-box-label">Irrigation Active</div></div>
-      </div>
-
-      <section class="card-premium" style="margin-bottom:16px">
-        <h2 style="font-size:16px;margin-bottom:12px"><i class="fas fa-water" style="color:var(--primary-green);margin-right:6px"></i> Irrigation Schedule</h2>
-        <div id="irrigation-schedule">
-          <div class="loading-shimmer"></div><div class="loading-shimmer" style="width:80%"></div>
-        </div>
-      </section>
-
-      <section class="card-premium" style="margin-bottom:16px">
-        <h2 style="font-size:16px;margin-bottom:12px"><i class="fas fa-list-check" style="color:var(--primary-green);margin-right:6px"></i> Today's Tasks</h2>
-        <div id="todays-tasks">
-          <div class="loading-shimmer"></div><div class="loading-shimmer" style="width:60%"></div>
-        </div>
-      </section>
-
-      <section class="card-premium" style="margin-bottom:16px">
-        <h2 style="font-size:16px;margin-bottom:12px"><i class="fas fa-users" style="color:var(--primary-green);margin-right:6px"></i> Workers on Site</h2>
-        <div id="workers-list">
-          <div class="loading-shimmer"></div><div class="loading-shimmer" style="width:50%"></div>
-        </div>
-      </section>
-
-      <div class="grid-3" style="margin-bottom:16px">
-        <div class="op-link-card" onclick="window.location.href='workers.html'">
-          <i class="fas fa-users"></i>
-          <h4>Workers</h4>
-          <p>Manage farm workers &amp; attendance</p>
-        </div>
-        <div class="op-link-card" onclick="window.location.href='tools.html'">
-          <i class="fas fa-toolbox"></i>
-          <h4>Tools &amp; Equipment</h4>
-          <p>Track tools and machinery</p>
-        </div>
-        <div class="op-link-card" onclick="window.location.href='tasks.html'">
-          <i class="fas fa-list-check"></i>
-          <h4>Tasks</h4>
-          <p>View and manage daily tasks</p>
-        </div>
-      </div>
-
-    </div>
-
     <div id="add-farm-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center">
       <div style="background:var(--bg-card);border-radius:16px;padding:24px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto">
         <h3 style="font-size:16px;margin-bottom:16px"><i class="fas fa-tractor" style="color:var(--primary-green);margin-right:6px"></i> Add New Farm</h3>
@@ -213,8 +162,6 @@
     var mockActivities = [];
 
     var mockExpenses = [];
-
-    var mockOperations = { irrigation: [], tasks: [], workers: [] };
 
     function populateFarmSelector() {
       var sel = document.getElementById('farm-selector');
@@ -464,60 +411,6 @@
       container.innerHTML = html;
     }
 
-    function renderIrrigationSchedule() {
-      var container = document.getElementById('irrigation-schedule');
-      var items = mockOperations.irrigation;
-      if (!items.length) { container.innerHTML = '<div class="empty-msg">No irrigation operations scheduled.</div>'; return; }
-      var html = '';
-      for (var i = 0; i < items.length; i++) {
-        var op = items[i];
-        var statusDot = op.status === 'completed' ? '#4caf50' : '#ff9800';
-        html += '<div class="journal-entry">';
-        html += '<i class="fas fa-water" style="color:var(--primary-green);margin-top:2px"></i>';
-        html += '<div style="flex:1"><div style="font-size:13px;font-weight:600">' + op.field + ' - ' + op.type + '</div>';
-        html += '<div style="font-size:11px;color:var(--text-muted)">' + op.time + '</div></div>';
-        html += '<span style="font-size:9px;padding:3px 8px;border-radius:6px;background:' + statusDot + '22;color:' + statusDot + '">' + op.status + '</span>';
-        html += '</div>';
-      }
-      container.innerHTML = html;
-    }
-
-    function renderTodaysTasks() {
-      var container = document.getElementById('todays-tasks');
-      var items = mockOperations.tasks;
-      if (!items.length) { container.innerHTML = '<div class="empty-msg">No tasks scheduled for today. Check the Tasks page.</div>'; return; }
-      var html = '';
-      for (var i = 0; i < items.length; i++) {
-        var t = items[i];
-        var priorityColor = t.priority === 'High' ? '#f44336' : t.priority === 'Medium' ? '#ff9800' : '#757575';
-        var statusIcon = t.status === 'completed' ? 'fa-check-circle' : t.status === 'in-progress' ? 'fa-spinner' : t.status === 'scheduled' ? 'fa-clock' : 'fa-circle';
-        var statusColor = t.status === 'completed' ? '#4caf50' : t.status === 'in-progress' ? '#2196f3' : '#ff9800';
-        html += '<div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:4px">';
-        html += '<i class="fas ' + statusIcon + '" style="color:' + statusColor + ';font-size:14px;width:16px;text-align:center"></i>';
-        html += '<div style="flex:1"><div style="font-size:12px;font-weight:600">' + t.task + '</div>';
-        html += '<div style="font-size:10px;color:var(--text-muted)">' + t.assignee + '</div></div>';
-        html += '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:' + priorityColor + '22;color:' + priorityColor + ';font-weight:600">' + t.priority + '</span>';
-        html += '</div>';
-      }
-      container.innerHTML = html;
-    }
-
-    function renderWorkersOnSite() {
-      var container = document.getElementById('workers-list');
-      var items = mockOperations.workers;
-      if (!items.length) { container.innerHTML = '<div class="empty-msg">No workers reported today.</div>'; return; }
-      var html = '';
-      for (var i = 0; i < items.length; i++) {
-        var w = items[i];
-        html += '<div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:4px">';
-        html += '<div style="width:36px;height:36px;border-radius:8px;background:var(--primary-green);color:white;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">' + w.name.charAt(0) + '</div>';
-        html += '<div style="flex:1"><div style="font-size:13px;font-weight:600">' + w.name + '</div>';
-        html += '<div style="font-size:10px;color:var(--text-muted)">' + w.role + ' &bull; ' + w.hours + ' &bull; ' + w.task + '</div></div>';
-        html += '</div>';
-      }
-      container.innerHTML = html;
-    }
-
     function switchTab(tab) {
       var tabs = document.querySelectorAll('.tab-content');
       for (var i = 0; i < tabs.length; i++) {
@@ -530,11 +423,6 @@
       document.getElementById('tab-' + tab).style.display = 'block';
       var activeBtn = document.querySelector('.filter-tab[data-tab="' + tab + '"]');
       if (activeBtn) activeBtn.classList.add('active');
-      if (tab === 'operations') {
-        renderIrrigationSchedule();
-        renderTodaysTasks();
-        renderWorkersOnSite();
-      }
       window.location.hash = tab === 'farm' ? '' : tab;
     }
 
@@ -616,12 +504,7 @@
         updateStats();
         renderActivities();
         renderExpenses();
-        var hash = window.location.hash.replace('#', '');
-        if (hash === 'operations') {
-          switchTab('operations');
-        } else {
-          switchTab('farm');
-        }
+        switchTab('farm');
       });
     });
   </script>

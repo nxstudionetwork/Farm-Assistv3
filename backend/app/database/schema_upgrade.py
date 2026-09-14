@@ -170,6 +170,28 @@ ADDITIVE_COLUMNS = {
     "equipment_metadata": [
         ("location", "VARCHAR(200)"),
     ],
+    "sensors": [
+        ("plot_id", "VARCHAR(36)"),
+        ("status", "VARCHAR(20) DEFAULT 'connected'"),
+        ("device_identifier", "VARCHAR(100)"),
+        ("connected_at", "DATETIME"),
+        ("last_seen", "DATETIME"),
+    ],
+    "sensor_readings": [
+        ("user_id", "VARCHAR(36)"),
+        ("farm_id", "VARCHAR(36)"),
+        ("plot_id", "VARCHAR(36)"),
+    ],
+    "products": [
+        ("supports_cod", "BOOLEAN DEFAULT 1"),
+    ],
+    "marketplace_orders": [
+        ("received_at", "DATETIME"),
+        ("cancelled_at", "DATETIME"),
+    ],
+    "delivery_tracking": [
+        ("notes", "TEXT"),
+    ],
 }
 
 

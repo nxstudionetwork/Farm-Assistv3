@@ -175,6 +175,15 @@ ID_COLUMN_MAP: Dict[str, str] = {
     "InsurancePayment": "payment_id",
     "InsuranceClaimDocument": "id",
     "CalendarEvent": "event_id",
+    "Livestock": "animal_id",
+    "LivestockHealthRecord": "record_id",
+    "LivestockVaccination": "vacc_id",
+    "LivestockTreatment": "treatment_id",
+    "LivestockFeedingRecord": "feed_id",
+    "LivestockBreedingRecord": "breeding_id",
+    "LivestockWeightRecord": "weight_id",
+    "LivestockProductionRecord": "production_id",
+    "LivestockExpenseRecord": "expense_id",
 }
 
 

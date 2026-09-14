@@ -21,14 +21,19 @@ class Sensor(Base):
     sensor_id = Column(String(20), unique=True, index=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     farm_id = Column(String(36), ForeignKey("farms.id"), nullable=True)
+    plot_id = Column(String(36), ForeignKey("farm_plots.id"), nullable=True)
     sensor_type = Column(String(50), nullable=False)
     sensor_name = Column(String(200), nullable=True)
     location = Column(String(200), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     is_active = Column(Boolean, default=True)
+    status = Column(String(20), default="connected")  # connected|connecting|offline|error
+    device_identifier = Column(String(100), nullable=True)
     battery_level = Column(Float, nullable=True)
     last_reading = Column(JSON, nullable=True)
+    connected_at = Column(DateTime, nullable=True)
+    last_seen = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -37,6 +42,9 @@ class SensorReading(Base):
 
     id = Column(String(36), primary_key=True, default=gen_uuid)
     sensor_id = Column(String(36), ForeignKey("sensors.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    farm_id = Column(String(36), ForeignKey("farms.id"), nullable=True)
+    plot_id = Column(String(36), ForeignKey("farm_plots.id"), nullable=True)
     reading_type = Column(String(50), nullable=False)
     value = Column(Float, nullable=False)
     unit = Column(String(20), nullable=True)
@@ -52,9 +60,15 @@ def _sensor_dict(s: Sensor) -> dict:
         "location": s.location,
         "latitude": s.latitude,
         "longitude": s.longitude,
+        "plot_id": s.plot_id,
+        "farm_id": s.farm_id,
         "is_active": s.is_active,
+        "status": s.status,
+        "device_identifier": s.device_identifier,
         "battery_level": s.battery_level,
         "last_reading": s.last_reading,
+        "connected_at": str(s.connected_at) if s.connected_at else None,
+        "last_seen": str(s.last_seen) if s.last_seen else None,
         "created_at": str(s.created_at) if s.created_at else None,
     }
 

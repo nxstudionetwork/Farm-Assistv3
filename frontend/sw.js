@@ -1,4 +1,4 @@
-var CACHE_NAME = 'farm-assist-v18';
+var CACHE_NAME = 'farm-assist-v19';
 var STATIC_CACHE = CACHE_NAME + '-static';
 var IMAGE_CACHE = CACHE_NAME + '-images';
 var FONT_CACHE = CACHE_NAME + '-fonts';

@@ -3,286 +3,1970 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-  <title>Farm Assist - Livestock Management</title>
+  <title>Livestock - Farm Assist</title>
+  <meta name="description" content="Manage your livestock — health, vaccinations, treatments, feeding, breeding and growth.">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    :root { --livestock-accent: #E67E22; --livestock-green: #27AE60; --livestock-blue: #3498DB; }
-    .livestock-toolbar { display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
-    .livestock-search { flex:1; min-width:200px; position:relative; }
-    .livestock-search input { width:100%; padding:10px 14px 10px 38px; border:1px solid var(--border-light); border-radius:var(--radius-sm); font-size:13px; background:white; }
-    .livestock-search input:focus { border-color:var(--livestock-accent); box-shadow:0 0 0 3px rgba(230,126,34,0.08); outline:none; }
-    .livestock-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:13px; }
-    .livestock-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px; }
-    .livestock-card { background:white; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; transition:all 0.2s; }
-    .livestock-card:hover { border-color:var(--livestock-accent); box-shadow:var(--shadow-sm); transform:translateY(-2px); }
-    .livestock-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-    .livestock-avatar { width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; color:white; flex-shrink:0; }
-    .livestock-avatar.cow { background:var(--livestock-accent); }
-    .livestock-avatar.buffalo { background:#34495E; }
-    .livestock-avatar.goat { background:#95A5A6; }
-    .livestock-avatar.chicken { background:#F39C12; }
-    .livestock-avatar.sheep { background:#E74C3C; }
-    .livestock-info { flex:1; }
-    .livestock-name { font-size:15px; font-weight:700; color:var(--text-primary); }
-    .livestock-type { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; }
-    .livestock-id { font-size:10px; color:var(--text-muted); margin-top:2px; }
-    .livestock-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
-    .livestock-stat { background:var(--bg-card-soft); padding:8px 10px; border-radius:8px; text-align:center; }
-    .livestock-stat-value { font-size:14px; font-weight:700; color:var(--text-primary); }
-    .livestock-stat-label { font-size:9px; color:var(--text-muted); text-transform:uppercase; }
-    .livestock-health { display:flex; align-items:center; gap:6px; margin-bottom:10px; }
-    .health-badge { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:600; }
-    .health-badge.healthy { background:rgba(39,174,96,0.12); color:var(--livestock-green); }
-    .health-badge.sick { background:rgba(231,76,60,0.12); color:#E74C3C; }
-    .health-badge.checkup { background:rgba(241,196,15,0.12); color:#F39C12; }
-    .livestock-actions { display:flex; gap:8px; margin-top:12px; }
-    .livestock-actions .btn-primary, .livestock-actions .btn-secondary { flex:1; font-size:11px; padding:8px; }
-    .vaccination-alert { background:rgba(241,196,15,0.08); border:1px solid rgba(241,196,15,0.2); border-radius:8px; padding:8px 10px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
-    .vaccination-alert i { color:#F39C12; font-size:12px; }
-    .vaccination-alert span { font-size:11px; color:#F39C12; font-weight:600; }
-    .milk-production { background:rgba(52,152,219,0.08); border:1px solid rgba(52,152,219,0.2); border-radius:8px; padding:8px 10px; margin-bottom:10px; }
-    .milk-production-value { font-size:14px; font-weight:700; color:var(--livestock-blue); }
-    .milk-production-label { font-size:10px; color:var(--text-muted); }
+    /* ============================================================
+       LIVESTOCK PAGE — SCOPED STYLES
+    ============================================================ */
+    :root {
+      --ls-accent:  #E67E22;
+      --ls-green:   #27AE60;
+      --ls-blue:    #3498DB;
+      --ls-red:     #E74C3C;
+      --ls-purple:  #8E44AD;
+      --ls-teal:    #16A085;
+      --ls-radius:  12px;
+      --ls-radius-sm: 8px;
+    }
+
+    /* ---------- page wrapper ---------- */
+    .ls-page { padding: 0 0 100px; }
+
+    /* ---------- overview stat strip ---------- */
+    .ls-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 0 16px; margin-bottom: 16px; }
+    .ls-stat {
+      background: #fff; border: 1px solid var(--border-light); border-radius: var(--ls-radius-sm);
+      padding: 12px 6px; text-align: center; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+    }
+    .ls-stat:hover { border-color: var(--ls-accent); box-shadow: var(--shadow-sm); }
+    .ls-stat.active { border-color: var(--ls-accent); background: #FFF3E0; }
+    .ls-stat i { font-size: 16px; margin-bottom: 4px; display: block; }
+    .ls-stat-num { font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
+    .ls-stat-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .3px; margin-top: 2px; }
+    .ls-stat .skel-num { height: 20px; width: 40px; margin: 0 auto 4px; border-radius: 6px; }
+
+    /* ---------- quick actions ---------- */
+    .ls-actions { display: flex; gap: 10px; padding: 0 16px 4px; overflow-x: auto; scrollbar-width: none; margin-bottom: 16px; }
+    .ls-actions::-webkit-scrollbar { display: none; }
+    .ls-action {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      flex: 0 0 auto; width: 62px; cursor: pointer; text-decoration: none; color: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ls-action:active .ls-aicon { transform: scale(.92); }
+    .ls-aicon {
+      width: 46px; height: 46px; border-radius: 13px; display: flex;
+      align-items: center; justify-content: center; font-size: 18px;
+      transition: transform .12s, filter .12s;
+    }
+    .ls-aicon.orange { background: #FFF3E0; color: var(--ls-accent); }
+    .ls-aicon.green  { background: #E8F5E9; color: var(--ls-green); }
+    .ls-aicon.blue   { background: #E3F2FD; color: var(--ls-blue); }
+    .ls-aicon.red    { background: #FFEBEE; color: var(--ls-red); }
+    .ls-aicon.purple { background: #F3E5F5; color: var(--ls-purple); }
+    .ls-aicon.teal   { background: #E0F2F1; color: var(--ls-teal); }
+    .ls-action span  { font-size: 9.5px; font-weight: 600; color: var(--text-primary); text-align: center; line-height: 1.2; }
+
+    /* ---------- search + filter toolbar ---------- */
+    .ls-toolbar { display: flex; gap: 8px; align-items: center; padding: 0 16px; margin-bottom: 14px; flex-wrap: wrap; }
+    .ls-search { flex: 1; min-width: 160px; position: relative; }
+    .ls-search input {
+      width: 100%; padding: 9px 12px 9px 34px; border: 1px solid var(--border-light);
+      border-radius: var(--ls-radius-sm); font-size: 13px; background: #fff;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .ls-search input:focus { border-color: var(--ls-accent); box-shadow: 0 0 0 3px rgba(230,126,34,.08); outline: none; }
+    .ls-search i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
+    .ls-filter-sel {
+      padding: 8px 10px; border-radius: var(--ls-radius-sm); border: 1px solid var(--border-light);
+      font-size: 12px; background: #fff; color: var(--text-primary); cursor: pointer; min-width: 100px;
+    }
+    .ls-filter-sel:focus { border-color: var(--ls-accent); outline: none; }
+
+    /* ---------- section header ---------- */
+    .ls-sec-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 16px 10px; margin-top: 8px;
+    }
+    .ls-sec-title { font-size: 14px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 7px; }
+    .ls-sec-title i { color: var(--ls-accent); }
+    .ls-sec-link { font-size: 12px; color: var(--medium-green); font-weight: 600; cursor: pointer; text-decoration: none; border: none; background: none; padding: 0; }
+
+    /* ---------- animal grid ---------- */
+    .ls-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); gap: 12px; padding: 0 16px; }
+
+    /* ---------- animal card ---------- */
+    .ls-card {
+      background: #fff; border: 1px solid var(--border-light); border-radius: var(--ls-radius);
+      padding: 14px; cursor: pointer; transition: border-color .18s, box-shadow .18s, transform .12s;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .ls-card:hover { border-color: var(--ls-accent); box-shadow: 0 4px 16px rgba(230,126,34,.1); transform: translateY(-2px); }
+    .ls-card:active { transform: scale(.98); }
+    .ls-card-top { display: flex; align-items: center; gap: 10px; }
+    .ls-avatar {
+      width: 50px; height: 50px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 22px;
+      color: #fff; flex-shrink: 0; overflow: hidden;
+    }
+    .ls-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .ls-card-info { flex: 1; min-width: 0; }
+    .ls-card-name { font-size: 14px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ls-card-type { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
+    .ls-card-meta { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    /* health badge */
+    .ls-hbadge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+    .ls-hbadge.healthy       { background: #E8F5E9; color: var(--ls-green); }
+    .ls-hbadge.monitoring    { background: #E3F2FD; color: var(--ls-blue); }
+    .ls-hbadge.needs_attention { background: #FFF3E0; color: var(--ls-accent); }
+    .ls-hbadge.critical      { background: #FFEBEE; color: var(--ls-red); }
+
+    /* vacc alert */
+    .ls-vacc-alert {
+      display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+      background: rgba(241,196,15,.08); border: 1px solid rgba(241,196,15,.25);
+      border-radius: var(--ls-radius-sm); font-size: 10px; font-weight: 600; color: #c0930c;
+    }
+
+    /* card stat chips */
+    .ls-card-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ls-chip { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: var(--soft-green); color: var(--primary-green); font-weight: 600; }
+    .ls-chip.breed { background: #F3E5F5; color: var(--ls-purple); }
+    .ls-chip.wt    { background: #E0F2F1; color: var(--ls-teal); }
+
+    /* card actions */
+    .ls-card-actions { display: flex; gap: 8px; }
+    .ls-card-btn {
+      flex: 1; padding: 8px; border: 1px solid var(--border-light); border-radius: var(--ls-radius-sm);
+      font-size: 11px; font-weight: 600; cursor: pointer; background: #fff; color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .ls-card-btn:hover { background: var(--soft-green); border-color: var(--medium-green); color: var(--medium-green); }
+    .ls-card-btn.primary { background: var(--ls-accent); color: #fff; border-color: var(--ls-accent); }
+    .ls-card-btn.primary:hover { filter: brightness(1.08); }
+
+    /* ---------- skeleton ---------- */
+    .ls-skel-card { background: #fff; border: 1px solid var(--border-light); border-radius: var(--ls-radius); padding: 14px; }
+    .sk { background: linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size: 200% 100%; animation: sk-sh 1.4s infinite; border-radius: 6px; margin-bottom: 10px; }
+    @keyframes sk-sh { 0%{background-position:200% 0}100%{background-position:-200% 0} }
+    .sk.h20 { height: 20px; }
+    .sk.h14 { height: 14px; }
+    .sk.h10 { height: 10px; }
+    .sk.w60 { width: 60%; }
+    .sk.w40 { width: 40%; }
+    .sk.w80 { width: 80%; }
+    .sk.circle { width: 50px; height: 50px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ---------- empty state ---------- */
+    .ls-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+    .ls-empty i { font-size: 36px; display: block; margin-bottom: 12px; opacity: .35; }
+    .ls-empty p { font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+
+    /* ---------- health overview chips (clickable) ---------- */
+    .ls-health-overview { display: flex; gap: 8px; padding: 0 16px; margin-bottom: 8px; flex-wrap: wrap; }
+    .ls-hov-chip {
+      display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+      border-radius: var(--ls-radius-sm); border: 1px solid transparent; cursor: pointer;
+      font-size: 12px; font-weight: 600; transition: all .15s; flex: 1; min-width: 100px;
+    }
+    .ls-hov-chip.green  { background: #E8F5E9; color: var(--ls-green); border-color: #C8E6C9; }
+    .ls-hov-chip.blue   { background: #E3F2FD; color: var(--ls-blue); border-color: #BBDEFB; }
+    .ls-hov-chip.orange { background: #FFF3E0; color: var(--ls-accent); border-color: #FFCC80; }
+    .ls-hov-chip.red    { background: #FFEBEE; color: var(--ls-red); border-color: #FFCDD2; }
+    .ls-hov-chip .hov-num { font-size: 18px; font-weight: 800; line-height: 1; }
+    .ls-hov-chip.sel { box-shadow: 0 0 0 2px currentColor; }
+
+    /* ---------- upcoming events ---------- */
+    .ls-events { padding: 0 16px; }
+    .ls-event-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .ls-event-item:last-child { border-bottom: none; }
+    .ls-event-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+    .ls-event-info { flex: 1; min-width: 0; }
+    .ls-event-title { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+    .ls-event-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .ls-event-date { font-size: 11px; font-weight: 700; color: var(--medium-green); white-space: nowrap; }
+    .ls-event-overdue { color: var(--ls-red) !important; }
+
+    /* ---------- ANIMAL DETAIL PANEL ---------- */
+    .ls-detail-panel {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--bg-app); z-index: 300;
+      transform: translateX(100%); opacity: 0;
+      transition: transform .28s cubic-bezier(.4,0,.2,1), opacity .28s ease;
+      pointer-events: none; overflow-y: auto;
+    }
+    .ls-detail-panel.open { transform: translateX(0); opacity: 1; pointer-events: auto; }
+
+    .ls-detail-hdr {
+      position: sticky; top: 0; z-index: 10;
+      background: linear-gradient(135deg, #0F2E1E 0%, #1B5E3F 100%);
+      padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    }
+    .ls-detail-back {
+      width: 36px; height: 36px; border-radius: 10px; border: none;
+      background: rgba(255,255,255,.18); color: #fff; font-size: 14px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background .15s;
+    }
+    .ls-detail-back:hover { background: rgba(255,255,255,.3); }
+    .ls-detail-hdr-name { flex: 1; font-size: 17px; font-weight: 700; color: #fff; }
+    .ls-detail-hdr-edit {
+      padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.25); color: #fff;
+      font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;
+      transition: background .15s;
+    }
+    .ls-detail-hdr-edit:hover { background: rgba(255,255,255,.3); }
+
+    /* Detail hero */
+    .ls-detail-hero { display: flex; align-items: center; gap: 14px; padding: 16px; background: #fff; border-bottom: 1px solid var(--border-light); }
+    .ls-detail-avatar { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #fff; flex-shrink: 0; overflow: hidden; }
+    .ls-detail-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .ls-detail-info { flex: 1; }
+    .ls-detail-name { font-size: 18px; font-weight: 800; color: var(--text-primary); }
+    .ls-detail-type { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+    .ls-detail-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+    /* Tabs */
+    .ls-tabs {
+      display: flex; gap: 0; background: #fff; border-bottom: 2px solid var(--border-light);
+      overflow-x: auto; scrollbar-width: none; position: sticky; top: 64px; z-index: 9;
+    }
+    .ls-tabs::-webkit-scrollbar { display: none; }
+    .ls-tab {
+      padding: 11px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+      color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px;
+      white-space: nowrap; transition: color .15s, border-color .15s;
+    }
+    .ls-tab.active { color: var(--ls-accent); border-bottom-color: var(--ls-accent); }
+    .ls-tab-body { padding: 14px 16px 80px; min-height: 300px; }
+
+    /* detail info row */
+    .ls-drow { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border-light); gap: 12px; }
+    .ls-drow:last-child { border-bottom: none; }
+    .ls-dlbl { font-size: 11px; color: var(--text-muted); font-weight: 500; flex-shrink: 0; }
+    .ls-dval { font-size: 12px; color: var(--text-primary); font-weight: 600; text-align: right; max-width: 65%; word-break: break-word; }
+    .ls-dval.empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
+
+    /* record card */
+    .ls-rec-card {
+      background: #fff; border: 1px solid var(--border-light); border-radius: var(--ls-radius-sm);
+      padding: 12px; margin-bottom: 10px;
+    }
+    .ls-rec-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .ls-rec-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+    .ls-rec-date { font-size: 10px; color: var(--text-muted); }
+    .ls-rec-field { display: flex; gap: 6px; font-size: 11px; color: var(--text-secondary); margin-bottom: 3px; }
+    .ls-rec-field strong { color: var(--text-primary); font-weight: 600; }
+
+    /* add record section */
+    .ls-add-form { background: #fff; border: 1px solid var(--border-light); border-radius: var(--ls-radius); padding: 14px; margin-top: 14px; }
+    .ls-add-form h4 { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 7px; }
+    .ls-form-row { margin-bottom: 10px; }
+    .ls-form-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; display: block; }
+    .ls-form-input {
+      width: 100%; padding: 9px 11px; border: 1px solid var(--border-light); border-radius: var(--ls-radius-sm);
+      font-size: 13px; background: var(--bg-card-soft); color: var(--text-primary);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .ls-form-input:focus { border-color: var(--ls-accent); box-shadow: 0 0 0 3px rgba(230,126,34,.08); outline: none; }
+    .ls-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .ls-form-btn {
+      width: 100%; padding: 10px; border-radius: var(--ls-radius-sm); border: none;
+      font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 6px; margin-top: 4px; transition: filter .15s, opacity .15s;
+    }
+    .ls-form-btn.primary { background: var(--ls-accent); color: #fff; }
+    .ls-form-btn.primary:hover { filter: brightness(1.08); }
+    .ls-form-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* weight chart placeholder */
+    .ls-weight-chart { background: var(--soft-green); border-radius: var(--ls-radius-sm); padding: 14px; text-align: center; margin-bottom: 12px; }
+    .ls-weight-chart p { font-size: 12px; color: var(--medium-green); }
+
+    /* modal overlay */
+    .ls-modal {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      backdrop-filter: blur(3px); z-index: 500; align-items: center; justify-content: center; padding: 16px;
+    }
+    .ls-modal.open { display: flex; }
+    .ls-modal-box {
+      background: #fff; border-radius: var(--ls-radius); width: 100%; max-width: 480px;
+      max-height: 88vh; overflow-y: auto; padding: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.2); animation: ls-pop .2s ease;
+    }
+    @keyframes ls-pop { from{ transform:scale(.92);opacity:0 } to{ transform:scale(1);opacity:1 } }
+    .ls-modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .ls-modal-hdr h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .ls-modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted); padding: 4px; }
+
+    /* delete confirm */
+    .ls-confirm {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      z-index: 600; align-items: center; justify-content: center; padding: 20px;
+    }
+    .ls-confirm.open { display: flex; }
+    .ls-confirm-box { background: #fff; border-radius: var(--ls-radius); padding: 24px; max-width: 340px; width: 100%; text-align: center; animation: ls-pop .2s ease; }
+    .ls-confirm-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .ls-confirm-box p { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5; }
+    .ls-confirm-btns { display: flex; gap: 10px; }
+    .ls-confirm-btns button { flex: 1; padding: 11px; border-radius: var(--ls-radius-sm); border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+    /* toast */
+    .ls-toast {
+      position: fixed; bottom: 82px; left: 50%; transform: translateX(-50%);
+      padding: 11px 20px; border-radius: 24px; color: #fff; font-size: 13px; font-weight: 600;
+      z-index: 2000; opacity: 0; pointer-events: none; max-width: 90%; text-align: center;
+      transition: opacity .25s; white-space: nowrap;
+    }
+    .ls-toast.show { opacity: 1; }
+    .ls-toast.success { background: #2E7D32; }
+    .ls-toast.error   { background: #C62828; }
+    .ls-toast.info    { background: #1565C0; }
+
+    /* ---------- overview tiles (fixed 6) ---------- */
+    .ls-stats { grid-template-columns: repeat(3,1fr); }
+    .ls-stat-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+    .ls-stat-load .ls-stat-num { color: transparent; }
+    @media (min-width: 768px) { .ls-stats { grid-template-columns: repeat(6,1fr); } }
+
+    /* ---------- error card ---------- */
+    .ls-error { text-align: center; padding: 32px 20px; background: #fff; border: 1px solid var(--border-light); border-radius: var(--ls-radius); margin: 0 16px; }
+    .ls-error i { font-size: 30px; color: var(--ls-red); margin-bottom: 10px; display: block; opacity: .7; }
+    .ls-error h3 { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+    .ls-error p { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+
+    /* ---------- friendly empty illustration ---------- */
+    .ls-empty { text-align: center; padding: 36px 20px; color: var(--text-muted); }
+    .ls-empty h3 { font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 12px 0 6px; }
+    .ls-empty p { font-size: 12.5px; line-height: 1.55; margin-bottom: 16px; max-width: 340px; margin-left: auto; margin-right: auto; }
+    .ls-empty-ill { width: 148px; height: 104px; margin: 0 auto; display: block; }
+    .ls-empty-ill.sm { width: 104px; height: 74px; }
+
+    /* ---------- attention section ---------- */
+    .ls-attn { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+    .ls-attn-item {
+      display: flex; align-items: center; gap: 10px; background: #fff;
+      border: 1px solid var(--border-light); border-radius: var(--ls-radius-sm);
+      padding: 10px 12px; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+    }
+    .ls-attn-item:hover { border-color: var(--ls-accent); box-shadow: var(--shadow-sm); }
+    .ls-attn-item.overdue { border-left: 3px solid var(--ls-red); }
+    .ls-attn-item.soon { border-left: 3px solid #F39C12; }
+    .ls-attn-pill { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+    .ls-attn-pill.overdue { background: #FFEBEE; color: var(--ls-red); }
+    .ls-attn-pill.soon { background: #FFF8E1; color: #B7791F; }
+    .ls-attn-allclear { display: flex; align-items: center; gap: 10px; background: #E8F5E9; border: 1px solid #C8E6C9; border-radius: var(--ls-radius-sm); padding: 12px; font-size: 12px; color: #2E7D32; font-weight: 600; margin: 0 16px; }
+
+    /* ---------- insights ---------- */
+    .ls-insights { padding: 0 16px; display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 768px) { .ls-insights { grid-template-columns: 1fr 1fr; padding: 0 20px; } }
+    .ls-ins-card { background: #fff; border: 1px solid var(--border-light); border-radius: var(--ls-radius); padding: 14px; }
+    .ls-ins-card h4 { font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+    .ls-ins-card h4 i { color: var(--ls-accent); }
+    .ls-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 11px; }
+    .ls-bar-lbl { width: 74px; flex-shrink: 0; color: var(--text-secondary); font-weight: 600; text-transform: capitalize; }
+    .ls-bar-track { flex: 1; height: 8px; background: #F1F1F1; border-radius: 5px; overflow: hidden; }
+    .ls-bar-fill { height: 100%; border-radius: 5px; background: var(--ls-accent); transition: width .4s ease; }
+    .ls-bar-val { width: 26px; text-align: right; font-weight: 700; color: var(--text-primary); }
+    .ls-ins-big { font-size: 22px; font-weight: 800; color: var(--text-primary); }
+    .ls-ins-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ---------- activity ---------- */
+    .ls-activity { padding: 0 16px; }
+    .ls-act-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border-light); cursor: pointer; }
+    .ls-act-item:last-child { border-bottom: none; }
+
+    /* ---------- animal picker ---------- */
+    .ls-pick-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border-light); border-radius: var(--ls-radius-sm); margin-bottom: 8px; cursor: pointer; transition: border-color .15s, background .15s; }
+    .ls-pick-item:hover { border-color: var(--ls-accent); background: #FFF8F0; }
+
+    /* ---------- photo upload ---------- */
+    .ls-photo-row { display: flex; gap: 8px; align-items: center; }
+    .ls-photo-prev { width: 44px; height: 44px; border-radius: 50%; background: #F1F1F1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); overflow: hidden; flex-shrink: 0; }
+    .ls-photo-prev img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* responsive */
+    @media (max-width: 400px) {
+      .ls-stats { grid-template-columns: repeat(2,1fr); }
+      .ls-hov-chip { min-width: 80px; }
+      .ls-detail-hdr-name { font-size: 15px; }
+    }
+    @media (min-width: 768px) {
+      .ls-grid { grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); }
+      .ls-stats { grid-template-columns: repeat(4,1fr); gap: 12px; padding: 0 20px; }
+      .ls-actions { padding: 0 20px 4px; gap: 14px; }
+      .ls-toolbar { padding: 0 20px; }
+      .ls-sec-hdr { padding: 4px 20px 10px; }
+      .ls-grid { padding: 0 20px; }
+      .ls-health-overview { padding: 0 20px; }
+      .ls-events { padding: 0 20px; }
+    }
+    @media (min-width: 1024px) {
+      .ls-grid { grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); }
+      .ls-detail-panel { left: auto; width: min(580px, 100%); right: 0; border-left: 1px solid var(--border-light); }
+    }
   </style>
 </head>
 <body>
-  <main class="page-container">
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-paw" style="color:var(--livestock-accent);"></i> Livestock Management</h1>
-        <p>Track animal health, vaccination, milk production, and feed management</p>
-      </div>
-      <button class="btn-primary btn-sm" onclick="openModal('add-animal-modal')" style="background:var(--livestock-accent);">
-        <i class="fas fa-plus-circle"></i> Add Animal
-      </button>
+
+<!-- ============================================================
+     MAIN PAGE
+============================================================ -->
+<main class="page-container ls-page" id="ls-main">
+
+  <!-- page header -->
+  <div class="page-header" style="padding: 0 16px; margin-bottom: 16px;">
+    <div>
+      <h1><i class="fas fa-paw" style="color:var(--ls-accent);"></i> Livestock</h1>
+      <p>Manage your animals, health records &amp; more</p>
     </div>
+    <button class="btn-primary btn-sm" id="btn-open-add" style="background:var(--ls-accent);">
+      <i class="fas fa-plus-circle"></i> Add Animal
+    </button>
+  </div>
 
-    <div class="grid-4" style="margin-bottom:16px;">
-      <div class="stat-box">
-        <i class="fas fa-paw" style="color:var(--livestock-accent);"></i>
-        <div class="stat-box-num" id="total-animals">0</div>
-        <div class="stat-box-label">Total Animals</div>
-      </div>
-      <div class="stat-box">
-        <i class="fas fa-heartbeat" style="color:var(--livestock-green);"></i>
-        <div class="stat-box-num" id="healthy-animals">0</div>
-        <div class="stat-box-label">Healthy</div>
-      </div>
-      <div class="stat-box">
-        <i class="fas fa-syringe" style="color:#F39C12;"></i>
-        <div class="stat-box-num" id="vaccination-due">0</div>
-        <div class="stat-box-label">Vaccination Due</div>
-      </div>
-      <div class="stat-box">
-        <i class="fas fa-tint" style="color:var(--livestock-blue);"></i>
-        <div class="stat-box-num" id="milk-total">0L</div>
-        <div class="stat-box-label">Daily Milk</div>
+  <!-- overview stats -->
+  <div class="ls-stats" id="ls-stats">
+    <div class="ls-skel-card" style="border-radius:var(--ls-radius-sm);padding:10px 6px;text-align:center;">
+      <div class="sk h20 w60" style="margin:0 auto 6px;"></div><div class="sk h10 w40" style="margin:0 auto;"></div>
+    </div>
+    <div class="ls-skel-card" style="border-radius:var(--ls-radius-sm);padding:10px 6px;text-align:center;">
+      <div class="sk h20 w60" style="margin:0 auto 6px;"></div><div class="sk h10 w40" style="margin:0 auto;"></div>
+    </div>
+    <div class="ls-skel-card" style="border-radius:var(--ls-radius-sm);padding:10px 6px;text-align:center;">
+      <div class="sk h20 w60" style="margin:0 auto 6px;"></div><div class="sk h10 w40" style="margin:0 auto;"></div>
+    </div>
+    <div class="ls-skel-card" style="border-radius:var(--ls-radius-sm);padding:10px 6px;text-align:center;">
+      <div class="sk h20 w60" style="margin:0 auto 6px;"></div><div class="sk h10 w40" style="margin:0 auto;"></div>
+    </div>
+  </div>
+
+  <!-- quick actions (only actions with implemented backend) -->
+  <div class="ls-actions">
+    <div class="ls-action" id="qa-add">
+      <div class="ls-aicon orange"><i class="fas fa-plus-circle"></i></div>
+      <span>Add Animal</span>
+    </div>
+    <div class="ls-action" id="qa-health">
+      <div class="ls-aicon green"><i class="fas fa-heartbeat"></i></div>
+      <span>Health</span>
+    </div>
+    <div class="ls-action" id="qa-vacc">
+      <div class="ls-aicon blue"><i class="fas fa-syringe"></i></div>
+      <span>Vaccine</span>
+    </div>
+    <div class="ls-action" id="qa-treat">
+      <div class="ls-aicon red"><i class="fas fa-pills"></i></div>
+      <span>Treatment</span>
+    </div>
+    <div class="ls-action" id="qa-feed">
+      <div class="ls-aicon teal"><i class="fas fa-bowl-food"></i></div>
+      <span>Feeding</span>
+    </div>
+    <div class="ls-action" id="qa-prod">
+      <div class="ls-aicon orange"><i class="fas fa-bottle-droplet"></i></div>
+      <span>Production</span>
+    </div>
+    <div class="ls-action" id="qa-exp">
+      <div class="ls-aicon purple"><i class="fas fa-receipt"></i></div>
+      <span>Expense</span>
+    </div>
+  </div>
+
+  <!-- health overview -->
+  <div class="ls-sec-hdr">
+    <div class="ls-sec-title"><i class="fas fa-heart-pulse"></i> Health Overview</div>
+  </div>
+  <div class="ls-health-overview" id="ls-health-overview">
+    <div class="ls-hov-chip green" data-status="healthy">
+      <div><div class="hov-num" id="hov-healthy">–</div><div style="font-size:10px;">Healthy</div></div>
+    </div>
+    <div class="ls-hov-chip blue" data-status="monitoring">
+      <div><div class="hov-num" id="hov-monitoring">–</div><div style="font-size:10px;">Monitoring</div></div>
+    </div>
+    <div class="ls-hov-chip orange" data-status="needs_attention">
+      <div><div class="hov-num" id="hov-attention">–</div><div style="font-size:10px;">Needs Attn</div></div>
+    </div>
+    <div class="ls-hov-chip red" data-status="critical">
+      <div><div class="hov-num" id="hov-critical">–</div><div style="font-size:10px;">Critical</div></div>
+    </div>
+  </div>
+
+  <!-- search + filter (client-side over loaded data; single fetch, no duplicate API calls) -->
+  <div class="ls-toolbar" style="margin-top:10px;">
+    <div class="ls-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="ls-search-input" placeholder="Search by name, tag or breed…">
+    </div>
+    <select id="ls-type-filter" class="ls-filter-sel" aria-label="Filter by animal type">
+      <option value="">All Types</option>
+      <option value="cow">Cow</option>
+      <option value="buffalo">Buffalo</option>
+      <option value="goat">Goat</option>
+      <option value="sheep">Sheep</option>
+      <option value="poultry">Poultry</option>
+      <option value="pig">Pig</option>
+      <option value="other">Other</option>
+    </select>
+    <select id="ls-breed-filter" class="ls-filter-sel" aria-label="Filter by breed">
+      <option value="">All Breeds</option>
+    </select>
+    <select id="ls-health-filter" class="ls-filter-sel" aria-label="Filter by health status">
+      <option value="">All Health</option>
+      <option value="healthy">Healthy</option>
+      <option value="monitoring">Monitoring</option>
+      <option value="needs_attention">Needs Attention</option>
+      <option value="critical">Critical</option>
+    </select>
+    <select id="ls-attn-filter" class="ls-filter-sel" aria-label="Filter by attention status">
+      <option value="">All Animals</option>
+      <option value="attention">Needs Attention</option>
+      <option value="vacc_due">Vaccination Due</option>
+    </select>
+  </div>
+
+  <!-- my livestock -->
+  <div class="ls-sec-hdr">
+    <div class="ls-sec-title"><i class="fas fa-paw"></i> My Livestock</div>
+    <span class="ls-sec-link" id="ls-clear-filters" style="display:none;">Clear Filters</span>
+  </div>
+  <div class="ls-grid" id="ls-grid">
+    <!-- skeleton cards -->
+    <div class="ls-skel-card"><div style="display:flex;gap:10px;margin-bottom:10px;"><div class="sk circle"></div><div style="flex:1;"><div class="sk h14 w80"></div><div class="sk h10 w40"></div></div></div><div class="sk h10 w60"></div><div class="sk h10 w80"></div></div>
+    <div class="ls-skel-card"><div style="display:flex;gap:10px;margin-bottom:10px;"><div class="sk circle"></div><div style="flex:1;"><div class="sk h14 w80"></div><div class="sk h10 w40"></div></div></div><div class="sk h10 w60"></div><div class="sk h10 w80"></div></div>
+    <div class="ls-skel-card"><div style="display:flex;gap:10px;margin-bottom:10px;"><div class="sk circle"></div><div style="flex:1;"><div class="sk h14 w80"></div><div class="sk h10 w40"></div></div></div><div class="sk h10 w60"></div><div class="sk h10 w80"></div></div>
+  </div>
+
+  <!-- attention required (real DB-derived tasks) -->
+  <div class="ls-sec-hdr" style="margin-top:16px;" id="attn-section-hdr">
+    <div class="ls-sec-title"><i class="fas fa-triangle-exclamation"></i> Attention Required</div>
+  </div>
+  <div class="ls-attn" id="ls-attention">
+    <div class="sk h14 w80"></div>
+    <div class="sk h14 w60"></div>
+  </div>
+
+  <!-- upcoming events -->
+  <div class="ls-sec-hdr" style="margin-top:16px;" id="events-section-hdr">
+    <div class="ls-sec-title"><i class="fas fa-calendar-alt"></i> Upcoming Events</div>
+  </div>
+  <div class="ls-events" id="ls-events">
+    <div class="sk h14 w80" style="margin-bottom:8px;"></div>
+    <div class="sk h14 w60"></div>
+  </div>
+
+  <!-- insights (real data only; hidden when insufficient data) -->
+  <div class="ls-sec-hdr" style="margin-top:16px;" id="insights-section-hdr">
+    <div class="ls-sec-title"><i class="fas fa-chart-line"></i> Livestock Insights</div>
+  </div>
+  <div class="ls-insights" id="ls-insights">
+    <div class="ls-ins-card"><div class="sk h14 w60"></div><div class="sk h10 w80" style="margin-top:8px;"></div></div>
+    <div class="ls-ins-card"><div class="sk h14 w60"></div><div class="sk h10 w80" style="margin-top:8px;"></div></div>
+  </div>
+
+  <!-- recent activity (real records only) -->
+  <div class="ls-sec-hdr" style="margin-top:16px;" id="activity-section-hdr">
+    <div class="ls-sec-title"><i class="fas fa-clock-rotate-left"></i> Recent Activity</div>
+  </div>
+  <div class="ls-activity" id="ls-activity">
+    <div class="sk h14 w80" style="margin-bottom:8px;"></div>
+    <div class="sk h14 w60"></div>
+  </div>
+
+</main><!-- /ls-main -->
+
+
+<!-- ============================================================
+     ANIMAL DETAIL PANEL
+============================================================ -->
+<div class="ls-detail-panel" id="ls-detail-panel">
+  <!-- header -->
+  <div class="ls-detail-hdr">
+    <button class="ls-detail-back" id="btn-detail-back"><i class="fas fa-arrow-left"></i></button>
+    <div class="ls-detail-hdr-name" id="dp-hdr-name">Animal</div>
+    <button class="ls-detail-hdr-edit" id="btn-detail-edit"><i class="fas fa-pen"></i> Edit</button>
+  </div>
+
+  <!-- hero -->
+  <div class="ls-detail-hero">
+    <div class="ls-detail-avatar" id="dp-avatar">🐄</div>
+    <div class="ls-detail-info">
+      <div class="ls-detail-name" id="dp-name">—</div>
+      <div class="ls-detail-type" id="dp-type">—</div>
+      <div class="ls-detail-badges">
+        <span class="ls-hbadge" id="dp-hbadge">—</span>
+        <span class="ls-chip" id="dp-tag" style="display:none;"></span>
       </div>
     </div>
+  </div>
 
-    <div class="livestock-toolbar">
-      <div class="livestock-search">
-        <i class="fas fa-search"></i>
-        <input type="text" id="livestock-search" placeholder="Search animals..." oninput="filterLivestock()">
-      </div>
-      <select class="form-select" id="type-filter" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-light); font-size:13px; background:white; min-width:120px;" onchange="filterLivestock()">
-        <option value="all">All Types</option>
-        <option value="cow">Cows</option>
-        <option value="buffalo">Buffalo</option>
-        <option value="goat">Goat</option>
-        <option value="chicken">Chicken</option>
-        <option value="sheep">Sheep</option>
-      </select>
-      <select class="form-select" id="health-filter" style="padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-light); font-size:13px; background:white; min-width:120px;" onchange="filterLivestock()">
-        <option value="all">All Health</option>
-        <option value="healthy">Healthy</option>
-        <option value="sick">Sick</option>
-        <option value="checkup">Checkup Due</option>
-      </select>
+  <!-- tabs (production/breeding shown only where applicable to the animal) -->
+  <div class="ls-tabs" id="dp-tabs">
+    <div class="ls-tab active" data-tab="info">Info</div>
+    <div class="ls-tab" data-tab="health">Health</div>
+    <div class="ls-tab" data-tab="vaccinations">Vaccines</div>
+    <div class="ls-tab" data-tab="treatments">Treatments</div>
+    <div class="ls-tab" data-tab="feeding">Feeding</div>
+    <div class="ls-tab" data-tab="breeding" id="dp-tabbtn-breeding">Breeding</div>
+    <div class="ls-tab" data-tab="growth">Growth</div>
+    <div class="ls-tab" data-tab="production" id="dp-tabbtn-production">Production</div>
+    <div class="ls-tab" data-tab="expenses">Expenses</div>
+  </div>
+
+  <!-- tab bodies -->
+  <div class="ls-tab-body" id="dp-tab-info"><!-- filled by JS --></div>
+  <div class="ls-tab-body" id="dp-tab-health" style="display:none;"></div>
+  <div class="ls-tab-body" id="dp-tab-vaccinations" style="display:none;"></div>
+  <div class="ls-tab-body" id="dp-tab-treatments" style="display:none;"></div>
+  <div class="ls-tab-body" id="dp-tab-feeding" style="display:none;"></div>
+  <div class="ls-tab-body" id="dp-tab-breeding" style="display:none;"></div>
+  <div class="ls-tab-body" id="dp-tab-growth" style="display:none;"></div>
+  <div class="ls-tab-body" id="dp-tab-production" style="display:none;"></div>
+  <div class="ls-tab-body" id="dp-tab-expenses" style="display:none;"></div>
+</div><!-- /ls-detail-panel -->
+
+
+<!-- ============================================================
+     ADD ANIMAL MODAL
+============================================================ -->
+<div class="ls-modal" id="modal-add">
+  <div class="ls-modal-box">
+    <div class="ls-modal-hdr">
+      <h3><i class="fas fa-paw" style="color:var(--ls-accent);"></i> Add New Animal</h3>
+      <button class="ls-modal-close" data-close="modal-add"><i class="fas fa-times"></i></button>
     </div>
-
-    <div class="livestock-grid" id="livestock-grid"></div>
-  </main>
-
-  <!-- Add Animal Modal -->
-  <div class="modal-backdrop" id="add-animal-modal">
-    <div class="modal-box" style="max-width:480px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-        <h3 style="font-size:18px;"><i class="fas fa-paw" style="color:var(--livestock-accent);"></i> Add New Animal</h3>
-        <button onclick="closeModal()" style="background:none;font-size:20px;cursor:pointer;color:var(--text-muted);"><i class="fas fa-times"></i></button>
-      </div>
-      <form id="add-animal-form" onsubmit="addAnimal(event)">
-        <div class="form-group" style="margin-bottom:12px;">
-          <label class="form-label">Animal Name/ID</label>
-          <input type="text" class="form-input" id="animal-name" placeholder="e.g. Cow-001" required>
+    <form id="form-add-animal">
+      <div class="ls-form-grid">
+        <div class="ls-form-row">
+          <label class="ls-form-label">Animal Name *</label>
+          <input class="ls-form-input" type="text" id="add-name" placeholder="e.g. Lakshmi" required maxlength="200">
         </div>
-        <div class="form-group" style="margin-bottom:12px;">
-          <label class="form-label">Type</label>
-          <select class="form-select" id="animal-type" required>
+        <div class="ls-form-row">
+          <label class="ls-form-label">Tag / ID</label>
+          <input class="ls-form-input" type="text" id="add-tag" placeholder="e.g. TAG-001" maxlength="100">
+        </div>
+      </div>
+      <div class="ls-form-grid">
+        <div class="ls-form-row">
+          <label class="ls-form-label">Animal Type *</label>
+          <select class="ls-form-input" id="add-type" required>
             <option value="">Select type</option>
             <option value="cow">Cow</option>
             <option value="buffalo">Buffalo</option>
             <option value="goat">Goat</option>
-            <option value="chicken">Chicken</option>
             <option value="sheep">Sheep</option>
+            <option value="poultry">Poultry</option>
+            <option value="pig">Pig</option>
+            <option value="other">Other</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom:12px;">
-          <label class="form-label">Age (years)</label>
-          <input type="number" class="form-input" id="animal-age" placeholder="e.g. 3" min="0" required>
+        <div class="ls-form-row">
+          <label class="ls-form-label">Gender</label>
+          <select class="ls-form-input" id="add-gender">
+            <option value="">Select</option>
+            <option value="female">Female</option>
+            <option value="male">Male</option>
+          </select>
         </div>
-        <div class="form-group" style="margin-bottom:12px;">
-          <label class="form-label">Health Status</label>
-          <select class="form-select" id="animal-health" required>
+      </div>
+      <div class="ls-form-grid">
+        <div class="ls-form-row">
+          <label class="ls-form-label">Breed</label>
+          <input class="ls-form-input" type="text" id="add-breed" placeholder="e.g. HF" maxlength="100">
+        </div>
+        <div class="ls-form-row">
+          <label class="ls-form-label">Date of Birth</label>
+          <input class="ls-form-input" type="date" id="add-dob">
+        </div>
+      </div>
+      <div class="ls-form-grid">
+        <div class="ls-form-row">
+          <label class="ls-form-label">Weight (kg)</label>
+          <input class="ls-form-input" type="number" id="add-weight" placeholder="e.g. 350" min="0" step="0.1">
+        </div>
+        <div class="ls-form-row">
+          <label class="ls-form-label">Health Status</label>
+          <select class="ls-form-input" id="add-health">
             <option value="healthy">Healthy</option>
-            <option value="sick">Sick</option>
-            <option value="checkup">Checkup Due</option>
+            <option value="monitoring">Monitoring</option>
+            <option value="needs_attention">Needs Attention</option>
+            <option value="critical">Critical</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom:12px;">
-          <label class="form-label">Last Vaccination</label>
-          <input type="date" class="form-input" id="animal-vaccination">
+      </div>
+      <div class="ls-form-row">
+        <label class="ls-form-label">Location / Shed</label>
+        <input class="ls-form-input" type="text" id="add-location" placeholder="e.g. Shed A" maxlength="200">
+      </div>
+      <div class="ls-form-row">
+        <label class="ls-form-label">Source / Acquisition</label>
+        <input class="ls-form-input" type="text" id="add-source" placeholder="e.g. Purchased from market" maxlength="200">
+      </div>
+      <div class="ls-form-row">
+        <label class="ls-form-label">Photo</label>
+        <div class="ls-photo-row">
+          <div class="ls-photo-prev" id="add-photo-prev"><i class="fas fa-camera"></i></div>
+          <input class="ls-form-input" type="file" id="add-photo" accept="image/*" style="padding:6px 11px;">
         </div>
-        <button type="submit" class="btn-primary" style="width:100%;background:var(--livestock-accent);"><i class="fas fa-plus-circle"></i> Add Animal</button>
-      </form>
+        <input class="ls-form-input" type="url" id="add-photo-url" placeholder="…or paste an image URL" maxlength="500" style="margin-top:6px;">
+      </div>
+      <div class="ls-form-row">
+        <label class="ls-form-label">Notes</label>
+        <textarea class="ls-form-input" id="add-notes" rows="2" placeholder="Any additional notes…" maxlength="500"></textarea>
+      </div>
+      <div id="add-err" style="color:var(--ls-red);font-size:12px;margin-bottom:8px;display:none;"></div>
+      <button type="submit" class="ls-form-btn primary"><i class="fas fa-plus-circle"></i> Add Animal</button>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT ANIMAL MODAL -->
+<div class="ls-modal" id="modal-edit">
+  <div class="ls-modal-box">
+    <div class="ls-modal-hdr">
+      <h3><i class="fas fa-pen" style="color:var(--ls-accent);"></i> Edit Animal</h3>
+      <button class="ls-modal-close" data-close="modal-edit"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="form-edit-animal">
+      <div class="ls-form-grid">
+        <div class="ls-form-row">
+          <label class="ls-form-label">Animal Name *</label>
+          <input class="ls-form-input" type="text" id="edit-name" required maxlength="200">
+        </div>
+        <div class="ls-form-row">
+          <label class="ls-form-label">Tag / ID</label>
+          <input class="ls-form-input" type="text" id="edit-tag" maxlength="100">
+        </div>
+      </div>
+      <div class="ls-form-grid">
+        <div class="ls-form-row">
+          <label class="ls-form-label">Animal Type *</label>
+          <select class="ls-form-input" id="edit-type" required>
+            <option value="cow">Cow</option>
+            <option value="buffalo">Buffalo</option>
+            <option value="goat">Goat</option>
+            <option value="sheep">Sheep</option>
+            <option value="poultry">Poultry</option>
+            <option value="pig">Pig</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="ls-form-row">
+          <label class="ls-form-label">Gender</label>
+          <select class="ls-form-input" id="edit-gender">
+            <option value="">Select</option>
+            <option value="female">Female</option>
+            <option value="male">Male</option>
+          </select>
+        </div>
+      </div>
+      <div class="ls-form-grid">
+        <div class="ls-form-row">
+          <label class="ls-form-label">Breed</label>
+          <input class="ls-form-input" type="text" id="edit-breed" maxlength="100">
+        </div>
+        <div class="ls-form-row">
+          <label class="ls-form-label">Date of Birth</label>
+          <input class="ls-form-input" type="date" id="edit-dob">
+        </div>
+      </div>
+      <div class="ls-form-grid">
+        <div class="ls-form-row">
+          <label class="ls-form-label">Weight (kg)</label>
+          <input class="ls-form-input" type="number" id="edit-weight" min="0" step="0.1">
+        </div>
+        <div class="ls-form-row">
+          <label class="ls-form-label">Health Status</label>
+          <select class="ls-form-input" id="edit-health">
+            <option value="healthy">Healthy</option>
+            <option value="monitoring">Monitoring</option>
+            <option value="needs_attention">Needs Attention</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+      </div>
+      <div class="ls-form-row">
+        <label class="ls-form-label">Location / Shed</label>
+        <input class="ls-form-input" type="text" id="edit-location" maxlength="200">
+      </div>
+      <div class="ls-form-row">
+        <label class="ls-form-label">Photo</label>
+        <div class="ls-photo-row">
+          <div class="ls-photo-prev" id="edit-photo-prev"><i class="fas fa-camera"></i></div>
+          <input class="ls-form-input" type="file" id="edit-photo" accept="image/*" style="padding:6px 11px;">
+        </div>
+        <input class="ls-form-input" type="url" id="edit-photo-url" placeholder="…or paste an image URL" maxlength="500" style="margin-top:6px;">
+      </div>
+      <div class="ls-form-row">
+        <label class="ls-form-label">Notes</label>
+        <textarea class="ls-form-input" id="edit-notes" rows="2" maxlength="500"></textarea>
+      </div>
+      <div id="edit-err" style="color:var(--ls-red);font-size:12px;margin-bottom:8px;display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="ls-form-btn" style="background:#FFEBEE;color:var(--ls-red);border:1px solid #FFCDD2;" id="btn-delete-animal"><i class="fas fa-trash"></i> Delete</button>
+        <button type="submit" class="ls-form-btn primary" style="flex:2;"><i class="fas fa-check"></i> Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div class="ls-confirm" id="confirm-delete">
+  <div class="ls-confirm-box">
+    <div style="font-size:40px;color:var(--ls-red);margin-bottom:12px;"><i class="fas fa-triangle-exclamation"></i></div>
+    <h3>Remove Animal?</h3>
+    <p>This will remove <strong id="confirm-delete-name"></strong> from your livestock. Health, vaccination, and treatment records will also be removed. This cannot be undone.</p>
+    <div class="ls-confirm-btns">
+      <button style="background:#f0f0f0;color:var(--text-primary);" onclick="lsCloseConfirm()">Cancel</button>
+      <button style="background:var(--ls-red);color:#fff;" id="btn-confirm-delete">Remove</button>
     </div>
   </div>
+</div>
 
-  <script src="js/database.js"></script>
-  <script src="js/services.js"></script>
-  <script src="js/userStore.js"></script>
-  <script src="assets/js/navigation.js"></script>
-  <script src="assets/js/app.js"></script>
-  <script src="js/script.js"></script>
-  <script>
-    var livestock = [
-      { id: 1, name: 'Cow-001', type: 'cow', age: 4, health: 'healthy', lastVaccination: '2025-12-15', milkProduction: 12, weight: 450 },
-      { id: 2, name: 'Cow-002', type: 'cow', age: 3, health: 'healthy', lastVaccination: '2025-11-20', milkProduction: 10, weight: 420 },
-      { id: 3, name: 'Buffalo-001', type: 'buffalo', age: 5, health: 'checkup', lastVaccination: '2025-10-10', milkProduction: 8, weight: 550 },
-      { id: 4, name: 'Goat-001', type: 'goat', age: 2, health: 'healthy', lastVaccination: '2026-01-05', milkProduction: 2, weight: 45 },
-      { id: 5, name: 'Chicken-001', type: 'chicken', age: 1, health: 'healthy', lastVaccination: '2026-01-10', milkProduction: 0, weight: 2 }
-    ];
+<!-- ANIMAL PICKER (for quick actions when more than one animal exists) -->
+<div class="ls-modal" id="modal-pick">
+  <div class="ls-modal-box">
+    <div class="ls-modal-hdr">
+      <h3><i class="fas fa-paw" style="color:var(--ls-accent);"></i> <span id="pick-title">Select Animal</span></h3>
+      <button class="ls-modal-close" data-close="modal-pick"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="pick-list"></div>
+  </div>
+</div>
 
-    function getTypeIcon(type) {
-      var icons = {
-        'cow': 'fa-cow',
-        'buffalo': 'fa-hippo',
-        'goat': 'fa-horse',
-        'chicken': 'fa-dove',
-        'sheep': 'fa-cloud'
-      };
-      return icons[type] || 'fa-paw';
+<!-- TOAST -->
+<div class="ls-toast" id="ls-toast"></div>
+
+<!-- ============================================================
+     SCRIPTS
+============================================================ -->
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ─── auth guard ─── */
+  if (!localStorage.getItem('fa-auth-token') || localStorage.getItem('fa-auth') !== 'true') {
+    window.location.replace('login.html');
+    return;
+  }
+
+  /* ─── API base: use the existing centralized config (services.js), same fallback ─── */
+  function getBase() {
+    try {
+      if (window.API && window.API.config && window.API.config.BASE_URL) return window.API.config.BASE_URL;
+    } catch (e) {}
+    if (window._API_BASE_URL) return window._API_BASE_URL;
+    var o = window.location.origin;
+    if (!o || o === 'null' || o.indexOf('file:') === 0) return 'http://localhost:8000/api/v1';
+    if (o.indexOf('localhost:8000') !== -1 || o.indexOf('127.0.0.1:8000') !== -1) return o + '/api/v1';
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://localhost:8000/api/v1';
+    return o + '/api/v1';
+  }
+
+  function lsApi(method, path, body) {
+    var token = localStorage.getItem('fa-auth-token');
+    var headers = { 'Authorization': 'Bearer ' + token };
+    var opts = { method: method, headers: headers };
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
     }
-
-    function getHealthBadge(health) {
-      var badges = {
-        'healthy': '<span class="health-badge healthy"><i class="fas fa-check-circle"></i> Healthy</span>',
-        'sick': '<span class="health-badge sick"><i class="fas fa-exclamation-circle"></i> Sick</span>',
-        'checkup': '<span class="health-badge checkup"><i class="fas fa-stethoscope"></i> Checkup Due</span>'
-      };
-      return badges[health] || '';
-    }
-
-    function isVaccinationDue(date) {
-      if (!date) return false;
-      var vaccDate = new Date(date);
-      var today = new Date();
-      var diffDays = Math.floor((today - vaccDate) / (1000 * 60 * 60 * 24));
-      return diffDays > 180; // 6 months
-    }
-
-    function renderLivestock() {
-      var container = document.getElementById('livestock-grid');
-      var searchTerm = (document.getElementById('livestock-search').value || '').toLowerCase();
-      var typeFilter = document.getElementById('type-filter').value;
-      var healthFilter = document.getElementById('health-filter').value;
-
-      var filtered = livestock.filter(function(animal) {
-        var matchesSearch = animal.name.toLowerCase().indexOf(searchTerm) !== -1;
-        var matchesType = typeFilter === 'all' || animal.type === typeFilter;
-        var matchesHealth = healthFilter === 'all' || animal.health === healthFilter;
-        return matchesSearch && matchesType && matchesHealth;
+    return fetch(getBase() + '/livestock' + path, opts)
+      .then(function (r) {
+        if (r.status === 401) {
+          try { localStorage.setItem('fa-auth', 'false'); } catch (e) {}
+          window.location.replace('login.html');
+          return { status: 'error', detail: 'Session expired. Please log in again.', auth: true };
+        }
+        var ct = (r.headers && r.headers.get && r.headers.get('content-type')) || '';
+        if (ct.indexOf('application/json') === -1) {
+          return r.text().then(function (t) {
+            if (!r.ok) return { status: 'error', detail: 'Server error (' + r.status + '). Please try again.' };
+            try { return JSON.parse(t); } catch (e) { return { status: 'success', data: null }; }
+          });
+        }
+        return r.text().then(function (t) {
+          var data = {};
+          try { data = t ? JSON.parse(t) : { status: 'success', data: null }; }
+          catch (e) { return { status: 'error', detail: 'Unexpected server response. Please try again.' }; }
+          if (!r.ok || data.status === 'error') {
+            return { status: 'error', detail: (data && data.detail) || ('Request failed (' + r.status + ')'), errors: (data && data.errors) || [] };
+          }
+          return data;
+        });
+      })
+      .catch(function (err) {
+        if (err && err.auth) return err;
+        return { status: 'error', detail: 'Unable to reach the server. Check your connection and retry.', network: true };
       });
+  }
 
-      if (filtered.length === 0) {
-        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);"><i class="fas fa-paw" style="font-size:32px;margin-bottom:12px;"></i>No animals found</div>';
+  /* Upload an animal photo through the existing storage API (public images dir). */
+  function lsUploadPhoto(file) {
+    var token = localStorage.getItem('fa-auth-token');
+    var fd = new FormData();
+    fd.append('file', file);
+    return fetch(getBase() + '/storage/upload?subdir=images', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: fd
+    }).then(function (r) {
+      return r.json().then(function (d) {
+        if (!r.ok || d.status === 'error') throw new Error((d && d.detail) || 'Photo upload failed');
+        var data = d.data || {};
+        return data.url || data.file_url || null;
+      });
+    });
+  }
+
+  /* ─── Toast ─── */
+  var _toastTimer = null;
+  function lsToast(msg, type) {
+    var el = document.getElementById('ls-toast');
+    el.textContent = msg;
+    el.className = 'ls-toast ' + (type || 'info') + ' show';
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function () { el.className = 'ls-toast'; }, 3200);
+  }
+
+  /* ─── helpers ─── */
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  var TYPE_CONFIG = {
+    cow:     { icon: 'fa-cow',        color: '#E67E22' },
+    buffalo: { icon: 'fa-hippo',      color: '#34495E' },
+    goat:    { icon: 'fa-horse-head', color: '#8E44AD' },
+    sheep:   { icon: 'fa-cloud',      color: '#E74C3C' },
+    poultry: { icon: 'fa-dove',       color: '#F39C12' },
+    pig:     { icon: 'fa-piggy-bank', color: '#E91E63' },
+    other:   { icon: 'fa-paw',        color: '#607D8B' }
+  };
+
+  function typeConf(type) {
+    return TYPE_CONFIG[type] || TYPE_CONFIG.other;
+  }
+
+  /* Friendly default livestock illustration (inline SVG, Farm Assist palette).
+     Used whenever an animal has no photo — never a broken image or stock photo. */
+  function lsIllustration(size) {
+    var w = size === 'sm' ? 'ls-empty-ill sm' : 'ls-empty-ill';
+    return '<svg class="' + w + '" viewBox="0 0 148 104" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<ellipse cx="74" cy="92" rx="58" ry="8" fill="#E8F5E9"/>' +
+      '<rect x="30" y="18" width="88" height="58" rx="10" fill="#E8F5E9"/>' +
+      '<rect x="30" y="18" width="88" height="58" rx="10" fill="#1B5E3F" fill-opacity="0.06"/>' +
+      '<circle cx="74" cy="52" r="22" fill="#FFF3E0" stroke="#E67E22" stroke-width="3"/>' +
+      '<circle cx="66" cy="50" r="2.4" fill="#2E7D32"/><circle cx="82" cy="50" r="2.4" fill="#2E7D32"/>' +
+      '<path d="M67 60 Q74 65 81 60" stroke="#2E7D32" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<path d="M56 44 Q50 36 54 30 Q60 34 60 42" fill="#E67E22"/>' +
+      '<path d="M92 44 Q98 36 94 30 Q88 34 88 42" fill="#E67E22"/>' +
+      '<rect x="40" y="76" width="68" height="8" rx="4" fill="#C8E6C9"/>' +
+      '<circle cx="38" cy="30" r="5" fill="#E3F2FD"/><circle cx="112" cy="66" r="6" fill="#FFF3E0"/>' +
+      '</svg>';
+  }
+
+  function lsEmptyState(opts) {
+    return '<div class="ls-empty" style="grid-column:1/-1;">' + lsIllustration(opts && opts.size) +
+      '<h3>' + esc((opts && opts.title) || 'No records yet') + '</h3>' +
+      '<p>' + esc((opts && opts.text) || 'Nothing here yet. Add your first record to get started.') + '</p>' +
+      ((opts && opts.action) || '') + '</div>';
+  }
+
+  function lsRecordEmpty(icon, text, targetTab) {
+    return '<div class="ls-empty" style="padding:22px 0;">' + lsIllustration('sm') +
+      '<h3>No records yet</h3><p>' + esc(text || 'No entries have been added for this animal yet.') + '</p>' +
+      (targetTab ? '<button class="ls-form-btn primary" style="width:auto;padding:8px 18px;margin:0 auto;" data-goto-form="1"><i class="fas fa-plus-circle"></i> Add the first record</button>' : '') +
+      '</div>';
+  }
+
+  /* Avatar: icon backdrop always rendered; photo layered on top and removed on
+     error — so a missing/broken URL degrades to the clean default icon. */
+  function avatarHtml(animal, size) {
+    var c = typeConf(animal.animal_type || '');
+    var s = size || 50;
+    var fs = Math.round(s * 0.42);
+    var inner = '<i class="fas ' + c.icon + '" style="font-size:' + fs + 'px;"></i>';
+    if (animal.photo_url) {
+      inner += '<img src="' + esc(animal.photo_url) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">';
+    }
+    return '<div class="ls-avatar" style="position:relative;width:' + s + 'px;height:' + s + 'px;background:' + c.color + ';">' + inner + '</div>';
+  }
+
+  function healthBadge(status) {
+    var labels = { healthy: 'Healthy', monitoring: 'Monitoring', needs_attention: 'Needs Attention', critical: 'Critical' };
+    var icons  = { healthy: 'fa-check-circle', monitoring: 'fa-eye', needs_attention: 'fa-exclamation-circle', critical: 'fa-skull-crossbones' };
+    var cls = status || 'healthy';
+    return '<span class="ls-hbadge ' + cls + '"><i class="fas ' + (icons[cls] || 'fa-circle') + '"></i> ' + (labels[cls] || cls) + '</span>';
+  }
+
+  function calcAge(dob) {
+    if (!dob) return null;
+    var b = new Date(dob);
+    if (isNaN(b)) return null;
+    var now = new Date();
+    var yr = now.getFullYear() - b.getFullYear();
+    var mo = now.getMonth() - b.getMonth();
+    if (mo < 0) { yr--; mo += 12; }
+    if (yr > 0) return yr + ' yr' + (yr !== 1 ? 's' : '') + (mo > 0 ? ' ' + mo + ' mo' : '');
+    if (mo > 0) return mo + ' month' + (mo !== 1 ? 's' : '');
+    var days = Math.floor((now - b) / 86400000);
+    return days + ' day' + (days !== 1 ? 's' : '');
+  }
+
+  function fmtDate(s) {
+    if (!s) return null;
+    try {
+      var d = new Date(s);
+      if (isNaN(d)) return s;
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) { return s; }
+  }
+
+  function dval(v, fallback) {
+    if (v === null || v === undefined || v === '') return '<span class="ls-dval empty">' + (fallback || 'Not added yet') + '</span>';
+    return '<span class="ls-dval">' + esc(String(v)) + '</span>';
+  }
+
+  /* ─── State ─── */
+  var _allAnimals = [];
+  var _overview   = null;   // null = not loaded yet (never render 0/placeholder before load)
+  var _attention  = null;   // null = not loaded yet
+  var _activity   = null;
+  var _loadError  = null;   // distinguishes "could not load" from "no livestock"
+  var _currentAnimal = null;
+  var _currentFull   = null;
+  var _filterStatus  = '';
+  var _filterType    = '';
+  var _filterBreed   = '';
+  var _filterAttn    = '';
+  var _searchQ       = '';
+  var _toDeleteId    = null;
+  var _activeTab     = 'info';
+  var _loadedOnce    = false;
+
+  /* ─────────────────────────────────────────────
+     LOAD OVERVIEW
+  ───────────────────────────────────────────── */
+  function loadOverview() {
+    lsApi('GET', '/overview').then(function (res) {
+      if (res.status !== 'success') return;
+      var d = res.data || {};
+      _overview = d;
+      renderStats(d);
+      renderHealthOverview(d);
+    });
+  }
+
+  function renderStats(d) {
+    var container = document.getElementById('ls-stats');
+    var html = statBox('fa-paw', '#E67E22', d.total || 0, 'Total', 'total');
+    var types = [
+      ['cow', 'Cattle', 'fa-cow'], ['buffalo', 'Buffalo', 'fa-hippo'],
+      ['goat', 'Goats', 'fa-horse-head'], ['sheep', 'Sheep', 'fa-cloud'],
+      ['poultry', 'Poultry', 'fa-dove'], ['pig', 'Pigs', 'fa-piggy-bank'],
+      ['other', 'Other', 'fa-paw']
+    ];
+    types.forEach(function (item) {
+      if ((d.by_type || {})[item[0]]) html += statBox(item[2], '#607D8B', d.by_type[item[0]], item[1], 'type_' + item[0]);
+    });
+    if (d.healthy) html += statBox('fa-heart', '#27AE60', d.healthy, 'Healthy', 'healthy');
+    if (d.monitoring) html += statBox('fa-eye', '#3498DB', d.monitoring, 'Monitoring', 'monitoring');
+    if (d.needs_attention) html += statBox('fa-triangle-exclamation', '#E65100', d.needs_attention, 'Needs Attn', 'needs_attention');
+    if (d.vaccinations_due) html += statBox('fa-syringe', '#3498DB', d.vaccinations_due, 'Vacc Due', 'vacc_due');
+    container.innerHTML = html;
+  }
+
+  function statBox(icon, color, num, label, key) {
+    return '<div class="ls-stat" data-statkey="' + key + '">' +
+      '<i class="fas ' + icon + '" style="color:' + color + ';"></i>' +
+      '<div class="ls-stat-num">' + num + '</div>' +
+      '<div class="ls-stat-lbl">' + label + '</div></div>';
+  }
+
+  function renderHealthOverview(d) {
+    var byType = d.by_type || {};
+    document.getElementById('hov-healthy').textContent = d.healthy || 0;
+    document.getElementById('hov-monitoring').textContent = d.monitoring || 0;
+    document.getElementById('hov-attention').textContent = d.needs_attention || 0;
+    document.getElementById('hov-critical').textContent = d.critical || 0;
+  }
+
+  /* ─────────────────────────────────────────────
+     LOAD ANIMALS
+  ───────────────────────────────────────────── */
+  function loadAnimals() {
+    var grid = document.getElementById('ls-grid');
+    var params = [];
+    if (_filterType) params.push('animal_type=' + encodeURIComponent(_filterType));
+    if (_filterStatus) params.push('health_status=' + encodeURIComponent(_filterStatus));
+    if (_searchQ) params.push('q=' + encodeURIComponent(_searchQ));
+    var qs = params.length ? '?' + params.join('&') : '';
+    lsApi('GET', qs).then(function (res) {
+      if (res.status !== 'success') {
+        grid.innerHTML = '<div class="ls-empty"><i class="fas fa-exclamation-triangle"></i><p>Failed to load livestock.<br><button class="ls-form-btn primary" style="width:auto;padding:8px 16px;margin-top:8px;" onclick="loadAnimals()">Retry</button></p></div>';
         return;
       }
+      _allAnimals = res.data || [];
+      renderGrid(_allAnimals);
+      // update health overview counts from real data
+      updateHealthCounts(_allAnimals);
+    });
+  }
 
+  function updateHealthCounts(animals) {
+    var counts = { healthy: 0, monitoring: 0, needs_attention: 0, critical: 0 };
+    animals.forEach(function (a) { if (counts[a.health_status] !== undefined) counts[a.health_status]++; });
+    document.getElementById('hov-healthy').textContent   = counts.healthy;
+    document.getElementById('hov-monitoring').textContent = counts.monitoring;
+    document.getElementById('hov-attention').textContent  = counts.needs_attention;
+    document.getElementById('hov-critical').textContent   = counts.critical;
+  }
+
+  function renderGrid(animals) {
+    var grid = document.getElementById('ls-grid');
+    if (!animals.length) {
+      var emptyMsg = (_filterStatus || _filterType || _searchQ)
+        ? 'No animals match your filters.'
+        : 'No livestock added yet.\nAdd your first animal to get started.';
+      grid.innerHTML = '<div class="ls-empty" style="grid-column:1/-1;"><i class="fas fa-paw"></i><p>' + esc(emptyMsg) + '</p>' +
+        (!_filterStatus && !_filterType && !_searchQ ? '<button class="ls-form-btn primary" style="width:auto;padding:8px 18px;margin:0 auto;" onclick="lsOpenModal(\'modal-add\')"><i class="fas fa-plus-circle"></i> Add Animal</button>' : '') +
+        '</div>';
+      return;
+    }
+    var html = '';
+    animals.forEach(function (a) {
+      html += buildCard(a);
+    });
+    grid.innerHTML = html;
+    // attach click events
+    grid.querySelectorAll('.ls-card').forEach(function (card) {
+      card.addEventListener('click', function () {
+        openDetail(card.dataset.aid);
+      });
+    });
+    grid.querySelectorAll('.ls-card-btn[data-edit]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openEditModal(btn.dataset.edit);
+      });
+    });
+  }
+
+  function buildCard(a) {
+    var age = a.date_of_birth ? calcAge(a.date_of_birth) : null;
+    var typeLabel = (a.animal_type || 'other').charAt(0).toUpperCase() + (a.animal_type || 'other').slice(1);
+    var chips = '';
+    if (a.breed) chips += '<span class="ls-chip breed">' + esc(a.breed) + '</span>';
+    if (a.weight_kg) chips += '<span class="ls-chip wt"><i class="fas fa-weight-scale"></i> ' + a.weight_kg + ' kg</span>';
+    return '<div class="ls-card" data-aid="' + esc(a.animal_id) + '">' +
+      '<div class="ls-card-top">' + avatarHtml(a, 50) +
+      '<div class="ls-card-info">' +
+      '<div class="ls-card-name">' + esc(a.name) + '</div>' +
+      '<div class="ls-card-type">' + typeLabel + (a.tag_id ? ' · ' + esc(a.tag_id) : '') + '</div>' +
+      '<div class="ls-card-meta">' + (age ? age : '') + (a.location ? (age ? ' · ' : '') + esc(a.location) : '') + '</div>' +
+      '</div></div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+      healthBadge(a.health_status) +
+      (chips ? '<div class="ls-card-chips" style="margin-left:6px;">' + chips + '</div>' : '') +
+      '</div>' +
+      '<div class="ls-card-actions">' +
+      '<button class="ls-card-btn" data-edit="' + esc(a.animal_id) + '"><i class="fas fa-pen"></i> Edit</button>' +
+      '<button class="ls-card-btn primary"><i class="fas fa-eye"></i> View Details</button>' +
+      '</div></div>';
+  }
+
+  /* ─────────────────────────────────────────────
+     UPCOMING EVENTS
+  ───────────────────────────────────────────── */
+  function loadUpcoming() {
+    var container = document.getElementById('ls-events');
+    lsApi('GET', '/events/upcoming').then(function (res) {
+      if (res.status !== 'success' || !res.data || !res.data.length) {
+        container.innerHTML = '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-calendar-check" style="font-size:28px;"></i><p>No upcoming livestock events in the next 30 days.</p></div>';
+        return;
+      }
       var html = '';
-      filtered.forEach(function(animal) {
-        var vaccDue = isVaccinationDue(animal.lastVaccination);
-        var milkHtml = animal.milkProduction > 0 ? 
-          '<div class="milk-production"><div class="milk-production-value">' + animal.milkProduction + 'L/day</div><div class="milk-production-label">Milk Production</div></div>' : '';
-        
-        html += '<div class="livestock-card">' +
-          '<div class="livestock-header">' +
-          '<div class="livestock-avatar ' + animal.type + '"><i class="fas ' + getTypeIcon(animal.type) + '"></i></div>' +
-          '<div class="livestock-info">' +
-          '<div class="livestock-name">' + animal.name + '</div>' +
-          '<div class="livestock-type">' + animal.type.charAt(0).toUpperCase() + animal.type.slice(1) + '</div>' +
-          '<div class="livestock-id">ID: ' + animal.id + ' • Age: ' + animal.age + ' years</div>' +
+      res.data.forEach(function (ev) {
+        var isOverdue = ev.status === 'overdue';
+        var iconMap = { vaccination: { icon: 'fa-syringe', bg: '#E3F2FD', color: '#3498DB' },
+                        health_checkup: { icon: 'fa-stethoscope', bg: '#E8F5E9', color: '#27AE60' },
+                        breeding: { icon: 'fa-baby', bg: '#F3E5F5', color: '#8E44AD' } };
+        var ic = iconMap[ev.type] || { icon: 'fa-calendar', bg: '#FFF3E0', color: '#E67E22' };
+        html += '<div class="ls-event-item">' +
+          '<div class="ls-event-icon" style="background:' + ic.bg + ';color:' + ic.color + ';"><i class="fas ' + ic.icon + '"></i></div>' +
+          '<div class="ls-event-info">' +
+          '<div class="ls-event-title">' + esc(ev.event) + '</div>' +
+          '<div class="ls-event-sub">' + esc(ev.animal_name) + ' · ' + esc((ev.animal_type || '').charAt(0).toUpperCase() + (ev.animal_type || '').slice(1)) + '</div>' +
           '</div>' +
-          '</div>' +
-          (vaccDue ? '<div class="vaccination-alert"><i class="fas fa-syringe"></i><span>Vaccination Due</span></div>' : '') +
-          milkHtml +
-          '<div class="livestock-stats">' +
-          '<div class="livestock-stat"><div class="livestock-stat-value">' + animal.weight + ' kg</div><div class="livestock-stat-label">Weight</div></div>' +
-          '<div class="livestock-stat"><div class="livestock-stat-value">' + animal.age + ' yrs</div><div class="livestock-stat-label">Age</div></div>' +
-          '</div>' +
-          '<div class="livestock-health">' + getHealthBadge(animal.health) + '</div>' +
-          '<div class="livestock-actions">' +
-          '<button class="btn-secondary" onclick="editAnimal(' + animal.id + ')"><i class="fas fa-edit"></i> Edit</button>' +
-          '<button class="btn-secondary" onclick="viewDetails(' + animal.id + ')"><i class="fas fa-eye"></i> Details</button>' +
-          '</div>' +
+          '<div class="ls-event-date' + (isOverdue ? ' ls-event-overdue' : '') + '">' + (fmtDate(ev.date) || '—') + '</div>' +
           '</div>';
       });
-
       container.innerHTML = html;
-      updateStats();
+    });
+  }
+
+  /* ─────────────────────────────────────────────
+     DETAIL PANEL
+  ───────────────────────────────────────────── */
+  function openDetail(animalId) {
+    var animal = _allAnimals.find(function (a) { return a.animal_id === animalId; });
+    if (!animal) {
+      // fetch fresh
+      lsApi('GET', '/' + animalId).then(function (res) {
+        if (res.status === 'success') { _currentAnimal = res.data; renderDetailPanel(); }
+        else lsToast('Animal not found', 'error');
+      });
+      return;
+    }
+    _currentAnimal = animal;
+    renderDetailPanel();
+  }
+
+  function renderDetailPanel() {
+    var a = _currentAnimal;
+    if (!a) return;
+    var c = typeConf(a.animal_type || '');
+
+    // header
+    document.getElementById('dp-hdr-name').textContent = a.name || '—';
+
+    // hero avatar
+    var dpAv = document.getElementById('dp-avatar');
+    dpAv.style.background = c.color;
+    dpAv.style.width = '72px';
+    dpAv.style.height = '72px';
+    dpAv.style.fontSize = '30px';
+    if (a.photo_url) {
+      dpAv.innerHTML = '<img src="' + esc(a.photo_url) + '" onerror="this.style.display=\'none\'">';
+    } else {
+      dpAv.innerHTML = '<i class="fas ' + c.icon + '"></i>';
     }
 
-    function updateStats() {
-      document.getElementById('total-animals').textContent = livestock.length;
-      document.getElementById('healthy-animals').textContent = livestock.filter(function(a) { return a.health === 'healthy'; }).length;
-      document.getElementById('vaccination-due').textContent = livestock.filter(function(a) { return isVaccinationDue(a.lastVaccination); }).length;
-      var totalMilk = livestock.reduce(function(sum, a) { return sum + (a.milkProduction || 0); }, 0);
-      document.getElementById('milk-total').textContent = totalMilk + 'L';
-    }
+    document.getElementById('dp-name').textContent = a.name || '—';
+    var typeLabel = (a.animal_type || 'other').charAt(0).toUpperCase() + (a.animal_type || 'other').slice(1);
+    document.getElementById('dp-type').textContent = typeLabel + (a.breed ? ' · ' + a.breed : '');
+    document.getElementById('dp-hbadge').outerHTML = healthBadge(a.health_status);
 
-    function filterLivestock() {
-      renderLivestock();
-    }
+    var tagEl = document.getElementById('dp-tag') || document.querySelector('.ls-detail-badges .ls-chip');
+    if (tagEl) { tagEl.textContent = a.tag_id || ''; tagEl.style.display = a.tag_id ? 'inline-flex' : 'none'; }
 
-    function addAnimal(e) {
-      e.preventDefault();
-      var newAnimal = {
-        id: livestock.length + 1,
-        name: document.getElementById('animal-name').value,
-        type: document.getElementById('animal-type').value,
-        age: parseInt(document.getElementById('animal-age').value),
-        health: document.getElementById('animal-health').value,
-        lastVaccination: document.getElementById('animal-vaccination').value,
-        milkProduction: 0,
-        weight: 50
-      };
-      livestock.unshift(newAnimal);
-      renderLivestock();
-      closeModal();
-      showToast('Animal added successfully!', 'success');
-      document.getElementById('add-animal-form').reset();
-    }
+    // open panel
+    _activeTab = 'info';
+    switchTab('info');
+    document.getElementById('ls-detail-panel').classList.add('open');
+    document.getElementById('ls-main').style.overflow = 'hidden';
+    renderTabInfo();
+  }
 
-    function editAnimal(id) {
-      showToast('Edit functionality for animal ' + id, 'info');
-    }
+  function closeDetailPanel() {
+    document.getElementById('ls-detail-panel').classList.remove('open');
+    document.getElementById('ls-main').style.overflow = '';
+    _currentAnimal = null;
+  }
 
-    function viewDetails(id) {
-      showToast('View details for animal ' + id, 'info');
-    }
+  function switchTab(tab) {
+    _activeTab = tab;
+    document.querySelectorAll('.ls-tab').forEach(function (t) {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    ['info','health','vaccinations','treatments','feeding','breeding','growth'].forEach(function (t) {
+      var el = document.getElementById('dp-tab-' + t);
+      if (el) el.style.display = (t === tab) ? 'block' : 'none';
+    });
+    if (tab === 'info')         renderTabInfo();
+    if (tab === 'health')       loadTabHealth();
+    if (tab === 'vaccinations') loadTabVaccinations();
+    if (tab === 'treatments')   loadTabTreatments();
+    if (tab === 'feeding')      loadTabFeeding();
+    if (tab === 'breeding')     loadTabBreeding();
+    if (tab === 'growth')       loadTabGrowth();
+  }
 
-    window.addEventListener('load', renderLivestock);
-  </script>
+  /* ── tab: Info ── */
+  function renderTabInfo() {
+    var a = _currentAnimal;
+    if (!a) return;
+    var age = a.date_of_birth ? calcAge(a.date_of_birth) : null;
+    var el = document.getElementById('dp-tab-info');
+    el.innerHTML =
+      '<div class="ls-add-form" style="margin-top:0;">' +
+      '<h4><i class="fas fa-info-circle" style="color:var(--ls-accent);"></i> Basic Information</h4>' +
+      infoRow('Animal ID', a.animal_id) +
+      infoRow('Name', a.name) +
+      infoRow('Type', (a.animal_type || '').charAt(0).toUpperCase() + (a.animal_type || '').slice(1)) +
+      infoRow('Breed', a.breed) +
+      infoRow('Gender', a.gender ? a.gender.charAt(0).toUpperCase() + a.gender.slice(1) : null) +
+      infoRow('Age', age) +
+      infoRow('Date of Birth', fmtDate(a.date_of_birth)) +
+      infoRow('Weight', a.weight_kg ? a.weight_kg + ' kg' : null) +
+      infoRow('Color', a.color) +
+      '</div>' +
+      '<div class="ls-add-form">' +
+      '<h4><i class="fas fa-map-marker-alt" style="color:var(--ls-accent);"></i> Location & Acquisition</h4>' +
+      infoRow('Location', a.location) +
+      infoRow('Source', a.source) +
+      infoRow('Purchase Date', fmtDate(a.purchase_date)) +
+      infoRow('Purchase Price', a.purchase_price ? '₹' + a.purchase_price : null) +
+      '</div>' +
+      (a.notes ? '<div class="ls-add-form"><h4><i class="fas fa-sticky-note" style="color:var(--ls-accent);"></i> Notes</h4><div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">' + esc(a.notes) + '</div></div>' : '') +
+      '<button class="ls-form-btn" style="background:#FFEBEE;color:var(--ls-red);border:1px solid #FFCDD2;margin-top:4px;" onclick="openEditModalCurrent()"><i class="fas fa-pen"></i> Edit Animal Details</button>';
+  }
+
+  function infoRow(label, value) {
+    return '<div class="ls-drow"><span class="ls-dlbl">' + esc(label) + '</span>' + dval(value) + '</div>';
+  }
+
+  /* ── tab: Health ── */
+  function loadTabHealth() {
+    var a = _currentAnimal;
+    var el = document.getElementById('dp-tab-health');
+    el.innerHTML = '<div class="sk h14 w80"></div><div class="sk h14 w60" style="margin-top:8px;"></div>';
+    lsApi('GET', '/' + a.animal_id + '/health').then(function (res) {
+      var records = (res.status === 'success' ? res.data : []) || [];
+      var html = buildAddHealthForm();
+      if (records.length) {
+        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-history"></i> History</div></div>';
+        records.forEach(function (r) {
+          html += '<div class="ls-rec-card">' +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.health_status || 'Health Record') + '</span><span class="ls-rec-date">' + esc(fmtDate(r.record_date) || '') + '</span></div>' +
+            (r.symptoms ? recField('Symptoms', r.symptoms) : '') +
+            (r.diagnosis ? recField('Diagnosis', r.diagnosis) : '') +
+            (r.treatment ? recField('Treatment', r.treatment) : '') +
+            (r.medicine ? recField('Medicine', r.medicine) : '') +
+            (r.veterinarian ? recField('Vet', r.veterinarian) : '') +
+            (r.follow_up_date ? recField('Follow-up', fmtDate(r.follow_up_date)) : '') +
+            (r.notes ? recField('Notes', r.notes) : '') +
+            '</div>';
+        });
+      } else {
+        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-stethoscope"></i><p>No health records yet.</p></div>';
+      }
+      el.innerHTML = html;
+      el.querySelector('#btn-save-health').addEventListener('click', submitHealth);
+    });
+  }
+
+  function buildAddHealthForm() {
+    return '<div class="ls-add-form"><h4><i class="fas fa-plus-circle" style="color:var(--ls-green);"></i> Add Health Record</h4>' +
+      frmRow('Date', '<input class="ls-form-input" type="date" id="hr-date">') +
+      frmRow('Health Status', '<select class="ls-form-input" id="hr-status"><option value="healthy">Healthy</option><option value="monitoring">Monitoring</option><option value="needs_attention">Needs Attention</option><option value="critical">Critical</option></select>') +
+      frmRow('Symptoms', '<input class="ls-form-input" type="text" id="hr-symptoms" placeholder="e.g. Loss of appetite">') +
+      frmRow('Diagnosis', '<input class="ls-form-input" type="text" id="hr-diagnosis" placeholder="Vet\'s diagnosis">') +
+      frmRow('Treatment', '<input class="ls-form-input" type="text" id="hr-treatment" placeholder="Treatment given">') +
+      frmRow('Medicine', '<input class="ls-form-input" type="text" id="hr-medicine" placeholder="Medicine name">') +
+      frmRow('Veterinarian', '<input class="ls-form-input" type="text" id="hr-vet" placeholder="Vet\'s name">') +
+      frmRow('Follow-up Date', '<input class="ls-form-input" type="date" id="hr-followup">') +
+      frmRow('Notes', '<textarea class="ls-form-input" id="hr-notes" rows="2" placeholder="Additional notes…"></textarea>') +
+      '<div id="hr-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
+      '<button class="ls-form-btn primary" id="btn-save-health"><i class="fas fa-save"></i> Save Record</button></div>';
+  }
+
+  function submitHealth() {
+    var a = _currentAnimal;
+    var payload = {
+      record_date: v('hr-date') || null,
+      health_status: v('hr-status') || null,
+      symptoms: v('hr-symptoms') || null,
+      diagnosis: v('hr-diagnosis') || null,
+      treatment: v('hr-treatment') || null,
+      medicine: v('hr-medicine') || null,
+      veterinarian: v('hr-vet') || null,
+      follow_up_date: v('hr-followup') || null,
+      notes: v('hr-notes') || null
+    };
+    var errEl = document.getElementById('hr-err');
+    setSaving('btn-save-health', true);
+    lsApi('POST', '/' + a.animal_id + '/health', payload).then(function (res) {
+      setSaving('btn-save-health', false);
+      if (res.status === 'success') {
+        lsToast('Health record saved', 'success');
+        // refresh animal health status locally
+        if (payload.health_status) {
+          _currentAnimal.health_status = payload.health_status;
+          var idx = _allAnimals.findIndex(function (x) { return x.animal_id === a.animal_id; });
+          if (idx >= 0) _allAnimals[idx].health_status = payload.health_status;
+        }
+        loadTabHealth();
+        loadOverview();
+      } else {
+        errEl.textContent = res.detail || 'Failed to save record'; errEl.style.display = 'block';
+      }
+    });
+  }
+
+  /* ── tab: Vaccinations ── */
+  function loadTabVaccinations() {
+    var a = _currentAnimal;
+    var el = document.getElementById('dp-tab-vaccinations');
+    el.innerHTML = '<div class="sk h14 w80"></div>';
+    lsApi('GET', '/' + a.animal_id + '/vaccinations').then(function (res) {
+      var records = (res.status === 'success' ? res.data : []) || [];
+      var html = '<div class="ls-add-form"><h4><i class="fas fa-syringe" style="color:var(--ls-blue);"></i> Add Vaccination</h4>' +
+        frmRow('Vaccine Name *', '<input class="ls-form-input" type="text" id="vc-name" placeholder="e.g. FMD Vaccine" required>') +
+        frmGrid(
+          frmRow('Date Given', '<input class="ls-form-input" type="date" id="vc-date">'),
+          frmRow('Next Due Date', '<input class="ls-form-input" type="date" id="vc-next">')
+        ) +
+        frmGrid(
+          frmRow('Dose', '<input class="ls-form-input" type="text" id="vc-dose" placeholder="e.g. 2ml">'),
+          frmRow('Veterinarian', '<input class="ls-form-input" type="text" id="vc-vet" placeholder="Vet\'s name">')
+        ) +
+        frmRow('Notes', '<textarea class="ls-form-input" id="vc-notes" rows="1" placeholder="Notes…"></textarea>') +
+        '<div id="vc-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
+        '<button class="ls-form-btn primary" id="btn-save-vacc"><i class="fas fa-save"></i> Save Vaccination</button></div>';
+      if (records.length) {
+        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> Records</div></div>';
+        records.forEach(function (r) {
+          var statusCls = { completed: 'healthy', due_soon: 'monitoring', overdue: 'critical' }[r.status] || 'healthy';
+          html += '<div class="ls-rec-card">' +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.vaccine_name) + '</span>' + healthBadge(statusCls) + '</div>' +
+            (r.date_given ? recField('Given', fmtDate(r.date_given)) : '') +
+            (r.next_due_date ? recField('Next Due', fmtDate(r.next_due_date)) : '') +
+            (r.dose ? recField('Dose', r.dose) : '') +
+            (r.veterinarian ? recField('Vet', r.veterinarian) : '') +
+            (r.notes ? recField('Notes', r.notes) : '') +
+            '</div>';
+        });
+      } else {
+        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-syringe"></i><p>No vaccination records yet.</p></div>';
+      }
+      el.innerHTML = html;
+      el.querySelector('#btn-save-vacc').addEventListener('click', submitVaccination);
+    });
+  }
+
+  function submitVaccination() {
+    var a = _currentAnimal;
+    var name = v('vc-name');
+    var errEl = document.getElementById('vc-err');
+    if (!name) { errEl.textContent = 'Vaccine name is required'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    var payload = { vaccine_name: name, date_given: v('vc-date') || null, next_due_date: v('vc-next') || null, dose: v('vc-dose') || null, veterinarian: v('vc-vet') || null, notes: v('vc-notes') || null };
+    setSaving('btn-save-vacc', true);
+    lsApi('POST', '/' + a.animal_id + '/vaccinations', payload).then(function (res) {
+      setSaving('btn-save-vacc', false);
+      if (res.status === 'success') { lsToast('Vaccination saved', 'success'); loadTabVaccinations(); loadOverview(); }
+      else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+    });
+  }
+
+  /* ── tab: Treatments ── */
+  function loadTabTreatments() {
+    var a = _currentAnimal;
+    var el = document.getElementById('dp-tab-treatments');
+    el.innerHTML = '<div class="sk h14 w80"></div>';
+    lsApi('GET', '/' + a.animal_id + '/treatments').then(function (res) {
+      var records = (res.status === 'success' ? res.data : []) || [];
+      var html = '<div class="ls-add-form"><h4><i class="fas fa-pills" style="color:var(--ls-red);"></i> Add Treatment</h4>' +
+        frmGrid(
+          frmRow('Date', '<input class="ls-form-input" type="date" id="tr-date">'),
+          frmRow('Status', '<select class="ls-form-input" id="tr-status"><option value="ongoing">Ongoing</option><option value="completed">Completed</option><option value="follow_up">Follow-up</option></select>')
+        ) +
+        frmRow('Issue / Problem', '<input class="ls-form-input" type="text" id="tr-issue" placeholder="What was the issue?">') +
+        frmRow('Treatment Given', '<input class="ls-form-input" type="text" id="tr-treatment" placeholder="Treatment description">') +
+        frmGrid(
+          frmRow('Medicine', '<input class="ls-form-input" type="text" id="tr-medicine" placeholder="Medicine name">'),
+          frmRow('Veterinarian', '<input class="ls-form-input" type="text" id="tr-vet" placeholder="Vet\'s name">')
+        ) +
+        frmRow('Notes', '<textarea class="ls-form-input" id="tr-notes" rows="1" placeholder="Notes…"></textarea>') +
+        '<div id="tr-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
+        '<button class="ls-form-btn primary" id="btn-save-treat"><i class="fas fa-save"></i> Save Treatment</button></div>';
+      if (records.length) {
+        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> History</div></div>';
+        records.forEach(function (r) {
+          html += '<div class="ls-rec-card">' +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.issue || 'Treatment') + '</span><span class="ls-rec-date">' + esc(fmtDate(r.treatment_date) || '') + '</span></div>' +
+            (r.treatment ? recField('Treatment', r.treatment) : '') +
+            (r.medicine ? recField('Medicine', r.medicine) : '') +
+            (r.veterinarian ? recField('Vet', r.veterinarian) : '') +
+            (r.status ? recField('Status', r.status.charAt(0).toUpperCase() + r.status.slice(1).replace('_', ' ')) : '') +
+            (r.notes ? recField('Notes', r.notes) : '') +
+            '</div>';
+        });
+      } else {
+        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-pills"></i><p>No treatment records yet.</p></div>';
+      }
+      el.innerHTML = html;
+      el.querySelector('#btn-save-treat').addEventListener('click', submitTreatment);
+    });
+  }
+
+  function submitTreatment() {
+    var a = _currentAnimal;
+    var errEl = document.getElementById('tr-err');
+    var payload = { treatment_date: v('tr-date') || null, issue: v('tr-issue') || null, treatment: v('tr-treatment') || null, medicine: v('tr-medicine') || null, veterinarian: v('tr-vet') || null, status: v('tr-status') || 'ongoing', notes: v('tr-notes') || null };
+    setSaving('btn-save-treat', true);
+    lsApi('POST', '/' + a.animal_id + '/treatments', payload).then(function (res) {
+      setSaving('btn-save-treat', false);
+      if (res.status === 'success') { lsToast('Treatment saved', 'success'); loadTabTreatments(); }
+      else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+    });
+  }
+
+  /* ── tab: Feeding ── */
+  function loadTabFeeding() {
+    var a = _currentAnimal;
+    var el = document.getElementById('dp-tab-feeding');
+    el.innerHTML = '<div class="sk h14 w80"></div>';
+    lsApi('GET', '/' + a.animal_id + '/feeding').then(function (res) {
+      var records = (res.status === 'success' ? res.data : []) || [];
+      var html = '<div class="ls-add-form"><h4><i class="fas fa-bowl-food" style="color:var(--ls-teal);"></i> Add Feeding Record</h4>' +
+        frmGrid(
+          frmRow('Date', '<input class="ls-form-input" type="date" id="fd-date">'),
+          frmRow('Feed Type', '<input class="ls-form-input" type="text" id="fd-type" placeholder="e.g. Hay, Silage">')
+        ) +
+        frmGrid(
+          frmRow('Quantity', '<input class="ls-form-input" type="text" id="fd-qty" placeholder="e.g. 5 kg">'),
+          frmRow('Frequency', '<input class="ls-form-input" type="text" id="fd-freq" placeholder="e.g. 2x daily">')
+        ) +
+        frmGrid(
+          frmRow('Feeding Time', '<input class="ls-form-input" type="text" id="fd-time" placeholder="e.g. Morning">'),
+          frmRow('Water Requirement', '<input class="ls-form-input" type="text" id="fd-water" placeholder="e.g. 20 L/day">')
+        ) +
+        frmRow('Notes', '<textarea class="ls-form-input" id="fd-notes" rows="1" placeholder="Notes…"></textarea>') +
+        '<div id="fd-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
+        '<button class="ls-form-btn primary" id="btn-save-feed"><i class="fas fa-save"></i> Save Feeding</button></div>';
+      if (records.length) {
+        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> Records</div></div>';
+        records.forEach(function (r) {
+          html += '<div class="ls-rec-card">' +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.feed_type || 'Feeding') + '</span><span class="ls-rec-date">' + esc(fmtDate(r.record_date) || '') + '</span></div>' +
+            (r.quantity ? recField('Quantity', r.quantity) : '') +
+            (r.frequency ? recField('Frequency', r.frequency) : '') +
+            (r.feeding_time ? recField('Time', r.feeding_time) : '') +
+            (r.water_requirement ? recField('Water', r.water_requirement) : '') +
+            (r.notes ? recField('Notes', r.notes) : '') +
+            '</div>';
+        });
+      } else {
+        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-bowl-food"></i><p>No feeding records yet.</p></div>';
+      }
+      el.innerHTML = html;
+      el.querySelector('#btn-save-feed').addEventListener('click', submitFeeding);
+    });
+  }
+
+  function submitFeeding() {
+    var a = _currentAnimal;
+    var errEl = document.getElementById('fd-err');
+    var payload = { record_date: v('fd-date') || null, feed_type: v('fd-type') || null, quantity: v('fd-qty') || null, frequency: v('fd-freq') || null, feeding_time: v('fd-time') || null, water_requirement: v('fd-water') || null, notes: v('fd-notes') || null };
+    setSaving('btn-save-feed', true);
+    lsApi('POST', '/' + a.animal_id + '/feeding', payload).then(function (res) {
+      setSaving('btn-save-feed', false);
+      if (res.status === 'success') { lsToast('Feeding record saved', 'success'); loadTabFeeding(); }
+      else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+    });
+  }
+
+  /* ── tab: Breeding ── */
+  function loadTabBreeding() {
+    var a = _currentAnimal;
+    var el = document.getElementById('dp-tab-breeding');
+    el.innerHTML = '<div class="sk h14 w80"></div>';
+    lsApi('GET', '/' + a.animal_id + '/breeding').then(function (res) {
+      var records = (res.status === 'success' ? res.data : []) || [];
+      var html = '<div class="ls-add-form"><h4><i class="fas fa-baby" style="color:var(--ls-purple);"></i> Add Breeding Record</h4>' +
+        frmGrid(
+          frmRow('Breeding Date', '<input class="ls-form-input" type="date" id="br-date">'),
+          frmRow('Method', '<select class="ls-form-input" id="br-method"><option value="">Select</option><option value="natural">Natural</option><option value="artificial_insemination">AI</option></select>')
+        ) +
+        frmRow('Partner / Sire Info', '<input class="ls-form-input" type="text" id="br-partner" placeholder="e.g. Bull ID or sire name">') +
+        frmGrid(
+          frmRow('Pregnancy Status', '<select class="ls-form-input" id="br-preg"><option value="">Unknown</option><option value="not_pregnant">Not Pregnant</option><option value="pregnant">Pregnant</option><option value="delivered">Delivered</option></select>'),
+          frmRow('Expected Delivery', '<input class="ls-form-input" type="date" id="br-expected">')
+        ) +
+        frmRow('Notes', '<textarea class="ls-form-input" id="br-notes" rows="1" placeholder="Notes…"></textarea>') +
+        '<div id="br-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
+        '<button class="ls-form-btn primary" id="btn-save-breed"><i class="fas fa-save"></i> Save Breeding Record</button></div>';
+      if (records.length) {
+        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> Records</div></div>';
+        records.forEach(function (r) {
+          html += '<div class="ls-rec-card">' +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">Breeding — ' + esc(fmtDate(r.breeding_date) || '—') + '</span><span class="ls-rec-date">' + esc(r.pregnancy_status || '') + '</span></div>' +
+            (r.method ? recField('Method', r.method.replace('_', ' ')) : '') +
+            (r.partner_info ? recField('Partner', r.partner_info) : '') +
+            (r.expected_delivery_date ? recField('Expected Delivery', fmtDate(r.expected_delivery_date)) : '') +
+            (r.actual_delivery_date ? recField('Actual Delivery', fmtDate(r.actual_delivery_date)) : '') +
+            (r.offspring_count ? recField('Offspring', r.offspring_count) : '') +
+            (r.notes ? recField('Notes', r.notes) : '') +
+            '</div>';
+        });
+      } else {
+        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-baby"></i><p>No breeding records yet.</p></div>';
+      }
+      el.innerHTML = html;
+      el.querySelector('#btn-save-breed').addEventListener('click', submitBreeding);
+    });
+  }
+
+  function submitBreeding() {
+    var a = _currentAnimal;
+    var errEl = document.getElementById('br-err');
+    var payload = { breeding_date: v('br-date') || null, method: v('br-method') || null, partner_info: v('br-partner') || null, pregnancy_status: v('br-preg') || null, expected_delivery_date: v('br-expected') || null, notes: v('br-notes') || null };
+    setSaving('btn-save-breed', true);
+    lsApi('POST', '/' + a.animal_id + '/breeding', payload).then(function (res) {
+      setSaving('btn-save-breed', false);
+      if (res.status === 'success') { lsToast('Breeding record saved', 'success'); loadTabBreeding(); }
+      else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+    });
+  }
+
+  /* ── tab: Growth ── */
+  function loadTabGrowth() {
+    var a = _currentAnimal;
+    var el = document.getElementById('dp-tab-growth');
+    el.innerHTML = '<div class="sk h14 w80"></div>';
+    lsApi('GET', '/' + a.animal_id + '/weight').then(function (res) {
+      var records = (res.status === 'success' ? res.data : []) || [];
+      var html = '<div class="ls-add-form"><h4><i class="fas fa-weight-scale" style="color:var(--ls-teal);"></i> Record Weight</h4>' +
+        frmGrid(
+          frmRow('Measurement Date', '<input class="ls-form-input" type="date" id="wt-date">'),
+          frmRow('Weight (kg) *', '<input class="ls-form-input" type="number" id="wt-kg" placeholder="e.g. 350" min="0.1" step="0.1" required>')
+        ) +
+        frmRow('Notes', '<input class="ls-form-input" type="text" id="wt-notes" placeholder="e.g. After calving">') +
+        '<div id="wt-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
+        '<button class="ls-form-btn primary" id="btn-save-wt"><i class="fas fa-save"></i> Save Weight</button></div>';
+      if (records.length >= 2) {
+        // show simple text trend
+        var first = records[0];
+        var last  = records[records.length - 1];
+        var diff  = (last.weight_kg - first.weight_kg).toFixed(1);
+        var sign  = diff >= 0 ? '+' : '';
+        html += '<div class="ls-weight-chart"><p><i class="fas fa-chart-line"></i> Growth: ' + esc(first.weight_kg) + ' kg → <strong>' + esc(last.weight_kg) + ' kg</strong> (' + sign + diff + ' kg total)</p></div>';
+      }
+      if (records.length) {
+        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> Measurements</div></div>';
+        var reversed = records.slice().reverse();
+        reversed.forEach(function (r) {
+          html += '<div class="ls-rec-card">' +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.weight_kg) + ' kg</span><span class="ls-rec-date">' + esc(fmtDate(r.measurement_date) || '') + '</span></div>' +
+            (r.notes ? recField('Notes', r.notes) : '') +
+            '</div>';
+        });
+      } else {
+        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-weight-scale"></i><p>No weight records yet.</p></div>';
+      }
+      el.innerHTML = html;
+      el.querySelector('#btn-save-wt').addEventListener('click', submitWeight);
+    });
+  }
+
+  function submitWeight() {
+    var a = _currentAnimal;
+    var errEl = document.getElementById('wt-err');
+    var kg = parseFloat(v('wt-kg'));
+    if (!kg || kg <= 0) { errEl.textContent = 'Enter a valid weight'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    var payload = { weight_kg: kg, measurement_date: v('wt-date') || null, notes: v('wt-notes') || null };
+    setSaving('btn-save-wt', true);
+    lsApi('POST', '/' + a.animal_id + '/weight', payload).then(function (res) {
+      setSaving('btn-save-wt', false);
+      if (res.status === 'success') {
+        lsToast('Weight recorded', 'success');
+        _currentAnimal.weight_kg = kg;
+        var idx = _allAnimals.findIndex(function (x) { return x.animal_id === a.animal_id; });
+        if (idx >= 0) _allAnimals[idx].weight_kg = kg;
+        loadTabGrowth();
+      } else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+    });
+  }
+
+  /* ─────────────────────────────────────────────
+     ADD ANIMAL
+  ───────────────────────────────────────────── */
+  document.getElementById('form-add-animal').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var errEl = document.getElementById('add-err');
+    var name = v('add-name');
+    var type = v('add-type');
+    if (!name) { errEl.textContent = 'Name is required'; errEl.style.display = 'block'; return; }
+    if (!type) { errEl.textContent = 'Select an animal type'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    var payload = { name: name, animal_type: type, tag_id: v('add-tag') || null, breed: v('add-breed') || null, gender: v('add-gender') || null, date_of_birth: v('add-dob') || null, weight_kg: v('add-weight') ? parseFloat(v('add-weight')) : null, health_status: v('add-health') || 'healthy', location: v('add-location') || null, source: v('add-source') || null, notes: v('add-notes') || null };
+    var btn = this.querySelector('button[type="submit"]');
+    setSavingEl(btn, true, 'Adding…');
+    lsApi('POST', '', payload).then(function (res) {
+      setSavingEl(btn, false, '<i class="fas fa-plus-circle"></i> Add Animal');
+      if (res.status === 'success') {
+        lsCloseModal('modal-add');
+        document.getElementById('form-add-animal').reset();
+        lsToast(name + ' added successfully', 'success');
+        loadAnimals();
+        loadOverview();
+      } else {
+        errEl.textContent = res.detail || 'Failed to add animal'; errEl.style.display = 'block';
+      }
+    });
+  });
+
+  /* ─────────────────────────────────────────────
+     EDIT ANIMAL
+  ───────────────────────────────────────────── */
+  var _editingId = null;
+
+  function openEditModal(animalId) {
+    var a = _allAnimals.find(function (x) { return x.animal_id === animalId; });
+    if (!a) return;
+    _editingId = animalId;
+    setVal('edit-name', a.name || '');
+    setVal('edit-tag', a.tag_id || '');
+    setVal('edit-type', a.animal_type || '');
+    setVal('edit-gender', a.gender || '');
+    setVal('edit-breed', a.breed || '');
+    setVal('edit-dob', a.date_of_birth || '');
+    setVal('edit-weight', a.weight_kg || '');
+    setVal('edit-health', a.health_status || 'healthy');
+    setVal('edit-location', a.location || '');
+    setVal('edit-notes', a.notes || '');
+    document.getElementById('confirm-delete-name').textContent = a.name;
+    lsOpenModal('modal-edit');
+  }
+
+  function openEditModalCurrent() {
+    if (_currentAnimal) openEditModal(_currentAnimal.animal_id);
+  }
+
+  document.getElementById('form-edit-animal').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!_editingId) return;
+    var errEl = document.getElementById('edit-err');
+    var name = v('edit-name');
+    if (!name) { errEl.textContent = 'Name is required'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    var payload = { name: name, animal_type: v('edit-type') || undefined, tag_id: v('edit-tag') || null, breed: v('edit-breed') || null, gender: v('edit-gender') || null, date_of_birth: v('edit-dob') || null, weight_kg: v('edit-weight') ? parseFloat(v('edit-weight')) : null, health_status: v('edit-health') || undefined, location: v('edit-location') || null, notes: v('edit-notes') || null };
+    var btn = this.querySelector('button[type="submit"]');
+    setSavingEl(btn, true, 'Saving…');
+    lsApi('PUT', '/' + _editingId, payload).then(function (res) {
+      setSavingEl(btn, false, '<i class="fas fa-check"></i> Save Changes');
+      if (res.status === 'success') {
+        lsCloseModal('modal-edit');
+        lsToast('Animal updated', 'success');
+        var idx = _allAnimals.findIndex(function (x) { return x.animal_id === _editingId; });
+        if (idx >= 0) _allAnimals[idx] = Object.assign(_allAnimals[idx], res.data || payload);
+        if (_currentAnimal && _currentAnimal.animal_id === _editingId) {
+          _currentAnimal = Object.assign(_currentAnimal, res.data || payload);
+          renderDetailPanel();
+        }
+        renderGrid(_allAnimals);
+        loadOverview();
+      } else { errEl.textContent = res.detail || 'Failed to save'; errEl.style.display = 'block'; }
+    });
+  });
+
+  document.getElementById('btn-delete-animal').addEventListener('click', function () {
+    lsCloseModal('modal-edit');
+    document.getElementById('confirm-delete').classList.add('open');
+  });
+
+  document.getElementById('btn-confirm-delete').addEventListener('click', function () {
+    if (!_editingId) return;
+    lsApi('DELETE', '/' + _editingId).then(function (res) {
+      lsCloseConfirm();
+      if (res.status === 'success') {
+        lsToast('Animal removed', 'success');
+        _allAnimals = _allAnimals.filter(function (a) { return a.animal_id !== _editingId; });
+        if (_currentAnimal && _currentAnimal.animal_id === _editingId) closeDetailPanel();
+        renderGrid(_allAnimals);
+        loadOverview();
+        _editingId = null;
+      } else { lsToast(res.detail || 'Failed to remove', 'error'); }
+    });
+  });
+
+  /* ─────────────────────────────────────────────
+     SEARCH + FILTER
+  ───────────────────────────────────────────── */
+  var _searchTimer = null;
+  document.getElementById('ls-search-input').addEventListener('input', function () {
+    _searchQ = this.value.trim();
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(loadAnimals, 350);
+    document.getElementById('ls-clear-filters').style.display = (_searchQ || _filterType || _filterStatus) ? 'inline' : 'none';
+  });
+  document.getElementById('ls-type-filter').addEventListener('change', function () {
+    _filterType = this.value;
+    loadAnimals();
+    document.getElementById('ls-clear-filters').style.display = (_searchQ || _filterType || _filterStatus) ? 'inline' : 'none';
+  });
+  document.getElementById('ls-clear-filters').addEventListener('click', function () {
+    _searchQ = ''; _filterType = ''; _filterStatus = '';
+    document.getElementById('ls-search-input').value = '';
+    document.getElementById('ls-type-filter').value = '';
+    this.style.display = 'none';
+    document.querySelectorAll('.ls-hov-chip').forEach(function (c) { c.classList.remove('sel'); });
+    loadAnimals();
+  });
+
+  /* Health overview chips filter */
+  document.getElementById('ls-health-overview').addEventListener('click', function (e) {
+    var chip = e.target.closest('.ls-hov-chip');
+    if (!chip) return;
+    var status = chip.dataset.status;
+    if (_filterStatus === status) {
+      _filterStatus = '';
+      chip.classList.remove('sel');
+    } else {
+      _filterStatus = status;
+      document.querySelectorAll('.ls-hov-chip').forEach(function (c) { c.classList.remove('sel'); });
+      chip.classList.add('sel');
+    }
+    document.getElementById('ls-clear-filters').style.display = (_searchQ || _filterType || _filterStatus) ? 'inline' : 'none';
+    loadAnimals();
+  });
+
+  /* ─────────────────────────────────────────────
+     QUICK ACTIONS
+  ───────────────────────────────────────────── */
+  document.getElementById('qa-add').addEventListener('click', function () { lsOpenModal('modal-add'); });
+  document.getElementById('btn-open-add').addEventListener('click', function () { lsOpenModal('modal-add'); });
+  document.getElementById('qa-animals').addEventListener('click', function () { scrollToSection('ls-grid'); });
+
+  function scrollToSection(sectionId) {
+    var el = document.getElementById(sectionId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  document.getElementById('qa-health').addEventListener('click', function () {
+    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('health'); }, 400); }
+    else scrollToSection('ls-health-overview');
+  });
+  document.getElementById('qa-vacc').addEventListener('click', function () {
+    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('vaccinations'); }, 400); }
+    else { lsToast('Select an animal first to view vaccinations', 'info'); }
+  });
+  document.getElementById('qa-treat').addEventListener('click', function () {
+    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('treatments'); }, 400); }
+    else { lsToast('Select an animal to manage treatments', 'info'); }
+  });
+  document.getElementById('qa-feed').addEventListener('click', function () {
+    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('feeding'); }, 400); }
+    else { lsToast('Select an animal to manage feeding', 'info'); }
+  });
+  document.getElementById('qa-breed').addEventListener('click', function () {
+    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('breeding'); }, 400); }
+    else { lsToast('Select an animal for breeding records', 'info'); }
+  });
+  document.getElementById('qa-growth').addEventListener('click', function () {
+    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('growth'); }, 400); }
+    else { lsToast('Select an animal for weight/growth', 'info'); }
+  });
+  document.getElementById('qa-upcoming').addEventListener('click', function () { scrollToSection('events-section-hdr'); });
+  document.getElementById('qa-reminders').addEventListener('click', function () { scrollToSection('events-section-hdr'); });
+  document.getElementById('qa-records').addEventListener('click', function () {
+    if (_allAnimals.length === 1) {
+      openDetail(_allAnimals[0].animal_id);
+      setTimeout(function () { switchTab('info'); }, 400);
+    } else {
+      lsToast('Select an animal to view its records', 'info');
+    }
+  });
+
+  /* ─────────────────────────────────────────────
+     STAT BOX CLICK
+  ───────────────────────────────────────────── */
+  document.getElementById('ls-stats').addEventListener('click', function (e) {
+    var box = e.target.closest('.ls-stat');
+    if (!box) return;
+    var key = box.dataset.statkey;
+    var map = { healthy: 'healthy', monitoring: 'monitoring', needs_attention: 'needs_attention', critical: 'critical' };
+    if (key.indexOf('type_') === 0) {
+      _filterType = key.substring(5);
+      _filterStatus = '';
+      loadAnimals();
+      return;
+    }
+    if (map[key]) {
+      _filterStatus = (_filterStatus === map[key]) ? '' : map[key];
+      document.getElementById('ls-clear-filters').style.display = (_searchQ || _filterType || _filterStatus) ? 'inline' : 'none';
+      loadAnimals();
+    }
+  });
+
+  /* ─────────────────────────────────────────────
+     DETAIL PANEL EVENTS
+  ───────────────────────────────────────────── */
+  document.getElementById('btn-detail-back').addEventListener('click', closeDetailPanel);
+  document.getElementById('btn-detail-edit').addEventListener('click', function () {
+    if (_currentAnimal) openEditModal(_currentAnimal.animal_id);
+  });
+  document.getElementById('dp-tabs').addEventListener('click', function (e) {
+    var tab = e.target.closest('.ls-tab');
+    if (tab) switchTab(tab.dataset.tab);
+  });
+
+  /* ─────────────────────────────────────────────
+     MODAL HELPERS
+  ───────────────────────────────────────────── */
+  function lsOpenModal(id) {
+    document.getElementById(id).classList.add('open');
+  }
+  window.lsOpenModal = lsOpenModal;
+
+  function lsCloseModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+  window.lsCloseModal = lsCloseModal;
+
+  function lsCloseConfirm() {
+    document.getElementById('confirm-delete').classList.remove('open');
+  }
+  window.lsCloseConfirm = lsCloseConfirm;
+
+  document.querySelectorAll('[data-close]').forEach(function (btn) {
+    btn.addEventListener('click', function () { lsCloseModal(btn.dataset.close); });
+  });
+
+  // close modals on overlay click
+  document.querySelectorAll('.ls-modal').forEach(function (m) {
+    m.addEventListener('click', function (e) {
+      if (e.target === m) lsCloseModal(m.id);
+    });
+  });
+
+  window.openEditModalCurrent = openEditModalCurrent;
+
+  /* ─────────────────────────────────────────────
+     FORM BUILDER HELPERS
+  ───────────────────────────────────────────── */
+  function frmRow(label, inputHtml) {
+    return '<div class="ls-form-row"><label class="ls-form-label">' + label + '</label>' + inputHtml + '</div>';
+  }
+  function frmGrid(a, b) {
+    return '<div class="ls-form-grid">' + a + b + '</div>';
+  }
+  function recField(label, value) {
+    if (!value) return '';
+    return '<div class="ls-rec-field"><strong>' + esc(label) + ':</strong> <span>' + esc(String(value)) + '</span></div>';
+  }
+  function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+  function setVal(id, val) { var el = document.getElementById(id); if (el) el.value = val; }
+  function setSaving(id, saving) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = saving;
+    if (saving) { btn.dataset.orig = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
+    else if (btn.dataset.orig) btn.innerHTML = btn.dataset.orig;
+  }
+  function setSavingEl(btn, saving, label) {
+    if (!btn) return;
+    btn.disabled = saving;
+    if (saving) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + label;
+    else btn.innerHTML = label;
+  }
+
+  /* ─────────────────────────────────────────────
+     INIT
+  ───────────────────────────────────────────── */
+  loadOverview();
+  loadAnimals();
+  loadUpcoming();
+
+})();
+</script>
 </body>
 </html>

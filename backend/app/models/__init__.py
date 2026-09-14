@@ -58,12 +58,19 @@ from app.models.news import NewsArticle, SavedNews
 from app.models.market_price import (
     MarketPrice, MarketWatchlist, MarketPriceAlert, MarketDataSync
 )
+from app.models.monitoring import MonitoringAlert, MonitoringThreshold
+from app.models.report import FarmReport
 from app.models.loan_product import (
     AgriculturalLoanProduct, SavedAgriculturalLoan, AgriculturalLoanApplication,
     AgriculturalLoanDocument, AgriculturalFarmerLoan, AgriculturalLoanRepayment,
     AgriculturalLoanEligibility,
 )
 from app.models.calendar import CalendarEvent
+from app.models.livestock import (
+    Livestock, LivestockHealthRecord, LivestockVaccination,
+    LivestockTreatment, LivestockFeedingRecord, LivestockBreedingRecord,
+    LivestockWeightRecord, LivestockProductionRecord, LivestockExpenseRecord,
+)
 
 __all__ = [
     "User", "FarmerProfile", "UserAddress", "OTPVerification",
@@ -107,4 +114,8 @@ __all__ = [
     "AgriculturalLoanDocument", "AgriculturalFarmerLoan", "AgriculturalLoanRepayment",
     "AgriculturalLoanEligibility",
     "CalendarEvent",
+    "FarmReport",
+    "Livestock", "LivestockHealthRecord", "LivestockVaccination",
+    "LivestockTreatment", "LivestockFeedingRecord", "LivestockBreedingRecord",
+    "LivestockWeightRecord", "LivestockProductionRecord", "LivestockExpenseRecord",
 ]

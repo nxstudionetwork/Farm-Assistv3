@@ -1561,7 +1561,7 @@ EXPERT_CATEGORIES = [
     ("Livestock", ["livestock", "animal husbandry", "veterinary", "dairy"]),
     ("Dairy", ["dairy", "livestock"]),
     ("Agricultural Engineering", ["engineering", "machinery", "mechanization"]),
-    ("Farm Management", ["farm management", "farm operations"]),
+    ("Farm Management", ["farm management"]),
     ("Agri Business", ["agribusiness", "agri business", "marketing"]),
     ("Market & Pricing", ["market", "pricing", "mandi"]),
     ("Government Schemes", ["government schemes", "government", "policy", "subsidy"]),

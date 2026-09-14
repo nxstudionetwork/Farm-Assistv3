@@ -43,6 +43,11 @@ Backend: FastAPI served from the same origin (port 8000).
     TIMEOUT: 15000
   };
 
+  global.APP_CONFIG = {
+    API_BASE_URL: Config.BASE_URL,
+    API_HOST: Config.BASE_URL.replace(/\/api\/v1\/?$/, '')
+  };
+
   function isNetworkError(e) {
     return e && (e.name === 'TypeError' || e.message === 'Failed to fetch' || e.message === 'NetworkError' || e.message === 'Load failed' || (e.code && (e.code === 'NETWORK_ERR' || e.code === 20)));
   }
@@ -58,7 +63,7 @@ Backend: FastAPI served from the same origin (port 8000).
         var trimmed = (text || '').trim();
         if (trimmed) {
           try { return JSON.parse(trimmed); } catch (e) { /* fall through */ }
-          var err = new Error('The server returned an unexpected response.');
+          var err = new Error('The server returned an unexpected response (HTTP ' + r.status + '). The backend may be stopped, outdated, or the API endpoint is missing. Retry once the backend is running.');
           err.status = r.status;
           err.isInvalidJson = true;
           err.rawText = trimmed;
@@ -76,7 +81,7 @@ Backend: FastAPI served from the same origin (port 8000).
       try {
         return JSON.parse(trimmed);
       } catch (e) {
-        var err = new Error('The server returned an invalid response. Please try again.');
+        var err = new Error('The server returned an invalid response (HTTP ' + r.status + '). Check the backend console for errors and retry.');
         err.status = r.status;
         err.isInvalidJson = true;
         err.rawText = trimmed;
@@ -111,14 +116,18 @@ Backend: FastAPI served from the same origin (port 8000).
       });
     }).catch(function (e) {
       clearTimeout(timeoutId);
+      if (!e || typeof e !== 'object') e = new Error(String(e || 'Request failed'));
+      if (!e.reqUrl) e.reqUrl = Config.BASE_URL + path;
       if (isAbortError(e)) {
         var timeoutErr = new Error('Request timed out. Please check your connection and try again.');
         timeoutErr.isTimeout = true;
+        timeoutErr.reqUrl = e.reqUrl || (Config.BASE_URL + path);
         throw timeoutErr;
       }
       if (isNetworkError(e)) {
         var netErr = new Error('Unable to connect to server. Please check your connection.');
         netErr.isNetworkError = true;
+        netErr.reqUrl = e.reqUrl || (Config.BASE_URL + path);
         throw netErr;
       }
       throw e;
@@ -600,6 +609,9 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     securityInfo: function () {
       return http('GET', '/wallet/security-info').then(unwrap);
+    },
+    withdraw: function (data) {
+      return http('POST', '/wallet/withdraw', data).then(unwrap);
     }
   };
 
@@ -648,6 +660,29 @@ Backend: FastAPI served from the same origin (port 8000).
         qs = parts.join('&');
       }
       return http('GET', '/workers/' + encodeURIComponent(workerId) + '/reviews' + (qs ? '?' + qs : '')).then(unwrap);
+    }
+  };
+
+  var InputStoreService = {
+    // Agricultural-input BUY side storefront (isolated from the farmer
+    // SELLING side in MarketplaceSellerService and the Tools & Equipment
+    // storefront in EquipmentService).
+    listProducts: function (params) {
+      var qs = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/input-store/products' + qs).then(unwrap);
+    },
+    getProduct: function (id) {
+      return http('GET', '/input-store/products/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getCategories: function () {
+      return http('GET', '/input-store/categories').then(unwrap);
+    },
+    getFilters: function () {
+      return http('GET', '/input-store/filters').then(unwrap);
+    },
+    getRecommended: function (params) {
+      var qs = params && params.limit ? '?limit=' + encodeURIComponent(params.limit) : '';
+      return http('GET', '/input-store/recommended' + qs).then(unwrap);
     }
   };
 
@@ -1462,6 +1497,82 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  var MonitoringService = {
+    farms: function () {
+      return http('GET', '/monitoring/farms').then(unwrap);
+    },
+    plots: function (farmId) {
+      return http('GET', '/monitoring/plots' + (farmId ? '?farm_id=' + enc(farmId) : '')).then(unwrap);
+    },
+    sensors: function (farmId, plotId) {
+      var q = '';
+      if (farmId) q += 'farm_id=' + enc(farmId);
+      if (plotId) q += (q ? '&' : '') + 'plot_id=' + enc(plotId);
+      return http('GET', '/monitoring/sensors' + (q ? '?' + q : '')).then(unwrap);
+    },
+    connectSensor: function (data) {
+      return http('POST', '/monitoring/sensors/connect', data).then(unwrap);
+    },
+    disconnectSensor: function (id) {
+      return http('POST', '/monitoring/sensors/' + enc(id) + '/disconnect', {}).then(unwrap);
+    },
+    ingestReading: function (id, data) {
+      return http('POST', '/monitoring/sensors/' + enc(id) + '/readings', data).then(unwrap);
+    },
+    overview: function (farmId, plotId) {
+      var q = '';
+      if (farmId) q += 'farm_id=' + enc(farmId);
+      if (plotId) q += (q ? '&' : '') + 'plot_id=' + enc(plotId);
+      return http('GET', '/monitoring/overview' + (q ? '?' + q : '')).then(unwrap);
+    },
+    history: function (farmId, plotId, days, metric) {
+      var q = 'days=' + (days || 7);
+      if (farmId) q += '&farm_id=' + enc(farmId);
+      if (plotId) q += '&plot_id=' + enc(plotId);
+      if (metric) q += '&metric=' + enc(metric);
+      return http('GET', '/monitoring/history?' + q).then(unwrap);
+    },
+    alerts: function (farmId, plotId, status) {
+      var q = '';
+      if (farmId) q += 'farm_id=' + enc(farmId);
+      if (plotId) q += (q ? '&' : '') + 'plot_id=' + enc(plotId);
+      if (status) q += (q ? '&' : '') + 'status=' + enc(status);
+      return http('GET', '/monitoring/alerts' + (q ? '?' + q : '')).then(unwrap);
+    },
+    acknowledgeAlert: function (id) {
+      return http('POST', '/monitoring/alerts/' + enc(id) + '/acknowledge', {}).then(unwrap);
+    },
+    resolveAlert: function (id) {
+      return http('POST', '/monitoring/alerts/' + enc(id) + '/resolve', {}).then(unwrap);
+    },
+    thresholds: function (farmId) {
+      return http('GET', '/monitoring/thresholds' + (farmId ? '?farm_id=' + enc(farmId) : '')).then(unwrap);
+    },
+    createThreshold: function (data) {
+      return http('POST', '/monitoring/thresholds', data).then(unwrap);
+    },
+    updateThreshold: function (id, data) {
+      return http('PATCH', '/monitoring/thresholds/' + enc(id), data).then(unwrap);
+    },
+    createTask: function (data) {
+      return http('POST', '/monitoring/tasks', data).then(unwrap);
+    },
+    insights: function (farmId, plotId) {
+      var q = '';
+      if (farmId) q += 'farm_id=' + enc(farmId);
+      if (plotId) q += (q ? '&' : '') + 'plot_id=' + enc(plotId);
+      return http('GET', '/monitoring/insights' + (q ? '?' + q : '')).then(unwrap);
+    },
+    droneAvailability: function () {
+      return http('GET', '/monitoring/drone/availability').then(unwrap);
+    },
+    droneContext: function (farmId, plotId) {
+      var q = 'farm_id=' + enc(farmId);
+      if (plotId) q += '&plot_id=' + enc(plotId);
+      return http('GET', '/monitoring/drone/context?' + q).then(unwrap);
+    }
+  };
+
   var StorageService = {
     upload: function (file, subdir) {
       var formData = new FormData();
@@ -1596,6 +1707,75 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     farmHealth: function () {
       return http('GET', '/analytics/farm-health').then(unwrap);
+    },
+    _qs: function (params) {
+      if (!params) return '';
+      var parts = [];
+      ['farm_id', 'plot_id', 'date_from', 'date_to'].forEach(function (k) {
+        var v = params[k];
+        if (v != null && v !== '' && v !== 'all') parts.push(k + '=' + encodeURIComponent(v));
+      });
+      return parts.length ? '?' + parts.join('&') : '';
+    },
+    context: function () {
+      return http('GET', '/analytics/context').then(unwrap);
+    },
+    overview: function (params) {
+      return http('GET', '/analytics/overview' + this._qs(params)).then(unwrap);
+    },
+    performance: function (params) {
+      return http('GET', '/analytics/performance' + this._qs(params)).then(unwrap);
+    },
+    crops: function (params) {
+      return http('GET', '/analytics/crops' + this._qs(params)).then(unwrap);
+    },
+    yield: function (params) {
+      return http('GET', '/analytics/yield' + this._qs(params)).then(unwrap);
+    },
+    production: function (params) {
+      return http('GET', '/analytics/production' + this._qs(params)).then(unwrap);
+    },
+    financial: function (params) {
+      return http('GET', '/analytics/financial' + this._qs(params)).then(unwrap);
+    },
+    tasks: function (params) {
+      return http('GET', '/analytics/tasks' + this._qs(params)).then(unwrap);
+    },
+    calendar: function (params) {
+      return http('GET', '/analytics/calendar' + this._qs(params)).then(unwrap);
+    },
+    weather: function (params) {
+      return http('GET', '/analytics/weather' + this._qs(params)).then(unwrap);
+    },
+    market: function (params) {
+      return http('GET', '/analytics/market' + this._qs(params)).then(unwrap);
+    },
+    sustainability: function (params) {
+      return http('GET', '/analytics/sustainability' + this._qs(params)).then(unwrap);
+    },
+    risks: function (params) {
+      return http('GET', '/analytics/risks' + this._qs(params)).then(unwrap);
+    },
+    completeness: function (params) {
+      return http('GET', '/analytics/completeness' + this._qs(params)).then(unwrap);
+    },
+    insights: function (params) {
+      return http('GET', '/analytics/insights' + this._qs(params)).then(unwrap);
+    },
+    ai: function (params) {
+      return http('GET', '/analytics/ai' + this._qs(params)).then(unwrap);
+    },
+    reportsList: function () {
+      return http('GET', '/analytics/reports').then(unwrap);
+    },
+    reportGet: function (id) {
+      return http('GET', '/analytics/reports/' + encodeURIComponent(id)).then(unwrap);
+    },
+    reportCreate: function (data) {
+      return http('POST', '/analytics/reports', data).then(unwrap);
+    },
+    reportDelete: function (id) {
+      return http('DELETE', '/analytics/reports/' + encodeURIComponent(id)).then(unwrap);
     }
   };
 
@@ -1926,6 +2106,7 @@ Backend: FastAPI served from the same origin (port 8000).
     Service: ServiceService,
     Wallet: WalletService,
     Equipment: EquipmentService,
+    InputStore: InputStoreService,
     Marketplace: MarketplaceService,
     MarketplaceSeller: MarketplaceSellerService,
     Government: GovernmentService,
@@ -1938,6 +2119,7 @@ Backend: FastAPI served from the same origin (port 8000).
     Loan: LoanService,
     Insurance: InsuranceService,
     Sensor: SensorService,
+    Monitoring: MonitoringService,
     FileStorage: StorageService,
     Documents: DocumentService,
     FarmBuzz: FarmBuzzService,
@@ -1967,6 +2149,7 @@ Backend: FastAPI served from the same origin (port 8000).
   global.ServiceService = ServiceService;
   global.WalletService = WalletService;
   global.EquipmentService = EquipmentService;
+  global.InputStoreService = InputStoreService;
   global.MarketplaceService = MarketplaceService;
   global.MarketplaceSellerService = MarketplaceSellerService;
   global.GovernmentService = GovernmentService;
@@ -1979,6 +2162,7 @@ Backend: FastAPI served from the same origin (port 8000).
   global.LoanService = LoanService;
   global.InsuranceService = InsuranceService;
   global.SensorService = SensorService;
+  global.MonitoringService = MonitoringService;
   global.StorageService = StorageService;
   global.DocumentService = DocumentService;
   global.NewsService = NewsService;
