@@ -1573,6 +1573,23 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  var SoilIrrigationService = {
+    overview: function(farmId, plotId, cropId) {
+      return http('GET', '/soil-irrigation/overview' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId,
+        crop_id: cropId
+      })).then(unwrap);
+    },
+    aiOverview: function(farmId, plotId, cropId) {
+      return http('GET', '/soil-irrigation/ai-overview' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId,
+        crop_id: cropId
+      })).then(unwrap);
+    }
+  };
+
   var StorageService = {
     upload: function (file, subdir) {
       var formData = new FormData();
@@ -2093,6 +2110,195 @@ Backend: FastAPI served from the same origin (port 8000).
     return parts.join('&');
   }
 
+  /* =========================================================================
+   * MONITORING SERVICE — Smart Monitoring real-data API layer
+   * All calls are scoped to the authenticated farmer. No mock data.
+   * ========================================================================= */
+  function monQ(params) {
+    if (!params) return '';
+    var parts = [];
+    Object.keys(params).forEach(function (k) {
+      if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+        parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+      }
+    });
+    return parts.length ? '?' + parts.join('&') : '';
+  }
+
+  var MonitoringService = {
+    /** List authenticated farmer's farms */
+    farms: function () {
+      return http('GET', '/monitoring/farms').then(unwrap);
+    },
+    /** List plots for a farm (pass farm_id string) */
+    plots: function (farmId) {
+      return http('GET', '/monitoring/plots' + monQ({ farm_id: farmId })).then(unwrap);
+    },
+    /** List sensors for a farm/plot */
+    sensors: function (farmId, plotId) {
+      return http('GET', '/monitoring/sensors' + monQ({ farm_id: farmId, plot_id: plotId })).then(unwrap);
+    },
+    /** Full overview — current conditions, sensors, alerts, weather, crops, thresholds */
+    overview: function (farmId, plotId) {
+      return http('GET', '/monitoring/overview' + monQ({ farm_id: farmId, plot_id: plotId })).then(unwrap);
+    },
+    /** Historical readings for charts */
+    history: function (farmId, plotId, days, metric) {
+      return http('GET', '/monitoring/history' + monQ({ farm_id: farmId, plot_id: plotId, days: days, metric: metric })).then(unwrap);
+    },
+    /** Active and recent alerts */
+    alerts: function (farmId, plotId, status) {
+      return http('GET', '/monitoring/alerts' + monQ({ farm_id: farmId, plot_id: plotId, status: status })).then(unwrap);
+    },
+    /** Connect a sensor to a farm/plot */
+    connectSensor: function (payload) {
+      return http('POST', '/monitoring/sensors/connect', payload).then(unwrap);
+    },
+    /** Disconnect a sensor */
+    disconnectSensor: function (sensorId) {
+      return http('POST', '/monitoring/sensors/' + encodeURIComponent(sensorId) + '/disconnect').then(unwrap);
+    },
+    /** Ingest a sensor reading */
+    ingestReading: function (sensorId, payload) {
+      return http('POST', '/monitoring/sensors/' + encodeURIComponent(sensorId) + '/readings', payload).then(unwrap);
+    },
+    /** Acknowledge a monitoring alert */
+    acknowledgeAlert: function (alertId) {
+      return http('POST', '/monitoring/alerts/' + encodeURIComponent(alertId) + '/acknowledge').then(unwrap);
+    },
+    /** Resolve a monitoring alert */
+    resolveAlert: function (alertId) {
+      return http('POST', '/monitoring/alerts/' + encodeURIComponent(alertId) + '/resolve').then(unwrap);
+    },
+    /** List thresholds */
+    thresholds: function (farmId) {
+      return http('GET', '/monitoring/thresholds' + monQ({ farm_id: farmId })).then(unwrap);
+    },
+    /** Create or upsert a threshold */
+    createThreshold: function (payload) {
+      return http('POST', '/monitoring/thresholds', payload).then(unwrap);
+    },
+    /** Update an existing threshold */
+    updateThreshold: function (thresholdId, payload) {
+      return http('PATCH', '/monitoring/thresholds/' + encodeURIComponent(thresholdId), payload).then(unwrap);
+    },
+    /** Create a farm task from a monitoring alert */
+    createTask: function (payload) {
+      return http('POST', '/monitoring/tasks', payload).then(unwrap);
+    },
+    /** AI insights for real monitoring data */
+    insights: function (farmId, plotId) {
+      return http('GET', '/monitoring/insights' + monQ({ farm_id: farmId, plot_id: plotId })).then(unwrap);
+    },
+    /** Check drone operating hours availability */
+    droneAvailability: function () {
+      return http('GET', '/monitoring/drone/availability').then(unwrap);
+    },
+    /** Get authorized drone context (farm, plot, crop, stream config) */
+    droneContext: function (farmId, plotId) {
+      return http('GET', '/monitoring/drone/context' + monQ({ farm_id: farmId, plot_id: plotId })).then(unwrap);
+    }
+  };
+
+  /* =========================================================================
+   * SENSOR SERVICE — direct sensor CRUD (separate from monitoring context)
+   * ========================================================================= */
+  var SensorService = {
+    list: function (params) {
+      return http('GET', '/sensors' + monQ(params)).then(unwrap);
+    },
+    get: function (sensorId) {
+      return http('GET', '/sensors/' + encodeURIComponent(sensorId)).then(unwrap);
+    },
+    readings: function (sensorType, hours) {
+      return http('GET', '/sensors/' + encodeURIComponent(sensorType) + '/readings' + monQ({ hours: hours })).then(unwrap);
+    }
+  };
+
+  /* =========================================================================
+   * SOIL IRRIGATION SERVICE
+   * ========================================================================= */
+  var SoilIrrigationService = {
+    overview: function (farmId) {
+      return http('GET', '/soil-irrigation/overview' + monQ({ farm_id: farmId })).then(unwrap);
+    },
+    records: function (params) {
+      return http('GET', '/soil-irrigation/records' + monQ(params)).then(unwrap);
+    },
+    create: function (payload) {
+      return http('POST', '/soil-irrigation/records', payload).then(unwrap);
+    },
+    update: function (id, payload) {
+      return http('PUT', '/soil-irrigation/records/' + encodeURIComponent(id), payload).then(unwrap);
+    },
+    delete: function (id) {
+      return http('DELETE', '/soil-irrigation/records/' + encodeURIComponent(id)).then(unwrap);
+    }
+  };
+
+  /* =========================================================================
+   * STORAGE / FILE SERVICE
+   * ========================================================================= */
+  var StorageService = {
+    upload: function (formData) {
+      return http('POST', '/storage/upload', formData).then(unwrap);
+    },
+    list: function (params) {
+      return http('GET', '/storage/files' + monQ(params)).then(unwrap);
+    },
+    get: function (fileId) {
+      return http('GET', '/storage/files/' + encodeURIComponent(fileId)).then(unwrap);
+    },
+    delete: function (fileId) {
+      return http('DELETE', '/storage/files/' + encodeURIComponent(fileId)).then(unwrap);
+    }
+  };
+
+  /* =========================================================================
+   * DOCUMENT SERVICE
+   * ========================================================================= */
+  var DocumentService = {
+    list: function (params) {
+      return http('GET', '/documents' + monQ(params)).then(unwrap);
+    },
+    get: function (docId) {
+      return http('GET', '/documents/' + encodeURIComponent(docId)).then(unwrap);
+    },
+    upload: function (formData) {
+      return http('POST', '/documents/upload', formData).then(unwrap);
+    },
+    delete: function (docId) {
+      return http('DELETE', '/documents/' + encodeURIComponent(docId)).then(unwrap);
+    }
+  };
+
+  /* =========================================================================
+   * MARKET PRICE SERVICE
+   * ========================================================================= */
+  var MarketPriceService = {
+    list: function (params) {
+      return http('GET', '/market-prices' + monQ(params)).then(unwrap);
+    },
+    commodities: function () {
+      return http('GET', '/market-prices/commodities').then(unwrap);
+    },
+    trends: function (commodity, days) {
+      return http('GET', '/market-prices/trends' + monQ({ commodity: commodity, days: days })).then(unwrap);
+    }
+  };
+
+  /* =========================================================================
+   * USER SETTINGS SERVICE
+   * ========================================================================= */
+  var UserSettingsService = {
+    get: function () {
+      return http('GET', '/users/settings').then(unwrap);
+    },
+    update: function (payload) {
+      return http('PATCH', '/users/settings', payload).then(unwrap);
+    }
+  };
+
   global.API = {
     config: Config,
     Storage: Storage,
@@ -2120,6 +2326,7 @@ Backend: FastAPI served from the same origin (port 8000).
     Insurance: InsuranceService,
     Sensor: SensorService,
     Monitoring: MonitoringService,
+    SoilIrrigation: SoilIrrigationService,
     FileStorage: StorageService,
     Documents: DocumentService,
     FarmBuzz: FarmBuzzService,
@@ -2163,6 +2370,7 @@ Backend: FastAPI served from the same origin (port 8000).
   global.InsuranceService = InsuranceService;
   global.SensorService = SensorService;
   global.MonitoringService = MonitoringService;
+  global.SoilIrrigationService = SoilIrrigationService;
   global.StorageService = StorageService;
   global.DocumentService = DocumentService;
   global.NewsService = NewsService;

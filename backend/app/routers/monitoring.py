@@ -74,7 +74,7 @@ def _resolve_scope(
     Never trusts ids from the frontend: every farm must belong to user,
     every plot must belong to the farm.
     """
-    farms_q = db.query(Farm).filter(Farm.user_id == user.id, Farm.is_active is not False)
+    farms_q = db.query(Farm).filter(Farm.user_id == user.id)
     if farm_id:
         farm = farms_q.filter(Farm.id == farm_id).first()
         if not farm:
@@ -157,9 +157,13 @@ def _alerts_for(db, user, farm_ids, plot_ids, status=None, limit=100):
     from app.routers.sensors import Sensor
     q = db.query(MonitoringAlert).filter(
         MonitoringAlert.user_id == user.id,
-        MonitoringAlert.farm_id.in_(farm_ids),
-        MonitoringAlert.plot_id.in_(plot_ids) if plot_ids else True,
+        MonitoringAlert.farm_id.in_(farm_ids) if farm_ids else False,
     )
+    if plot_ids:
+        q = q.filter(
+            (MonitoringAlert.plot_id.in_(plot_ids)) |
+            (MonitoringAlert.plot_id.is_(None))
+        )
     if status:
         q = q.filter(MonitoringAlert.status == status)
     rows = q.order_by(MonitoringAlert.created_at.desc()).limit(limit).all()
@@ -614,8 +618,9 @@ def monitoring_overview(
     # sensors within scope
     q = db.query(Sensor).filter(
         Sensor.user_id == current_user.id,
-        Sensor.farm_id.in_(farm_ids) if farm_ids else True,
     )
+    if farm_ids:
+        q = q.filter(Sensor.farm_id.in_(farm_ids))
     sensors = q.all()
     if plot_ids:
         sensors = [s for s in sensors if s.plot_id in plot_ids or s.plot_id is None]
@@ -684,8 +689,9 @@ def monitoring_overview(
     # thresholds
     thr_q = db.query(MonitoringThreshold).filter(
         MonitoringThreshold.user_id == current_user.id,
-        MonitoringThreshold.farm_id.in_(farm_ids) if farm_ids else True,
     )
+    if farm_ids:
+        thr_q = thr_q.filter(MonitoringThreshold.farm_id.in_(farm_ids))
     thresholds = thr_q.all()
 
     # monitoring status
@@ -819,9 +825,9 @@ def monitoring_history(
         s.id
         for s in db.query(Sensor).filter(
             Sensor.user_id == current_user.id,
-            Sensor.farm_id.in_(farm_ids) if farm_ids else True,
         ).all()
-        if s.plot_id in plot_ids or s.plot_id is None
+        if (not farm_ids or s.farm_id in farm_ids)
+        and (s.plot_id in plot_ids or s.plot_id is None)
     ]
     if not sensor_ids:
         return {"status": "success", "data": {}}
@@ -1096,8 +1102,9 @@ async def monitoring_insights(
 
     sensors = db.query(Sensor).filter(
         Sensor.user_id == current_user.id,
-        Sensor.farm_id.in_(farm_ids) if farm_ids else True,
     ).all()
+    if farm_ids:
+        sensors = [s for s in sensors if s.farm_id in farm_ids]
     if plot_ids:
         sensors = [s for s in sensors if s.plot_id in plot_ids or s.plot_id is None]
 

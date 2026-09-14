@@ -192,6 +192,9 @@ async def startup():
             if input_products < 400:
                 from app.database.seed_input_store import seed as seed_input_store
                 input_summary = seed_input_store(db)
+
+            from app.database.seed_soil_irrigation import seed_soil_irrigation_demo
+            soil_summary = seed_soil_irrigation_demo(db)
         finally:
             db.close()
         return {

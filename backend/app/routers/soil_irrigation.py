@@ -141,7 +141,7 @@ def _crop_filter_list(db: Session, cycles) -> list:
     """Distinct crops present in the scope, for the crop selector."""
     crops = {}
     for c in cycles:
-        crop = db.query(Crop).get(c.crop_id) if c.crop_id else None
+        crop = db.get(Crop, c.crop_id) if c.crop_id else None
         if not crop:
             continue
         entry = crops.setdefault(
