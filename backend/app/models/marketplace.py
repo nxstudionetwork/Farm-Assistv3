@@ -239,6 +239,9 @@ class EquipmentMetadata(Base):
     operating_width = Column(String(50), nullable=True)
     capacity = Column(String(50), nullable=True)
     location = Column(String(200), nullable=True)
+    condition = Column(String(30), nullable=True)
+    delivery_available = Column(Boolean, nullable=True)
+    pickup_available = Column(Boolean, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     product = relationship("Product", back_populates="equipment_metadata")

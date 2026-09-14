@@ -829,7 +829,7 @@ Backend: FastAPI served from the same origin (port 8000).
       return http('GET', M + '/categories').then(unwrap);
     },
     listListings: function (params) {
-      return http('GET', M + '/listings' + buildQuery(params)).then(unwrap);
+      return http('GET', M + '/listings' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
     },
     getListing: function (id) {
       return http('GET', M + '/listings/' + enc(id)).then(unwrap);
@@ -850,7 +850,7 @@ Backend: FastAPI served from the same origin (port 8000).
       return http('POST', M + '/listings/' + enc(listingId) + '/sales', data).then(unwrap);
     },
     listSales: function (params) {
-      return http('GET', M + '/sales' + buildQuery(params)).then(unwrap);
+      return http('GET', M + '/sales' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
     },
     getSale: function (id) {
       return http('GET', M + '/sales/' + enc(id)).then(unwrap);
@@ -859,7 +859,7 @@ Backend: FastAPI served from the same origin (port 8000).
       return http('PATCH', M + '/sales/' + enc(id), data).then(unwrap);
     },
     listEnquiries: function (params) {
-      return http('GET', M + '/enquiries' + buildQuery(params)).then(unwrap);
+      return http('GET', M + '/enquiries' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
     },
     replyEnquiry: function (id, message) {
       return http('POST', M + '/enquiries/' + enc(id) + '/reply', { message: message }).then(unwrap);
@@ -871,7 +871,7 @@ Backend: FastAPI served from the same origin (port 8000).
       return http('GET', M + '/insights').then(unwrap);
     },
     listBuyers: function (params) {
-      return http('GET', M + '/buyers' + buildQuery(params)).then(unwrap);
+      return http('GET', M + '/buyers' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
     },
     sendBuyerMessage: function (buyerId, message) {
       return http('POST', M + '/buyers/' + enc(buyerId) + '/message', { message: message }).then(unwrap);

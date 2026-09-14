@@ -121,6 +121,8 @@ class Equipment(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     image_url = Column(String(500), nullable=True)
+    condition = Column(String(30), nullable=True)
+    listing_status = Column(String(20), default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

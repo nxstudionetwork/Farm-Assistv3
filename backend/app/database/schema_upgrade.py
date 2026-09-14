@@ -166,9 +166,14 @@ ADDITIVE_COLUMNS = {
         ("deposit_amount", "FLOAT"),
         ("min_duration_days", "INTEGER DEFAULT 1"),
         ("rental_terms", "TEXT"),
+        ("condition", "VARCHAR(30)"),
+        ("listing_status", "VARCHAR(20) DEFAULT 'active'"),
     ],
     "equipment_metadata": [
         ("location", "VARCHAR(200)"),
+        ("condition", "VARCHAR(30)"),
+        ("delivery_available", "BOOLEAN"),
+        ("pickup_available", "BOOLEAN"),
     ],
     "sensors": [
         ("plot_id", "VARCHAR(36)"),

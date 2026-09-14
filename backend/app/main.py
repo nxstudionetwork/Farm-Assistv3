@@ -31,7 +31,7 @@ from .routers import (
     services, farmbuzz, messages, support, feedback, wallet, documents,
     learning, techniques, emergency, market_prices,
     insurance, calendar, input_store, tools_equipment,
-    marketplace_seller, monitoring, livestock,
+    marketplace_seller, monitoring, livestock, soil_irrigation,
 )
 
 
@@ -103,6 +103,7 @@ app.include_router(monitoring.router)
 app.include_router(tools_equipment.router, prefix="/api/equipment")
 app.include_router(tools_equipment.router, prefix="/api/v1/tools-equipment")
 app.include_router(livestock.router)
+app.include_router(soil_irrigation.router)
 
 
 

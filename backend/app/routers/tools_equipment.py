@@ -11,7 +11,7 @@ Provides full backend endpoints for Tools & Equipment (Buy & Rent modes):
 - Rental machinery listings and bookings with calendar integration.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
