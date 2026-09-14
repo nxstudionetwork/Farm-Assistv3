@@ -474,6 +474,7 @@ def list_messages(
             "messages": items,
             "has_more": has_more,
             "total": q.count(),
+            "last_read_at": str(is_participant.last_read_at) if is_participant.last_read_at else None,
         },
     }
 
@@ -502,7 +503,7 @@ def send_message(
         raise HTTPException(status_code=403, detail="You are not a participant in this conversation")
     if not payload.content or not payload.content.strip():
         raise HTTPException(status_code=400, detail="Message content is required")
-    if payload.message_type not in ("text", "image", "file", "system"):
+    if payload.message_type not in ("text", "image", "file", "voice", "system"):
         raise HTTPException(status_code=400, detail="Invalid message_type")
 
     msg_id = _generate_id("FA-MSG", db, Message)
@@ -868,6 +869,8 @@ async def upload_attachment(
         getattr(settings, "STORAGE_ALLOWED_EXTENSIONS", "jpg,jpeg,png,gif,pdf,doc,docx,xlsx,csv,txt")
         .split(",")
     )
+    # Voice messages (recorded via MediaRecorder -> webm/ogg, or encoded mp3/m4a/wav)
+    allowed += ["webm", "ogg", "mp3", "m4a", "aac", "wav", "opus"]
     ext = (file.filename.rsplit(".", 1)[-1] if "." in file.filename else "").lower()
     if ext not in [e.strip().lower() for e in allowed]:
         raise HTTPException(status_code=400, detail=f"File type '{ext}' not allowed")

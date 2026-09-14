@@ -177,6 +177,65 @@ def test_delivered_then_read_status_flow(db):
     assert r.json()["data"]["messages"][0]["status"] == "read"
 
 
+def test_voice_message_upload_and_send(db):
+    user_a = create_user(db, "FA-AS-00000001", "Farmer Ramesh", "9876543210", "ramesh@farm.com")
+    user_b = create_user(db, "FA-AS-00000002", "Farmer Suresh", "9123456780", "suresh@farm.com")
+    headers_a = {"Authorization": f"Bearer {get_token(user_a)}"}
+    headers_b = {"Authorization": f"Bearer {get_token(user_b)}"}
+
+    r = client.post("/api/v1/messages/conversations", headers=headers_a, json={"farmer_id": "FA-AS-00000002"})
+    conv_id = r.json()["data"]["id"]
+
+    # Invalid message_type still rejected
+    r = client.post(
+        f"/api/v1/messages/conversations/{conv_id}/messages",
+        headers=headers_a,
+        json={"content": "x", "message_type": "video"},
+    )
+    assert r.status_code == 400
+
+    # Voice clip upload (webm) is accepted
+    r_up = client.post(
+        "/api/v1/messages/upload",
+        headers=headers_a,
+        files={"file": ("voice-1.webm", b"fake-audio-content", "audio/webm")},
+    )
+    assert r_up.status_code == 201
+    file_url = r_up.json()["data"]["file_url"]
+    assert file_url.startswith("/api/v1/storage/messages/")
+
+    # Send as a voice message through the authenticated chat flow
+    r_send = client.post(
+        f"/api/v1/messages/conversations/{conv_id}/messages",
+        headers=headers_a,
+        json={"content": "0:06", "message_type": "voice", "attachment_url": file_url},
+    )
+    assert r_send.status_code == 201
+    data = r_send.json()["data"]
+    assert data["message_type"] == "voice"
+    assert data["attachment_url"] == file_url
+
+    # Recipient sees the voice message; attachment stays private (no auth -> 404)
+    r_list = client.get(f"/api/v1/messages/conversations/{conv_id}/messages", headers=headers_b)
+    msg = r_list.json()["data"]["messages"][0]
+    assert msg["message_type"] == "voice"
+    assert r_list.json()["data"]["last_read_at"] is None
+    anon = client.get(file_url)
+    assert anon.status_code == 404
+
+    # After reading, list_messages exposes the updated last_read_at (for the reader)
+    r_read = client.put(f"/api/v1/messages/conversations/{conv_id}/read", headers=headers_b)
+    assert r_read.status_code == 200
+    r_list2 = client.get(f"/api/v1/messages/conversations/{conv_id}/messages", headers=headers_b)
+    assert r_list2.json()["data"]["last_read_at"] is not None
+
+    # Non-participant cannot fetch the voice attachment (unlinked -> 404)
+    user_c = create_user(db, "FA-AS-00000003", "Farmer Priya", "9333344444", "priya@farm.com")
+    headers_c = {"Authorization": f"Bearer {get_token(user_c)}"}
+    r_c = client.get(file_url, headers=headers_c)
+    assert r_c.status_code == 404
+
+
 def test_user_search(db):
     user_a = create_user(db, "FA-AS-00000001", "Farmer Ramesh", "9876543210", "ramesh@farm.com")
     user_b = create_user(db, "FA-AS-00000002", "Farmer Suresh", "9123456780", "suresh@farm.com")

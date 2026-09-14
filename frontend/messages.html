@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
     /* ==========================================================================
        RESET & THEME VARIABLES
        ========================================================================== */
@@ -51,7 +53,14 @@
       overflow: hidden;
       background: var(--fa-light-bg);
       color: var(--fa-text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      font-weight: 700;
+      color: var(--fa-text);
     }
 
     input, textarea, button, select {
@@ -69,6 +78,358 @@
     ::-webkit-scrollbar-thumb:hover { background: rgba(45, 134, 89, 0.45); }
 
     .hidden { display: none !important; }
+
+    /* Outfit headlines for names/branding (matching the rest of the app) */
+    .msg-brand-title,
+    .msg-brand-tag,
+    .ch-name,
+    .conv-farmer-name,
+    .sug-title,
+    .contact-drawer-name,
+    .msg-top-header h2,
+    .conv-header-row h2 {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      letter-spacing: -0.2px;
+    }
+
+    /* When a chat is open the app-level chrome is dismissed so only the chat remains */
+    .msg-app.chat-open .msg-top-header,
+    .msg-app.chat-open .search-bar-wrap {
+      display: none;
+    }
+    .msg-app.chat-open .chat-back-btn {
+      display: inline-flex !important;
+    }
+    .msg-app.chat-open .msg-body {
+      height: 100vh;
+      height: 100dvh;
+    }
+
+    /* ==========================================================================
+       MOTION & ANIMATIONS (WhatsApp / Google Messages style)
+       ========================================================================== */
+    @keyframes msgIn {
+      0%   { opacity: 0; transform: translateY(12px) scale(0.96); }
+      60%  { opacity: 1; transform: translateY(-2px) scale(1.01); }
+      100% { opacity: 1; transform: none; }
+    }
+    @keyframes sugIn {
+      0%   { opacity: 0; transform: translateY(16px) scale(0.94); }
+      100% { opacity: 1; transform: none; }
+    }
+    @keyframes fabPulse {
+      0%   { box-shadow: 0 4px 14px rgba(11, 61, 46, 0.35), 0 0 0 0 rgba(45, 134, 89, 0.45); }
+      70%  { box-shadow: 0 4px 14px rgba(11, 61, 46, 0.35), 0 0 0 12px rgba(45, 134, 89, 0); }
+      100% { box-shadow: 0 4px 14px rgba(11, 61, 46, 0.35), 0 0 0 0 rgba(45, 134, 89, 0); }
+    }
+    @keyframes dotBlink {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+      40%           { transform: translateY(-3px); opacity: 1; }
+    }
+    @keyframes statusPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6); }
+      70%  { box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+    }
+    @keyframes betaPulse {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    /* Scroll-to-bottom (WhatsApp style) */
+    .chat-view { position: relative; }
+    .chat-scroll-fab {
+      position: absolute;
+      right: 16px;
+      bottom: 86px;
+      z-index: 40;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: var(--fa-primary);
+      border: 1px solid var(--fa-border);
+      box-shadow: var(--fa-shadow-md);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease, opacity 0.2s ease, visibility 0.2s ease;
+      opacity: 0;
+      visibility: hidden;
+      animation: fabPulse 2.4s ease-in-out infinite;
+    }
+    .chat-scroll-fab.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .chat-scroll-fab:active { transform: scale(0.9); }
+
+    /* Pending send clock (WhatsApp style) */
+    .msg-status-ticks.pending {
+      color: rgba(255, 255, 255, 0.85);
+      animation: dotBlink 1.4s ease-in-out infinite;
+    }
+
+    /* Online presence ring on the active-chat avatar */
+    .ch-avatar.online {
+      box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #10B981, 0 0 14px rgba(16, 185, 129, 0.55);
+      animation: statusPulse 2.6s ease-in-out infinite;
+    }
+
+    /* New-message entrance only for rows that actually appeared */
+    .msg-row.msg-entering {
+      animation: msgIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    /* "typing…" / sending dots bubble (Google Chat style) */
+    .msg-typing-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 2px;
+    }
+    .msg-typing-bubble {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--fa-out-bubble);
+      color: #ffffff;
+      padding: 13px 16px;
+      border-radius: 16px;
+      border-top-right-radius: 4px;
+      box-shadow: var(--fa-shadow-sm);
+    }
+    .msg-typing-bubble .tdot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ffffff;
+      animation: dotBlink 1.2s ease-in-out infinite;
+    }
+    .msg-typing-bubble .tdot:nth-child(2) { animation-delay: 0.15s; }
+    .msg-typing-bubble .tdot:nth-child(3) { animation-delay: 0.3s; }
+
+    /* ==========================================================================
+       FLOATING VOICE BUTTON (farmers' voice interaction)
+       ========================================================================== */
+    .voice-fab {
+      position: fixed;
+      right: 18px;
+      bottom: 24px;
+      z-index: 90;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, var(--fa-primary-dark), var(--fa-accent));
+      color: #ffffff;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(11, 61, 46, 0.4);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      animation: voiceFabPulse 2.6s ease-in-out infinite;
+    }
+    .voice-fab:hover { transform: scale(1.07); }
+    .voice-fab:active { transform: scale(0.92); }
+    .voice-fab:focus-visible { outline: 3px solid rgba(45, 134, 89, 0.5); outline-offset: 2px; }
+
+    @keyframes voiceFabPulse {
+      0%   { box-shadow: 0 6px 18px rgba(11, 61, 46, 0.4), 0 0 0 0 rgba(45, 134, 89, 0.5); }
+      70%  { box-shadow: 0 6px 18px rgba(11, 61, 46, 0.4), 0 0 0 12px rgba(45, 134, 89, 0); }
+      100% { box-shadow: 0 6px 18px rgba(11, 61, 46, 0.4), 0 0 0 0 rgba(45, 134, 89, 0); }
+    }
+
+    /* Inside an open chat the voice button floats above the composer, clear of
+       the text input, the Send button and the scroll FAB. */
+    .msg-app.chat-open .voice-fab {
+      right: 18px;
+      bottom: 98px;
+    }
+    .msg-app.chat-open .chat-scroll-fab {
+      right: 82px;
+    }
+
+    /* Voice control sheet (bottom sheet) */
+    .voice-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      z-index: 190;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s ease, visibility 0.25s;
+    }
+    .voice-backdrop.show { opacity: 1; visibility: visible; }
+
+    .voice-sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 200;
+      background: #ffffff;
+      border-radius: 22px 22px 0 0;
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.22);
+      padding: 18px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+      transform: translateY(105%);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .voice-sheet.open { transform: translateY(0); }
+
+    .voice-sheet-grab { width: 40px; height: 4px; border-radius: 2px; background: var(--fa-border); margin: 0 auto 12px; }
+
+    .voice-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .voice-sheet-head h3 { font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px; color: var(--fa-primary); }
+    .voice-sheet-close { background: none; border: none; font-size: 20px; color: var(--fa-text-sec); cursor: pointer; width: 36px; height: 36px; border-radius: 50%; transition: background 0.15s; }
+    .voice-sheet-close:hover { background: var(--fa-soft-green); }
+
+    .voice-mode-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .voice-mode-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--fa-border);
+      background: #ffffff;
+      color: var(--fa-text);
+      font-weight: 700;
+      font-size: 13.5px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .voice-mode-btn:hover:not(:disabled) { border-color: var(--fa-accent); }
+    .voice-mode-btn.active { background: linear-gradient(135deg, var(--fa-primary), var(--fa-accent)); color: #ffffff; border-color: transparent; }
+    .voice-mode-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .voice-stage { text-align: center; padding: 8px 0 4px; min-height: 134px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .voice-stage .v-status { font-size: 13.5px; color: var(--fa-text-sec); margin-bottom: 10px; min-height: 18px; }
+
+    .voice-record-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--fa-primary), var(--fa-accent));
+      color: #ffffff;
+      font-size: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(45, 134, 89, 0.4);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .voice-record-btn.recording { background: linear-gradient(135deg, #DC2626, #EF4444); box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4); animation: betaPulse 1.2s ease-in-out infinite; }
+    .voice-record-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .voice-timer { font-size: 26px; font-weight: 800; font-family: 'Inter', sans-serif; color: var(--fa-text); margin: 8px 0 2px; font-variant-numeric: tabular-nums; }
+
+    .voice-bars { display: flex; align-items: center; gap: 3px; height: 28px; margin: 10px 0 2px; }
+    .voice-bars span { width: 4px; border-radius: 2px; background: var(--fa-accent); transform-origin: center; animation: vbar 0.9s ease-in-out infinite; }
+    .voice-bars span:nth-child(2) { height: 60%; animation-delay: 0.1s; }
+    .voice-bars span:nth-child(3) { height: 90%; animation-delay: 0.2s; }
+    .voice-bars span:nth-child(4) { height: 45%; animation-delay: 0.3s; }
+    .voice-bars span:nth-child(5) { height: 75%; animation-delay: 0.15s; }
+    @keyframes vbar { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1.2); } }
+
+    .voice-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .voice-act-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--fa-border);
+      background: #ffffff;
+      font-size: 14px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s;
+    }
+    .voice-act-btn:hover:not(:disabled) { border-color: var(--fa-accent); }
+    .voice-act-btn.primary { background: linear-gradient(135deg, var(--fa-primary), var(--fa-accent)); color: #ffffff; border-color: transparent; }
+    .voice-act-btn.danger { color: #DC2626; border-color: rgba(220, 38, 38, 0.35); }
+    .voice-act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .voice-hint { font-size: 11.5px; color: var(--fa-text-muted); margin-top: 10px; text-align: center; line-height: 1.4; }
+
+    /* Voice message bubble (inline player) */
+    .msg-voice-bubble {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 180px;
+      max-width: 250px;
+      padding: 8px 12px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.06);
+      margin-bottom: 4px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .msg-row.outgoing .msg-voice-bubble { background: rgba(255, 255, 255, 0.18); }
+    .voice-play-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      flex-shrink: 0;
+      cursor: pointer;
+      background: #ffffff;
+      color: var(--fa-primary);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      transition: transform 0.12s ease;
+    }
+    .voice-play-btn:active { transform: scale(0.9); }
+    .voice-info { flex: 1; min-width: 0; }
+    .voice-dur { font-size: 12px; font-weight: 700; margin-top: 3px; }
+    .voice-eq { display: flex; align-items: center; gap: 2px; height: 14px; }
+    .voice-eq span { width: 3px; height: 100%; border-radius: 1px; background: currentColor; opacity: 0.7; transform-origin: center; }
+    .voice-eq.playing span { animation: vbar 0.8s ease-in-out infinite; }
+    .voice-eq.playing span:nth-child(2) { animation-delay: 0.12s; }
+    .voice-eq.playing span:nth-child(3) { animation-delay: 0.24s; }
+    .voice-eq.playing span:nth-child(4) { animation-delay: 0.36s; }
+
+    /* "Unread messages" separator inside the message stream */
+    .unread-separator { display: flex; align-items: center; gap: 12px; margin: 16px 8px; }
+    .unread-separator::before, .unread-separator::after { content: ''; flex: 1; height: 1px; background: var(--fa-border); }
+    .unread-separator span {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--fa-primary);
+      background: var(--fa-soft-green);
+      padding: 5px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(45, 134, 89, 0.18);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    @media (max-width: 480px) {
+      .voice-fab { width: 52px; height: 52px; font-size: 20px; right: 14px; }
+      .msg-app.chat-open .voice-fab { right: 14px; }
+      .msg-app.chat-open .chat-scroll-fab { right: 74px; }
+      .msg-voice-bubble { min-width: 160px; max-width: 220px; }
+    }
 
     /* ==========================================================================
        APP WRAPPER & HEADER
@@ -239,7 +600,7 @@
 
     /* Horizontal Agricultural Suggestion Cards */
     .sug-container {
-      padding: 10px 14px 6px;
+      padding: 14px 18px 10px;
       background: #ffffff;
       border-bottom: 1px solid var(--fa-border-subtle);
       flex-shrink: 0;
@@ -362,6 +723,10 @@
       overflow: hidden;
     }
 
+    .conv-avatar.online {
+      box-shadow: 0 0 0 3px #ffffff, 0 0 0 5px #10B981;
+    }
+
     .conv-avatar img {
       width: 100%;
       height: 100%;
@@ -452,7 +817,8 @@
     }
 
     .conv-tick.read {
-      color: var(--fa-accent);
+      color: #38BDF8;
+      filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.45));
     }
 
     .conv-preview-text {
@@ -717,12 +1083,15 @@
     .ch-meta {
       flex: 1;
       min-width: 0;
+      overflow: hidden;
     }
 
     .ch-name-row {
       display: flex;
       align-items: center;
       gap: 6px;
+      min-width: 0;
+      width: 100%;
     }
 
     .ch-name {
@@ -731,6 +1100,8 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      min-width: 0;
+      flex: 1;
     }
 
     .ch-fid-pill {
@@ -739,6 +1110,11 @@
       padding: 1px 6px;
       border-radius: 6px;
       font-weight: 600;
+      flex-shrink: 0;
+      white-space: nowrap;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .ch-status {
@@ -927,7 +1303,8 @@
     }
 
     .msg-status-ticks.read {
-      color: var(--fa-tick-read);
+      color: #38BDF8;
+      filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.55));
     }
 
     .msg-status-ticks.sent {
@@ -1676,6 +2053,8 @@
        RESPONSIVENESS (MOBILE / TABLET / DESKTOP)
        ========================================================================== */
     @media (max-width: 768px) {
+      .sug-container { padding: 12px 14px 9px; }
+      .sug-card { flex-basis: 238px; min-height: 112px; }
       .conv-panel {
         width: 100%;
         min-width: 100%;
@@ -1732,68 +2111,128 @@
     }
 
     .sug-card {
-      flex: 0 0 172px;
+      flex: 0 0 258px;
       display: flex;
       align-items: flex-start;
-      gap: 10px;
+      gap: 12px;
       background: #ffffff;
       border: 1px solid var(--fa-border);
-      border-radius: 14px;
-      padding: 10px 12px;
+      border-radius: 18px;
+      padding: 16px 17px;
+      min-height: 118px;
       cursor: pointer;
       text-decoration: none;
       box-shadow: var(--fa-shadow-sm);
-      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+      animation: sugIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+      position: relative;
+      overflow: hidden;
     }
+    .sug-card:nth-child(2) { animation-delay: 0.04s; }
+    .sug-card:nth-child(3) { animation-delay: 0.08s; }
+    .sug-card:nth-child(4) { animation-delay: 0.12s; }
+    .sug-card:nth-child(5) { animation-delay: 0.16s; }
+    .sug-card:nth-child(6) { animation-delay: 0.20s; }
+    .sug-card:nth-child(7) { animation-delay: 0.24s; }
+    .sug-card:nth-child(8) { animation-delay: 0.28s; }
+    .sug-card:nth-child(9) { animation-delay: 0.32s; }
+    .sug-card:nth-child(10) { animation-delay: 0.36s; }
 
     .sug-card:hover,
     .sug-card:focus-visible {
-      transform: translateY(-2px);
+      transform: translateY(-3px) scale(1.01);
       border-color: var(--fa-accent);
-      box-shadow: var(--fa-shadow-md);
+      box-shadow: var(--fa-shadow-lg);
     }
 
     .sug-card:active {
-      transform: scale(0.98);
+      transform: scale(0.97);
     }
 
     .sug-icon {
-      font-size: 20px;
+      font-size: 24px;
       line-height: 1;
       flex-shrink: 0;
-      width: 30px;
-      height: 30px;
+      width: 48px;
+      height: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--fa-soft-green);
-      border-radius: 9px;
+      background: linear-gradient(135deg, var(--fa-soft-green), #DCF3E4);
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 1px rgba(45, 134, 89, 0.08);
+    }
+    .sug-card.beta .sug-icon {
+      background: linear-gradient(135deg, #0B3D2E, #2D8659);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(45, 134, 89, 0.35);
+      animation: betaPulse 3.2s ease-in-out infinite;
     }
 
     .sug-body {
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 4px;
+      padding-top: 2px;
     }
 
     .sug-title {
-      font-size: 12.5px;
+      font-size: 15px;
       font-weight: 800;
       color: var(--fa-text);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sug-badge-beta {
+      font-family: 'Inter', sans-serif;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #ffffff;
+      background: linear-gradient(135deg, #2D8659, #4CAF50);
+      border-radius: 6px;
+      padding: 1px 6px;
+      flex-shrink: 0;
     }
 
     .sug-desc {
-      font-size: 10.5px;
+      font-size: 11.5px;
       color: var(--fa-text-sec);
-      line-height: 1.3;
+      line-height: 1.35;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+    }
+
+    .sug-verified {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #159447;
+      color: #ffffff;
+      font-size: 9px;
+      flex-shrink: 0;
+    }
+
+    .sug-action {
+      margin-top: auto;
+      color: var(--fa-primary);
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
     /* ==========================================================================
@@ -1873,13 +2312,14 @@
     }
 
     /* ==========================================================================
-       FIRST-OPEN INTRO SCREEN
+       FIRST-OPEN INTRO DIALOG (WhatsApp-style encryption screen, shown once)
        ========================================================================== */
     .msgs-intro {
       position: fixed;
       inset: 0;
-      z-index: 400;
-      background: linear-gradient(160deg, #07261C 0%, #0B3D2E 55%, #175239 100%);
+      z-index: 500;
+      background: rgba(244, 248, 244, 0.94);
+      backdrop-filter: blur(5px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1902,64 +2342,88 @@
       max-width: 380px;
       width: 100%;
       text-align: center;
-      color: #ffffff;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 24px;
-      padding: 38px 28px;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      color: var(--fa-text);
+      background: #ffffff;
+      border: 1px solid var(--fa-border);
+      border-radius: 20px;
+      padding: 38px 30px 32px;
+      box-shadow: 0 18px 48px rgba(11, 61, 46, 0.18);
+      animation: msgsIntroIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes msgsIntroIn {
+      from { opacity: 0; transform: translateY(18px) scale(0.96); }
+      to   { opacity: 1; transform: none; }
     }
 
     .msgs-intro-logo {
-      width: 74px;
-      height: 74px;
-      margin: 0 auto 18px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, #2D8659, #4CAF50);
+      width: 96px;
+      height: 96px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      overflow: hidden;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 34px;
-      box-shadow: 0 10px 30px rgba(76, 175, 80, 0.35);
+      background: linear-gradient(135deg, #2D8659, #4CAF50);
+      box-shadow: 0 12px 32px rgba(76, 175, 80, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    }
+
+    .msgs-intro-logo i {
+      font-size: 42px;
+      color: #ffffff;
+    }
+
+    .msgs-intro-logo img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
     }
 
     .msgs-intro-card h1 {
-      font-size: 22px;
+      font-family: 'Outfit', 'Inter', sans-serif;
+      font-size: 21px;
       font-weight: 800;
       letter-spacing: -0.3px;
-      margin-bottom: 10px;
+      color: var(--fa-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      margin-bottom: 12px;
     }
 
-    .msgs-intro-enctxt {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      background: rgba(255, 255, 255, 0.12);
-      padding: 6px 14px;
-      border-radius: 16px;
-      font-size: 12.5px;
-      font-weight: 700;
-      color: #A7F3D0;
-      margin-bottom: 14px;
+    .msgs-intro-card h1 i {
+      color: var(--fa-accent);
+      font-size: 15px;
     }
 
     .msgs-intro-card p {
-      font-size: 13.5px;
-      line-height: 1.55;
-      color: rgba(255, 255, 255, 0.82);
-      margin-bottom: 26px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--fa-text-sec);
+      margin-bottom: 24px;
     }
 
     .msgs-intro-card .btn-msg-pri {
-      background: #ffffff;
-      color: var(--fa-primary);
+      background: linear-gradient(135deg, var(--fa-primary-dark), var(--fa-primary));
+      color: #ffffff;
       width: 100%;
-      max-width: 240px;
+      max-width: 250px;
       margin: 0 auto;
+      box-shadow: 0 6px 20px rgba(11, 61, 46, 0.2);
     }
 
     .msgs-intro-card .btn-msg-pri:hover {
       background: #E8F5E9;
+    }
+
+    .msgs-intro-card .btn-msg-pri:active {
+      transform: translateY(0) scale(0.98);
     }
 
     /* Accessible focus states */
@@ -1979,21 +2443,23 @@
 <body>
 
 <!-- ==========================================================================
-     FIRST-OPEN INTRO (shown once, only when the farmer has no chats yet)
+     FIRST-OPEN INTRO DIALOG (shown once, on the very first visit)
      ========================================================================== -->
 <div class="msgs-intro" id="msgs-intro" aria-hidden="true">
-  <div class="msgs-intro-card" role="dialog" aria-labelledby="msgs-intro-title">
-    <div class="msgs-intro-logo"><i class="fas fa-leaf"></i></div>
-    <h1 id="msgs-intro-title">Farm Assist Messages</h1>
-    <div class="msgs-intro-enctxt"><i class="fas fa-lock"></i> End-to-end encrypted</div>
-    <p>Your conversations are private and securely protected.</p>
+  <div class="msgs-intro-card" role="dialog" aria-modal="true" aria-labelledby="msgs-intro-title">
+    <div class="msgs-intro-logo">
+      <i class="fas fa-seedling" aria-hidden="true"></i>
+      <img src="assets/icons/icon-512x512.png" alt="Farm Assist logo" onerror="this.remove()">
+    </div>
+    <h1 id="msgs-intro-title"><i class="fas fa-lock" aria-hidden="true"></i> End-to-end encrypted</h1>
+    <p>Your personal conversations stay between you and the people you choose to message.</p>
     <button class="btn-msg-pri" id="btn-intro-continue" aria-label="Continue to Messages">
-      <i class="fas fa-arrow-right"></i> Continue to Messages
+      Continue to Messages <i class="fas fa-arrow-right" aria-hidden="true"></i>
     </button>
   </div>
 </div>
 
-<div class="msg-app">
+<div class="msg-app" id="msg-app">
   <!-- Top App Header -->
   <header class="msg-top-header">
     <div class="msg-brand">
@@ -2029,64 +2495,55 @@
   <div class="msg-body">
     <!-- Left Panel: Conversations -->
     <div class="conv-panel" id="conv-panel">
-      <!-- Horizontal Agricultural Suggestion Cards -->
       <div class="sug-container">
-        <div class="sug-label">Suggested for you</div>
+        <div class="sug-label">Farm Assist directory</div>
         <div class="sug-scroll" id="sug-scroll">
-          <a class="sug-card" href="news.html" title="Open Farm News">
+          <a class="sug-card" href="expert.html" title="Open Agriculture Expert">
             <span class="sug-icon" aria-hidden="true">🌾</span>
             <span class="sug-body">
-              <span class="sug-title">Farm News</span>
-              <span class="sug-desc">Latest agriculture updates</span>
+              <span class="sug-title">Agriculture Expert <span class="sug-verified" title="Verified Farm Assist service"><i class="fas fa-check"></i></span></span>
+              <span class="sug-desc">Connect with specialists for farm decisions</span>
+              <span class="sug-action">Open expert help <i class="fas fa-arrow-right"></i></span>
             </span>
           </a>
-          <a class="sug-card" href="schemes.html" title="Open Government Schemes">
-            <span class="sug-icon" aria-hidden="true">🏛</span>
-            <span class="sug-body">
-              <span class="sug-title">Govt. Schemes</span>
-              <span class="sug-desc">Discover available schemes</span>
-            </span>
-          </a>
-          <a class="sug-card" href="weather.html" title="Open Weather">
-            <span class="sug-icon" aria-hidden="true">🌦</span>
-            <span class="sug-body">
-              <span class="sug-title">Weather</span>
-              <span class="sug-desc">Weather &amp; farming alerts</span>
-            </span>
-          </a>
-          <a class="sug-card" href="crop-health.html" title="Open Crop Advice">
+          <a class="sug-card" href="crop-health.html" title="Open Crop Advisor">
             <span class="sug-icon" aria-hidden="true">🌱</span>
             <span class="sug-body">
-              <span class="sug-title">Crop Advice</span>
-              <span class="sug-desc">Improve crop management</span>
+              <span class="sug-title">Crop Advisor <span class="sug-verified" title="Verified Farm Assist service"><i class="fas fa-check"></i></span></span>
+              <span class="sug-desc">Review crop health and practical next steps</span>
+              <span class="sug-action">Open crop health <i class="fas fa-arrow-right"></i></span>
             </span>
           </a>
-          <a class="sug-card" href="expert.html" title="Open Expert Help">
-            <span class="sug-icon" aria-hidden="true">👨‍🌾</span>
+          <a class="sug-card" href="weather.html" title="Open Weather Assistant">
+            <span class="sug-icon" aria-hidden="true">🌦️</span>
             <span class="sug-body">
-              <span class="sug-title">Expert Help</span>
-              <span class="sug-desc">Connect with specialists</span>
+              <span class="sug-title">Weather Assistant <span class="sug-verified" title="Verified Farm Assist service"><i class="fas fa-check"></i></span></span>
+              <span class="sug-desc">Plan field work around local conditions</span>
+              <span class="sug-action">Open weather <i class="fas fa-arrow-right"></i></span>
             </span>
           </a>
-          <a class="sug-card" href="techniques.html" title="Open Farm Techniques">
-            <span class="sug-icon" aria-hidden="true">🚜</span>
+          <a class="sug-card" href="schemes.html" title="Open Government Schemes Assistant">
+            <span class="sug-icon" aria-hidden="true">🏛️</span>
             <span class="sug-body">
-              <span class="sug-title">Techniques</span>
-              <span class="sug-desc">Learn practical techniques</span>
+              <span class="sug-title">Government Schemes <span class="sug-verified" title="Verified Farm Assist service"><i class="fas fa-check"></i></span></span>
+              <span class="sug-desc">Find eligibility and application guidance</span>
+              <span class="sug-action">Browse schemes <i class="fas fa-arrow-right"></i></span>
             </span>
           </a>
-          <a class="sug-card" href="marketplace.html" title="Open Marketplace">
-            <span class="sug-icon" aria-hidden="true">🛒</span>
+          <a class="sug-card" href="market-prices.html" title="Open Market Advisor">
+            <span class="sug-icon" aria-hidden="true">📈</span>
             <span class="sug-body">
-              <span class="sug-title">Marketplace</span>
-              <span class="sug-desc">Buy &amp; sell farm products</span>
+              <span class="sug-title">Market Advisor <span class="sug-verified" title="Verified Farm Assist service"><i class="fas fa-check"></i></span></span>
+              <span class="sug-desc">Track prices before you buy or sell</span>
+              <span class="sug-action">Open market prices <i class="fas fa-arrow-right"></i></span>
             </span>
           </a>
-          <a class="sug-card" href="livestock.html" title="Open Livestock">
-            <span class="sug-icon" aria-hidden="true">🐄</span>
+          <a class="sug-card" href="help.html" title="Open Farm Assist Support">
+            <span class="sug-icon" aria-hidden="true">🛟</span>
             <span class="sug-body">
-              <span class="sug-title">Livestock</span>
-              <span class="sug-desc">Livestock guidance</span>
+              <span class="sug-title">Farm Assist Support <span class="sug-verified" title="Verified Farm Assist service"><i class="fas fa-check"></i></span></span>
+              <span class="sug-desc">Get help with your account and app</span>
+              <span class="sug-action">Open support <i class="fas fa-arrow-right"></i></span>
             </span>
           </a>
         </div>
@@ -2176,9 +2633,6 @@
             </div>
           </div>
           <div class="chat-header-actions">
-            <button class="hdr-btn" id="btn-chat-info" title="Contact Details" aria-label="Contact details">
-              <i class="fas fa-info-circle"></i>
-            </button>
             <button class="hdr-btn" id="btn-chat-options" title="More Options" aria-label="Chat options">
               <i class="fas fa-ellipsis-v"></i>
             </button>
@@ -2194,6 +2648,11 @@
 
         <!-- Chat Message Stream -->
         <div class="chat-messages" id="chat-messages"></div>
+
+        <!-- Scroll-to-bottom quick jump (WhatsApp style) -->
+        <button class="chat-scroll-fab" id="chat-scroll-fab" title="Scroll to latest message" aria-label="Scroll to latest message">
+          <i class="fas fa-chevron-down"></i>
+        </button>
 
         <!-- Reply Preview Bar -->
         <div class="reply-preview-bar" id="reply-preview-bar">
@@ -2228,7 +2687,37 @@
         </div>
       </div>
     </div>
+
+    <!-- Floating voice button (tap to open voice controls) -->
+    <button class="voice-fab" id="voice-fab" title="Voice message" aria-label="Voice message">
+      <i class="fas fa-microphone"></i>
+    </button>
   </div>
+</div>
+
+<!-- Voice interaction control sheet -->
+<div class="voice-backdrop" id="voice-backdrop"></div>
+<div class="voice-sheet" id="voice-sheet" role="dialog" aria-modal="true" aria-label="Voice message">
+  <div class="voice-sheet-grab"></div>
+  <div class="voice-sheet-head">
+    <h3><i class="fas fa-microphone"></i> Voice message</h3>
+    <button class="voice-sheet-close" id="voice-sheet-close" title="Close voice controls" aria-label="Close voice controls">&times;</button>
+  </div>
+  <div class="voice-mode-row">
+    <button class="voice-mode-btn" id="voice-mode-record" type="button"><i class="fas fa-microphone-alt"></i> Voice Note</button>
+    <button class="voice-mode-btn" id="voice-mode-dictate" type="button"><i class="fas fa-keyboard"></i> Voice to Text</button>
+  </div>
+  <div class="voice-stage">
+    <div class="v-status" id="voice-status">Tap the microphone to record a voice message.</div>
+    <button class="voice-record-btn" id="voice-record-btn" type="button" aria-label="Start or stop recording"><i class="fas fa-microphone"></i></button>
+    <div class="voice-timer" id="voice-timer">0:00</div>
+    <div class="voice-bars" id="voice-bars" hidden><span></span><span></span><span></span><span></span><span></span></div>
+  </div>
+  <div class="voice-actions">
+    <button class="voice-act-btn danger" id="voice-cancel-btn" type="button" disabled><i class="fas fa-times"></i> Cancel</button>
+    <button class="voice-act-btn primary" id="voice-send-btn" type="button" disabled><i class="fas fa-paper-plane"></i> Send</button>
+  </div>
+  <div class="voice-hint" id="voice-hint">Recordings are stored securely and sent only through Farm Assist.</div>
 </div>
 
 <!-- ==========================================================================
@@ -2365,9 +2854,12 @@
   var activeConversation = null;
   var messages = [];
   var messagesMap = {};
+  var renderedMsgIds = {};          // ids already on screen -> animate only truly-new rows
   var hasMoreMessages = false;
   var loadingOlderMessages = false;
   var loadingMessages = false;
+  var lastReadAt = null;            // "your" read marker, used for the unread separator
+  var messageDrafts = {};           // per-conversation composer drafts (keyed by conversation id)
   var searchQuery = '';
   var isLoadingConversations = false;
   var pollTimer = null;
@@ -2375,7 +2867,8 @@
   var replyingToMessage = null;
   var farmerSearchTimer = null;
   var convSearchTimer = null;
-  var introSeenKey = 'fa_msgs_intro_seen';
+  var typingNotifyTimer = null;
+  var introSeenKey = 'fa_msgs_intro_seen_' + (currentUserId || 'device');
   var isMobile = window.innerWidth <= 768;
 
   function $(id) { return document.getElementById(id); }
@@ -2502,7 +2995,7 @@
 
       html += '<div class="conv-item' + (isActive ? ' active' : '') + '" data-cid="' + escapeHtml(c.id || c.conversation_id) + '" role="button" tabindex="0" aria-label="Open chat with ' + escapeHtml(name) + '">' +
         '<div class="conv-avatar-box">' +
-          '<div class="conv-avatar">' + avatarContent + '</div>' +
+          '<div class="conv-avatar' + (p.is_online ? ' online' : '') + '">' + avatarContent + '</div>' +
           '<div class="conv-online-indicator ' + onlineClass + '"></div>' +
         '</div>' +
         '<div class="conv-details">' +
@@ -2602,11 +3095,16 @@
     $('ch-status').className = 'ch-status' + (p.is_online ? '' : ' offline');
 
     var avatarEl = $('ch-avatar');
+    avatarEl.classList.remove('online');
+    if (p.is_online) avatarEl.classList.add('online');
     if (p.profile_image) {
-      avatarEl.innerHTML = '<img src="' + escapeHtml(p.profile_image) + '" alt="' + escapeHtml(name) + '" onerror="this.parentElement.textContent=\'' + getInitials(name) + '\'">';
+      avatarEl.innerHTML = '<img src="' + escapeHtml(p.profile_image) + '" alt="' + escapeHtml(name) + '" onerror="this.parentElement.innerHTML=\'' + getInitials(name) + '\'">';
     } else {
       avatarEl.textContent = getInitials(name);
     }
+
+    // Dismiss app chrome so only the open chat remains (same pattern as WhatsApp / Google Chat)
+    document.getElementById('msg-app').classList.add('chat-open');
 
     $('chat-placeholder').style.display = 'none';
     $('chat-view').classList.remove('hidden');
@@ -2619,13 +3117,21 @@
     // Clear reply state on new chat open
     cancelReply();
 
+    // Restore the draft the farmer was typing for this conversation (if any)
+    var draftKey = conv.id || conv.conversation_id;
+    var savedDraft = messageDrafts[draftKey] || '';
+    $('msg-input').value = savedDraft;
+    $('msg-input').style.height = savedDraft ? 'auto' : '42px';
+    $('msg-input').style.height = savedDraft ? Math.min($('msg-input').scrollHeight, 120) + 'px' : '42px';
+    $('btn-send-msg').disabled = !savedDraft.trim();
+
     renderConversations();
     loadMessages(conv.id || conv.conversation_id);
-    window.API.Messages.markRead(conv.id || conv.conversation_id).catch(function(){});
   }
 
   function closeChat() {
     activeConversation = null;
+    document.getElementById('msg-app').classList.remove('chat-open');
     messages = [];
     cancelReply();
     $('chat-view').classList.add('hidden');
@@ -2659,13 +3165,19 @@
   function loadMessages(cid) {
     loadingMessages = true;
     messagesMap = {};
+    renderedMsgIds = {};
+    lastReadAt = null;
     renderMessagesStream();
     window.API.Messages.getMessages(cid).then(function(res) {
       loadingMessages = false;
       var data = res.data || res || {};
       hasMoreMessages = !!data.has_more;
+      // The read marker reflects the state BEFORE this load, so the
+      // "Unread messages" separator is drawn from where the farmer last read.
+      lastReadAt = data.last_read_at || null;
       mergeMessages(data.messages || []);
       renderMessagesStream();
+      window.API.Messages.markRead(cid).catch(function(){});
     }).catch(function(e) {
       loadingMessages = false;
       console.error('Failed to load messages:', e);
@@ -2700,7 +3212,28 @@
 
   $('chat-messages').addEventListener('scroll', function() {
     if (this.scrollTop < 40) loadOlderMessages();
+    updateScrollFab();
   });
+
+  function updateScrollFab() {
+    var fab = $('chat-scroll-fab');
+    if (!fab) return;
+    if (activeConversation && !isNearBottom()) fab.classList.add('show');
+    else fab.classList.remove('show');
+  }
+
+  $('chat-scroll-fab').addEventListener('click', function() {
+    var c = $('chat-messages');
+    c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' });
+  });
+
+  // True for inbound rows newer than the farmer's last read marker.
+  function isUnreadMessage(m) {
+    if (!lastReadAt) return true;
+    var t = Date.parse(String(m.created_at || '').replace(' ', 'T'));
+    var ref = Date.parse(String(lastReadAt).replace(' ', 'T'));
+    return !isNaN(t) && !isNaN(ref) && t > ref;
+  }
 
   function renderMessagesStream() {
     var container = $('chat-messages');
@@ -2725,8 +3258,9 @@
 
     var html = '';
     var lastDate = '';
+    var separatorAdded = false;
 
-    messages.forEach(function(m) {
+    messages.forEach(function(m, idx) {
       var datePill = formatDatePill(m.created_at);
       if (datePill && datePill !== lastDate) {
         lastDate = datePill;
@@ -2736,13 +3270,21 @@
       var isOut = String(m.sender_id) === String(currentUserId);
       var dir = isOut ? 'outgoing' : 'incoming';
 
+      // "Unread messages" separator sits right before the first inbound row
+      // that is newer than the farmer's last read marker.
+      if (!isOut && !separatorAdded && isUnreadMessage(m)) {
+        separatorAdded = true;
+        html += '<div class="unread-separator"><span>Unread messages</span></div>';
+      }
+
       var statusTicks = '';
       if (isOut) {
+        var isPending = !!m.pending;
         var isRead = m.status === 'read';
         var isDlv = m.status === 'delivered';
-        var tickCls = isRead ? 'read' : (isDlv ? 'delivered' : 'sent');
-        var tickIcon = (isRead || isDlv) ? 'fa-check-double' : 'fa-check';
-        var tickTitle = isRead ? 'Read' : (isDlv ? 'Delivered' : 'Sent');
+        var tickCls = isPending ? 'pending' : (isRead ? 'read' : (isDlv ? 'delivered' : 'sent'));
+        var tickIcon = isPending ? 'fa-clock' : ((isRead || isDlv) ? 'fa-check-double' : 'fa-check');
+        var tickTitle = isPending ? 'Sending' : (isRead ? 'Read' : (isDlv ? 'Delivered' : 'Sent'));
         statusTicks = '<span class="msg-status-ticks ' + tickCls + '" title="' + tickTitle + '">' +
           '<i class="fas ' + tickIcon + '"></i></span>';
       }
@@ -2759,6 +3301,15 @@
           '<div class="msg-file-info">' +
             '<div class="msg-file-name">' + escapeHtml(m.content || 'Document') + '</div>' +
             '<div class="msg-file-size">Download Attachment</div>' +
+          '</div>' +
+        '</div>';
+      } else if (m.message_type === 'voice' && m.attachment_url) {
+        var durText = (m.content && /^\d+:\d{2}$/.test(String(m.content))) ? String(m.content) : '0:00';
+        contentHtml = '<div class="msg-voice-bubble" data-src="' + escapeHtml(m.attachment_url) + '" data-playing="0">' +
+          '<button class="voice-play-btn" aria-label="Play voice message"><i class="fas fa-play"></i></button>' +
+          '<div class="voice-info">' +
+            '<div class="voice-eq"><span></span><span></span><span></span><span></span></div>' +
+            '<div class="voice-dur">' + escapeHtml(durText) + '</div>' +
           '</div>' +
         '</div>';
       } else {
@@ -2797,7 +3348,9 @@
         '</button>';
       }
 
-      html += '<div class="msg-row ' + dir + '" data-mid="' + escapeHtml(m.id || m.message_id) + '">' +
+      var isNewRow = !!m.id && !renderedMsgIds[m.id];
+
+      html += '<div class="msg-row ' + dir + (isNewRow ? ' msg-entering' : '') + '" data-mid="' + escapeHtml(m.id || m.message_id) + '">' +
         '<div class="msg-bubble-wrap">' +
           actionToolbar +
           '<div class="msg-bubble">' +
@@ -2814,8 +3367,11 @@
     });
 
     container.innerHTML = html;
+    renderedMsgIds = {};
+    messages.forEach(function(m) { if (m.id) renderedMsgIds[m.id] = true; });
     bindMessageActions(container);
     if (stickToBottom) scrollToChatBottom();
+    updateScrollFab();
   }
 
   // Protected attachments (messages/, documents/) are served behind a per-user
@@ -2914,6 +3470,61 @@
         }
       });
     });
+
+    bindVoicePlayers(container);
+  }
+
+  // Voice message playback (a VoiceNote voice clip, resolved to an anonymous
+  // blob URL because the storage endpoint requires the auth header).
+  var voiceAudio = null;
+  var playingVoiceKey = null;
+  function bindVoicePlayers(container) {
+    container.querySelectorAll('.msg-voice-bubble').forEach(function(bubble) {
+      if (bubble._voiceBound) return;
+      bubble._voiceBound = true;
+      bubble.addEventListener('click', function() {
+        var src = this.getAttribute('data-src');
+        var btn = this.querySelector('.voice-play-btn');
+        var eq = this.querySelector('.voice-eq');
+        if (!src) return;
+        if (playingVoiceKey === this) {
+          stopVoicePlayback();
+          return;
+        }
+        stopVoicePlayback();
+        authImgUrl(src, function(url) {
+          if (!url) { showToast('Could not play voice message', 'error'); return; }
+          if (voiceAudio) voiceAudio.src = '';
+          voiceAudio = new Audio(url);
+          playingVoiceKey = bubble;
+          bubble.setAttribute('data-playing', '1');
+          if (btn) btn.innerHTML = '<i class="fas fa-stop"></i>';
+          if (eq) eq.classList.add('playing');
+          voiceAudio.play().then(function() {
+            voiceAudio.addEventListener('ended', function() {
+              if (btn) btn.innerHTML = '<i class="fas fa-play"></i>';
+              if (eq) eq.classList.remove('playing');
+              bubble.setAttribute('data-playing', '0');
+            });
+          }).catch(function() {
+            stopVoicePlayback();
+            showToast('Could not play voice message', 'error');
+          });
+        });
+      });
+    });
+  }
+
+  function stopVoicePlayback() {
+    if (voiceAudio) { try { voiceAudio.pause(); } catch(e){} voiceAudio = null; }
+    if (playingVoiceKey) {
+      var btn = playingVoiceKey.querySelector('.voice-play-btn');
+      var eq = playingVoiceKey.querySelector('.voice-eq');
+      if (btn) btn.innerHTML = '<i class="fas fa-play"></i>';
+      if (eq) eq.classList.remove('playing');
+      playingVoiceKey.setAttribute('data-playing', '0');
+      playingVoiceKey = null;
+    }
   }
 
   function scrollToChatBottom() {
@@ -2940,6 +3551,7 @@
       content: content,
       message_type: mType,
       status: 'sent',
+      pending: true,
       failed: false,
       created_at: new Date().toISOString()
     };
@@ -2970,6 +3582,10 @@
     var text = input.value.trim();
     if (!text || !activeConversation) return;
 
+    // Draft no longer needed once the message is on its way
+    var cid = activeConversation.id || activeConversation.conversation_id;
+    delete messageDrafts[cid];
+
     input.value = '';
     input.style.height = '42px';
     $('btn-send-msg').disabled = true;
@@ -2992,6 +3608,19 @@
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     $('btn-send-msg').disabled = !this.value.trim();
+
+    // Notify typing (WhatsApp-style) once the user pauses while focused on this chat
+    if (!activeConversation) return;
+    var cid = activeConversation.id || activeConversation.conversation_id;
+
+    // Preserve the draft so it never gets lost when re-opening the chat
+    messageDrafts[cid] = this.value;
+
+    clearTimeout(typingNotifyTimer);
+    if (!this.value.trim()) return;
+    typingNotifyTimer = setTimeout(function() {
+      window.API.Messages.setTyping(cid).catch(function() {});
+    }, 700);
   });
 
   msgInput.addEventListener('keydown', function(e) {
@@ -3129,6 +3758,294 @@
   });
 
   // ==========================================================================
+  // VOICE MESSAGE  (floating voice button + record / voice-to-text sheet)
+  // ==========================================================================
+  var voiceState = {
+    mode: 'record',          // 'record' | 'dictate'
+    recording: false,
+    listening: false,
+    chunks: [],
+    blob: null,
+    durationMs: 0,
+    timerInt: null,
+    rec: null,
+    stream: null,
+    recog: null
+  };
+  var MIN_VOICE_DURATION_MS = 800;
+
+  function fmtVoiceTime(ms) {
+    var totalSec = Math.floor(ms / 1000);
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    return m + ':' + (s < 10 ? '0' + s : s);
+  }
+
+  function voiceEl(id) { return document.getElementById(id); }
+
+  function openVoiceSheet() {
+    if (!activeConversation) {
+      showToast('Open a chat first to send a voice message', 'error');
+      return;
+    }
+    resetVoiceStage('record');
+    voiceEl('voice-sheet').classList.add('open');
+    voiceEl('voice-backdrop').classList.add('show');
+    voiceEl('voice-record-btn').disabled = false;
+  }
+
+  function closeVoiceSheet() {
+    stopVoiceRecording(true);
+    stopDictation();
+    voiceEl('voice-sheet').classList.remove('open');
+    voiceEl('voice-backdrop').classList.remove('show');
+  }
+
+  function resetVoiceStage(mode) {
+    voiceState.mode = mode;
+    voiceState.blob = null;
+    voiceState.durationMs = 0;
+    voiceEl('voice-timer').textContent = '0:00';
+    voiceEl('voice-bars').hidden = true;
+    voiceEl('voice-record-btn').classList.remove('recording');
+    voiceEl('voice-record-btn').innerHTML = '<i class="fas fa-microphone"></i>';
+    voiceEl('voice-cancel-btn').disabled = true;
+    voiceEl('voice-send-btn').disabled = true;
+
+    var recBtn = voiceEl('voice-mode-record');
+    var dictBtn = voiceEl('voice-mode-dictate');
+    recBtn.classList.toggle('active', mode === 'record');
+    dictBtn.classList.toggle('active', mode === 'dictate');
+
+    if (mode === 'record') {
+      voiceEl('voice-record-btn').disabled = false;
+      voiceEl('voice-record-btn').style.display = '';
+      voiceEl('voice-status').textContent = 'Tap the microphone to record a voice message.';
+      voiceEl('voice-hint').textContent = 'Recordings are stored securely and sent only through Farm Assist.';
+    } else {
+      voiceEl('voice-record-btn').disabled = true;
+      voiceEl('voice-record-btn').style.display = 'none';
+      voiceEl('voice-send-btn').disabled = true;
+      if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) {
+        voiceEl('voice-status').textContent = "Voice input isn't supported on this device/browser.";
+        voiceEl('voice-hint').textContent = 'You can still use the Voice Note option above.';
+        return;
+      }
+      voiceEl('voice-status').textContent = 'Tap to speak and convert your voice into text.';
+      voiceEl('voice-hint').textContent = 'The converted text will appear in the chat box, ready to send.';
+    }
+  }
+
+  function startVoiceRecording() {
+    if (!window.MediaRecorder) {
+      voiceEl('voice-status').textContent = 'Recording is not supported on this device/browser.';
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+      voiceState.stream = stream;
+      var mime = 'audio/webm';
+      if (!window.MediaRecorder.isTypeSupported) { mime = ''; }
+      else if (!window.MediaRecorder.isTypeSupported('audio/webm')) {
+        mime = 'audio/mp4';
+      }
+      voiceState.rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      voiceState.chunks = [];
+      voiceState.rec.ondataavailable = function(e) {
+        if (e.data && e.data.size > 0) voiceState.chunks.push(e.data);
+      };
+      voiceState.rec.onstop = function() {
+        if (voiceState.stream) { voiceState.stream.getTracks().forEach(function(t) { t.stop(); }); voiceState.stream = null; }
+        if (!voiceState.chunks.length) return;
+        voiceState.blob = new Blob(voiceState.chunks, { type: voiceState.rec.mimeType || 'audio/webm' });
+        voiceEl('voice-send-btn').disabled = (voiceState.durationMs < MIN_VOICE_DURATION_MS || !voiceState.blob);
+        voiceEl('voice-cancel-btn').disabled = false;
+        voiceEl('voice-record-btn').innerHTML = '<i class="fas fa-microphone"></i>';
+        voiceEl('voice-hint').textContent = 'Listening complete. Press Send when ready.';
+        if (voiceState.durationMs < MIN_VOICE_DURATION_MS && voiceState.blob) {
+          voiceEl('voice-status').textContent = 'Hold the microphone a little longer.';
+        } else {
+          voiceEl('voice-status').textContent = 'Ready to send (' + fmtVoiceTime(voiceState.durationMs) + ').';
+        }
+      };
+      voiceState.rec.start();
+      voiceState.recording = true;
+      voiceState.durationMs = 0;
+      voiceEl('voice-timer').textContent = '0:00';
+      voiceEl('voice-bars').hidden = false;
+      voiceEl('voice-record-btn').classList.add('recording');
+      voiceEl('voice-record-btn').innerHTML = '<i class="fas fa-stop"></i>';
+      voiceEl('voice-cancel-btn').disabled = false;
+      voiceEl('voice-hint').textContent = 'Recording in progress - tap the red button to stop.';
+      voiceEl('voice-status').textContent = 'Recording... you can speak now.';
+      clearInterval(voiceState.timerInt);
+      voiceState.timerInt = setInterval(function() {
+        voiceState.durationMs += 100;
+        voiceEl('voice-timer').textContent = fmtVoiceTime(voiceState.durationMs);
+      }, 100);
+    }).catch(function() {
+      voiceEl('voice-status').textContent = 'Microphone access is blocked or unavailable.';
+      voiceEl('voice-hint').textContent = 'Allow microphone access to record a voice message.';
+    });
+  }
+
+  function stopVoiceRecording(cancelAll) {
+    if (!voiceState.recording && !voiceState.rec) return;
+    clearInterval(voiceState.timerInt);
+    voiceState.timerInt = null;
+    voiceEl('voice-bars').hidden = true;
+    voiceEl('voice-record-btn').classList.remove('recording');
+    if (voiceState.rec && voiceState.rec.state !== 'inactive') {
+      try { voiceState.rec.stop(); } catch(e){}
+    }
+    voiceState.rec = null;
+    if (cancelAll && voiceState.stream) {
+      voiceState.stream.getTracks().forEach(function(t) { t.stop(); });
+      voiceState.stream = null;
+    }
+    voiceState.recording = false;
+    if (cancelAll) voiceState.blob = null;
+  }
+
+  function sendVoiceNow() {
+    if (!activeConversation || !voiceState.blob) return;
+    if (voiceState.durationMs < MIN_VOICE_DURATION_MS) {
+      showToast('Recording is too short - speak a little longer', 'error');
+      return;
+    }
+    var cid = activeConversation.id || activeConversation.conversation_id;
+    var ext = 'webm';
+    var mt = voiceState.blob.type || '';
+    if (mt.indexOf('mp4') !== -1) ext = 'mp4';
+    else if (mt.indexOf('ogg') !== -1) ext = 'ogg';
+    else if (mt.indexOf('mp3') !== -1) ext = 'mp3';
+    var fname = 'voice-' + Date.now() + '.' + ext;
+    var file = new File([voiceState.blob], fname, { type: mt || 'audio/webm' });
+    var durText = fmtVoiceTime(voiceState.durationMs);
+
+    voiceEl('voice-send-btn').disabled = true;
+    voiceEl('voice-status').textContent = 'Sending voice message...';
+
+    // Secure path: upload to the authenticated storage endpoint, then the
+    // voice message is sent through the backend and stored in the DB.
+    window.API.Messages.upload(file).then(function(att) {
+      return window.API.Messages.sendMessage(cid, {
+        content: durText,
+        message_type: 'voice',
+        attachment_url: att.file_url
+      });
+    }).then(function(res) {
+      var d = res.data || res;
+      messages.push(d);
+      messagesMap[d.id || d.message_id] = d;
+      renderMessagesStream();
+      loadConversations(true);
+      showToast('Voice message sent', 'success');
+      closeVoiceSheet();
+    }).catch(function(err) {
+      voiceEl('voice-status').textContent = 'Could not send the voice message. Tap to try again.';
+      voiceEl('voice-send-btn').disabled = false;
+      voiceEl('voice-cancel-btn').disabled = false;
+      showToast((err && err.message) || 'Failed to send voice message', 'error');
+    });
+  }
+
+  function startDictation() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      voiceEl('voice-status').textContent = "Voice input isn't supported on this device/browser.";
+      return;
+    }
+    if (!activeConversation) { showToast('Open a chat first', 'error'); return; }
+    if (voiceState.listening) { stopDictation(); return; }
+    voiceState.recog = new SR();
+    voiceState.recog.lang = 'en-IN';
+    voiceState.recog.interimResults = true;
+    voiceState.recog.maxAlternatives = 1;
+    voiceState.listening = true;
+    voiceEl('voice-record-btn').style.display = 'none';
+    voiceEl('voice-status').textContent = 'Listening... speak clearly.';
+    voiceEl('voice-hint').textContent = 'Tap again or press Esc to stop voice to text.';
+    voiceState.recog.onresult = function(e) {
+      var interim = '';
+      var finalText = '';
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t;
+        else interim += t;
+      }
+      var input = $('msg-input');
+      var existing = input.value || '';
+      if (finalText) input.value = existing + finalText;
+      else if (interim) input.value = existing + interim;
+      if (activeConversation) {
+        var cid = activeConversation.id || activeConversation.conversation_id;
+        messageDrafts[cid] = input.value;
+      }
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+      $('btn-send-msg').disabled = !input.value.trim();
+      if (finalText) {
+        stopDictation();
+        showToast('Voice converted to text', 'success');
+      }
+    };
+    voiceState.recog.onerror = function(e) {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        voiceEl('voice-status').textContent = 'Microphone access is blocked.';
+      } else if (e.error === 'no-speech') {
+        voiceEl('voice-status').textContent = 'No speech heard - tap the microphone to try again.';
+      } else {
+        voiceEl('voice-status').textContent = 'Voice to text could not run right now.';
+      }
+      stopDictation();
+    };
+    voiceState.recog.onend = function() { voiceState.listening = false; };
+    voiceState.recog.start();
+  }
+
+  function stopDictation() {
+    if (voiceState.recog) {
+      try { voiceState.recog.stop(); } catch(e){}
+      voiceState.recog = null;
+    }
+    voiceState.listening = false;
+  }
+
+  $('voice-fab').addEventListener('click', openVoiceSheet);
+  setTimeout(function() {
+    $('voice-sheet-close').addEventListener('click', closeVoiceSheet);
+    $('voice-backdrop').addEventListener('click', closeVoiceSheet);
+    $('voice-mode-record').addEventListener('click', function() {
+      if (voiceState.mode === 'record') return;
+      stopDictation();
+      resetVoiceStage('record');
+    });
+    $('voice-mode-dictate').addEventListener('click', function() {
+      if (voiceState.mode === 'dictate') return;
+      stopVoiceRecording(true);
+      resetVoiceStage('dictate');
+    });
+    $('voice-record-btn').addEventListener('click', function() {
+      if (voiceState.mode === 'record') {
+        if (voiceState.recording) stopVoiceRecording(false);
+        else startVoiceRecording();
+      } else {
+        if (voiceState.listening) stopDictation();
+        else startDictation();
+      }
+    });
+    $('voice-cancel-btn').addEventListener('click', function() {
+      stopVoiceRecording(true);
+      stopDictation();
+      resetVoiceStage(voiceState.mode);
+    });
+    $('voice-send-btn').addEventListener('click', sendVoiceNow);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && voiceEl('voice-sheet').classList.contains('open')) closeVoiceSheet();
+    });
+  }, 0);
+
+  // ==========================================================================
   // EMOJI PICKER
   // ==========================================================================
   function initEmojiPicker() {
@@ -3207,7 +4124,6 @@
     openContactDrawer();
   });
 
-  $('btn-chat-info').addEventListener('click', openContactDrawer);
   $('chat-header-profile').addEventListener('click', openContactDrawer);
 
   function openContactDrawer() {
@@ -3539,19 +4455,24 @@
   startPolling();
   window.API.Messages.setOnline().catch(function(){});
 
-  // First-open introduction: shown once, only when the farmer has no chats.
+  // First-open introduction dialog: shown once per authenticated user on this device.
   function maybeShowIntro() {
-    if (localStorage.getItem(introSeenKey) || conversations.length > 0) return;
+    if (localStorage.getItem(introSeenKey)) return;
     setTimeout(function() {
-      $('msgs-intro').classList.add('show');
-    }, 350);
+      var el = $('msgs-intro');
+      el.classList.add('show');
+      el.setAttribute('aria-hidden', 'false');
+      var btn = $('btn-intro-continue');
+      if (btn) btn.focus();
+    }, 500);
   }
-  setTimeout(maybeShowIntro, 700);
+  setTimeout(maybeShowIntro, 600);
 
   $('btn-intro-continue').addEventListener('click', function() {
     localStorage.setItem(introSeenKey, '1');
     var el = $('msgs-intro');
     el.classList.remove('show');
+    el.setAttribute('aria-hidden', 'true');
     setTimeout(function() { el.classList.add('hidden'); }, 320);
   });
 
