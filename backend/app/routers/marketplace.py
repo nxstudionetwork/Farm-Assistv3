@@ -176,7 +176,7 @@ class ProductCreate(BaseModel):
 
 class OrderItemCreate(BaseModel):
     product_id: str
-    quantity: float = Field(default=1, ge=1)
+    quantity: int = Field(default=1, ge=1)
 
 
 class OrderCreate(BaseModel):
@@ -191,7 +191,7 @@ class OrderCreate(BaseModel):
 
 class CartItemPayload(BaseModel):
     product_id: str
-    quantity: float = Field(default=1, ge=1)
+    quantity: int = Field(default=1, ge=1)
 
 
 def _product_payload(product: Product) -> dict:
