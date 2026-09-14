@@ -404,13 +404,21 @@ function isReq(method,path,body){
 function unwrap(r){return r&&r.data!==undefined?r.data:r;}
 
 var fmtPrice=function(v){return'₹'+Number(v||0).toLocaleString('en-IN')};
-var imgFallback=function(){return'<div class="is-image-unavailable" role="img" aria-label="Product image unavailable"><i class="fas fa-image"></i><span>Image unavailable</span></div>';};
-var productImage=function(p){
+  var imgFallback=function(){return'<div class="is-image-unavailable" role="img" aria-label="Product image unavailable"><i class="fas fa-image"></i><span>Image unavailable</span></div>';};
+  var productImage=function(p){
   var candidates=[];
   if(p&&Array.isArray(p.images)) candidates=candidates.concat(p.images);
   if(p&&p.image_url) candidates.push(p.image_url);
-  return candidates.find(function(url){return typeof url==='string'&&/^https?:\/\//i.test(url);})||'';
-};
+  var host=(window.APP_CONFIG&&window.APP_CONFIG.API_HOST)||'';
+  return candidates.map(function(url){
+    if(typeof url!=='string'||!url.trim()) return '';
+    url=url.trim();
+    if(/^https?:\/\//i.test(url)) return url;
+    if(url.indexOf('//')===0) return window.location.protocol+url;
+    if(url.charAt(0)==='/') return host+url;
+    return host+'/'+url.replace(/^\.\//,'');
+  }).find(Boolean)||'';
+  };
 var starsHTML=function(r){
   r=Number(r)||0;var f=Math.floor(r),h=r%1>=.5?1:0,e=5-f-h,s='';
   for(var i=0;i<f;i++)s+='<i class="fas fa-star"></i>';if(h)s+='<i class="fas fa-star-half-alt"></i>';
@@ -623,7 +631,7 @@ function loadRecommended(){
   }).catch(function(){});
 }
 
-/* ─── RECENTLY VIEWED ─── */
+/* ─── RECENTLY VIEWED ��── */
 function shortDate(v){
   if(!v)return'';
   var d=new Date(v);
@@ -675,8 +683,18 @@ function addToCart(productId,qty,goCheckout){
     if(goCheckout) openCheckout(); else renderProducts();
   }).catch(function(err){toast(err.message||'Failed to add to cart','error')});
 }
-window.addToCart=addToCart;
-window.buyNow=function(pid){addToCart(pid,1,true);};
+  window.addToCart=addToCart;
+  window.buyNow=function(pid){
+    if(!requireAuth())return;
+    var existing=S.cart&&S.cart.items?S.cart.items.find(function(item){
+      return item.product&&(item.product.product_id===pid||item.product.id===pid);
+    }):null;
+    if(existing){
+      openCheckout();
+      return;
+    }
+    addToCart(pid,1,true);
+  };
 function cartQty(itemId,currentQty,delta,productId){
   if(!requireAuth())return;
   var newQty=Math.max(1,parseInt(currentQty,10)||1)+delta;
