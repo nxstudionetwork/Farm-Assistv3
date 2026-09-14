@@ -81,11 +81,25 @@ class ListingCreate(BaseModel):
             raise ValueError(f"Invalid unit. Must be one of: {', '.join(UNITS)}")
         return v
 
-    @field_validator("pricing_type", "contact_method", "status")
+    @field_validator("pricing_type")
     @classmethod
-    def _validate_enums(cls, v):
-        if v in PRICING_TYPES or v in CONTACT_METHODS or v in LISTING_STATUSES:
-            return v
+    def _pricing_type(cls, v):
+        if v not in PRICING_TYPES:
+            raise ValueError(f"Invalid pricing type. Must be one of: {', '.join(PRICING_TYPES)}")
+        return v
+
+    @field_validator("contact_method")
+    @classmethod
+    def _contact_method(cls, v):
+        if v not in CONTACT_METHODS:
+            raise ValueError(f"Invalid contact method. Must be one of: {', '.join(CONTACT_METHODS)}")
+        return v
+
+    @field_validator("status")
+    @classmethod
+    def _status(cls, v):
+        if v not in LISTING_STATUSES:
+            raise ValueError(f"Invalid status. Must be one of: {', '.join(LISTING_STATUSES)}")
         return v
 
     @field_validator("images")
@@ -310,7 +324,6 @@ def _get_owned_listing(listing_id: str, user_id: str, db: Session) -> Marketplac
     listing = db.query(MarketplaceListing).filter(
         (MarketplaceListing.id == listing_id) | (MarketplaceListing.listing_id == listing_id),
         MarketplaceListing.user_id == user_id,
-        MarketplaceListing.is_active == True,
     ).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
@@ -353,13 +366,17 @@ def seller_dashboard(
     uid = current_user.id
     listing_ids = [r[0] for r in db.query(MarketplaceListing.id).filter(MarketplaceListing.user_id == uid).all()]
 
-    base = db.query(MarketplaceListing).filter(MarketplaceListing.user_id == uid, MarketplaceListing.is_active == True)
-    active_count = base.filter(MarketplaceListing.status == "active").count()
-    pending_count = base.filter(MarketplaceListing.status == "pending").count()
-    paused_count = base.filter(MarketplaceListing.status == "paused").count()
+    base = db.query(MarketplaceListing).filter(MarketplaceListing.user_id == uid)
+    active_count = base.filter(MarketplaceListing.status == "active", MarketplaceListing.is_active == True).count()
+    pending_count = base.filter(MarketplaceListing.status == "pending", MarketplaceListing.is_active == True).count()
+    paused_count = base.filter(MarketplaceListing.status == "paused", MarketplaceListing.is_active == True).count()
     total_listings = base.count()
-    # Items still looking for a buyer (active or pending, stock remaining).
-    awaiting_buyer = active_count + pending_count
+    # Only listings with remaining stock are awaiting a buyer.
+    awaiting_buyer = base.filter(
+        MarketplaceListing.status.in_(["active", "pending"]),
+        MarketplaceListing.is_active == True,
+        MarketplaceListing.quantity > func.coalesce(MarketplaceListing.sold_quantity, 0),
+    ).count()
 
     pending_sales = 0
     confirmed_sales = 0

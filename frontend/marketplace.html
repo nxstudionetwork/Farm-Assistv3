@@ -310,11 +310,11 @@
     <!-- QUICK ACTIONS -->
     <div class="mp-actions">
       <button class="mp-btn primary" id="quick-add"><i class="fas fa-plus"></i> &nbsp;List New Item</button>
-      <button class="mp-btn ghost" id="my-listings-btn"><i class="fas fa-boxes-stacked"></i> My Listings</button>
+      <button class="mp-btn ghost" id="my-listings-btn"><i class="fas fa-boxes-stacked"></i> All Listings</button>
     </div>
 
-    <!-- MY LISTINGS VIEW (separate from tabs) -->
-    <section id="my-listings-view" class="mp-tabpane" style="display:none">
+      <!-- Legacy listings view kept hidden; Listings now lives in the main tab area. -->
+    <section id="my-listings-view" class="mp-tabpane" style="display:none" aria-hidden="true">
       <div class="mp-pane-body">
         <section class="mp-buyers-dash" id="buyers-dash">
           <div class="mp-buyers-head">
@@ -394,8 +394,25 @@
       <button class="mp-tab" data-tab="insights"><i class="fas fa-lightbulb"></i> Insights</button>
     </div>
 
-    <!-- TAB: LISTINGS (default) - REMOVED -->
-    <!-- Listings functionality moved to My Listings button -->
+    <!-- TAB: LISTINGS (default) -->
+    <section id="tab-listings" class="mp-tabpane">
+      <div class="mp-pane-body">
+        <div class="mp-hint"><i class="fas fa-circle-info"></i> Manage every item you are selling, including sold and cancelled listings.</div>
+        <div class="mp-toolbar" id="listings-tools">
+          <div class="mp-search"><i class="fas fa-magnifying-glass"></i><input id="l-search" maxlength="60" placeholder="Search your listings"></div>
+          <select class="mp-tbfield" id="f-cat"><option value="">All categories</option></select>
+          <input class="mp-tbfield" id="f-loc" maxlength="60" placeholder="Location">
+          <select class="mp-tbfield" id="f-status"><option value="">All statuses</option><option value="active">Active</option><option value="pending">Pending</option><option value="paused">Paused</option><option value="sold">Sold</option><option value="expired">Expired</option><option value="cancelled">Cancelled</option></select>
+          <input class="mp-tbfield" id="f-min" type="number" min="0" step="0.01" placeholder="Min ₹">
+          <input class="mp-tbfield" id="f-max" type="number" min="0" step="0.01" placeholder="Max ₹">
+          <select class="mp-tbfield" id="f-sort"><option value="newest">Newest first</option><option value="price_asc">Price: Low to High</option><option value="price_desc">Price: High to Low</option></select>
+          <button class="mp-btn ghost" id="f-apply"><i class="fas fa-magnifying-glass"></i> Apply</button>
+          <button class="mp-btn ghost" id="f-reset"><i class="fas fa-rotate-left"></i> Reset</button>
+        </div>
+        <div class="is-grid" id="l-grid"></div>
+        <button class="mp-loadmore" id="l-more" style="display:none">Load more</button>
+      </div>
+    </section>
 
     <!-- TAB: ACTIVE -->
     <section id="tab-active" class="mp-tabpane" style="display:none">
@@ -788,8 +805,8 @@
       loadCategories().then(function () {
         loadDashboard();
         loadBuyers();
-        // Show the active tab by default
-        switchTab('active');
+        // Show the unified listings tab by default
+        switchTab('listings');
       }).catch(function (e) {
         showApiBanner('Marketplace data did not load', backendReason(e), true);
         switchTab('active');
@@ -1902,7 +1919,10 @@
       var listStatus = '';
       
       // Map tabs to their content panes
-      if (section === 'active') {
+      if (section === 'listings') {
+        pane = 'listings';
+        listStatus = '';
+      } else if (section === 'active') {
         pane = 'active';
         listStatus = 'active';
       } else if (section === 'pending') {
@@ -1938,7 +1958,8 @@
       syncBuyersVisibility();
 
       // Load content for the selected pane
-      if (pane === 'active') loadActiveListings(true);
+      if (pane === 'listings') loadListings(true);
+      else if (pane === 'active') loadActiveListings(true);
       else if (pane === 'pending') loadPendingSales(false);
       else if (pane === 'sold') loadSold(false);
       else if (pane === 'sales') {
@@ -2059,7 +2080,7 @@
       
       var myListingsBtn = $('my-listings-btn');
       if (myListingsBtn) {
-        myListingsBtn.addEventListener('click', showMyListings);
+        myListingsBtn.addEventListener('click', function () { switchTab('listings'); });
       }
 
       // Tabs
