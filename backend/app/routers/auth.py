@@ -17,6 +17,7 @@ from app.schemas.auth import (
 from app.utils.auth import (
     create_access_token, hash_password, verify_password,
     get_current_user, generate_farmer_id, generate_id, normalize_farmer_id,
+    phone_lookup_candidates,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["Authentication"])
@@ -628,6 +629,7 @@ class AddressRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     phone_number: Optional[str] = None
+    phone: Optional[str] = None
     email: Optional[str] = None
     pin: Optional[str] = None
     password: Optional[str] = None
@@ -671,7 +673,9 @@ class ProfileLookupRequest(BaseModel):
 
 @router.post("/auth/register", response_model=dict, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.phone_number == payload.phone_number).first()
+    existing = db.query(User).filter(
+        User.phone_number.in_(phone_lookup_candidates(payload.phone_number))
+    ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Phone number already registered")
 
@@ -773,7 +777,9 @@ def send_otp(payload: OTPRequest, db: Session = Depends(get_db)):
 
     user = None
     if payload.phone_number:
-        user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+        user = db.query(User).filter(
+            User.phone_number.in_(phone_lookup_candidates(payload.phone_number))
+        ).first()
     elif payload.email:
         user = db.query(User).filter(User.email == payload.email).first()
 
@@ -952,7 +958,9 @@ def verify_otp(payload: OTPVerifyRequest, db: Session = Depends(get_db)):
 
     user = None
     if lookup_phone:
-        user = db.query(User).filter(User.phone_number == lookup_phone).first()
+        user = db.query(User).filter(
+            User.phone_number.in_(phone_lookup_candidates(lookup_phone))
+        ).first()
     elif lookup_email:
         user = db.query(User).filter(User.email == lookup_email).first()
 
@@ -1003,8 +1011,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         pin = payload.pin or payload.password
         if not pin or not user.password_hash or not verify_password(pin, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid PIN")
-    elif payload.phone_number:
-        user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+    elif payload.phone_number or payload.phone:
+        phone_input = payload.phone_number or payload.phone
+        user = db.query(User).filter(
+            User.phone_number.in_(phone_lookup_candidates(phone_input))
+        ).first()
         if not user:
             raise HTTPException(status_code=401, detail="Phone number not found")
         pwd = payload.pin or payload.password
@@ -1064,7 +1075,9 @@ def forgot_pin(payload: ForgotPinRequest, db: Session = Depends(get_db)):
 
     user = None
     if payload.phone_number:
-        user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+        user = db.query(User).filter(
+            User.phone_number.in_(phone_lookup_candidates(payload.phone_number))
+        ).first()
     elif payload.email:
         user = db.query(User).filter(User.email == payload.email).first()
 
@@ -1122,7 +1135,9 @@ def forgot_pin(payload: ForgotPinRequest, db: Session = Depends(get_db)):
 def lookup_profile(payload: ProfileLookupRequest, db: Session = Depends(get_db)):
     user = None
     if payload.phone_number:
-        user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+        user = db.query(User).filter(
+            User.phone_number.in_(phone_lookup_candidates(payload.phone_number))
+        ).first()
     elif payload.email:
         user = db.query(User).filter(User.email == payload.email).first()
     elif payload.farmer_id:

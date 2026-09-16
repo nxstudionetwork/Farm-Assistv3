@@ -204,8 +204,13 @@ ADDITIVE_COLUMNS = {
 
 
 def run_additive_migrations(database_url: str) -> None:
-    if not database_url.startswith("sqlite:///"):
-        return
+    if database_url.startswith("sqlite:///"):
+        _migrate_sqlite(database_url)
+    elif database_url.startswith("postgresql"):
+        _migrate_postgres(database_url)
+
+
+def _migrate_sqlite(database_url: str) -> None:
     db_path = database_url.replace("sqlite:///", "", 1)
     try:
         conn = sqlite3.connect(db_path)
@@ -224,4 +229,43 @@ def run_additive_migrations(database_url: str) -> None:
         finally:
             conn.close()
     except Exception as exc:  # pragma: no cover - defensive
-        logger.error("Additive migrations failed: %s", exc)
+        logger.error("SQLite additive migrations failed: %s", exc)
+
+
+def _migrate_postgres(database_url: str) -> None:
+    try:
+        import psycopg2
+        from urllib.parse import urlparse
+
+        parsed = urlparse(database_url)
+        conn = psycopg2.connect(
+            host=parsed.hostname,
+            port=parsed.port or 5432,
+            dbname=parsed.path.lstrip("/"),
+            user=parsed.username,
+            password=parsed.password,
+            sslmode="require" if "render.com" in (parsed.hostname or "") else "prefer",
+        )
+        try:
+            cur = conn.cursor()
+            for table, columns in ADDITIVE_COLUMNS.items():
+                cur.execute(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = %s",
+                    (table,),
+                )
+                existing = {row[0] for row in cur.fetchall()}
+                for column, declaration in columns:
+                    if column not in existing:
+                        pg_type = declaration.upper().replace("VARCHAR", "VARCHAR")
+                        cur.execute(
+                            f"ALTER TABLE {table} ADD COLUMN {column} {pg_type}"
+                        )
+                        logger.info("Added column %s.%s (postgres)", table, column)
+            conn.commit()
+        finally:
+            conn.close()
+    except ImportError:
+        logger.warning("psycopg2 not installed; skipping PostgreSQL migrations")
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("PostgreSQL additive migrations failed: %s", exc)

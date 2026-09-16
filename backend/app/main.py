@@ -152,6 +152,9 @@ async def startup():
     def _run_seed_suite():
         db = SessionLocal()
         try:
+            from app.database.seed_demo_login import ensure_demo_login_user
+            demo_login = ensure_demo_login_user(db)
+
             created = seed_communities(db)
             demo_summary = seed_demo(db)
 
@@ -200,19 +203,22 @@ async def startup():
         return {
             "created": created,
             "demo": demo_summary,
+            "demo_login": demo_login,
             "mkt": mkt_seeded,
             "market": market_seeded,
             "eq": eq_summary,
             "input": input_summary,
         }
 
-    created = demo_summary = mkt_seeded = market_seeded = input_summary = None
+    created = demo_summary = market_seeded = input_summary = None
+    demo_login = None
     eq_summary = None
     for _attempt in range(1, 5):
         try:
             _report = _run_seed_suite()
             created = _report["created"]
             demo_summary = _report["demo"]
+            demo_login = _report["demo_login"]
             mkt_seeded = _report["mkt"]
             market_seeded = _report["market"]
             eq_summary = _report["eq"]
@@ -223,6 +229,8 @@ async def startup():
             time.sleep(2 * _attempt)
     if eq_summary is None and market_seeded is None:
         print("WARNING: startup seeding did not fully complete after retries; API remains available.")
+    if demo_login and demo_login.get("status") == "created":
+        print(f"Created demo login account: {demo_login['phone']} / PIN {demo_login['pin']} (farmer {demo_login['farmer_id']})")
 
     print(f"{settings.APP_NAME} v{settings.APP_VERSION} started. DB tables created.")
     if created:

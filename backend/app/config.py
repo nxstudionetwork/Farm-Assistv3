@@ -45,7 +45,9 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5500",
         "http://localhost:8080",
         "http://localhost:8000",
+        "http://192.168.16.56:8000",
         "https://farm-assistv3.vercel.app",
+        "https://v0-farm-assistv3.vercel.app",
     ]
 
     RATE_LIMIT_ENABLED: bool = False

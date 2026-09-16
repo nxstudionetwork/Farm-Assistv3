@@ -23,7 +23,10 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[int] = None):
@@ -39,6 +42,39 @@ def decode_token(token: str):
         return payload
     except JWTError:
         return None
+
+
+def normalize_phone(raw: Optional[str]) -> str:
+    """Return the digits-only form of a phone/contact string."""
+    if not raw:
+        return ""
+    return re.sub(r"\D", "", str(raw))
+
+
+def phone_lookup_candidates(raw: Optional[str]) -> list:
+    """Phone variants to match stored user records.
+
+    Handles the country-code ambiguity: the UI strips everything to a bare
+    10-digit number while seed data may store ``+919876543210``. Returns a
+    deduped list of plausible stored forms (bare, ``91``-prefixed, ``+91``,
+    ``0091``) so logins/OTPs work no matter which form was saved.
+    """
+    digits = normalize_phone(raw)
+    if not digits:
+        return []
+    if len(digits) == 12 and digits.startswith("91"):
+        bare = digits[2:]
+    elif len(digits) == 10:
+        bare = digits
+    else:
+        bare = digits[-10:] if len(digits) > 10 else digits
+    candidates = {digits, bare}
+    if len(bare) == 10:
+        candidates.add("91" + bare)
+        candidates.add("+91" + bare)
+        candidates.add("0091" + bare)
+        candidates.add("+91 " + bare)
+    return [c for c in candidates if c]
 
 
 def normalize_farmer_id(raw_id: Optional[str], prefix: str = "FA-AS-") -> str:
