@@ -529,7 +529,7 @@ class TestServices:
         resp = client.post("/api/v1/service-requests", json={
             "service_name": "Soil NPK Test",
             "contact_phone": "12345",
-            "preferred_date": "2026-09-01"
+            "preferred_date": "2026-12-01"
         }, headers=auth_headers)
         assert resp.status_code == 422
 
@@ -538,7 +538,7 @@ class TestServices:
             "service_name": "Drone Pesticide Spraying",
             "service_category": "pest-disease",
             "contact_phone": "9876543210",
-            "preferred_date": "2026-09-10",
+            "preferred_date": "2026-12-10",
             "description": "3 acres paddy spray"
         }, headers=auth_headers)
         assert resp.status_code == 201
@@ -557,7 +557,7 @@ class TestServices:
         req = client.post("/api/v1/service-requests", json={
             "service_name": "Soil Test",
             "contact_phone": "9876543210",
-            "preferred_date": "2026-09-12"
+            "preferred_date": "2026-12-12"
         }, headers=auth_headers).json()["data"]
 
         req_id = req["service_request_id"]

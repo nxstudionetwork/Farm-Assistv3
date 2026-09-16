@@ -1485,6 +1485,10 @@
           <option value="upi">UPI / Direct Net Banking</option>
         </select>
       </div>
+      <div id="coWalletPinGroup" style="margin-bottom:16px;display:none;">
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">Wallet PIN</label>
+        <input type="password" class="te-filter-input" id="coWalletPin" maxlength="4" inputmode="numeric" placeholder="4-digit wallet PIN">
+      </div>
       <div style="background:#eef7ef;padding:12px;border-radius:10px;margin-bottom:16px;display:flex;justify-content:space-between;font-weight:800;font-size:15px;color:var(--te-dark-green);">
         <span>Total Payable:</span>
         <span id="coTotalAmount">₹0</span>
@@ -1599,7 +1603,9 @@
   }
 
   function renderStars(rating) {
-    var r = parseFloat(rating) || 4.5;
+    var r = parseFloat(rating);
+    if (!r || r <= 0) return '';
+    if (r > 5) r = 5;
     var full = Math.floor(r);
     var half = r - full >= 0.5 ? 1 : 0;
     var html = '';
@@ -1683,19 +1689,20 @@
       '</div>' +
       '<div class="te-card-body">' +
         '<div class="te-card-brand-cat">' +
-          '<span>' + esc(p.brand || 'Farm Assist') + '</span>' +
-          '<span>' + esc(p.power_source || 'Manual') + '</span>' +
+          (p.brand ? '<span>' + esc(p.brand) + '</span>' : '') +
+          (p.power_source ? '<span>' + esc(p.power_source) + '</span>' : '') +
         '</div>' +
         '<h3 class="te-card-title" data-detail="' + esc(p.id) + '">' + esc(p.name) + '</h3>' +
-        '<div class="te-card-use-badge"><i class="fas fa-check-circle"></i> Best for: ' + esc(p.suitable_use || 'Farming') + '</div>' +
+        (p.suitable_use ? '<div class="te-card-use-badge"><i class="fas fa-check-circle"></i> Best for: ' + esc(p.suitable_use) + '</div>' : '') +
         '<div class="te-card-price-row">' +
           '<span class="te-price">' + rupees(p.price) + '</span>' +
           (p.mrp ? '<span class="te-mrp">' + rupees(p.mrp) + '</span>' : '') +
           (p.discount ? '<span class="te-discount">' + p.discount + '% OFF</span>' : '') +
         '</div>' +
-        '<div class="te-card-rating-meta">' +
-          renderStars(p.rating) + ' <span>' + Number(p.rating || 4.5).toFixed(1) + ' (' + (p.total_reviews || 12) + ')</span>' +
-        '</div>' +
+        ((p.rating && parseFloat(p.rating) > 0) ? '<div class="te-card-rating-meta">' +
+          renderStars(p.rating) + ' <span>' + Number(p.rating).toFixed(1) +
+          (p.total_reviews ? ' (' + p.total_reviews + ')' : '') + '</span>' +
+        '</div>' : '') +
         '<div class="te-card-actions">' +
           '<button class="te-btn-view" data-detail="' + esc(p.id) + '"><i class="fas fa-eye"></i> View</button>' +
           '<button class="te-btn-cart" data-add="' + esc(p.id) + '" ' + (inStock ? '' : 'disabled') + '>' +
@@ -1934,7 +1941,7 @@
         '</div>' +
         '<div>' +
           '<div style="font-size:12px;font-weight:700;color:var(--te-muted);margin-bottom:4px;">' +
-            esc(p.brand || 'Farm Assist') + ' · ' + esc(p.category ? p.category.name : 'Equipment') +
+            (p.brand ? esc(p.brand) + ' · ' : '') + esc(p.category ? p.category.name : 'Equipment') +
           '</div>' +
           '<h2 style="font-size:22px;font-weight:800;color:var(--te-dark-green);margin:0 0 8px 0;">' + esc(p.name) + '</h2>' +
           '<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px;">' +
@@ -1947,9 +1954,8 @@
               (inStock ? 'In Stock (' + p.stock_quantity + ' units)' : 'Out of Stock') +
             '</span>' +
           '</div>' +
-          '<p style="font-size:13px;color:#3d5644;line-height:1.6;margin-bottom:14px;">' +
-            esc(p.description || 'Professional equipment built for Indian farming conditions.') +
-          '</p>' +
+          (p.description ? '<p style="font-size:13px;color:#3d5644;line-height:1.6;margin-bottom:14px;">' +
+            esc(p.description) + '</p>' : '') +
           '<table class="te-specs-table">' +
             '<tbody>' +
               '<tr><td>Power Source</td><td>' + esc(p.power_source) + '</td></tr>' +
@@ -2268,7 +2274,19 @@
     toggleModal('cartDrawer', false);
     document.getElementById('cartBackdrop').classList.remove('open');
     document.getElementById('cartDrawer').classList.remove('open');
+    updateCheckoutPaymentUI();
     toggleModal('checkoutModal', true);
+  }
+
+  function updateCheckoutPaymentUI() {
+    var sel = document.getElementById('coPayment');
+    var group = document.getElementById('coWalletPinGroup');
+    if (sel && group) {
+      var isWallet = sel.value === 'wallet';
+      group.style.display = isWallet ? 'block' : 'none';
+      var pinInput = document.getElementById('coWalletPin');
+      if (pinInput && !isWallet) pinInput.value = '';
+    }
   }
 
   // --- EVENT LISTENERS ---
@@ -2556,6 +2574,12 @@
     openCheckout(null);
   });
 
+  // Wallet PIN field visibility depends on selected payment method
+  var coPaymentEl = document.getElementById('coPayment');
+  if (coPaymentEl) {
+    coPaymentEl.addEventListener('change', updateCheckoutPaymentUI);
+  }
+
   // Submit Checkout Form
   document.getElementById('checkoutForm').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -2563,6 +2587,14 @@
     var phone = document.getElementById('coPhone').value.trim();
     var address = document.getElementById('coAddress').value.trim();
     var method = document.getElementById('coPayment').value;
+
+    if (method === 'wallet') {
+      var pin = document.getElementById('coWalletPin').value.trim();
+      if (!/^\d{4}$/.test(pin)) {
+        toast('Please enter your 4-digit wallet PIN.');
+        return;
+      }
+    }
 
     if (!/^\d{10}$/.test(phone)) {
       toast('Please enter a valid 10-digit phone number.');
@@ -2589,13 +2621,18 @@
       return;
     }
 
-    API.Marketplace.createOrder({
+    var orderPayload = {
       items: orderItems,
       delivery_name: name,
       delivery_phone: phone,
       delivery_address: address,
       payment_method: method
-    }).then(function (res) {
+    };
+    if (method === 'wallet') {
+      orderPayload.wallet_pin = document.getElementById('coWalletPin').value.trim();
+    }
+
+    API.Marketplace.createOrder(orderPayload).then(function (res) {
       var ord = (res && res.data) || res;
       toggleModal('checkoutModal', false);
       toast('Order ' + (ord.order_id || '') + ' placed successfully!');
@@ -2609,7 +2646,12 @@
       state.directCheckoutItem = null;
       refreshCartBadge();
     }).catch(function (err) {
-      toast(err.message || 'Order could not be placed.');
+      var msg = (err && err.message) || 'Order could not be placed.';
+      if ((err && err.status === 400) && /insufficient/i.test(msg)) {
+        toast('Insufficient wallet balance for this order. Please add money from the Wallet page.');
+      } else {
+        toast(msg);
+      }
     });
   });
 
