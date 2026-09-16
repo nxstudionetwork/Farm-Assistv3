@@ -11,6 +11,8 @@ Backend: FastAPI served from the same origin (port 8000).
 
   function detectBaseUrl() {
     if (window._API_BASE_URL) return window._API_BASE_URL;
+    var cfg = global.FARM_ASSIST_CONFIG;
+    if (cfg && cfg.API_BASE_URL) return cfg.API_BASE_URL;
     var meta = document.querySelector('meta[name="api-base-url"], meta[name="api-base"]');
     if (meta && meta.content) return meta.content;
 

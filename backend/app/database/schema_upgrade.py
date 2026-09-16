@@ -190,6 +190,9 @@ ADDITIVE_COLUMNS = {
     "products": [
         ("supports_cod", "BOOLEAN DEFAULT 1"),
     ],
+    "marketplace_listings": [
+        ("is_deleted", "BOOLEAN DEFAULT 0"),
+    ],
     "marketplace_orders": [
         ("received_at", "DATETIME"),
         ("cancelled_at", "DATETIME"),

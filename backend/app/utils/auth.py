@@ -195,20 +195,32 @@ def generate_id(prefix: str, db: Session, model_class) -> str:
     col = getattr(model_class, col_name, None)
     if col is None:
         return f"{prefix}-{str(1).zfill(6)}"
+    nums = set()
     try:
         rows = db.query(col).filter(col.like(f'{prefix}-%')).all()
     except Exception:
         rows = []
-    nums = []
     for row in rows:
         value = row[0] if not isinstance(row, (str,)) else row
         if value:
             try:
                 part = str(value).split('-')[-1]
                 if part.isdigit():
-                    nums.append(int(part))
+                    nums.add(int(part))
             except (ValueError, IndexError):
                 continue
+    # Include ids from objects already added to this session but not yet
+    # flushed, otherwise two pending rows can be assigned the same id and a
+    # UNIQUE constraint fails at commit time.
+    try:
+        for _obj in list(db.new):
+            _value = getattr(_obj, col_name, None)
+            if _value:
+                _part = str(_value).split('-')[-1]
+                if _part.isdigit():
+                    nums.add(int(_part))
+    except Exception:
+        pass
     num = (max(nums) + 1) if nums else 1
     return f"{prefix}-{str(num).zfill(6)}"
 

@@ -1,0 +1,43 @@
+# Render Blueprint - hosted backend (FastAPI + PostgreSQL) for Farm Assist.
+# Deploy this whole repo to Render by importing it ("Blueprint" / render.yaml).
+# After the service is live, copy its public URL into vercel.json
+# (`destination` for /api/(.*)) so the Vercel frontend proxies to it.
+services:
+  - type: web
+    name: farm-assist-backend
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port 10000
+    healthCheckPath: /api/health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: farm-assist-db
+          property: connectionString
+      - key: DEBUG
+        value: "false"
+      - key: ECHO
+        value: "false"
+      - key: STORAGE_BACKEND
+        value: local
+      - key: STORAGE_LOCAL_PATH
+        value: uploads
+      - key: SMTP_HOST
+        value: smtp-mail.outlook.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: farm.assist@outlook.com
+      - key: SMTP_FROM_EMAIL
+        value: farm.assist@outlook.com
+      - key: SUPPORT_EMAIL_TO
+        value: farm.assist@outlook.com
+
+databases:
+  - name: farm-assist-db
+    databaseName: farmassist
+    plan: free
+    postgresMajorVersion: "16"

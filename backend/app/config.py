@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "Farm Assist"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    # Separate SQL echo from DEBUG so we keep the in-app debug helpers (e.g.
+    # debug OTP shown in the UI) without logging every SQL statement on boot.
+    ECHO: bool = False
 
     DATABASE_URL: str = f"sqlite:///{(BACKEND_DIR / 'farm_assist.db').as_posix()}"
 

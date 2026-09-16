@@ -325,6 +325,7 @@ class MarketplaceListing(Base):
     sold_quantity = Column(Float, default=0)
     sold_at = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
+    is_deleted = Column(Boolean, default=False)
     total_views = Column(Integer, default=0)
     interested_count = Column(Integer, default=0)
 

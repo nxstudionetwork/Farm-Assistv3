@@ -324,6 +324,7 @@ def _get_owned_listing(listing_id: str, user_id: str, db: Session) -> Marketplac
     listing = db.query(MarketplaceListing).filter(
         (MarketplaceListing.id == listing_id) | (MarketplaceListing.listing_id == listing_id),
         MarketplaceListing.user_id == user_id,
+        MarketplaceListing.is_deleted == False,  # noqa: E712
     ).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
@@ -804,6 +805,7 @@ def delete_listing(
     if has_sales:
         # Keep history; hide the listing so past sales remain intact.
         listing.is_active = False
+        listing.is_deleted = True
         listing.updated_at = datetime.utcnow()
         db.commit()
         return {"status": "success", "data": {"id": listing.id, "soft_deleted": True}, "message": "Listing hidden (sales history kept)"}
