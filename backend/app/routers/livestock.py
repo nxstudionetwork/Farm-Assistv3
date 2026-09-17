@@ -148,6 +148,85 @@ class ExpenseRecordCreate(BaseModel):
     notes: Optional[str] = None
 
 
+# ── Update (edit) schemas: all fields optional so callers can send partials ──
+
+class HealthRecordUpdate(BaseModel):
+    record_date: Optional[str] = None
+    health_status: Optional[str] = None
+    symptoms: Optional[str] = None
+    observation: Optional[str] = None
+    diagnosis: Optional[str] = None
+    treatment: Optional[str] = None
+    medicine: Optional[str] = None
+    veterinarian: Optional[str] = None
+    follow_up_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class VaccinationUpdate(BaseModel):
+    vaccine_name: Optional[str] = None
+    date_given: Optional[str] = None
+    next_due_date: Optional[str] = None
+    dose: Optional[str] = None
+    veterinarian: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+
+
+class TreatmentUpdate(BaseModel):
+    treatment_date: Optional[str] = None
+    issue: Optional[str] = None
+    treatment: Optional[str] = None
+    medicine: Optional[str] = None
+    veterinarian: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class FeedingRecordUpdate(BaseModel):
+    feed_type: Optional[str] = None
+    quantity: Optional[str] = None
+    frequency: Optional[str] = None
+    feeding_time: Optional[str] = None
+    water_requirement: Optional[str] = None
+    notes: Optional[str] = None
+    record_date: Optional[str] = None
+
+
+class BreedingRecordUpdate(BaseModel):
+    breeding_date: Optional[str] = None
+    method: Optional[str] = None
+    partner_info: Optional[str] = None
+    pregnancy_status: Optional[str] = None
+    expected_delivery_date: Optional[str] = None
+    actual_delivery_date: Optional[str] = None
+    offspring_count: Optional[int] = None
+    notes: Optional[str] = None
+
+
+class WeightRecordUpdate(BaseModel):
+    measurement_date: Optional[str] = None
+    weight_kg: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class ProductionRecordUpdate(BaseModel):
+    record_date: Optional[str] = None
+    product_type: Optional[str] = None
+    quantity: Optional[float] = None
+    unit: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ExpenseRecordUpdate(BaseModel):
+    expense_date: Optional[str] = None
+    category: Optional[str] = None
+    amount: Optional[float] = None
+    vendor: Optional[str] = None
+    description: Optional[str] = None
+    notes: Optional[str] = None
+
+
 # ─────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────
@@ -202,6 +281,90 @@ def _vaccination_status(next_due: Optional[str]) -> str:
         return "completed"
     except ValueError:
         return "completed"
+
+
+def _get_record_or_404(db: Session, model, id_field: str, rec_id: str, user_id: str):
+    """Fetch a child record by its public id, scoped to the current user."""
+    rec = db.query(model).filter(
+        getattr(model, id_field) == rec_id,
+        model.user_id == user_id,
+    ).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return rec
+
+
+def _active_animal_ids(db: Session, uid: str) -> list:
+    rows = db.query(Livestock.id).filter(
+        Livestock.user_id == uid, Livestock.is_active == True
+    ).all()
+    return [r[0] for r in rows]
+
+
+def _breeding_flags(rec) -> dict:
+    """Classify a breeding record into the flags used by the UI filters."""
+    status = (rec.pregnancy_status or "").lower()
+    pregnant = status == "pregnant"
+    recently_calved = False
+    if rec.actual_delivery_date:
+        try:
+            d = datetime.strptime(str(rec.actual_delivery_date), "%Y-%m-%d").date()
+            recently_calved = (date.today() - d).days <= 60
+        except ValueError:
+            recently_calved = False
+    active = pregnant or recently_calved
+    if not active and status not in ("delivered", "not_pregnant"):
+        if rec.breeding_date:
+            try:
+                b = datetime.strptime(str(rec.breeding_date), "%Y-%m-%d").date()
+                active = (date.today() - b).days <= 300
+            except ValueError:
+                active = True
+        else:
+            active = True
+    return {"active": active, "pregnant": pregnant, "recently_calved": recently_calved}
+
+
+def _latest_breeding_flags(db: Session, uid: str, animal_ids: list) -> dict:
+    """Map Livestock.id -> breeding flags using each animal's latest record."""
+    if not animal_ids:
+        return {}
+    rows = db.query(LivestockBreedingRecord).filter(
+        LivestockBreedingRecord.user_id == uid,
+        LivestockBreedingRecord.animal_id.in_(animal_ids),
+    ).order_by(LivestockBreedingRecord.created_at.asc()).all()
+    latest = {}
+    for r in rows:
+        latest[r.animal_id] = r
+    return {aid: _breeding_flags(rec) for aid, rec in latest.items()}
+
+
+def _vacc_status_map(db: Session, uid: str, animal_ids: list) -> dict:
+    """Map Livestock.id -> worst vaccination status among its records."""
+    if not animal_ids:
+        return {}
+    rows = db.query(LivestockVaccination).filter(
+        LivestockVaccination.user_id == uid,
+        LivestockVaccination.animal_id.in_(animal_ids),
+    ).all()
+    rank = {"overdue": 3, "due_soon": 2, "up_to_date": 1, "none": 0}
+    out = {}
+    for r in rows:
+        raw = _vaccination_status(r.next_due_date)
+        status = "up_to_date" if raw == "completed" else raw
+        cur = out.get(r.animal_id)
+        if cur is None or rank.get(status, 0) > rank.get(cur, 0):
+            out[r.animal_id] = status
+    return out
+
+
+def _animal_dict_filters(a: Livestock, vacc_map: dict, breed_map: dict) -> dict:
+    d = _animal_dict(a)
+    d["vacc_status"] = vacc_map.get(a.id, "none")
+    d["breeding"] = breed_map.get(
+        a.id, {"active": False, "pregnant": False, "recently_calved": False}
+    )
+    return d
 
 
 # ─────────────────────────────────────────────────────────
@@ -267,6 +430,17 @@ def get_overview(
         LivestockVaccination.next_due_date < today_str,
     ).scalar() or 0
 
+    # Pregnant + recently added (both derived from real records)
+    active_ids = _active_animal_ids(db, uid)
+    breeding_map = _latest_breeding_flags(db, uid, active_ids)
+    pregnant_count = sum(1 for f in breeding_map.values() if f.get("pregnant"))
+    cutoff = datetime.utcnow() - timedelta(days=30)
+    recently_added = db.query(func.count(Livestock.id)).filter(
+        Livestock.user_id == uid,
+        Livestock.is_active == True,
+        Livestock.created_at >= cutoff,
+    ).scalar() or 0
+
     # Per-type breakdown
     type_counts = db.query(
         Livestock.animal_type,
@@ -300,6 +474,8 @@ def get_overview(
             "critical": critical,
             "vaccinations_due": vacc_due,
             "vaccinations_overdue": vacc_overdue,
+            "pregnant": pregnant_count,
+            "recently_added": recently_added,
             "by_type": by_type,
             "total_expenses": total_expenses,
             "production_records": production_count,
@@ -349,9 +525,12 @@ def list_animals(
             )
         )
     animals = query.order_by(Livestock.created_at.desc()).limit(limit).all()
+    ids = [a.id for a in animals]
+    vacc_map = _vacc_status_map(db, current_user.id, ids)
+    breed_map = _latest_breeding_flags(db, current_user.id, ids)
     return {
         "status": "success",
-        "data": [_animal_dict(a) for a in animals],
+        "data": [_animal_dict_filters(a, vacc_map, breed_map) for a in animals],
         "total": len(animals),
     }
 
@@ -523,6 +702,29 @@ def add_health_record(
     return {"status": "success", "message": "Health record added", "data": {"id": rec.id, "record_id": rec.record_id}}
 
 
+@router.put("/{animal_id}/health/{record_id}")
+def update_health_record(
+    animal_id: str,
+    record_id: str,
+    payload: HealthRecordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    animal = _get_animal_or_404(db, animal_id, current_user.id)
+    rec = _get_record_or_404(db, LivestockHealthRecord, "record_id", record_id, current_user.id)
+    if rec.animal_id != animal.id:
+        raise HTTPException(status_code=404, detail="Record not found")
+    updates = payload.model_dump(exclude_unset=True)
+    for key, val in updates.items():
+        setattr(rec, key, val)
+    if updates.get("health_status"):
+        animal.health_status = updates["health_status"]
+        animal.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(rec)
+    return {"status": "success", "message": "Health record updated", "data": {"id": rec.id, "record_id": rec.record_id}}
+
+
 # ─────────────────────────────────────────────────────────
 # VACCINATIONS
 # ─────────────────────────────────────────────────────────
@@ -596,6 +798,28 @@ def add_vaccination(
     return {"status": "success", "message": "Vaccination record added", "data": {"id": rec.id, "vacc_id": rec.vacc_id}}
 
 
+@router.put("/{animal_id}/vaccinations/{vacc_id}")
+def update_vaccination(
+    animal_id: str,
+    vacc_id: str,
+    payload: VaccinationUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    animal = _get_animal_or_404(db, animal_id, current_user.id)
+    rec = _get_record_or_404(db, LivestockVaccination, "vacc_id", vacc_id, current_user.id)
+    if rec.animal_id != animal.id:
+        raise HTTPException(status_code=404, detail="Record not found")
+    updates = payload.model_dump(exclude_unset=True)
+    updates.pop("status", None)
+    for key, val in updates.items():
+        setattr(rec, key, val)
+    rec.status = _vaccination_status(rec.next_due_date)
+    db.commit()
+    db.refresh(rec)
+    return {"status": "success", "message": "Vaccination record updated", "data": {"id": rec.id, "vacc_id": rec.vacc_id}}
+
+
 # ─────────────────────────────────────────────────────────
 # TREATMENTS
 # ─────────────────────────────────────────────────────────
@@ -647,6 +871,25 @@ def add_treatment(
     return {"status": "success", "message": "Treatment record added", "data": {"id": rec.id, "treatment_id": rec.treatment_id}}
 
 
+@router.put("/{animal_id}/treatments/{treatment_id}")
+def update_treatment(
+    animal_id: str,
+    treatment_id: str,
+    payload: TreatmentUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    animal = _get_animal_or_404(db, animal_id, current_user.id)
+    rec = _get_record_or_404(db, LivestockTreatment, "treatment_id", treatment_id, current_user.id)
+    if rec.animal_id != animal.id:
+        raise HTTPException(status_code=404, detail="Record not found")
+    for key, val in payload.model_dump(exclude_unset=True).items():
+        setattr(rec, key, val)
+    db.commit()
+    db.refresh(rec)
+    return {"status": "success", "message": "Treatment record updated", "data": {"id": rec.id, "treatment_id": rec.treatment_id}}
+
+
 # ─────────────────────────────────────────────────────────
 # FEEDING
 # ─────────────────────────────────────────────────────────
@@ -696,6 +939,25 @@ def add_feeding_record(
     db.commit()
     db.refresh(rec)
     return {"status": "success", "message": "Feeding record added", "data": {"id": rec.id, "feed_id": rec.feed_id}}
+
+
+@router.put("/{animal_id}/feeding/{feed_id}")
+def update_feeding_record(
+    animal_id: str,
+    feed_id: str,
+    payload: FeedingRecordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    animal = _get_animal_or_404(db, animal_id, current_user.id)
+    rec = _get_record_or_404(db, LivestockFeedingRecord, "feed_id", feed_id, current_user.id)
+    if rec.animal_id != animal.id:
+        raise HTTPException(status_code=404, detail="Record not found")
+    for key, val in payload.model_dump(exclude_unset=True).items():
+        setattr(rec, key, val)
+    db.commit()
+    db.refresh(rec)
+    return {"status": "success", "message": "Feeding record updated", "data": {"id": rec.id, "feed_id": rec.feed_id}}
 
 
 # ─────────────────────────────────────────────────────────
@@ -766,6 +1028,25 @@ def add_breeding_record(
     return {"status": "success", "message": "Breeding record added", "data": {"id": rec.id, "breeding_id": rec.breeding_id}}
 
 
+@router.put("/{animal_id}/breeding/{breeding_id}")
+def update_breeding_record(
+    animal_id: str,
+    breeding_id: str,
+    payload: BreedingRecordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    animal = _get_animal_or_404(db, animal_id, current_user.id)
+    rec = _get_record_or_404(db, LivestockBreedingRecord, "breeding_id", breeding_id, current_user.id)
+    if rec.animal_id != animal.id:
+        raise HTTPException(status_code=404, detail="Record not found")
+    for key, val in payload.model_dump(exclude_unset=True).items():
+        setattr(rec, key, val)
+    db.commit()
+    db.refresh(rec)
+    return {"status": "success", "message": "Breeding record updated", "data": {"id": rec.id, "breeding_id": rec.breeding_id}}
+
+
 # ─────────────────────────────────────────────────────────
 # WEIGHT / GROWTH
 # ─────────────────────────────────────────────────────────
@@ -818,6 +1099,31 @@ def add_weight_record(
     db.commit()
     db.refresh(rec)
     return {"status": "success", "message": "Weight record added", "data": {"id": rec.id, "weight_id": rec.weight_id}}
+
+
+@router.put("/{animal_id}/weight/{weight_id}")
+def update_weight_record(
+    animal_id: str,
+    weight_id: str,
+    payload: WeightRecordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    animal = _get_animal_or_404(db, animal_id, current_user.id)
+    rec = _get_record_or_404(db, LivestockWeightRecord, "weight_id", weight_id, current_user.id)
+    if rec.animal_id != animal.id:
+        raise HTTPException(status_code=404, detail="Record not found")
+    updates = payload.model_dump(exclude_unset=True)
+    if "weight_kg" in updates and updates["weight_kg"] is not None and updates["weight_kg"] <= 0:
+        raise HTTPException(status_code=400, detail="Weight must be greater than zero")
+    for key, val in updates.items():
+        setattr(rec, key, val)
+    if updates.get("weight_kg"):
+        animal.weight_kg = updates["weight_kg"]
+        animal.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(rec)
+    return {"status": "success", "message": "Weight record updated", "data": {"id": rec.id, "weight_id": rec.weight_id}}
 
 
 # ─────────────────────────────────────────────────────────
@@ -1114,6 +1420,26 @@ def add_production_record(
             "data": {"id": rec.id, "production_id": rec.production_id}}
 
 
+@router.put("/{animal_id}/production/{production_id}")
+def update_production_record(
+    animal_id: str,
+    production_id: str,
+    payload: ProductionRecordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    animal = _get_animal_or_404(db, animal_id, current_user.id)
+    rec = _get_record_or_404(db, LivestockProductionRecord, "production_id", production_id, current_user.id)
+    if rec.animal_id != animal.id:
+        raise HTTPException(status_code=404, detail="Record not found")
+    for key, val in payload.model_dump(exclude_unset=True).items():
+        setattr(rec, key, val)
+    db.commit()
+    db.refresh(rec)
+    return {"status": "success", "message": "Production record updated",
+            "data": {"id": rec.id, "production_id": rec.production_id}}
+
+
 # ─────────────────────────────────────────────────────────
 # EXPENSES
 # ─────────────────────────────────────────────────────────
@@ -1169,6 +1495,29 @@ def add_expense_record(
     db.commit()
     db.refresh(rec)
     return {"status": "success", "message": "Expense record added",
+            "data": {"id": rec.id, "expense_id": rec.expense_id}}
+
+
+@router.put("/{animal_id}/expenses/{expense_id}")
+def update_expense_record(
+    animal_id: str,
+    expense_id: str,
+    payload: ExpenseRecordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    animal = _get_animal_or_404(db, animal_id, current_user.id)
+    rec = _get_record_or_404(db, LivestockExpenseRecord, "expense_id", expense_id, current_user.id)
+    if rec.animal_id != animal.id:
+        raise HTTPException(status_code=404, detail="Record not found")
+    updates = payload.model_dump(exclude_unset=True)
+    if "amount" in updates and updates["amount"] is not None and updates["amount"] < 0:
+        raise HTTPException(status_code=400, detail="Amount cannot be negative")
+    for key, val in updates.items():
+        setattr(rec, key, val)
+    db.commit()
+    db.refresh(rec)
+    return {"status": "success", "message": "Expense record updated",
             "data": {"id": rec.id, "expense_id": rec.expense_id}}
 
 
