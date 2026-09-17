@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light" data-page="livestock">
 <head>
   <meta charset="UTF-8">
@@ -817,7 +817,7 @@
     <h3>Remove Animal?</h3>
     <p>This will remove <strong id="confirm-delete-name"></strong> from your livestock. Health, vaccination, and treatment records will also be removed. This cannot be undone.</p>
     <div class="ls-confirm-btns">
-      <button style="background:#f0f0f0;color:var(--text-primary);" onclick="lsCloseConfirm()">Cancel</button>
+      <button id="btn-cancel-delete" style="background:#f0f0f0;color:var(--text-primary);">Cancel</button>
       <button style="background:var(--ls-red);color:#fff;" id="btn-confirm-delete">Remove</button>
     </div>
   </div>
@@ -848,94 +848,53 @@
 (function () {
   'use strict';
 
-  /* ─── auth guard ─── */
   if (!localStorage.getItem('fa-auth-token') || localStorage.getItem('fa-auth') !== 'true') {
     window.location.replace('login.html');
     return;
   }
 
-  /* ─── API base: use the existing centralized config (services.js), same fallback ─── */
-  function getBase() {
-    try {
-      if (window.API && window.API.config && window.API.config.BASE_URL) return window.API.config.BASE_URL;
-    } catch (e) {}
-    if (window._API_BASE_URL) return window._API_BASE_URL;
-    var o = window.location.origin;
-    if (!o || o === 'null' || o.indexOf('file:') === 0) return 'http://localhost:8000/api/v1';
-    if (o.indexOf('localhost:8000') !== -1 || o.indexOf('127.0.0.1:8000') !== -1) return o + '/api/v1';
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://localhost:8000/api/v1';
-    return o + '/api/v1';
-  }
-
-  function lsApi(method, path, body) {
-    var token = localStorage.getItem('fa-auth-token');
-    var headers = { 'Authorization': 'Bearer ' + token };
-    var opts = { method: method, headers: headers };
-    if (body !== undefined) {
-      headers['Content-Type'] = 'application/json';
-      opts.body = JSON.stringify(body);
-    }
-    return fetch(getBase() + '/livestock' + path, opts)
-      .then(function (r) {
-        if (r.status === 401) {
-          try { localStorage.setItem('fa-auth', 'false'); } catch (e) {}
-          window.location.replace('login.html');
-          return { status: 'error', detail: 'Session expired. Please log in again.', auth: true };
-        }
-        var ct = (r.headers && r.headers.get && r.headers.get('content-type')) || '';
-        if (ct.indexOf('application/json') === -1) {
-          return r.text().then(function (t) {
-            if (!r.ok) return { status: 'error', detail: 'Server error (' + r.status + '). Please try again.' };
-            try { return JSON.parse(t); } catch (e) { return { status: 'success', data: null }; }
-          });
-        }
-        return r.text().then(function (t) {
-          var data = {};
-          try { data = t ? JSON.parse(t) : { status: 'success', data: null }; }
-          catch (e) { return { status: 'error', detail: 'Unexpected server response. Please try again.' }; }
-          if (!r.ok || data.status === 'error') {
-            return { status: 'error', detail: (data && data.detail) || ('Request failed (' + r.status + ')'), errors: (data && data.errors) || [] };
-          }
-          return data;
-        });
-      })
-      .catch(function (err) {
-        if (err && err.auth) return err;
-        return { status: 'error', detail: 'Unable to reach the server. Check your connection and retry.', network: true };
-      });
-  }
-
-  /* Upload an animal photo through the existing storage API (public images dir). */
-  function lsUploadPhoto(file) {
-    var token = localStorage.getItem('fa-auth-token');
-    var fd = new FormData();
-    fd.append('file', file);
-    return fetch(getBase() + '/storage/upload?subdir=images', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
-      body: fd
-    }).then(function (r) {
-      return r.json().then(function (d) {
-        if (!r.ok || d.status === 'error') throw new Error((d && d.detail) || 'Photo upload failed');
-        var data = d.data || {};
-        return data.url || data.file_url || null;
-      });
-    });
-  }
-
-  /* ─── Toast ─── */
-  var _toastTimer = null;
-  function lsToast(msg, type) {
-    var el = document.getElementById('ls-toast');
-    el.textContent = msg;
-    el.className = 'ls-toast ' + (type || 'info') + ' show';
-    clearTimeout(_toastTimer);
-    _toastTimer = setTimeout(function () { el.className = 'ls-toast'; }, 3200);
-  }
-
-  /* ─── helpers ─── */
+  /* ============ helpers ============ */
   function esc(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function $id(id) { return document.getElementById(id); }
+
+  function fmtDate(s) {
+    if (!s) return null;
+    try {
+      var d = new Date(s);
+      if (isNaN(d.getTime())) return s;
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) { return s; }
+  }
+
+  function fmtDateTime(s) {
+    if (!s) return null;
+    try {
+      var d = new Date(s);
+      if (isNaN(d.getTime())) return s;
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) { return s; }
+  }
+
+  function calcAge(dob) {
+    if (!dob) return null;
+    var b = new Date(dob);
+    if (isNaN(b.getTime())) return null;
+    var now = new Date();
+    var yr = now.getFullYear() - b.getFullYear();
+    var mo = now.getMonth() - b.getMonth();
+    if (mo < 0) { yr--; mo += 12; }
+    if (yr > 0) return yr + ' yr' + (yr !== 1 ? 's' : '') + (mo > 0 ? ' ' + mo + ' mo' : '');
+    if (mo > 0) return mo + ' month' + (mo !== 1 ? 's' : '');
+    var days = Math.floor((now - b) / 86400000);
+    return days + ' day' + (days !== 1 ? 's' : '');
+  }
+
+  function money(v) {
+    var n = Number(v || 0);
+    return '₹' + (isFinite(n) ? n.toLocaleString('en-IN') : '0');
   }
 
   var TYPE_CONFIG = {
@@ -952,8 +911,10 @@
     return TYPE_CONFIG[type] || TYPE_CONFIG.other;
   }
 
-  /* Friendly default livestock illustration (inline SVG, Farm Assist palette).
-     Used whenever an animal has no photo — never a broken image or stock photo. */
+  function typeLabel(t) {
+    return (t || 'other').charAt(0).toUpperCase() + (t || 'other').slice(1);
+  }
+
   function lsIllustration(size) {
     var w = size === 'sm' ? 'ls-empty-ill sm' : 'ls-empty-ill';
     return '<svg class="' + w + '" viewBox="0 0 148 104" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
@@ -977,15 +938,13 @@
       ((opts && opts.action) || '') + '</div>';
   }
 
-  function lsRecordEmpty(icon, text, targetTab) {
+  function lsRecordEmpty(icon, text) {
     return '<div class="ls-empty" style="padding:22px 0;">' + lsIllustration('sm') +
       '<h3>No records yet</h3><p>' + esc(text || 'No entries have been added for this animal yet.') + '</p>' +
-      (targetTab ? '<button class="ls-form-btn primary" style="width:auto;padding:8px 18px;margin:0 auto;" data-goto-form="1"><i class="fas fa-plus-circle"></i> Add the first record</button>' : '') +
+      '<button class="ls-form-btn primary" style="width:auto;padding:8px 18px;margin:0 auto;" data-goto-form="1"><i class="fas fa-circle-plus"></i> Add the first record</button>' +
       '</div>';
   }
 
-  /* Avatar: icon backdrop always rendered; photo layered on top and removed on
-     error — so a missing/broken URL degrades to the clean default icon. */
   function avatarHtml(animal, size) {
     var c = typeConf(animal.animal_type || '');
     var s = size || 50;
@@ -994,37 +953,14 @@
     if (animal.photo_url) {
       inner += '<img src="' + esc(animal.photo_url) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">';
     }
-    return '<div class="ls-avatar" style="position:relative;width:' + s + 'px;height:' + s + 'px;background:' + c.color + ';">' + inner + '</div>';
+    return '<div class="ls-avatar" style="position:relative;width:' + s + 'px;height:' + s + 'px;background:' + c.color + ';" aria-hidden="true">' + inner + '</div>';
   }
 
   function healthBadge(status) {
     var labels = { healthy: 'Healthy', monitoring: 'Monitoring', needs_attention: 'Needs Attention', critical: 'Critical' };
-    var icons  = { healthy: 'fa-check-circle', monitoring: 'fa-eye', needs_attention: 'fa-exclamation-circle', critical: 'fa-skull-crossbones' };
+    var icons  = { healthy: 'fa-circle-check', monitoring: 'fa-eye', needs_attention: 'fa-triangle-exclamation', critical: 'fa-skull-crossbones' };
     var cls = status || 'healthy';
     return '<span class="ls-hbadge ' + cls + '"><i class="fas ' + (icons[cls] || 'fa-circle') + '"></i> ' + (labels[cls] || cls) + '</span>';
-  }
-
-  function calcAge(dob) {
-    if (!dob) return null;
-    var b = new Date(dob);
-    if (isNaN(b)) return null;
-    var now = new Date();
-    var yr = now.getFullYear() - b.getFullYear();
-    var mo = now.getMonth() - b.getMonth();
-    if (mo < 0) { yr--; mo += 12; }
-    if (yr > 0) return yr + ' yr' + (yr !== 1 ? 's' : '') + (mo > 0 ? ' ' + mo + ' mo' : '');
-    if (mo > 0) return mo + ' month' + (mo !== 1 ? 's' : '');
-    var days = Math.floor((now - b) / 86400000);
-    return days + ' day' + (days !== 1 ? 's' : '');
-  }
-
-  function fmtDate(s) {
-    if (!s) return null;
-    try {
-      var d = new Date(s);
-      if (isNaN(d)) return s;
-      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    } catch (e) { return s; }
   }
 
   function dval(v, fallback) {
@@ -1032,53 +968,108 @@
     return '<span class="ls-dval">' + esc(String(v)) + '</span>';
   }
 
-  /* ─── State ─── */
-  var _allAnimals = [];
-  var _overview   = null;   // null = not loaded yet (never render 0/placeholder before load)
-  var _attention  = null;   // null = not loaded yet
-  var _activity   = null;
-  var _loadError  = null;   // distinguishes "could not load" from "no livestock"
-  var _currentAnimal = null;
-  var _currentFull   = null;
-  var _filterStatus  = '';
-  var _filterType    = '';
-  var _filterBreed   = '';
-  var _filterAttn    = '';
-  var _searchQ       = '';
-  var _toDeleteId    = null;
-  var _activeTab     = 'info';
-  var _loadedOnce    = false;
+  function infoRow(label, value) {
+    return '<div class="ls-drow"><span class="ls-dlbl">' + esc(label) + '</span>' + dval(value) + '</div>';
+  }
 
-  /* ─────────────────────────────────────────────
-     LOAD OVERVIEW
-  ───────────────────────────────────────────── */
-  function loadOverview() {
-    lsApi('GET', '/overview').then(function (res) {
-      if (res.status !== 'success') return;
-      var d = res.data || {};
-      _overview = d;
-      renderStats(d);
-      renderHealthOverview(d);
+  function recField(label, value) {
+    if (!value) return '';
+    return '<div class="ls-rec-field"><strong>' + esc(label) + ':</strong> <span>' + esc(String(value)) + '</span></div>';
+  }
+
+  function frmRow(label, inputHtml) {
+    return '<div class="ls-form-row"><label class="ls-form-label">' + label + '</label>' + inputHtml + '</div>';
+  }
+
+  function frmGrid(a, b) {
+    return '<div class="ls-form-grid">' + a + b + '</div>';
+  }
+
+  function v(id) { var el = $id(id); return el ? el.value.trim() : ''; }
+  function setVal(id, val) { var el = $id(id); if (el) el.value = (val == null ? '' : val); }
+  function setSaving(id, saving) {
+    var btn = $id(id);
+    if (!btn) return;
+    btn.disabled = saving;
+    if (saving) { btn.dataset.orig = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
+    else if (btn.dataset.orig) btn.innerHTML = btn.dataset.orig;
+  }
+  function setSavingEl(btn, saving, busyLabel, idleLabel) {
+    if (!btn) return;
+    btn.disabled = saving;
+    if (saving) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + busyLabel;
+    else btn.innerHTML = idleLabel;
+  }
+
+  function errorCard(action, text) {
+    return '<div class="ls-error">' +
+      '<i class="fas fa-circle-exclamation"></i>' +
+      '<h3>Could not load this data</h3>' +
+      '<p>' + esc(text || 'The server did not respond. Check your connection and try again.') + '</p>' +
+      (action ? '<button class="ls-form-btn primary" style="width:auto;padding:8px 18px;margin:0 auto;" data-action="' + action + '"><i class="fas fa-rotate-right"></i> Retry</button>' : '') +
+      '</div>';
+  }
+
+  function skeletonRows() {
+    return '<div class="sk h14 w80"></div><div class="sk h14 w60" style="margin-top:8px;"></div>';
+  }
+
+  /* ============ toast ============ */
+  var _toastTimer = null;
+  function lsToast(msg, type) {
+    var el = $id('ls-toast');
+    el.textContent = msg;
+    el.className = 'ls-toast ' + (type || 'info') + ' show';
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function () { el.className = 'ls-toast'; }, 3200);
+  }
+
+  /* ============ request wrapper (centralized API layer) ============ */
+  function lsReq(promise) {
+    return promise.then(function (data) {
+      return { ok: true, data: data };
+    }).catch(function (err) {
+      if (err && (err.isAuthError === true || err.status === 401 || err.status === 403)) {
+        try { localStorage.setItem('fa-auth', 'false'); } catch (e) {}
+        window.location.replace('login.html');
+        return { ok: false, redirect: true, error: 'Session expired' };
+      }
+      return { ok: false, error: (err && err.message) || 'Request failed. Please try again.' };
     });
   }
 
-  function renderStats(d) {
-    var container = document.getElementById('ls-stats');
-    var html = statBox('fa-paw', '#E67E22', d.total || 0, 'Total', 'total');
-    var types = [
-      ['cow', 'Cattle', 'fa-cow'], ['buffalo', 'Buffalo', 'fa-hippo'],
-      ['goat', 'Goats', 'fa-horse-head'], ['sheep', 'Sheep', 'fa-cloud'],
-      ['poultry', 'Poultry', 'fa-dove'], ['pig', 'Pigs', 'fa-piggy-bank'],
-      ['other', 'Other', 'fa-paw']
-    ];
-    types.forEach(function (item) {
-      if ((d.by_type || {})[item[0]]) html += statBox(item[2], '#607D8B', d.by_type[item[0]], item[1], 'type_' + item[0]);
+  /* ============ state ============ */
+  var _overview = null;
+  var _allAnimals = null;
+  var _animalsError = null;
+  var _attention = null;
+  var _attnSet = {};
+  var _events = null;
+  var _activity = null;
+  var _searchQ = '';
+  var _filterType = '';
+  var _filterGS = false;
+  var _filterBreed = '';
+  var _filterStatus = '';
+  var _filterAttn = '';
+  var _currentAnimal = null;
+  var _currentFull = null;
+  var _editingId = null;
+  var _pickAction = '';
+  var _activeTab = 'info';
+  var _detailSeq = 0;
+
+  /* ============ overview ============ */
+  function loadOverview() {
+    var el = $id('ls-stats');
+    el.innerHTML = '<div class="ls-skel-card" style="border-radius:var(--ls-radius-sm);padding:10px 6px;text-align:center;"><div class="sk h20 w60" style="margin:0 auto 6px;"></div><div class="sk h10 w40" style="margin:0 auto;"></div></div>'.repeat(6);
+    lsReq(API.Livestock.overview()).then(function (r) {
+      if (!r.ok) { el.innerHTML = errorCard('retry-overview', 'Livestock statistics could not be loaded.'); return; }
+      _overview = r.data || {};
+      renderStats();
+      renderHealthOverview();
+      renderInsights();
     });
-    if (d.healthy) html += statBox('fa-heart', '#27AE60', d.healthy, 'Healthy', 'healthy');
-    if (d.monitoring) html += statBox('fa-eye', '#3498DB', d.monitoring, 'Monitoring', 'monitoring');
-    if (d.needs_attention) html += statBox('fa-triangle-exclamation', '#E65100', d.needs_attention, 'Needs Attn', 'needs_attention');
-    if (d.vaccinations_due) html += statBox('fa-syringe', '#3498DB', d.vaccinations_due, 'Vacc Due', 'vacc_due');
-    container.innerHTML = html;
   }
 
   function statBox(icon, color, num, label, key) {
@@ -1088,87 +1079,152 @@
       '<div class="ls-stat-lbl">' + label + '</div></div>';
   }
 
-  function renderHealthOverview(d) {
-    var byType = d.by_type || {};
-    document.getElementById('hov-healthy').textContent = d.healthy || 0;
-    document.getElementById('hov-monitoring').textContent = d.monitoring || 0;
-    document.getElementById('hov-attention').textContent = d.needs_attention || 0;
-    document.getElementById('hov-critical').textContent = d.critical || 0;
+  function renderStats() {
+    var d = _overview || {};
+    var by = d.by_type || {};
+    var gs = (by.goat || 0) + (by.sheep || 0);
+    var el = $id('ls-stats');
+    el.innerHTML =
+      statBox('fa-paw', '#E67E22', d.total || 0, 'Total', 'total') +
+      statBox('fa-cow', '#E67E22', by.cow || 0, 'Cattle', 'type_cow') +
+      statBox('fa-hippo', '#34495E', by.buffalo || 0, 'Buffalo', 'type_buffalo') +
+      statBox('fa-horse-head', '#8E44AD', gs, 'Goats / Sheep', 'gss') +
+      statBox('fa-dove', '#F39C12', by.poultry || 0, 'Poultry', 'type_poultry') +
+      statBox('fa-triangle-exclamation', '#E65100', d.needs_attention || 0, 'Need Attention', 'attention');
   }
 
-  /* ─────────────────────────────────────────────
-     LOAD ANIMALS
-  ───────────────────────────────────────────── */
+  function renderHealthOverview() {
+    var d = _overview || {};
+    $id('hov-healthy').textContent = d.healthy || 0;
+    $id('hov-monitoring').textContent = d.monitoring || 0;
+    $id('hov-attention').textContent = d.needs_attention || 0;
+    $id('hov-critical').textContent = d.critical || 0;
+  }
+
+  /* ============ insights (real data only) ============ */
+  function renderInsights() {
+    var sec = $id('insights-section-hdr');
+    var body = $id('ls-insights');
+    if (!_overview || (Number(_overview.total) || 0) <= 0) {
+      sec.style.display = 'none';
+      body.style.display = 'none';
+      return;
+    }
+    sec.style.display = '';
+    body.style.display = '';
+    var by = _overview.by_type || {};
+    var max = Math.max(1, _overview.total || 1);
+    var bars = '';
+    ['cow', 'buffalo', 'goat', 'sheep', 'poultry', 'pig', 'other'].forEach(function (t) {
+      var n = by[t] || 0;
+      if (!n) return;
+      bars += '<div class="ls-bar-row"><span class="ls-bar-lbl">' + esc(typeLabel(t)) + '</span>' +
+        '<div class="ls-bar-track"><div class="ls-bar-fill" style="width:' + Math.round((n / max) * 100) + '%;"></div></div>' +
+        '<span class="ls-bar-val">' + n + '</span></div>';
+    });
+    var vaccDue = _overview.vaccinations_due || 0;
+    var vaccOver = _overview.vaccinations_overdue || 0;
+    var prod = _overview.production_records || 0;
+    var exp = _overview.total_expenses || 0;
+    body.innerHTML =
+      '<div class="ls-ins-card"><h4><i class="fas fa-chart-pie"></i> Animals by Type</h4>' + (bars || '<div class="ls-ins-sub">No animals yet.</div>') + '</div>' +
+      '<div class="ls-ins-card"><h4><i class="fas fa-syringe"></i> Vaccination Status</h4>' +
+      '<div class="ls-ins-big">' + vaccDue + '</div>' +
+      '<div class="ls-ins-sub">' + (vaccDue ? 'vaccinations due (incl. overdue) in the next 30 days' : 'No vaccinations currently due.') + '</div>' +
+      (vaccOver ? '<div style="margin-top:8px;font-size:11px;color:var(--ls-red);font-weight:700;"><i class="fas fa-triangle-exclamation"></i> ' + vaccOver + ' overdue</div>' : '') +
+      '</div>' +
+      '<div class="ls-ins-card"><h4><i class="fas fa-bottle-droplet"></i> Production</h4>' +
+      '<div class="ls-ins-big">' + prod + '</div>' +
+      '<div class="ls-ins-sub">' + (prod ? 'production records logged' : 'No production records logged yet.') + '</div>' +
+      '</div>' +
+      '<div class="ls-ins-card"><h4><i class="fas fa-receipt"></i> Livestock Expenses</h4>' +
+      '<div class="ls-ins-big">' + money(exp) + '</div>' +
+      '<div class="ls-ins-sub">' + (exp ? 'livestock expenses recorded' : 'No livestock expenses recorded yet.') + '</div>' +
+      '</div>';
+  }
+
+  /* ============ animals ============ */
   function loadAnimals() {
-    var grid = document.getElementById('ls-grid');
-    var params = [];
-    if (_filterType) params.push('animal_type=' + encodeURIComponent(_filterType));
-    if (_filterStatus) params.push('health_status=' + encodeURIComponent(_filterStatus));
-    if (_searchQ) params.push('q=' + encodeURIComponent(_searchQ));
-    var qs = params.length ? '?' + params.join('&') : '';
-    lsApi('GET', qs).then(function (res) {
-      if (res.status !== 'success') {
-        grid.innerHTML = '<div class="ls-empty"><i class="fas fa-exclamation-triangle"></i><p>Failed to load livestock.<br><button class="ls-form-btn primary" style="width:auto;padding:8px 16px;margin-top:8px;" onclick="loadAnimals()">Retry</button></p></div>';
+    _animalsError = null;
+    var grid = $id('ls-grid');
+    lsReq(API.Livestock.list({ limit: 200 })).then(function (r) {
+      if (!r.ok) {
+        _animalsError = r.error;
+        grid.innerHTML = errorCard('retry-animals', 'Your livestock could not be loaded.');
         return;
       }
-      _allAnimals = res.data || [];
-      renderGrid(_allAnimals);
-      // update health overview counts from real data
-      updateHealthCounts(_allAnimals);
+      _allAnimals = r.data || [];
+      populateBreedFilter();
+      renderGrid();
     });
   }
 
-  function updateHealthCounts(animals) {
-    var counts = { healthy: 0, monitoring: 0, needs_attention: 0, critical: 0 };
-    animals.forEach(function (a) { if (counts[a.health_status] !== undefined) counts[a.health_status]++; });
-    document.getElementById('hov-healthy').textContent   = counts.healthy;
-    document.getElementById('hov-monitoring').textContent = counts.monitoring;
-    document.getElementById('hov-attention').textContent  = counts.needs_attention;
-    document.getElementById('hov-critical').textContent   = counts.critical;
+  function visibleAnimals() {
+    if (!_allAnimals) return null;
+    var q = _searchQ.trim().toLowerCase();
+    var out = [];
+    _allAnimals.forEach(function (a) {
+      if (q) {
+        var hay = ((a.name || '') + ' ' + (a.tag_id || '') + ' ' + (a.breed || '')).toLowerCase();
+        if (hay.indexOf(q) < 0) return;
+      }
+      if (_filterType && a.animal_type !== _filterType) return;
+      if (_filterGS && a.animal_type !== 'goat' && a.animal_type !== 'sheep') return;
+      if (_filterBreed && (a.breed || '') !== _filterBreed) return;
+      if (_filterStatus && a.health_status !== _filterStatus) return;
+      if (_filterAttn === 'attention' && a.health_status !== 'needs_attention' && a.health_status !== 'critical') return;
+      if (_filterAttn === 'vacc_due' && !_attnSet[a.animal_id]) return;
+      out.push(a);
+    });
+    return out;
   }
 
-  function renderGrid(animals) {
-    var grid = document.getElementById('ls-grid');
-    if (!animals.length) {
-      var emptyMsg = (_filterStatus || _filterType || _searchQ)
-        ? 'No animals match your filters.'
-        : 'No livestock added yet.\nAdd your first animal to get started.';
-      grid.innerHTML = '<div class="ls-empty" style="grid-column:1/-1;"><i class="fas fa-paw"></i><p>' + esc(emptyMsg) + '</p>' +
-        (!_filterStatus && !_filterType && !_searchQ ? '<button class="ls-form-btn primary" style="width:auto;padding:8px 18px;margin:0 auto;" onclick="lsOpenModal(\'modal-add\')"><i class="fas fa-plus-circle"></i> Add Animal</button>' : '') +
-        '</div>';
+  function hasFilters() {
+    return !!( _searchQ || _filterType || _filterGS || _filterBreed || _filterStatus || _filterAttn);
+  }
+
+  function renderGrid() {
+    var grid = $id('ls-grid');
+    if (_animalsError) { grid.innerHTML = errorCard('retry-animals', 'Your livestock could not be loaded.'); return; }
+    if (_allAnimals === null) { return; }
+    var list = visibleAnimals();
+    if (!list.length) {
+      grid.innerHTML = hasFilters()
+        ? '<div class="ls-empty" style="grid-column:1/-1;">' + lsIllustration('sm') +
+          '<h3>No animals match</h3><p>Try adjusting your search or filters.</p>' +
+          '<button class="ls-form-btn primary" style="width:auto;padding:8px 18px;margin:0 auto;" data-action="clear-filters"><i class="fas fa-filter-circle-xmark"></i> Clear Filters</button></div>'
+        : lsEmptyState({
+            title: 'No livestock added yet',
+            text: 'Add cattle, buffalo, goats, sheep, poultry and more to track health, vaccinations, feeding, breeding and expenses in one place.',
+            action: '<button class="ls-form-btn primary" style="width:auto;padding:8px 18px;margin:0 auto;" data-action="add-animal"><i class="fas fa-circle-plus"></i> Add Animal</button>'
+          });
       return;
     }
     var html = '';
-    animals.forEach(function (a) {
-      html += buildCard(a);
-    });
+    list.forEach(function (a) { html += buildCard(a); });
     grid.innerHTML = html;
-    // attach click events
-    grid.querySelectorAll('.ls-card').forEach(function (card) {
-      card.addEventListener('click', function () {
-        openDetail(card.dataset.aid);
-      });
-    });
-    grid.querySelectorAll('.ls-card-btn[data-edit]').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        openEditModal(btn.dataset.edit);
-      });
-    });
+  }
+
+  function renderCards() {
+    var grid = $id('ls-grid');
+    var list = visibleAnimals();
+    if (!list || !list.length) { renderGrid(); return; }
+    var html = '';
+    list.forEach(function (a) { html += buildCard(a); });
+    return html;
   }
 
   function buildCard(a) {
     var age = a.date_of_birth ? calcAge(a.date_of_birth) : null;
-    var typeLabel = (a.animal_type || 'other').charAt(0).toUpperCase() + (a.animal_type || 'other').slice(1);
     var chips = '';
     if (a.breed) chips += '<span class="ls-chip breed">' + esc(a.breed) + '</span>';
-    if (a.weight_kg) chips += '<span class="ls-chip wt"><i class="fas fa-weight-scale"></i> ' + a.weight_kg + ' kg</span>';
+    if (a.weight_kg) chips += '<span class="ls-chip wt"><i class="fas fa-weight-scale"></i> ' + esc(String(a.weight_kg)) + ' kg</span>';
     return '<div class="ls-card" data-aid="' + esc(a.animal_id) + '">' +
       '<div class="ls-card-top">' + avatarHtml(a, 50) +
       '<div class="ls-card-info">' +
       '<div class="ls-card-name">' + esc(a.name) + '</div>' +
-      '<div class="ls-card-type">' + typeLabel + (a.tag_id ? ' · ' + esc(a.tag_id) : '') + '</div>' +
-      '<div class="ls-card-meta">' + (age ? age : '') + (a.location ? (age ? ' · ' : '') + esc(a.location) : '') + '</div>' +
+      '<div class="ls-card-type">' + esc(typeLabel(a.animal_type)) + (a.tag_id ? ' · ' + esc(a.tag_id) : '') + '</div>' +
+      '<div class="ls-card-meta">' + (age ? esc(age) : '') + (a.location ? (age ? ' · ' : '') + esc(a.location) : '') + '</div>' +
       '</div></div>' +
       '<div style="display:flex;align-items:center;justify-content:space-between;">' +
       healthBadge(a.health_status) +
@@ -1180,93 +1236,248 @@
       '</div></div>';
   }
 
-  /* ─────────────────────────────────────────────
-     UPCOMING EVENTS
-  ───────────────────────────────────────────── */
-  function loadUpcoming() {
-    var container = document.getElementById('ls-events');
-    lsApi('GET', '/events/upcoming').then(function (res) {
-      if (res.status !== 'success' || !res.data || !res.data.length) {
-        container.innerHTML = '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-calendar-check" style="font-size:28px;"></i><p>No upcoming livestock events in the next 30 days.</p></div>';
-        return;
-      }
-      var html = '';
-      res.data.forEach(function (ev) {
-        var isOverdue = ev.status === 'overdue';
-        var iconMap = { vaccination: { icon: 'fa-syringe', bg: '#E3F2FD', color: '#3498DB' },
-                        health_checkup: { icon: 'fa-stethoscope', bg: '#E8F5E9', color: '#27AE60' },
-                        breeding: { icon: 'fa-baby', bg: '#F3E5F5', color: '#8E44AD' } };
-        var ic = iconMap[ev.type] || { icon: 'fa-calendar', bg: '#FFF3E0', color: '#E67E22' };
-        html += '<div class="ls-event-item">' +
-          '<div class="ls-event-icon" style="background:' + ic.bg + ';color:' + ic.color + ';"><i class="fas ' + ic.icon + '"></i></div>' +
-          '<div class="ls-event-info">' +
-          '<div class="ls-event-title">' + esc(ev.event) + '</div>' +
-          '<div class="ls-event-sub">' + esc(ev.animal_name) + ' · ' + esc((ev.animal_type || '').charAt(0).toUpperCase() + (ev.animal_type || '').slice(1)) + '</div>' +
-          '</div>' +
-          '<div class="ls-event-date' + (isOverdue ? ' ls-event-overdue' : '') + '">' + (fmtDate(ev.date) || '—') + '</div>' +
-          '</div>';
-      });
-      container.innerHTML = html;
+  function populateBreedFilter() {
+    var sel = $id('ls-breed-filter');
+    var seen = {};
+    (_allAnimals || []).forEach(function (a) { if (a.breed) seen[a.breed] = 1; });
+    var breeds = Object.keys(seen).sort();
+    var html = '<option value="">All Breeds</option>';
+    breeds.forEach(function (b) { html += '<option value="' + esc(b) + '">' + esc(b) + '</option>'; });
+    sel.innerHTML = html;
+    if (breeds.indexOf(_filterBreed) < 0) _filterBreed = '';
+    setVal('ls-breed-filter', _filterBreed);
+  }
+
+  function applyFilters() {
+    renderGrid();
+    updateClearFilters();
+  }
+
+  function clearFilters() {
+    _searchQ = ''; _filterType = ''; _filterGS = false; _filterBreed = ''; _filterStatus = ''; _filterAttn = '';
+    setVal('ls-search-input', '');
+    setVal('ls-type-filter', '');
+    setVal('ls-health-filter', '');
+    setVal('ls-attn-filter', '');
+    if (_filterBreed) setVal('ls-breed-filter', '');
+    document.querySelectorAll('.ls-hov-chip').forEach(function (c) { c.classList.remove('sel'); });
+    document.querySelectorAll('.ls-stat').forEach(function (s) { s.classList.remove('active'); });
+    populateBreedFilter();
+    renderGrid();
+    updateClearFilters();
+  }
+
+  function updateClearFilters() {
+    $id('ls-clear-filters').style.display = hasFilters() ? 'inline' : 'none';
+  }
+
+  /* ============ attention required ============ */
+  function loadAttention() {
+    var el = $id('ls-attention');
+    el.innerHTML = skeletonRows();
+    lsReq(API.Livestock.attentionSummary()).then(function (r) {
+      if (!r.ok) { el.innerHTML = errorCard('retry-attention', 'Attention items could not be loaded.'); return; }
+      _attention = r.data || { overdue: [], upcoming: [], all: [] };
+      _attnSet = {};
+      (_attention.all || []).forEach(function (ev) { if (ev.type === 'vaccination') _attnSet[ev.animal_id] = 1; });
+      renderAttention();
+      if (_filterAttn === 'vacc_due') renderGrid();
     });
   }
 
-  /* ─────────────────────────────────────────────
-     DETAIL PANEL
-  ───────────────────────────────────────────── */
-  function openDetail(animalId) {
-    var animal = _allAnimals.find(function (a) { return a.animal_id === animalId; });
-    if (!animal) {
-      // fetch fresh
-      lsApi('GET', '/' + animalId).then(function (res) {
-        if (res.status === 'success') { _currentAnimal = res.data; renderDetailPanel(); }
-        else lsToast('Animal not found', 'error');
-      });
+  function renderAttention() {
+    var el = $id('ls-attention');
+    var overdue = _attention.overdue || [];
+    var upcoming = _attention.upcoming || [];
+    if (!overdue.length && !upcoming.length) {
+      el.innerHTML = '<div class="ls-attn-allclear"><i class="fas fa-circle-check"></i> All caught up! No overdue vaccinations, check-ups, deliveries or treatments right now.</div>';
       return;
     }
-    _currentAnimal = animal;
-    renderDetailPanel();
+    var html = '';
+    overdue.forEach(function (e) { html += attnItem(e, 'overdue', 'Overdue'); });
+    upcoming.forEach(function (e) {
+      var pill = e.status === 'ongoing' ? 'Ongoing' : (e.status === 'due_soon' ? 'Due Soon' : 'Upcoming');
+      html += attnItem(e, 'soon', pill);
+    });
+    el.innerHTML = html;
   }
 
-  function renderDetailPanel() {
-    var a = _currentAnimal;
-    if (!a) return;
-    var c = typeConf(a.animal_type || '');
+  function attnItem(e, cls, pill) {
+    var map = {
+      vaccination:    { icon: 'fa-syringe',       bg: '#E3F2FD', color: '#3498DB' },
+      health_checkup: { icon: 'fa-stethoscope',   bg: '#E8F5E9', color: '#27AE60' },
+      breeding:       { icon: 'fa-baby',          bg: '#F3E5F5', color: '#8E44AD' },
+      treatment:      { icon: 'fa-pills',         bg: '#FFEBEE', color: '#E74C3C' },
+      health_alert:   { icon: 'fa-triangle-exclamation', bg: '#FFF3E0', color: '#E65100' }
+    };
+    var ic = map[e.type] || { icon: 'fa-bell', bg: '#F1F1F1', color: '#607D8B' };
+    return '<div class="ls-attn-item ' + cls + '" data-aid="' + esc(e.animal_id) + '">' +
+      '<div class="ls-event-icon" style="background:' + ic.bg + ';color:' + ic.color + ';"><i class="fas ' + ic.icon + '"></i></div>' +
+      '<div class="ls-event-info"><div class="ls-event-title">' + esc(e.event) + '</div>' +
+      '<div class="ls-event-sub">' + esc(e.animal_name) + ' · ' + esc(typeLabel(e.animal_type)) + '</div></div>' +
+      '<span class="ls-attn-pill ' + cls + '">' + pill + '</span>' +
+      '</div>';
+  }
 
-    // header
-    document.getElementById('dp-hdr-name').textContent = a.name || '—';
+  /* ============ upcoming events ============ */
+  function loadEvents() {
+    var el = $id('ls-events');
+    el.innerHTML = skeletonRows();
+    lsReq(API.Livestock.eventsUpcoming(30)).then(function (r) {
+      if (!r.ok) { el.innerHTML = errorCard('retry-events', 'Upcoming events could not be loaded.'); return; }
+      _events = r.data || [];
+      renderEvents();
+    });
+  }
 
-    // hero avatar
-    var dpAv = document.getElementById('dp-avatar');
-    dpAv.style.background = c.color;
-    dpAv.style.width = '72px';
-    dpAv.style.height = '72px';
-    dpAv.style.fontSize = '30px';
-    if (a.photo_url) {
-      dpAv.innerHTML = '<img src="' + esc(a.photo_url) + '" onerror="this.style.display=\'none\'">';
-    } else {
-      dpAv.innerHTML = '<i class="fas ' + c.icon + '"></i>';
+  function renderEvents() {
+    var el = $id('ls-events');
+    if (!_events.length) {
+      el.innerHTML = '<div class="ls-empty" style="padding:18px 0;"><i class="far fa-calendar-check"></i><p>No upcoming livestock events in the next 30 days.</p></div>';
+      return;
     }
+    var html = '';
+    _events.forEach(function (ev) {
+      var isOverdue = ev.status === 'overdue';
+      var iconMap = {
+        vaccination:    { icon: 'fa-syringe',     bg: '#E3F2FD', color: '#3498DB' },
+        health_checkup: { icon: 'fa-stethoscope', bg: '#E8F5E9', color: '#27AE60' },
+        breeding:       { icon: 'fa-baby',        bg: '#F3E5F5', color: '#8E44AD' },
+        treatment:      { icon: 'fa-pills',       bg: '#FFEBEE', color: '#E74C3C' },
+        health_alert:   { icon: 'fa-triangle-exclamation', bg: '#FFF3E0', color: '#E65100' }
+      };
+      var ic = iconMap[ev.type] || { icon: 'fa-calendar', bg: '#FFF3E0', color: '#E67E22' };
+      html += '<div class="ls-event-item" data-aid="' + esc(ev.animal_id) + '">' +
+        '<div class="ls-event-icon" style="background:' + ic.bg + ';color:' + ic.color + ';"><i class="fas ' + ic.icon + '"></i></div>' +
+        '<div class="ls-event-info">' +
+        '<div class="ls-event-title">' + esc(ev.event) + '</div>' +
+        '<div class="ls-event-sub">' + esc(ev.animal_name) + ' · ' + esc(typeLabel(ev.animal_type)) + '</div>' +
+        '</div>' +
+        '<div class="ls-event-date' + (isOverdue ? ' ls-event-overdue' : '') + '">' + (fmtDate(ev.date) || '—') + '</div>' +
+        '</div>';
+    });
+    el.innerHTML = html;
+  }
 
-    document.getElementById('dp-name').textContent = a.name || '—';
-    var typeLabel = (a.animal_type || 'other').charAt(0).toUpperCase() + (a.animal_type || 'other').slice(1);
-    document.getElementById('dp-type').textContent = typeLabel + (a.breed ? ' · ' + a.breed : '');
-    document.getElementById('dp-hbadge').outerHTML = healthBadge(a.health_status);
+  /* ============ recent activity ============ */
+  function loadActivity() {
+    var el = $id('ls-activity');
+    el.innerHTML = skeletonRows();
+    lsReq(API.Livestock.recentActivity(15)).then(function (r) {
+      if (!r.ok) { el.innerHTML = errorCard('retry-activity', 'Recent activity could not be loaded.'); return; }
+      _activity = r.data || [];
+      renderActivity();
+    });
+  }
 
-    var tagEl = document.getElementById('dp-tag') || document.querySelector('.ls-detail-badges .ls-chip');
-    if (tagEl) { tagEl.textContent = a.tag_id || ''; tagEl.style.display = a.tag_id ? 'inline-flex' : 'none'; }
+  function renderActivity() {
+    var el = $id('ls-activity');
+    if (!_activity.length) {
+      el.innerHTML = '<div class="ls-empty" style="padding:18px 0;"><i class="far fa-clock"></i><p>No activity yet — additions, vaccinations, health records and more will appear here.</p></div>';
+      return;
+    }
+    var html = '';
+    _activity.forEach(function (it) {
+      var map = {
+        animal_added: { icon: 'fa-paw', bg: '#FFF3E0', color: '#E67E22' },
+        vaccination:  { icon: 'fa-syringe', bg: '#E3F2FD', color: '#3498DB' },
+        health:       { icon: 'fa-stethoscope', bg: '#E8F5E9', color: '#27AE60' },
+        treatment:    { icon: 'fa-pills', bg: '#FFEBEE', color: '#E74C3C' },
+        feeding:      { icon: 'fa-bowl-food', bg: '#E0F2F1', color: '#16A085' },
+        production:   { icon: 'fa-bottle-droplet', bg: '#FFF3E0', color: '#E65100' },
+        expense:      { icon: 'fa-receipt', bg: '#F3E5F5', color: '#8E44AD' },
+        weight:       { icon: 'fa-weight-scale', bg: '#E0F2F1', color: '#16A085' },
+        breeding:     { icon: 'fa-baby', bg: '#F3E5F5', color: '#8E44AD' }
+      };
+      var ic = map[it.type] || { icon: 'fa-paw', bg: '#F1F1F1', color: '#607D8B' };
+      html += '<div class="ls-act-item" data-aid="' + esc(it.animal_id || '') + '">' +
+        '<div class="ls-event-icon" style="background:' + ic.bg + ';color:' + ic.color + ';"><i class="fas ' + ic.icon + '"></i></div>' +
+        '<div class="ls-event-info">' +
+        '<div class="ls-event-title">' + esc(it.title) + '</div>' +
+        '<div class="ls-event-sub">' + esc(it.subtitle || '') + (it.animal_name ? ' · ' + esc(it.animal_name) : '') + '</div>' +
+        '</div>' +
+        '<div class="ls-event-date">' + (fmtDateTime(it.at) || '') + '</div>' +
+        '</div>';
+    });
+    el.innerHTML = html;
+  }
 
-    // open panel
+  /* ============ detail panel ============ */
+  function openDetail(animalId, focusTab) {
+    var panel = $id('ls-detail-panel');
+    panel.classList.add('open');
+    $id('ls-main').style.overflow = 'hidden';
+    var local = (_allAnimals || []).find(function (a) { return a.animal_id === animalId; });
+    $id('dp-hdr-name').textContent = local ? (local.name || 'Animal') : 'Animal';
     _activeTab = 'info';
     switchTab('info');
-    document.getElementById('ls-detail-panel').classList.add('open');
-    document.getElementById('ls-main').style.overflow = 'hidden';
-    renderTabInfo();
+    $id('dp-tab-info').innerHTML = '<div class="sk h14 w80"></div><div class="sk h14 w60" style="margin-top:8px;"></div>';
+    var myKey = ++_detailSeq;
+    lsReq(API.Livestock.full(animalId)).then(function (r) {
+      if (myKey !== _detailSeq) return;
+      if (!r.ok) {
+        $id('dp-tab-info').innerHTML = '<div class="ls-error">' +
+          '<i class="fas fa-circle-exclamation"></i>' +
+          '<h3>Could not load this animal</h3><p>' + esc(r.error || 'Please try again.') + '</p>' +
+          '<button class="ls-form-btn primary" style="width:auto;padding:8px 18px;margin:0 auto;" data-action="retry-detail" data-aid="' + esc(animalId) + '"><i class="fas fa-rotate-right"></i> Retry</button></div>';
+        return;
+      }
+      _currentAnimal = r.data.animal;
+      _currentFull = r.data;
+      renderDetailHeader();
+      renderTabInfo();
+      if (focusTab && focusTab !== 'info') switchTab(focusTab);
+      applyTabVisibility();
+    });
   }
 
   function closeDetailPanel() {
-    document.getElementById('ls-detail-panel').classList.remove('open');
-    document.getElementById('ls-main').style.overflow = '';
+    $id('ls-detail-panel').classList.remove('open');
+    $id('ls-main').style.overflow = '';
     _currentAnimal = null;
+    _currentFull = null;
+    _activeTab = 'info';
+  }
+
+  function renderDetailHeader() {
+    var a = _currentAnimal;
+    if (!a) return;
+    var c = typeConf(a.animal_type || '');
+    $id('dp-hdr-name').textContent = a.name || '—';
+    var av = $id('dp-avatar');
+    av.style.background = c.color;
+    av.style.width = '72px';
+    av.style.height = '72px';
+    av.style.fontSize = '30px';
+    if (a.photo_url) {
+      av.innerHTML = '<img src="' + esc(a.photo_url) + '" alt="" onerror="this.remove()">';
+    } else {
+      av.innerHTML = '<i class="fas ' + c.icon + '"></i>';
+    }
+    $id('dp-name').textContent = a.name || '—';
+    $id('dp-type').textContent = esc(typeLabel(a.animal_type)) + (a.breed ? ' · ' + esc(a.breed) : '');
+    var hb = $id('dp-hbadge');
+    var cls = a.health_status || 'healthy';
+    var labels = { healthy: 'Healthy', monitoring: 'Monitoring', needs_attention: 'Needs Attention', critical: 'Critical' };
+    var icons  = { healthy: 'fa-circle-check', monitoring: 'fa-eye', needs_attention: 'fa-triangle-exclamation', critical: 'fa-skull-crossbones' };
+    hb.className = 'ls-hbadge ' + cls;
+    hb.innerHTML = '<i class="fas ' + (icons[cls] || 'fa-circle') + '"></i> ' + (labels[cls] || cls);
+    var tagEl = $id('dp-tag');
+    if (tagEl) { tagEl.textContent = a.tag_id || ''; tagEl.style.display = a.tag_id ? 'inline-flex' : 'none'; }
+    applyTabVisibility();
+  }
+
+  function applyTabVisibility() {
+    var type = (_currentAnimal && _currentAnimal.animal_type) || '';
+    var breedingOk = ['cow', 'buffalo', 'goat', 'sheep', 'pig'].indexOf(type) >= 0;
+    var prodOk = ['cow', 'buffalo', 'goat', 'sheep', 'poultry'].indexOf(type) >= 0;
+    $id('dp-tabbtn-breeding').style.display = breedingOk ? '' : 'none';
+    $id('dp-tabbtn-production').style.display = prodOk ? '' : 'none';
+    if ((_activeTab === 'breeding' && !breedingOk) || (_activeTab === 'production' && !prodOk)) {
+      _activeTab = 'info';
+      switchTab('info');
+      renderTabInfo();
+    }
   }
 
   function switchTab(tab) {
@@ -1274,8 +1485,8 @@
     document.querySelectorAll('.ls-tab').forEach(function (t) {
       t.classList.toggle('active', t.dataset.tab === tab);
     });
-    ['info','health','vaccinations','treatments','feeding','breeding','growth'].forEach(function (t) {
-      var el = document.getElementById('dp-tab-' + t);
+    ['info', 'health', 'vaccinations', 'treatments', 'feeding', 'breeding', 'growth', 'production', 'expenses'].forEach(function (t) {
+      var el = $id('dp-tab-' + t);
       if (el) el.style.display = (t === tab) ? 'block' : 'none';
     });
     if (tab === 'info')         renderTabInfo();
@@ -1285,74 +1496,90 @@
     if (tab === 'feeding')      loadTabFeeding();
     if (tab === 'breeding')     loadTabBreeding();
     if (tab === 'growth')       loadTabGrowth();
+    if (tab === 'production')   loadTabProduction();
+    if (tab === 'expenses')     loadTabExpenses();
   }
 
-  /* ── tab: Info ── */
   function renderTabInfo() {
     var a = _currentAnimal;
     if (!a) return;
     var age = a.date_of_birth ? calcAge(a.date_of_birth) : null;
-    var el = document.getElementById('dp-tab-info');
-    el.innerHTML =
-      '<div class="ls-add-form" style="margin-top:0;">' +
-      '<h4><i class="fas fa-info-circle" style="color:var(--ls-accent);"></i> Basic Information</h4>' +
-      infoRow('Animal ID', a.animal_id) +
-      infoRow('Name', a.name) +
-      infoRow('Type', (a.animal_type || '').charAt(0).toUpperCase() + (a.animal_type || '').slice(1)) +
-      infoRow('Breed', a.breed) +
-      infoRow('Gender', a.gender ? a.gender.charAt(0).toUpperCase() + a.gender.slice(1) : null) +
-      infoRow('Age', age) +
-      infoRow('Date of Birth', fmtDate(a.date_of_birth)) +
-      infoRow('Weight', a.weight_kg ? a.weight_kg + ' kg' : null) +
-      infoRow('Color', a.color) +
-      '</div>' +
-      '<div class="ls-add-form">' +
-      '<h4><i class="fas fa-map-marker-alt" style="color:var(--ls-accent);"></i> Location & Acquisition</h4>' +
-      infoRow('Location', a.location) +
-      infoRow('Source', a.source) +
-      infoRow('Purchase Date', fmtDate(a.purchase_date)) +
-      infoRow('Purchase Price', a.purchase_price ? '₹' + a.purchase_price : null) +
-      '</div>' +
-      (a.notes ? '<div class="ls-add-form"><h4><i class="fas fa-sticky-note" style="color:var(--ls-accent);"></i> Notes</h4><div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">' + esc(a.notes) + '</div></div>' : '') +
-      '<button class="ls-form-btn" style="background:#FFEBEE;color:var(--ls-red);border:1px solid #FFCDD2;margin-top:4px;" onclick="openEditModalCurrent()"><i class="fas fa-pen"></i> Edit Animal Details</button>';
+    var counts = (_currentFull && _currentFull.counts) || {};
+    var recordChips = '';
+    [
+      ['health', 'fa-stethoscope', 'Health'],
+      ['vaccinations', 'fa-syringe', 'Vaccines'],
+      ['treatments', 'fa-pills', 'Treatments'],
+      ['feeding', 'fa-bowl-food', 'Feeding'],
+      ['breeding', 'fa-baby', 'Breeding'],
+      ['weight', 'fa-weight-scale', 'Weigh-ins'],
+      ['production', 'fa-bottle-droplet', 'Production'],
+      ['expenses', 'fa-receipt', 'Expenses']
+    ].forEach(function (row) {
+      if (counts[row[0]]) recordChips += '<span class="ls-chip"><i class="fas ' + row[1] + '"></i> ' + row[0].charAt(0).toUpperCase() + row[0].slice(1) + ': ' + counts[row[0]] + '</span>';
+    });
+    var fresh = [];
+    fresh.push('<div class="ls-add-form" style="margin-top:0;"><h4><i class="fas fa-id-card" style="color:var(--ls-accent);"></i> Basic Information</h4>');
+    fresh.push(infoRow('Animal ID', a.animal_id));
+    fresh.push(infoRow('Name', a.name));
+    fresh.push(infoRow('Type', typeLabel(a.animal_type)));
+    fresh.push(infoRow('Breed', a.breed));
+    fresh.push(infoRow('Gender', a.gender ? a.gender.charAt(0).toUpperCase() + a.gender.slice(1) : null));
+    fresh.push(infoRow('Age', age));
+    fresh.push(infoRow('Date of Birth', fmtDate(a.date_of_birth)));
+    fresh.push(infoRow('Weight', a.weight_kg ? esc(String(a.weight_kg)) + ' kg' : null));
+    fresh.push(infoRow('Color', a.color));
+    fresh.push('</div>');
+    fresh.push('<div class="ls-add-form"><h4><i class="fas fa-map-location-dot" style="color:var(--ls-accent);"></i> Location & Acquisition</h4>');
+    fresh.push(infoRow('Location', a.location));
+    fresh.push(infoRow('Source', a.source));
+    fresh.push(infoRow('Purchase Date', fmtDate(a.purchase_date)));
+    fresh.push(infoRow('Purchase Price', a.purchase_price ? money(a.purchase_price) : null));
+    fresh.push('</div>');
+    if (recordChips) fresh.push('<div class="ls-add-form"><h4><i class="fas fa-list-check" style="color:var(--ls-accent);"></i> Records</h4><div style="display:flex;gap:6px;flex-wrap:wrap;">' + recordChips + '</div></div>');
+    if (a.notes) fresh.push('<div class="ls-add-form"><h4><i class="fas fa-note-sticky" style="color:var(--ls-accent);"></i> Notes</h4><div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">' + esc(a.notes) + '</div></div>');
+    fresh.push('<button class="ls-form-btn" style="background:#FFEBEE;color:var(--ls-red);border:1px solid #FFCDD2;margin-top:4px;" data-action="edit-current"><i class="fas fa-pen"></i> Edit Animal Details</button>');
+    $id('dp-tab-info').innerHTML = fresh.join('');
   }
 
-  function infoRow(label, value) {
-    return '<div class="ls-drow"><span class="ls-dlbl">' + esc(label) + '</span>' + dval(value) + '</div>';
+  /* ============ record tab loaders ============ */
+  function recHeader(title) {
+    return '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> ' + title + '</div></div>';
   }
 
-  /* ── tab: Health ── */
   function loadTabHealth() {
     var a = _currentAnimal;
-    var el = document.getElementById('dp-tab-health');
-    el.innerHTML = '<div class="sk h14 w80"></div><div class="sk h14 w60" style="margin-top:8px;"></div>';
-    lsApi('GET', '/' + a.animal_id + '/health').then(function (res) {
-      var records = (res.status === 'success' ? res.data : []) || [];
+    if (!a) return;
+    var el = $id('dp-tab-health');
+    el.innerHTML = '<div class="sk h14 w80"></div>';
+    lsReq(API.Livestock.health(a.animal_id)).then(function (r) {
+      var records = (r.ok ? r.data : []) || [];
       var html = buildAddHealthForm();
+      if (!r.ok) { el.innerHTML = errorCard('retry-tab-health', 'Health records could not be loaded.'); return; }
       if (records.length) {
-        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-history"></i> History</div></div>';
-        records.forEach(function (r) {
+        html += recHeader('History');
+        records.forEach(function (rec) {
           html += '<div class="ls-rec-card">' +
-            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.health_status || 'Health Record') + '</span><span class="ls-rec-date">' + esc(fmtDate(r.record_date) || '') + '</span></div>' +
-            (r.symptoms ? recField('Symptoms', r.symptoms) : '') +
-            (r.diagnosis ? recField('Diagnosis', r.diagnosis) : '') +
-            (r.treatment ? recField('Treatment', r.treatment) : '') +
-            (r.medicine ? recField('Medicine', r.medicine) : '') +
-            (r.veterinarian ? recField('Vet', r.veterinarian) : '') +
-            (r.follow_up_date ? recField('Follow-up', fmtDate(r.follow_up_date)) : '') +
-            (r.notes ? recField('Notes', r.notes) : '') +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(rec.health_status || 'Health Record') + '</span><span class="ls-rec-date">' + esc(fmtDate(rec.record_date) || '') + '</span></div>' +
+            (rec.symptoms ? recField('Symptoms', rec.symptoms) : '') +
+            (rec.diagnosis ? recField('Diagnosis', rec.diagnosis) : '') +
+            (rec.treatment ? recField('Treatment', rec.treatment) : '') +
+            (rec.medicine ? recField('Medicine', rec.medicine) : '') +
+            (rec.veterinarian ? recField('Vet', rec.veterinarian) : '') +
+            (rec.follow_up_date ? recField('Follow-up', fmtDate(rec.follow_up_date)) : '') +
+            (rec.notes ? recField('Notes', rec.notes) : '') +
             '</div>';
         });
       } else {
-        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-stethoscope"></i><p>No health records yet.</p></div>';
+        html += lsRecordEmpty('fa-stethoscope', 'No health records yet.');
       }
       el.innerHTML = html;
-      el.querySelector('#btn-save-health').addEventListener('click', submitHealth);
+      safeBind('btn-save-health', submitHealth);
     });
   }
 
   function buildAddHealthForm() {
-    return '<div class="ls-add-form"><h4><i class="fas fa-plus-circle" style="color:var(--ls-green);"></i> Add Health Record</h4>' +
+    return '<div class="ls-add-form"><h4><i class="fas fa-circle-plus" style="color:var(--ls-green);"></i> Add Health Record</h4>' +
       frmRow('Date', '<input class="ls-form-input" type="date" id="hr-date">') +
       frmRow('Health Status', '<select class="ls-form-input" id="hr-status"><option value="healthy">Healthy</option><option value="monitoring">Monitoring</option><option value="needs_attention">Needs Attention</option><option value="critical">Critical</option></select>') +
       frmRow('Symptoms', '<input class="ls-form-input" type="text" id="hr-symptoms" placeholder="e.g. Loss of appetite">') +
@@ -1379,89 +1606,88 @@
       follow_up_date: v('hr-followup') || null,
       notes: v('hr-notes') || null
     };
-    var errEl = document.getElementById('hr-err');
+    var errEl = $id('hr-err');
     setSaving('btn-save-health', true);
-    lsApi('POST', '/' + a.animal_id + '/health', payload).then(function (res) {
+    lsReq(API.Livestock.addHealth(a.animal_id, payload)).then(function (r) {
       setSaving('btn-save-health', false);
-      if (res.status === 'success') {
-        lsToast('Health record saved', 'success');
-        // refresh animal health status locally
-        if (payload.health_status) {
-          _currentAnimal.health_status = payload.health_status;
-          var idx = _allAnimals.findIndex(function (x) { return x.animal_id === a.animal_id; });
-          if (idx >= 0) _allAnimals[idx].health_status = payload.health_status;
-        }
-        loadTabHealth();
-        loadOverview();
-      } else {
-        errEl.textContent = res.detail || 'Failed to save record'; errEl.style.display = 'block';
+      if (!r.ok) { errEl.textContent = r.error || 'Failed to save record'; errEl.style.display = 'block'; return; }
+      if (payload.health_status) {
+        _currentAnimal.health_status = payload.health_status;
+        var idx = _allAnimals.findIndex(function (x) { return x.animal_id === a.animal_id; });
+        if (idx >= 0) _allAnimals[idx].health_status = payload.health_status;
       }
+      lsToast('Health record saved', 'success');
+      loadTabHealth();
+      afterMutation();
     });
   }
 
-  /* ── tab: Vaccinations ── */
   function loadTabVaccinations() {
     var a = _currentAnimal;
-    var el = document.getElementById('dp-tab-vaccinations');
+    if (!a) return;
+    var el = $id('dp-tab-vaccinations');
     el.innerHTML = '<div class="sk h14 w80"></div>';
-    lsApi('GET', '/' + a.animal_id + '/vaccinations').then(function (res) {
-      var records = (res.status === 'success' ? res.data : []) || [];
+    lsReq(API.Livestock.vaccinations(a.animal_id)).then(function (r) {
+      var records = (r.ok ? r.data : []) || [];
       var html = '<div class="ls-add-form"><h4><i class="fas fa-syringe" style="color:var(--ls-blue);"></i> Add Vaccination</h4>' +
-        frmRow('Vaccine Name *', '<input class="ls-form-input" type="text" id="vc-name" placeholder="e.g. FMD Vaccine" required>') +
+        frmRow('Vaccine Name *', '<input class="ls-form-input" type="text" id="vc-name" placeholder="e.g. FMD Vaccine">') +
         frmGrid(
           frmRow('Date Given', '<input class="ls-form-input" type="date" id="vc-date">'),
           frmRow('Next Due Date', '<input class="ls-form-input" type="date" id="vc-next">')
         ) +
         frmGrid(
-          frmRow('Dose', '<input class="ls-form-input" type="text" id="vc-dose" placeholder="e.g. 2ml">'),
+          frmRow('Dose', '<input class="ls-form-input" type="text" id="vc-dose" placeholder="e.g. 2 ml">'),
           frmRow('Veterinarian', '<input class="ls-form-input" type="text" id="vc-vet" placeholder="Vet\'s name">')
         ) +
         frmRow('Notes', '<textarea class="ls-form-input" id="vc-notes" rows="1" placeholder="Notes…"></textarea>') +
         '<div id="vc-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
         '<button class="ls-form-btn primary" id="btn-save-vacc"><i class="fas fa-save"></i> Save Vaccination</button></div>';
+      if (!r.ok) { el.innerHTML = errorCard('retry-tab-vaccinations', 'Vaccination records could not be loaded.'); return; }
       if (records.length) {
-        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> Records</div></div>';
-        records.forEach(function (r) {
-          var statusCls = { completed: 'healthy', due_soon: 'monitoring', overdue: 'critical' }[r.status] || 'healthy';
+        html += recHeader('Records');
+        records.forEach(function (rec) {
+          var statusCls = { completed: 'healthy', due_soon: 'monitoring', overdue: 'critical' }[rec.status] || 'healthy';
           html += '<div class="ls-rec-card">' +
-            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.vaccine_name) + '</span>' + healthBadge(statusCls) + '</div>' +
-            (r.date_given ? recField('Given', fmtDate(r.date_given)) : '') +
-            (r.next_due_date ? recField('Next Due', fmtDate(r.next_due_date)) : '') +
-            (r.dose ? recField('Dose', r.dose) : '') +
-            (r.veterinarian ? recField('Vet', r.veterinarian) : '') +
-            (r.notes ? recField('Notes', r.notes) : '') +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(rec.vaccine_name) + '</span>' + healthBadge(statusCls) + '</div>' +
+            (rec.date_given ? recField('Given', fmtDate(rec.date_given)) : '') +
+            (rec.next_due_date ? recField('Next Due', fmtDate(rec.next_due_date)) : '') +
+            (rec.dose ? recField('Dose', rec.dose) : '') +
+            (rec.veterinarian ? recField('Vet', rec.veterinarian) : '') +
+            (rec.notes ? recField('Notes', rec.notes) : '') +
             '</div>';
         });
       } else {
-        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-syringe"></i><p>No vaccination records yet.</p></div>';
+        html += lsRecordEmpty('fa-syringe', 'No vaccination records yet.');
       }
       el.innerHTML = html;
-      el.querySelector('#btn-save-vacc').addEventListener('click', submitVaccination);
+      safeBind('btn-save-vacc', submitVaccination);
     });
   }
 
   function submitVaccination() {
     var a = _currentAnimal;
     var name = v('vc-name');
-    var errEl = document.getElementById('vc-err');
+    var errEl = $id('vc-err');
     if (!name) { errEl.textContent = 'Vaccine name is required'; errEl.style.display = 'block'; return; }
     errEl.style.display = 'none';
     var payload = { vaccine_name: name, date_given: v('vc-date') || null, next_due_date: v('vc-next') || null, dose: v('vc-dose') || null, veterinarian: v('vc-vet') || null, notes: v('vc-notes') || null };
     setSaving('btn-save-vacc', true);
-    lsApi('POST', '/' + a.animal_id + '/vaccinations', payload).then(function (res) {
+    lsReq(API.Livestock.addVaccination(a.animal_id, payload)).then(function (r) {
       setSaving('btn-save-vacc', false);
-      if (res.status === 'success') { lsToast('Vaccination saved', 'success'); loadTabVaccinations(); loadOverview(); }
-      else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+      if (!r.ok) { errEl.textContent = r.error || 'Failed'; errEl.style.display = 'block'; return; }
+      lsToast('Vaccination saved', 'success');
+      loadTabVaccinations();
+      afterMutation();
     });
   }
 
-  /* ── tab: Treatments ── */
   function loadTabTreatments() {
     var a = _currentAnimal;
-    var el = document.getElementById('dp-tab-treatments');
+    if (!a) return;
+    var el = $id('dp-tab-treatments');
     el.innerHTML = '<div class="sk h14 w80"></div>';
-    lsApi('GET', '/' + a.animal_id + '/treatments').then(function (res) {
-      var records = (res.status === 'success' ? res.data : []) || [];
+    lsReq(API.Livestock.treatments(a.animal_id)).then(function (r) {
+      var records = (r.ok ? r.data : []) || [];
       var html = '<div class="ls-add-form"><h4><i class="fas fa-pills" style="color:var(--ls-red);"></i> Add Treatment</h4>' +
         frmGrid(
           frmRow('Date', '<input class="ls-form-input" type="date" id="tr-date">'),
@@ -1476,45 +1702,48 @@
         frmRow('Notes', '<textarea class="ls-form-input" id="tr-notes" rows="1" placeholder="Notes…"></textarea>') +
         '<div id="tr-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
         '<button class="ls-form-btn primary" id="btn-save-treat"><i class="fas fa-save"></i> Save Treatment</button></div>';
+      if (!r.ok) { el.innerHTML = errorCard('retry-tab-treatments', 'Treatment records could not be loaded.'); return; }
       if (records.length) {
-        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> History</div></div>';
-        records.forEach(function (r) {
+        html += recHeader('History');
+        records.forEach(function (rec) {
           html += '<div class="ls-rec-card">' +
-            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.issue || 'Treatment') + '</span><span class="ls-rec-date">' + esc(fmtDate(r.treatment_date) || '') + '</span></div>' +
-            (r.treatment ? recField('Treatment', r.treatment) : '') +
-            (r.medicine ? recField('Medicine', r.medicine) : '') +
-            (r.veterinarian ? recField('Vet', r.veterinarian) : '') +
-            (r.status ? recField('Status', r.status.charAt(0).toUpperCase() + r.status.slice(1).replace('_', ' ')) : '') +
-            (r.notes ? recField('Notes', r.notes) : '') +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(rec.issue || 'Treatment') + '</span><span class="ls-rec-date">' + esc(fmtDate(rec.treatment_date) || '') + '</span></div>' +
+            (rec.treatment ? recField('Treatment', rec.treatment) : '') +
+            (rec.medicine ? recField('Medicine', rec.medicine) : '') +
+            (rec.veterinarian ? recField('Vet', rec.veterinarian) : '') +
+            (rec.status ? recField('Status', rec.status.charAt(0).toUpperCase() + rec.status.slice(1).replace('_', ' ')) : '') +
+            (rec.notes ? recField('Notes', rec.notes) : '') +
             '</div>';
         });
       } else {
-        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-pills"></i><p>No treatment records yet.</p></div>';
+        html += lsRecordEmpty('fa-pills', 'No treatment records yet.');
       }
       el.innerHTML = html;
-      el.querySelector('#btn-save-treat').addEventListener('click', submitTreatment);
+      safeBind('btn-save-treat', submitTreatment);
     });
   }
 
   function submitTreatment() {
     var a = _currentAnimal;
-    var errEl = document.getElementById('tr-err');
+    var errEl = $id('tr-err');
     var payload = { treatment_date: v('tr-date') || null, issue: v('tr-issue') || null, treatment: v('tr-treatment') || null, medicine: v('tr-medicine') || null, veterinarian: v('tr-vet') || null, status: v('tr-status') || 'ongoing', notes: v('tr-notes') || null };
     setSaving('btn-save-treat', true);
-    lsApi('POST', '/' + a.animal_id + '/treatments', payload).then(function (res) {
+    lsReq(API.Livestock.addTreatment(a.animal_id, payload)).then(function (r) {
       setSaving('btn-save-treat', false);
-      if (res.status === 'success') { lsToast('Treatment saved', 'success'); loadTabTreatments(); }
-      else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+      if (!r.ok) { errEl.textContent = r.error || 'Failed'; errEl.style.display = 'block'; return; }
+      lsToast('Treatment saved', 'success');
+      loadTabTreatments();
+      afterMutation();
     });
   }
 
-  /* ── tab: Feeding ── */
   function loadTabFeeding() {
     var a = _currentAnimal;
-    var el = document.getElementById('dp-tab-feeding');
+    if (!a) return;
+    var el = $id('dp-tab-feeding');
     el.innerHTML = '<div class="sk h14 w80"></div>';
-    lsApi('GET', '/' + a.animal_id + '/feeding').then(function (res) {
-      var records = (res.status === 'success' ? res.data : []) || [];
+    lsReq(API.Livestock.feeding(a.animal_id)).then(function (r) {
+      var records = (r.ok ? r.data : []) || [];
       var html = '<div class="ls-add-form"><h4><i class="fas fa-bowl-food" style="color:var(--ls-teal);"></i> Add Feeding Record</h4>' +
         frmGrid(
           frmRow('Date', '<input class="ls-form-input" type="date" id="fd-date">'),
@@ -1531,45 +1760,48 @@
         frmRow('Notes', '<textarea class="ls-form-input" id="fd-notes" rows="1" placeholder="Notes…"></textarea>') +
         '<div id="fd-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
         '<button class="ls-form-btn primary" id="btn-save-feed"><i class="fas fa-save"></i> Save Feeding</button></div>';
+      if (!r.ok) { el.innerHTML = errorCard('retry-tab-feeding', 'Feeding records could not be loaded.'); return; }
       if (records.length) {
-        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> Records</div></div>';
-        records.forEach(function (r) {
+        html += recHeader('Records');
+        records.forEach(function (rec) {
           html += '<div class="ls-rec-card">' +
-            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.feed_type || 'Feeding') + '</span><span class="ls-rec-date">' + esc(fmtDate(r.record_date) || '') + '</span></div>' +
-            (r.quantity ? recField('Quantity', r.quantity) : '') +
-            (r.frequency ? recField('Frequency', r.frequency) : '') +
-            (r.feeding_time ? recField('Time', r.feeding_time) : '') +
-            (r.water_requirement ? recField('Water', r.water_requirement) : '') +
-            (r.notes ? recField('Notes', r.notes) : '') +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(rec.feed_type || 'Feeding') + '</span><span class="ls-rec-date">' + esc(fmtDate(rec.record_date) || '') + '</span></div>' +
+            (rec.quantity ? recField('Quantity', rec.quantity) : '') +
+            (rec.frequency ? recField('Frequency', rec.frequency) : '') +
+            (rec.feeding_time ? recField('Time', rec.feeding_time) : '') +
+            (rec.water_requirement ? recField('Water', rec.water_requirement) : '') +
+            (rec.notes ? recField('Notes', rec.notes) : '') +
             '</div>';
         });
       } else {
-        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-bowl-food"></i><p>No feeding records yet.</p></div>';
+        html += lsRecordEmpty('fa-bowl-food', 'No feeding records yet.');
       }
       el.innerHTML = html;
-      el.querySelector('#btn-save-feed').addEventListener('click', submitFeeding);
+      safeBind('btn-save-feed', submitFeeding);
     });
   }
 
   function submitFeeding() {
     var a = _currentAnimal;
-    var errEl = document.getElementById('fd-err');
+    var errEl = $id('fd-err');
     var payload = { record_date: v('fd-date') || null, feed_type: v('fd-type') || null, quantity: v('fd-qty') || null, frequency: v('fd-freq') || null, feeding_time: v('fd-time') || null, water_requirement: v('fd-water') || null, notes: v('fd-notes') || null };
     setSaving('btn-save-feed', true);
-    lsApi('POST', '/' + a.animal_id + '/feeding', payload).then(function (res) {
+    lsReq(API.Livestock.addFeeding(a.animal_id, payload)).then(function (r) {
       setSaving('btn-save-feed', false);
-      if (res.status === 'success') { lsToast('Feeding record saved', 'success'); loadTabFeeding(); }
-      else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+      if (!r.ok) { errEl.textContent = r.error || 'Failed'; errEl.style.display = 'block'; return; }
+      lsToast('Feeding record saved', 'success');
+      loadTabFeeding();
+      afterMutation();
     });
   }
 
-  /* ── tab: Breeding ── */
   function loadTabBreeding() {
     var a = _currentAnimal;
-    var el = document.getElementById('dp-tab-breeding');
+    if (!a) return;
+    var el = $id('dp-tab-breeding');
     el.innerHTML = '<div class="sk h14 w80"></div>';
-    lsApi('GET', '/' + a.animal_id + '/breeding').then(function (res) {
-      var records = (res.status === 'success' ? res.data : []) || [];
+    lsReq(API.Livestock.breeding(a.animal_id)).then(function (r) {
+      var records = (r.ok ? r.data : []) || [];
       var html = '<div class="ls-add-form"><h4><i class="fas fa-baby" style="color:var(--ls-purple);"></i> Add Breeding Record</h4>' +
         frmGrid(
           frmRow('Breeding Date', '<input class="ls-form-input" type="date" id="br-date">'),
@@ -1583,134 +1815,314 @@
         frmRow('Notes', '<textarea class="ls-form-input" id="br-notes" rows="1" placeholder="Notes…"></textarea>') +
         '<div id="br-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
         '<button class="ls-form-btn primary" id="btn-save-breed"><i class="fas fa-save"></i> Save Breeding Record</button></div>';
+      if (!r.ok) { el.innerHTML = errorCard('retry-tab-breeding', 'Breeding records could not be loaded.'); return; }
       if (records.length) {
-        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> Records</div></div>';
-        records.forEach(function (r) {
+        html += recHeader('Records');
+        records.forEach(function (rec) {
           html += '<div class="ls-rec-card">' +
-            '<div class="ls-rec-hdr"><span class="ls-rec-title">Breeding — ' + esc(fmtDate(r.breeding_date) || '—') + '</span><span class="ls-rec-date">' + esc(r.pregnancy_status || '') + '</span></div>' +
-            (r.method ? recField('Method', r.method.replace('_', ' ')) : '') +
-            (r.partner_info ? recField('Partner', r.partner_info) : '') +
-            (r.expected_delivery_date ? recField('Expected Delivery', fmtDate(r.expected_delivery_date)) : '') +
-            (r.actual_delivery_date ? recField('Actual Delivery', fmtDate(r.actual_delivery_date)) : '') +
-            (r.offspring_count ? recField('Offspring', r.offspring_count) : '') +
-            (r.notes ? recField('Notes', r.notes) : '') +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">Breeding — ' + esc(fmtDate(rec.breeding_date) || '—') + '</span><span class="ls-rec-date">' + esc(rec.pregnancy_status || '') + '</span></div>' +
+            (rec.method ? recField('Method', rec.method.replace('_', ' ')) : '') +
+            (rec.partner_info ? recField('Partner', rec.partner_info) : '') +
+            (rec.expected_delivery_date ? recField('Expected Delivery', fmtDate(rec.expected_delivery_date)) : '') +
+            (rec.actual_delivery_date ? recField('Actual Delivery', fmtDate(rec.actual_delivery_date)) : '') +
+            (rec.offspring_count ? recField('Offspring', rec.offspring_count) : '') +
+            (rec.notes ? recField('Notes', rec.notes) : '') +
             '</div>';
         });
       } else {
-        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-baby"></i><p>No breeding records yet.</p></div>';
+        html += lsRecordEmpty('fa-baby', 'No breeding records yet.');
       }
       el.innerHTML = html;
-      el.querySelector('#btn-save-breed').addEventListener('click', submitBreeding);
+      safeBind('btn-save-breed', submitBreeding);
     });
   }
 
   function submitBreeding() {
     var a = _currentAnimal;
-    var errEl = document.getElementById('br-err');
+    var errEl = $id('br-err');
     var payload = { breeding_date: v('br-date') || null, method: v('br-method') || null, partner_info: v('br-partner') || null, pregnancy_status: v('br-preg') || null, expected_delivery_date: v('br-expected') || null, notes: v('br-notes') || null };
     setSaving('btn-save-breed', true);
-    lsApi('POST', '/' + a.animal_id + '/breeding', payload).then(function (res) {
+    lsReq(API.Livestock.addBreeding(a.animal_id, payload)).then(function (r) {
       setSaving('btn-save-breed', false);
-      if (res.status === 'success') { lsToast('Breeding record saved', 'success'); loadTabBreeding(); }
-      else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+      if (!r.ok) { errEl.textContent = r.error || 'Failed'; errEl.style.display = 'block'; return; }
+      lsToast('Breeding record saved', 'success');
+      loadTabBreeding();
+      afterMutation();
     });
   }
 
-  /* ── tab: Growth ── */
   function loadTabGrowth() {
     var a = _currentAnimal;
-    var el = document.getElementById('dp-tab-growth');
+    if (!a) return;
+    var el = $id('dp-tab-growth');
     el.innerHTML = '<div class="sk h14 w80"></div>';
-    lsApi('GET', '/' + a.animal_id + '/weight').then(function (res) {
-      var records = (res.status === 'success' ? res.data : []) || [];
+    lsReq(API.Livestock.weight(a.animal_id)).then(function (r) {
+      var records = (r.ok ? r.data : []) || [];
       var html = '<div class="ls-add-form"><h4><i class="fas fa-weight-scale" style="color:var(--ls-teal);"></i> Record Weight</h4>' +
         frmGrid(
           frmRow('Measurement Date', '<input class="ls-form-input" type="date" id="wt-date">'),
-          frmRow('Weight (kg) *', '<input class="ls-form-input" type="number" id="wt-kg" placeholder="e.g. 350" min="0.1" step="0.1" required>')
+          frmRow('Weight (kg) *', '<input class="ls-form-input" type="number" id="wt-kg" placeholder="e.g. 350" min="0.1" step="0.1">')
         ) +
         frmRow('Notes', '<input class="ls-form-input" type="text" id="wt-notes" placeholder="e.g. After calving">') +
         '<div id="wt-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
         '<button class="ls-form-btn primary" id="btn-save-wt"><i class="fas fa-save"></i> Save Weight</button></div>';
+      if (!r.ok) { el.innerHTML = errorCard('retry-tab-growth', 'Weight records could not be loaded.'); return; }
       if (records.length >= 2) {
-        // show simple text trend
         var first = records[0];
-        var last  = records[records.length - 1];
-        var diff  = (last.weight_kg - first.weight_kg).toFixed(1);
-        var sign  = diff >= 0 ? '+' : '';
-        html += '<div class="ls-weight-chart"><p><i class="fas fa-chart-line"></i> Growth: ' + esc(first.weight_kg) + ' kg → <strong>' + esc(last.weight_kg) + ' kg</strong> (' + sign + diff + ' kg total)</p></div>';
+        var last = records[records.length - 1];
+        var diff = (last.weight_kg - first.weight_kg).toFixed(1);
+        var sign = diff >= 0 ? '+' : '';
+        html += '<div class="ls-weight-chart"><p><i class="fas fa-chart-line"></i> Growth: ' + esc(String(first.weight_kg)) + ' kg → <strong>' + esc(String(last.weight_kg)) + ' kg</strong> (' + sign + diff + ' kg total)</p></div>';
       }
       if (records.length) {
-        html += '<div class="ls-sec-hdr" style="padding:0 0 8px;"><div class="ls-sec-title"><i class="fas fa-list"></i> Measurements</div></div>';
-        var reversed = records.slice().reverse();
-        reversed.forEach(function (r) {
+        html += recHeader('Measurements');
+        records.slice().reverse().forEach(function (rec) {
           html += '<div class="ls-rec-card">' +
-            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(r.weight_kg) + ' kg</span><span class="ls-rec-date">' + esc(fmtDate(r.measurement_date) || '') + '</span></div>' +
-            (r.notes ? recField('Notes', r.notes) : '') +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(rec.weight_kg) + ' kg</span><span class="ls-rec-date">' + esc(fmtDate(rec.measurement_date) || '') + '</span></div>' +
+            (rec.notes ? recField('Notes', rec.notes) : '') +
             '</div>';
         });
       } else {
-        html += '<div class="ls-empty" style="padding:20px 0;"><i class="fas fa-weight-scale"></i><p>No weight records yet.</p></div>';
+        html += lsRecordEmpty('fa-weight-scale', 'No weight records yet.');
       }
       el.innerHTML = html;
-      el.querySelector('#btn-save-wt').addEventListener('click', submitWeight);
+      safeBind('btn-save-wt', submitWeight);
     });
   }
 
   function submitWeight() {
     var a = _currentAnimal;
-    var errEl = document.getElementById('wt-err');
+    var errEl = $id('wt-err');
     var kg = parseFloat(v('wt-kg'));
     if (!kg || kg <= 0) { errEl.textContent = 'Enter a valid weight'; errEl.style.display = 'block'; return; }
     errEl.style.display = 'none';
     var payload = { weight_kg: kg, measurement_date: v('wt-date') || null, notes: v('wt-notes') || null };
     setSaving('btn-save-wt', true);
-    lsApi('POST', '/' + a.animal_id + '/weight', payload).then(function (res) {
+    lsReq(API.Livestock.addWeight(a.animal_id, payload)).then(function (r) {
       setSaving('btn-save-wt', false);
-      if (res.status === 'success') {
-        lsToast('Weight recorded', 'success');
-        _currentAnimal.weight_kg = kg;
-        var idx = _allAnimals.findIndex(function (x) { return x.animal_id === a.animal_id; });
-        if (idx >= 0) _allAnimals[idx].weight_kg = kg;
-        loadTabGrowth();
-      } else { errEl.textContent = res.detail || 'Failed'; errEl.style.display = 'block'; }
+      if (!r.ok) { errEl.textContent = r.error || 'Failed'; errEl.style.display = 'block'; return; }
+      _currentAnimal.weight_kg = kg;
+      var idx = _allAnimals.findIndex(function (x) { return x.animal_id === a.animal_id; });
+      if (idx >= 0) _allAnimals[idx].weight_kg = kg;
+      lsToast('Weight recorded', 'success');
+      loadTabGrowth();
+      afterMutation();
     });
   }
 
-  /* ─────────────────────────────────────────────
-     ADD ANIMAL
-  ───────────────────────────────────────────── */
-  document.getElementById('form-add-animal').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var errEl = document.getElementById('add-err');
+  function loadTabProduction() {
+    var a = _currentAnimal;
+    if (!a) return;
+    var el = $id('dp-tab-production');
+    el.innerHTML = '<div class="sk h14 w80"></div>';
+    lsReq(API.Livestock.production(a.animal_id)).then(function (r) {
+      var records = (r.ok ? r.data : []) || [];
+      var html = '<div class="ls-add-form"><h4><i class="fas fa-bottle-droplet" style="color:var(--ls-accent);"></i> Add Production Record</h4>' +
+        frmGrid(
+          frmRow('Date', '<input class="ls-form-input" type="date" id="pd-date">'),
+          frmRow('Product', '<select class="ls-form-input" id="pd-type"><option value="milk">Milk</option><option value="eggs">Eggs</option><option value="wool">Wool</option><option value="other">Other</option></select>')
+        ) +
+        frmGrid(
+          frmRow('Quantity', '<input class="ls-form-input" type="number" id="pd-qty" placeholder="e.g. 5" min="0" step="0.1">'),
+          frmRow('Unit', '<input class="ls-form-input" type="text" id="pd-unit" placeholder="e.g. Litres, dozens">')
+        ) +
+        frmRow('Notes', '<textarea class="ls-form-input" id="pd-notes" rows="1" placeholder="Notes…"></textarea>') +
+        '<div id="pd-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
+        '<button class="ls-form-btn primary" id="btn-save-prod"><i class="fas fa-save"></i> Save Production</button></div>';
+      if (!r.ok) { el.innerHTML = errorCard('retry-tab-production', 'Production records could not be loaded.'); return; }
+      if (records.length) {
+        html += recHeader('Records');
+        records.forEach(function (rec) {
+          html += '<div class="ls-rec-card">' +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc(rec.product_type ? rec.product_type.charAt(0).toUpperCase() + rec.product_type.slice(1) : 'Production') + '</span><span class="ls-rec-date">' + esc(fmtDate(rec.record_date) || '') + '</span></div>' +
+            (rec.quantity ? recField('Quantity', rec.quantity + (rec.unit ? ' ' + esc(rec.unit) : '')) : '') +
+            (rec.notes ? recField('Notes', rec.notes) : '') +
+            '</div>';
+        });
+      } else {
+        html += lsRecordEmpty('fa-bottle-droplet', 'No production records yet.');
+      }
+      el.innerHTML = html;
+      safeBind('btn-save-prod', submitProduction);
+    });
+  }
+
+  function submitProduction() {
+    var a = _currentAnimal;
+    var errEl = $id('pd-err');
+    var qty = v('pd-qty') ? parseFloat(v('pd-qty')) : null;
+    var payload = { record_date: v('pd-date') || null, product_type: v('pd-type') || null, quantity: qty, unit: v('pd-unit') || null, notes: v('pd-notes') || null };
+    setSaving('btn-save-prod', true);
+    lsReq(API.Livestock.addProduction(a.animal_id, payload)).then(function (r) {
+      setSaving('btn-save-prod', false);
+      if (!r.ok) { errEl.textContent = r.error || 'Failed'; errEl.style.display = 'block'; return; }
+      lsToast('Production record saved', 'success');
+      loadTabProduction();
+      afterMutation();
+    });
+  }
+
+  function loadTabExpenses() {
+    var a = _currentAnimal;
+    if (!a) return;
+    var el = $id('dp-tab-expenses');
+    el.innerHTML = '<div class="sk h14 w80"></div>';
+    lsReq(API.Livestock.expenses(a.animal_id)).then(function (r) {
+      var records = (r.ok ? r.data : []) || [];
+      var html = '<div class="ls-add-form"><h4><i class="fas fa-receipt" style="color:var(--ls-purple);"></i> Add Expense</h4>' +
+        frmGrid(
+          frmRow('Date', '<input class="ls-form-input" type="date" id="ex-date">'),
+          frmRow('Category', '<select class="ls-form-input" id="ex-cat"><option value="feed">Feed & Nutrition</option><option value="medicine">Medicine</option><option value="veterinary">Veterinary</option><option value="breeding">Breeding</option><option value="equipment">Equipment</option><option value="other">Other</option></select>')
+        ) +
+        frmGrid(
+          frmRow('Amount (₹) *', '<input class="ls-form-input" type="number" id="ex-amt" placeholder="e.g. 500" min="0" step="0.01">'),
+          frmRow('Vendor', '<input class="ls-form-input" type="text" id="ex-vendor" placeholder="Vendor name">')
+        ) +
+        frmRow('Description', '<input class="ls-form-input" type="text" id="ex-desc" placeholder="What was this for?">') +
+        frmRow('Notes', '<textarea class="ls-form-input" id="ex-notes" rows="1" placeholder="Notes…"></textarea>') +
+        '<div id="ex-err" style="color:var(--ls-red);font-size:12px;display:none;margin-bottom:6px;"></div>' +
+        '<button class="ls-form-btn primary" id="btn-save-exp"><i class="fas fa-save"></i> Save Expense</button></div>';
+      if (!r.ok) { el.innerHTML = errorCard('retry-tab-expenses', 'Expense records could not be loaded.'); return; }
+      if (records.length) {
+        html += recHeader('Records');
+        records.forEach(function (rec) {
+          html += '<div class="ls-rec-card">' +
+            '<div class="ls-rec-hdr"><span class="ls-rec-title">' + esc((rec.category || 'Expense').charAt(0).toUpperCase() + (rec.category || 'Expense').slice(1)) + '</span><span class="ls-rec-date">' + esc(fmtDate(rec.expense_date) || '') + '</span></div>' +
+            (rec.amount ? recField('Amount', money(rec.amount)) : '') +
+            (rec.vendor ? recField('Vendor', rec.vendor) : '') +
+            (rec.description ? recField('Description', rec.description) : '') +
+            (rec.notes ? recField('Notes', rec.notes) : '') +
+            '</div>';
+        });
+      } else {
+        html += lsRecordEmpty('fa-receipt', 'No expense records yet.');
+      }
+      el.innerHTML = html;
+      safeBind('btn-save-exp', submitExpense);
+    });
+  }
+
+  function submitExpense() {
+    var a = _currentAnimal;
+    var errEl = $id('ex-err');
+    var amt = v('ex-amt') ? parseFloat(v('ex-amt')) : null;
+    if (!amt || amt <= 0) { errEl.textContent = 'Enter a valid amount'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    var payload = { expense_date: v('ex-date') || null, category: v('ex-cat') || null, amount: amt, vendor: v('ex-vendor') || null, description: v('ex-desc') || null, notes: v('ex-notes') || null };
+    setSaving('btn-save-exp', true);
+    lsReq(API.Livestock.addExpense(a.animal_id, payload)).then(function (r) {
+      setSaving('btn-save-exp', false);
+      if (!r.ok) { errEl.textContent = r.error || 'Failed'; errEl.style.display = 'block'; return; }
+      lsToast('Expense saved', 'success');
+      loadTabExpenses();
+      afterMutation();
+    });
+  }
+
+  function safeBind(id, fn) {
+    var el = $id(id);
+    if (el) el.addEventListener('click', fn);
+  }
+
+  function retryRecordTab(retryAction) {
+    if (retryAction === 'retry-tab-health') loadTabHealth();
+    if (retryAction === 'retry-tab-vaccinations') loadTabVaccinations();
+    if (retryAction === 'retry-tab-treatments') loadTabTreatments();
+    if (retryAction === 'retry-tab-feeding') loadTabFeeding();
+    if (retryAction === 'retry-tab-breeding') loadTabBreeding();
+    if (retryAction === 'retry-tab-growth') loadTabGrowth();
+    if (retryAction === 'retry-tab-production') loadTabProduction();
+    if (retryAction === 'retry-tab-expenses') loadTabExpenses();
+  }
+
+  function afterMutation() {
+    loadOverview();
+    loadAttention();
+    loadEvents();
+    loadActivity();
+  }
+
+  /* ============ photo upload (existing storage API) ============ */
+  function previewPhoto(file, side) {
+    var prev = $id(side + '-photo-prev');
+    if (!prev) return;
+    if (file) {
+      var reader = new FileReader();
+      reader.onload = function () { prev.innerHTML = '<img src="' + esc(String(reader.result)) + '" alt="">'; };
+      reader.readAsDataURL(file);
+    } else {
+      var url = $id(side + '-photo-url').value.trim();
+      prev.innerHTML = url ? '<img src="' + esc(url) + '" alt="" onerror="this.remove()">' : '<i class="fas fa-camera"></i>';
+    }
+  }
+
+  function collectPhoto(side) {
+    var fileEl = $id(side + '-photo');
+    var file = fileEl && fileEl.files && fileEl.files[0];
+    if (file) {
+      return API.Storage.upload(file, 'images').then(function (up) {
+        var url = up && up.url;
+        try { if (fileEl) fileEl.value = ''; } catch (e) {}
+        previewPhoto(null, side);
+        return url || null;
+      }).catch(function () {
+        lsToast('Photo upload failed. Try again or continue without it.', 'error');
+        return null;
+      });
+    }
+    var direct = $id(side + '-photo-url').value.trim();
+    return Promise.resolve(direct || null);
+  }
+
+  /* ============ add / edit animal ============ */
+  function lsOpenModal(id) { $id(id).classList.add('open'); }
+  function lsCloseModal(id) { $id(id).classList.remove('open'); }
+
+  function resetAddModal() {
+    var f = $id('form-add-animal');
+    if (f) f.reset();
+    previewPhoto(null, 'add');
+    var err = $id('add-err'); if (err) err.style.display = 'none';
+  }
+
+  function submitAddAnimal() {
+    var errEl = $id('add-err');
     var name = v('add-name');
     var type = v('add-type');
     if (!name) { errEl.textContent = 'Name is required'; errEl.style.display = 'block'; return; }
     if (!type) { errEl.textContent = 'Select an animal type'; errEl.style.display = 'block'; return; }
     errEl.style.display = 'none';
-    var payload = { name: name, animal_type: type, tag_id: v('add-tag') || null, breed: v('add-breed') || null, gender: v('add-gender') || null, date_of_birth: v('add-dob') || null, weight_kg: v('add-weight') ? parseFloat(v('add-weight')) : null, health_status: v('add-health') || 'healthy', location: v('add-location') || null, source: v('add-source') || null, notes: v('add-notes') || null };
-    var btn = this.querySelector('button[type="submit"]');
-    setSavingEl(btn, true, 'Adding…');
-    lsApi('POST', '', payload).then(function (res) {
-      setSavingEl(btn, false, '<i class="fas fa-plus-circle"></i> Add Animal');
-      if (res.status === 'success') {
-        lsCloseModal('modal-add');
-        document.getElementById('form-add-animal').reset();
-        lsToast(name + ' added successfully', 'success');
-        loadAnimals();
-        loadOverview();
-      } else {
-        errEl.textContent = res.detail || 'Failed to add animal'; errEl.style.display = 'block';
-      }
+    var btn = document.querySelector('#form-add-animal button[type="submit"]');
+    setSavingEl(btn, true, 'Adding…', '<i class="fas fa-circle-plus"></i> Add Animal');
+    collectPhoto('add').then(function (photoUrl) {
+      var payload = {
+        name: name,
+        animal_type: type,
+        tag_id: v('add-tag') || null,
+        breed: v('add-breed') || null,
+        gender: v('add-gender') || null,
+        date_of_birth: v('add-dob') || null,
+        weight_kg: v('add-weight') ? parseFloat(v('add-weight')) : null,
+        health_status: v('add-health') || 'healthy',
+        location: v('add-location') || null,
+        source: v('add-source') || null,
+        photo_url: photoUrl,
+        notes: v('add-notes') || null
+      };
+      return lsReq(API.Livestock.create(payload));
+    }).then(function (r) {
+      setSavingEl(btn, false, 'Adding…', '<i class="fas fa-circle-plus"></i> Add Animal');
+      if (!r.ok) { errEl.textContent = r.error || 'Failed to add animal'; errEl.style.display = 'block'; return; }
+      lsCloseModal('modal-add');
+      resetAddModal();
+      lsToast(name + ' added successfully', 'success');
+      loadAnimals();
+      afterMutation();
     });
-  });
-
-  /* ─────────────────────────────────────────────
-     EDIT ANIMAL
-  ───────────────────────────────────────────── */
-  var _editingId = null;
+  }
 
   function openEditModal(animalId) {
-    var a = _allAnimals.find(function (x) { return x.animal_id === animalId; });
+    var a = (_allAnimals || []).find(function (x) { return x.animal_id === animalId; });
     if (!a) return;
     _editingId = animalId;
     setVal('edit-name', a.name || '');
@@ -1723,7 +2135,9 @@
     setVal('edit-health', a.health_status || 'healthy');
     setVal('edit-location', a.location || '');
     setVal('edit-notes', a.notes || '');
-    document.getElementById('confirm-delete-name').textContent = a.name;
+    setVal('edit-photo-url', a.photo_url || '');
+    previewPhoto(null, 'edit');
+    $id('confirm-delete-name').textContent = a.name;
     lsOpenModal('modal-edit');
   }
 
@@ -1731,240 +2145,259 @@
     if (_currentAnimal) openEditModal(_currentAnimal.animal_id);
   }
 
-  document.getElementById('form-edit-animal').addEventListener('submit', function (e) {
-    e.preventDefault();
+  function submitEditAnimal() {
     if (!_editingId) return;
-    var errEl = document.getElementById('edit-err');
+    var errEl = $id('edit-err');
     var name = v('edit-name');
     if (!name) { errEl.textContent = 'Name is required'; errEl.style.display = 'block'; return; }
     errEl.style.display = 'none';
-    var payload = { name: name, animal_type: v('edit-type') || undefined, tag_id: v('edit-tag') || null, breed: v('edit-breed') || null, gender: v('edit-gender') || null, date_of_birth: v('edit-dob') || null, weight_kg: v('edit-weight') ? parseFloat(v('edit-weight')) : null, health_status: v('edit-health') || undefined, location: v('edit-location') || null, notes: v('edit-notes') || null };
-    var btn = this.querySelector('button[type="submit"]');
-    setSavingEl(btn, true, 'Saving…');
-    lsApi('PUT', '/' + _editingId, payload).then(function (res) {
-      setSavingEl(btn, false, '<i class="fas fa-check"></i> Save Changes');
-      if (res.status === 'success') {
-        lsCloseModal('modal-edit');
-        lsToast('Animal updated', 'success');
-        var idx = _allAnimals.findIndex(function (x) { return x.animal_id === _editingId; });
-        if (idx >= 0) _allAnimals[idx] = Object.assign(_allAnimals[idx], res.data || payload);
-        if (_currentAnimal && _currentAnimal.animal_id === _editingId) {
-          _currentAnimal = Object.assign(_currentAnimal, res.data || payload);
-          renderDetailPanel();
-        }
-        renderGrid(_allAnimals);
-        loadOverview();
-      } else { errEl.textContent = res.detail || 'Failed to save'; errEl.style.display = 'block'; }
+    var btn = document.querySelector('#form-edit-animal button[type="submit"]');
+    var editingId = _editingId;
+    setSavingEl(btn, true, 'Saving…', '<i class="fas fa-check"></i> Save Changes');
+    collectPhoto('edit').then(function (photoUrl) {
+      var payload = {
+        name: name,
+        animal_type: v('edit-type') || undefined,
+        tag_id: v('edit-tag') || null,
+        breed: v('edit-breed') || null,
+        gender: v('edit-gender') || null,
+        date_of_birth: v('edit-dob') || null,
+        weight_kg: v('edit-weight') ? parseFloat(v('edit-weight')) : null,
+        health_status: v('edit-health') || undefined,
+        location: v('edit-location') || null,
+        photo_url: photoUrl,
+        notes: v('edit-notes') || null
+      };
+      if (!photoUrl && !v('edit-photo-url')) payload.photo_url = null;
+      return lsReq(API.Livestock.update(editingId, payload));
+    }).then(function (r) {
+      setSavingEl(btn, false, 'Saving…', '<i class="fas fa-check"></i> Save Changes');
+      if (!r.ok) { errEl.textContent = r.error || 'Failed to save'; errEl.style.display = 'block'; return; }
+      lsCloseModal('modal-edit');
+      lsToast('Animal updated', 'success');
+      var idx = _allAnimals.findIndex(function (x) { return x.animal_id === editingId; });
+      if (idx >= 0) _allAnimals[idx] = Object.assign({}, _allAnimals[idx], r.data || {});
+      if (_currentAnimal && _currentAnimal.animal_id === editingId) {
+        _currentAnimal = Object.assign({}, _currentAnimal, r.data || {});
+        if (_currentFull) _currentFull.animal = _currentAnimal;
+        renderDetailHeader();
+        renderTabInfo();
+      }
+      renderGrid();
+      afterMutation();
     });
-  });
-
-  document.getElementById('btn-delete-animal').addEventListener('click', function () {
-    lsCloseModal('modal-edit');
-    document.getElementById('confirm-delete').classList.add('open');
-  });
-
-  document.getElementById('btn-confirm-delete').addEventListener('click', function () {
-    if (!_editingId) return;
-    lsApi('DELETE', '/' + _editingId).then(function (res) {
-      lsCloseConfirm();
-      if (res.status === 'success') {
-        lsToast('Animal removed', 'success');
-        _allAnimals = _allAnimals.filter(function (a) { return a.animal_id !== _editingId; });
-        if (_currentAnimal && _currentAnimal.animal_id === _editingId) closeDetailPanel();
-        renderGrid(_allAnimals);
-        loadOverview();
-        _editingId = null;
-      } else { lsToast(res.detail || 'Failed to remove', 'error'); }
-    });
-  });
-
-  /* ─────────────────────────────────────────────
-     SEARCH + FILTER
-  ───────────────────────────────────────────── */
-  var _searchTimer = null;
-  document.getElementById('ls-search-input').addEventListener('input', function () {
-    _searchQ = this.value.trim();
-    clearTimeout(_searchTimer);
-    _searchTimer = setTimeout(loadAnimals, 350);
-    document.getElementById('ls-clear-filters').style.display = (_searchQ || _filterType || _filterStatus) ? 'inline' : 'none';
-  });
-  document.getElementById('ls-type-filter').addEventListener('change', function () {
-    _filterType = this.value;
-    loadAnimals();
-    document.getElementById('ls-clear-filters').style.display = (_searchQ || _filterType || _filterStatus) ? 'inline' : 'none';
-  });
-  document.getElementById('ls-clear-filters').addEventListener('click', function () {
-    _searchQ = ''; _filterType = ''; _filterStatus = '';
-    document.getElementById('ls-search-input').value = '';
-    document.getElementById('ls-type-filter').value = '';
-    this.style.display = 'none';
-    document.querySelectorAll('.ls-hov-chip').forEach(function (c) { c.classList.remove('sel'); });
-    loadAnimals();
-  });
-
-  /* Health overview chips filter */
-  document.getElementById('ls-health-overview').addEventListener('click', function (e) {
-    var chip = e.target.closest('.ls-hov-chip');
-    if (!chip) return;
-    var status = chip.dataset.status;
-    if (_filterStatus === status) {
-      _filterStatus = '';
-      chip.classList.remove('sel');
-    } else {
-      _filterStatus = status;
-      document.querySelectorAll('.ls-hov-chip').forEach(function (c) { c.classList.remove('sel'); });
-      chip.classList.add('sel');
-    }
-    document.getElementById('ls-clear-filters').style.display = (_searchQ || _filterType || _filterStatus) ? 'inline' : 'none';
-    loadAnimals();
-  });
-
-  /* ─────────────────────────────────────────────
-     QUICK ACTIONS
-  ───────────────────────────────────────────── */
-  document.getElementById('qa-add').addEventListener('click', function () { lsOpenModal('modal-add'); });
-  document.getElementById('btn-open-add').addEventListener('click', function () { lsOpenModal('modal-add'); });
-  document.getElementById('qa-animals').addEventListener('click', function () { scrollToSection('ls-grid'); });
-
-  function scrollToSection(sectionId) {
-    var el = document.getElementById(sectionId);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  document.getElementById('qa-health').addEventListener('click', function () {
-    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('health'); }, 400); }
-    else scrollToSection('ls-health-overview');
-  });
-  document.getElementById('qa-vacc').addEventListener('click', function () {
-    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('vaccinations'); }, 400); }
-    else { lsToast('Select an animal first to view vaccinations', 'info'); }
-  });
-  document.getElementById('qa-treat').addEventListener('click', function () {
-    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('treatments'); }, 400); }
-    else { lsToast('Select an animal to manage treatments', 'info'); }
-  });
-  document.getElementById('qa-feed').addEventListener('click', function () {
-    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('feeding'); }, 400); }
-    else { lsToast('Select an animal to manage feeding', 'info'); }
-  });
-  document.getElementById('qa-breed').addEventListener('click', function () {
-    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('breeding'); }, 400); }
-    else { lsToast('Select an animal for breeding records', 'info'); }
-  });
-  document.getElementById('qa-growth').addEventListener('click', function () {
-    if (_allAnimals.length === 1) { openDetail(_allAnimals[0].animal_id); setTimeout(function(){ switchTab('growth'); }, 400); }
-    else { lsToast('Select an animal for weight/growth', 'info'); }
-  });
-  document.getElementById('qa-upcoming').addEventListener('click', function () { scrollToSection('events-section-hdr'); });
-  document.getElementById('qa-reminders').addEventListener('click', function () { scrollToSection('events-section-hdr'); });
-  document.getElementById('qa-records').addEventListener('click', function () {
+  function performDelete() {
+    if (!_editingId) return;
+    var targetId = _editingId;
+    _editingId = null;
+    lsCloseModal('modal-edit');
+    lsCloseConfirm();
+    lsReq(API.Livestock.remove(targetId)).then(function (r) {
+      if (!r.ok) { lsToast(r.error || 'Failed to remove animal', 'error'); return; }
+      lsToast('Animal removed', 'success');
+      _allAnimals = _allAnimals.filter(function (a) { return a.animal_id !== targetId; });
+      if (_currentAnimal && _currentAnimal.animal_id === targetId) closeDetailPanel();
+      renderGrid();
+      afterMutation();
+    });
+  }
+
+  function lsCloseConfirm() { $id('confirm-delete').classList.remove('open'); }
+
+  /* ============ quick actions ============ */
+  function quickAction(tab) {
+    if (!_allAnimals || !_allAnimals.length) { lsToast('Add an animal first to record ' + tab + ' details', 'info'); return; }
     if (_allAnimals.length === 1) {
-      openDetail(_allAnimals[0].animal_id);
-      setTimeout(function () { switchTab('info'); }, 400);
+      openDetail(_allAnimals[0].animal_id, tab);
     } else {
-      lsToast('Select an animal to view its records', 'info');
+      openPickModal(tab);
     }
-  });
+  }
 
-  /* ─────────────────────────────────────────────
-     STAT BOX CLICK
-  ───────────────────────────────────────────── */
-  document.getElementById('ls-stats').addEventListener('click', function (e) {
-    var box = e.target.closest('.ls-stat');
-    if (!box) return;
-    var key = box.dataset.statkey;
-    var map = { healthy: 'healthy', monitoring: 'monitoring', needs_attention: 'needs_attention', critical: 'critical' };
-    if (key.indexOf('type_') === 0) {
-      _filterType = key.substring(5);
-      _filterStatus = '';
-      loadAnimals();
-      return;
-    }
-    if (map[key]) {
-      _filterStatus = (_filterStatus === map[key]) ? '' : map[key];
-      document.getElementById('ls-clear-filters').style.display = (_searchQ || _filterType || _filterStatus) ? 'inline' : 'none';
-      loadAnimals();
-    }
-  });
+  function openPickModal(tab) {
+    _pickAction = tab;
+    $id('pick-title').textContent = 'Select animal to record ' + tab;
+    var list = $id('pick-list');
+    var html = '';
+    _allAnimals.forEach(function (a) {
+      html += '<div class="ls-pick-item" data-aid="' + esc(a.animal_id) + '">' +
+        avatarHtml(a, 36) +
+        '<div style="min-width:0;"><div style="font-weight:700;font-size:13px;">' + esc(a.name) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);">' + esc(typeLabel(a.animal_type)) + (a.breed ? ' · ' + esc(a.breed) : '') + '</div></div>' +
+        '<i class="fas fa-chevron-right" style="margin-left:auto;color:var(--text-muted);"></i>' +
+        '</div>';
+    });
+    list.innerHTML = html;
+    lsOpenModal('modal-pick');
+  }
 
-  /* ─────────────────────────────────────────────
-     DETAIL PANEL EVENTS
-  ───────────────────────────────────────────── */
-  document.getElementById('btn-detail-back').addEventListener('click', closeDetailPanel);
-  document.getElementById('btn-detail-edit').addEventListener('click', function () {
-    if (_currentAnimal) openEditModal(_currentAnimal.animal_id);
-  });
-  document.getElementById('dp-tabs').addEventListener('click', function (e) {
+  function handlePickClick(aid) {
+    lsCloseModal('modal-pick');
+    if (_pickAction) openDetail(aid, _pickAction);
+  }
+
+  /* ============ event wiring ============ */
+  $id('form-add-animal').addEventListener('submit', function (e) { e.preventDefault(); submitAddAnimal(); });
+  $id('form-edit-animal').addEventListener('submit', function (e) { e.preventDefault(); submitEditAnimal(); });
+
+  $id('btn-open-add').addEventListener('click', function () { lsOpenModal('modal-add'); });
+  $id('qa-add').addEventListener('click', function () { lsOpenModal('modal-add'); });
+  $id('qa-health').addEventListener('click', function () { quickAction('health'); });
+  $id('qa-vacc').addEventListener('click', function () { quickAction('vaccinations'); });
+  $id('qa-treat').addEventListener('click', function () { quickAction('treatments'); });
+  $id('qa-feed').addEventListener('click', function () { quickAction('feeding'); });
+  $id('qa-prod').addEventListener('click', function () { quickAction('production'); });
+  $id('qa-exp').addEventListener('click', function () { quickAction('expenses'); });
+
+  $id('add-photo').addEventListener('change', function () { previewPhoto(this.files && this.files[0], 'add'); });
+  $id('edit-photo').addEventListener('change', function () { previewPhoto(this.files && this.files[0], 'edit'); });
+  $id('add-photo-url').addEventListener('input', function () { previewPhoto(null, 'add'); });
+  $id('edit-photo-url').addEventListener('input', function () { previewPhoto(null, 'edit'); });
+
+  $id('btn-detail-back').addEventListener('click', closeDetailPanel);
+  $id('btn-detail-edit').addEventListener('click', function () { if (_currentAnimal) openEditModal(_currentAnimal.animal_id); });
+  $id('dp-tabs').addEventListener('click', function (e) {
     var tab = e.target.closest('.ls-tab');
     if (tab) switchTab(tab.dataset.tab);
   });
 
-  /* ─────────────────────────────────────────────
-     MODAL HELPERS
-  ───────────────────────────────────────────── */
-  function lsOpenModal(id) {
-    document.getElementById(id).classList.add('open');
-  }
-  window.lsOpenModal = lsOpenModal;
+  $id('btn-delete-animal').addEventListener('click', function () {
+    if (!_editingId) return;
+    lsCloseModal('modal-edit');
+    lsOpenModal('confirm-delete');
+  });
+  $id('btn-cancel-delete').addEventListener('click', lsCloseConfirm);
+  $id('btn-confirm-delete').addEventListener('click', performDelete);
 
-  function lsCloseModal(id) {
-    document.getElementById(id).classList.remove('open');
-  }
-  window.lsCloseModal = lsCloseModal;
+  /* stats tiles */
+  $id('ls-stats').addEventListener('click', function (e) {
+    var box = e.target.closest('.ls-stat');
+    if (!box) return;
+    var key = box.dataset.statkey;
+    if (!key) return;
+    if (key === 'total') {
+      clearFilters();
+      return;
+    }
+    if (key === 'attention') {
+      _filterAttn = _filterAttn === 'attention' ? '' : 'attention';
+      _filterType = ''; _filterGS = false;
+    } else if (key === 'gss') {
+      _filterGS = !_filterGS;
+      _filterType = ''; _filterAttn = ''; _filterStatus = ''; _filterBreed = '';
+    } else if (key.indexOf('type_') === 0) {
+      var t = key.slice(5);
+      _filterType = _filterType === t ? '' : t;
+      _filterGS = false; _filterAttn = '';
+    }
+    document.querySelectorAll('.ls-stat').forEach(function (s) { s.classList.remove('active'); });
+    var activeNow = (key === 'gss' && _filterGS) || (key === 'attention' && _filterAttn) || (key.indexOf('type_') === 0 && _filterType === key.slice(5));
+    if (activeNow) box.classList.add('active');
+    setVal('ls-type-filter', _filterType);
+    setVal('ls-attn-filter', _filterAttn);
+    applyFilters();
+  });
 
-  function lsCloseConfirm() {
-    document.getElementById('confirm-delete').classList.remove('open');
-  }
-  window.lsCloseConfirm = lsCloseConfirm;
+  /* health overview chips (client-side filter) */
+  $id('ls-health-overview').addEventListener('click', function (e) {
+    var chip = e.target.closest('.ls-hov-chip');
+    if (!chip) return;
+    var status = chip.dataset.status;
+    _filterStatus = _filterStatus === status ? '' : status;
+    document.querySelectorAll('.ls-hov-chip').forEach(function (c) { c.classList.remove('sel'); });
+    if (_filterStatus) chip.classList.add('sel');
+    applyFilters();
+  });
 
+  /* search + filters */
+  var _searchTimer = null;
+  $id('ls-search-input').addEventListener('input', function () {
+    _searchQ = this.value.trim();
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(applyFilters, 250);
+  });
+  $id('ls-type-filter').addEventListener('change', function () {
+    _filterType = this.value;
+    _filterGS = false;
+    document.querySelectorAll('.ls-stat').forEach(function (s) { s.classList.remove('active'); });
+    applyFilters();
+  });
+  $id('ls-breed-filter').addEventListener('change', function () { _filterBreed = this.value; applyFilters(); });
+  $id('ls-health-filter').addEventListener('change', function () { _filterStatus = this.value; applyFilters(); });
+  $id('ls-attn-filter').addEventListener('change', function () { _filterAttn = this.value; applyFilters(); });
+  $id('ls-clear-filters').addEventListener('click', clearFilters);
+
+  /* grid interactions */
+  $id('ls-grid').addEventListener('click', function (e) {
+    var editBtn = e.target.closest('[data-edit]');
+    if (editBtn) { e.stopPropagation(); openEditModal(editBtn.dataset.edit); return; }
+    var card = e.target.closest('.ls-card');
+    if (card) openDetail(card.dataset.aid);
+  });
+
+  /* attention / events / activity item clicks */
+  $id('ls-attention').addEventListener('click', function (e) {
+    var item = e.target.closest('[data-aid]');
+    if (item && item.dataset.aid) openDetail(item.dataset.aid);
+  });
+  $id('ls-events').addEventListener('click', function (e) {
+    var item = e.target.closest('[data-aid]');
+    if (item && item.dataset.aid) openDetail(item.dataset.aid);
+  });
+  $id('ls-activity').addEventListener('click', function (e) {
+    var item = e.target.closest('[data-aid]');
+    if (item && item.dataset.aid) openDetail(item.dataset.aid);
+  });
+
+  /* animal picker */
+  $id('pick-list').addEventListener('click', function (e) {
+    var item = e.target.closest('[data-aid]');
+    if (item) handlePickClick(item.dataset.aid);
+  });
+
+  /* modals: close buttons + overlay */
   document.querySelectorAll('[data-close]').forEach(function (btn) {
     btn.addEventListener('click', function () { lsCloseModal(btn.dataset.close); });
   });
-
-  // close modals on overlay click
   document.querySelectorAll('.ls-modal').forEach(function (m) {
-    m.addEventListener('click', function (e) {
-      if (e.target === m) lsCloseModal(m.id);
-    });
+    m.addEventListener('click', function (e) { if (e.target === m) lsCloseModal(m.id); });
   });
 
-  window.openEditModalCurrent = openEditModalCurrent;
+  /* global data-action routing */
+  document.addEventListener('click', function (e) {
+    var g = e.target.closest('[data-goto-form]');
+    if (g) {
+      var body = $id('dp-tab-' + _activeTab);
+      if (body) {
+        var form = body.querySelector('.ls-add-form');
+        if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      return;
+    }
+    var act = e.target.closest('[data-action]');
+    if (!act) return;
+    var a = act.dataset.action;
+    var aid = act.dataset.aid || '';
+    if (a === 'add-animal') lsOpenModal('modal-add');
+    else if (a === 'clear-filters') clearFilters();
+    else if (a === 'retry-overview') loadOverview();
+    else if (a === 'retry-animals') loadAnimals();
+    else if (a === 'retry-attention') loadAttention();
+    else if (a === 'retry-events') loadEvents();
+    else if (a === 'retry-activity') loadActivity();
+    else if (a === 'retry-detail') openDetail(aid);
+    else if (a === 'edit-current') openEditModalCurrent();
+    else if (a.indexOf('retry-tab-') === 0) retryRecordTab(a);
+  });
 
-  /* ─────────────────────────────────────────────
-     FORM BUILDER HELPERS
-  ───────────────────────────────────────────── */
-  function frmRow(label, inputHtml) {
-    return '<div class="ls-form-row"><label class="ls-form-label">' + label + '</label>' + inputHtml + '</div>';
-  }
-  function frmGrid(a, b) {
-    return '<div class="ls-form-grid">' + a + b + '</div>';
-  }
-  function recField(label, value) {
-    if (!value) return '';
-    return '<div class="ls-rec-field"><strong>' + esc(label) + ':</strong> <span>' + esc(String(value)) + '</span></div>';
-  }
-  function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
-  function setVal(id, val) { var el = document.getElementById(id); if (el) el.value = val; }
-  function setSaving(id, saving) {
-    var btn = document.getElementById(id);
-    if (!btn) return;
-    btn.disabled = saving;
-    if (saving) { btn.dataset.orig = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
-    else if (btn.dataset.orig) btn.innerHTML = btn.dataset.orig;
-  }
-  function setSavingEl(btn, saving, label) {
-    if (!btn) return;
-    btn.disabled = saving;
-    if (saving) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + label;
-    else btn.innerHTML = label;
-  }
-
-  /* ─────────────────────────────────────────────
-     INIT
-  ───────────────────────────────────────────── */
+  /* ============ init ============ */
   loadOverview();
   loadAnimals();
-  loadUpcoming();
+  loadAttention();
+  loadEvents();
+  loadActivity();
 
 })();
 </script>

@@ -49,6 +49,7 @@ class AnimalCreate(BaseModel):
     purchase_price: Optional[float] = None
     location: Optional[str] = None
     health_status: Optional[str] = "healthy"
+    photo_url: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -383,6 +384,7 @@ def create_animal(
         purchase_price=payload.purchase_price,
         location=payload.location,
         health_status=payload.health_status or "healthy",
+        photo_url=payload.photo_url,
         notes=payload.notes,
     )
     db.add(animal)

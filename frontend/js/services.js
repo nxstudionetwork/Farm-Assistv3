@@ -2102,6 +2102,87 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  var LivestockService = {
+    overview: function () {
+      return http('GET', '/livestock/overview').then(unwrap);
+    },
+    eventsUpcoming: function () {
+      return http('GET', '/livestock/events/upcoming').then(unwrap);
+    },
+    list: function () {
+      return http('GET', '/livestock').then(unwrap);
+    },
+    create: function (data) {
+      return http('POST', '/livestock', data).then(unwrap);
+    },
+    get: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId)).then(unwrap);
+    },
+    update: function (animalId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId), data).then(unwrap);
+    },
+    remove: function (animalId) {
+      return http('DELETE', '/livestock/' + encodeURIComponent(animalId)).then(unwrap);
+    },
+    full: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/full').then(unwrap);
+    },
+    attentionSummary: function () {
+      return http('GET', '/livestock/attention/summary').then(unwrap);
+    },
+    recentActivity: function () {
+      return http('GET', '/livestock/activity/recent').then(unwrap);
+    },
+    health: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/health').then(unwrap);
+    },
+    addHealth: function (animalId, data) {
+      return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/health', data).then(unwrap);
+    },
+    vaccinations: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/vaccinations').then(unwrap);
+    },
+    addVaccination: function (animalId, data) {
+      return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/vaccinations', data).then(unwrap);
+    },
+    treatments: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/treatments').then(unwrap);
+    },
+    addTreatment: function (animalId, data) {
+      return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/treatments', data).then(unwrap);
+    },
+    feeding: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/feeding').then(unwrap);
+    },
+    addFeeding: function (animalId, data) {
+      return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/feeding', data).then(unwrap);
+    },
+    breeding: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/breeding').then(unwrap);
+    },
+    addBreeding: function (animalId, data) {
+      return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/breeding', data).then(unwrap);
+    },
+    weight: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/weight').then(unwrap);
+    },
+    addWeight: function (animalId, data) {
+      return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/weight', data).then(unwrap);
+    },
+    production: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/production').then(unwrap);
+    },
+    addProduction: function (animalId, data) {
+      return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/production', data).then(unwrap);
+    },
+    expenses: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/expenses').then(unwrap);
+    },
+    addExpense: function (animalId, data) {
+      return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/expenses', data).then(unwrap);
+    }
+  };
+
   function buildQuery(params) {
     var parts = [];
     for (var k in params) {
@@ -2346,6 +2427,7 @@ Backend: FastAPI served from the same origin (port 8000).
     Learning: LearningService,
     Technique: TechniqueService,
     Calendar: CalendarService,
+    Livestock: LivestockService,
     buildQuery: buildQuery
   };
 
@@ -2386,5 +2468,6 @@ Backend: FastAPI served from the same origin (port 8000).
   global.LearningService = LearningService;
   global.TechniqueService = TechniqueService;
   global.CalendarService = CalendarService;
+  global.LivestockService = LivestockService;
 
 })(window);
