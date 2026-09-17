@@ -793,18 +793,16 @@ def send_otp(payload: OTPRequest, db: Session = Depends(get_db)):
     db.add(otp_record)
     db.commit()
 
-    # Development/Test mode: expose the OTP in the API response so the app can
-    # display it inside the UI for easy testing. Automatically disabled when a
-    # real SMS or email provider is configured.
-    real_provider_configured = bool(
-        settings.SMS_API_KEY or (settings.SMTP_HOST and settings.SMTP_USER)
-    )
+    # Development/Test mode: expose the OTP in the API response (the frontend
+    # logs it to the browser console in development). The debug OTP is only
+    # available while settings.DEBUG is enabled so it is never exposed in
+    # production deployments.
     response = {
         "status": "success",
         "message": "OTP sent successfully",
         "expires_in_seconds": 600,
     }
-    if settings.DEBUG and not real_provider_configured:
+    if settings.DEBUG:
         response["debug_otp"] = otp_code
         response["debug_mode"] = True
 
@@ -854,9 +852,6 @@ def send_farmer_otp(payload: FarmerOTPRequest, db: Session = Depends(get_db)):
     elif channel == "email" and email and "@" in email:
         masked = email[:2] + "***@" + email.split("@")[1]
 
-    real_provider_configured = bool(
-        settings.SMS_API_KEY or (settings.SMTP_HOST and settings.SMTP_USER)
-    )
     response = {
         "status": "success",
         "message": "OTP sent successfully",
@@ -864,7 +859,7 @@ def send_farmer_otp(payload: FarmerOTPRequest, db: Session = Depends(get_db)):
         "masked": masked,
         "expires_in_seconds": 600,
     }
-    if settings.DEBUG and not real_provider_configured:
+    if settings.DEBUG:
         response["debug_otp"] = otp_code
         response["debug_mode"] = True
 
@@ -1299,9 +1294,6 @@ def send_phone_change_otp(
     db.add(otp_record)
     db.commit()
 
-    real_provider_configured = bool(
-        settings.SMS_API_KEY or (settings.SMTP_HOST and settings.SMTP_USER)
-    )
     masked = new_phone[:3] + "****" + new_phone[-2:]
     response = {
         "status": "success",
@@ -1309,7 +1301,7 @@ def send_phone_change_otp(
         "masked_phone": masked,
         "expires_in_seconds": 600,
     }
-    if settings.DEBUG and not real_provider_configured:
+    if settings.DEBUG:
         response["debug_otp"] = otp_code
         response["debug_mode"] = True
     return response
