@@ -629,9 +629,7 @@
           if (e && (e.status === 401 || (e.detail && String(e.detail).indexOf('expired') > -1) || String(e.message || '').indexOf('401') > -1)) {
             window.AnPage.showFatal('Your session has expired. Please sign in again.');
           } else {
-            var dbgExtra = '';
-            try { dbgExtra = ' || STACK: ' + ((e && e.stack) || 'none').split('\n').slice(0, 6).join('\n'); } catch (e9) {}
-            window.AnPage.showFatal('Could not reach the analytics service. ' + (e && e.message ? e.message : String(e)) + dbgExtra);
+            window.AnPage.showFatal('Could not reach the analytics service. ' + (e && e.message ? e.message : ''));
           }
         });
       },
@@ -1480,20 +1478,9 @@
     fetchSections = function (keys, params) {
       var out = {};
       var jobs = keys.map(function (k) {
-        if (!SV[k]) {
-          out[k] = null;
-          try { window.__anMissing = window.__anMissing || []; window.__anMissing.push(String(k)); } catch (e3) {}
-          return Promise.resolve();
-        }
+        if (!SV[k]) { out[k] = null; return Promise.resolve(); }
         var p = params || state();
-        try { window.__anPerf = window.__anPerf || {}; window.__anPerf[String(k)] = ['start', Date.now()]; } catch (e0) {}
-        return SV[k](p).then(function (r) {
-          try { window.__anPerf[String(k)] = ['ok', Date.now()]; } catch (e0) {}
-          out[k] = r;
-        }).catch(function (e) {
-          try { window.__anPerf[String(k)] = ['err', Date.now()]; } catch (e0) {}
-          out[k] = null;
-        });
+        return SV[k](p).then(function (r) { out[k] = r; }).catch(function (e) { out[k] = null; });
       });
       return Promise.all(jobs).then(function () { return out; });
     };
