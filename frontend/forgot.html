@@ -52,11 +52,6 @@
     .auth-footer a{color:#2e7d32;font-size:13px;font-weight:600;text-decoration:none}
     .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);color:#fff;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.15);z-index:2000;animation:fadeUp .3s ease;display:flex;align-items:center;gap:10px;max-width:90vw}
     .toast.success{background:#1a3c2a}.toast.danger{background:#c62828}.toast.info{background:#1565c0}
-    .dev-otp-box{display:none;margin-bottom:16px;padding:12px 14px;border:1.5px dashed #ff9800;border-radius:12px;background:#fff8e1;color:#5d4037;animation:fadeUp .3s ease}
-    .dev-otp-box.show{display:block}
-    .dev-otp-box .dev-otp-label{font-size:11px;font-weight:700;color:#e65100;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
-    .dev-otp-box .dev-otp-code{font-size:26px;font-weight:800;letter-spacing:8px;color:#0B3D2E;font-variant-numeric:tabular-nums}
-    .dev-otp-box .dev-otp-note{font-size:11px;color:#8a6d3b;margin-top:4px}
     .success-icon{text-align:center;margin:20px 0}
     .success-icon i{font-size:60px;color:#4caf50}
     .profile-preview{text-align:center;padding:12px 0;display:none}.profile-preview.show{display:block;animation:fadeUp .3s ease}
@@ -72,12 +67,6 @@
     </div>
     <div class="auth-body">
       <!-- Step 1: Choose recovery method -->
-      <div class="dev-otp-box" id="dev-otp-box" role="status" aria-live="polite">
-        <div class="dev-otp-label"><i class="fas fa-flask" aria-hidden="true"></i> Development Mode Only</div>
-        <div>Your verification code is:</div>
-        <div class="dev-otp-code" id="dev-otp-code">0000</div>
-        <div class="dev-otp-note">This code is shown for local testing only. It is hidden in production when SMS/email providers are configured.</div>
-      </div>
       <div class="step active" id="step-1">
         <div class="step-title">Forgot PIN?</div>
         <div class="step-desc">Choose how you'd like to recover your PIN</div>
@@ -170,19 +159,11 @@
 
     function showDevOtp(result) {
       var code = result && (result.debug_otp || (result.data && result.data.debug_otp));
-      var box = document.getElementById('dev-otp-box');
-      var codeEl = document.getElementById('dev-otp-code');
-      if (!box || !codeEl) return;
-      if (!code) { box.classList.remove('show'); return; }
-      codeEl.textContent = code;
-      box.classList.add('show');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (!code || !result.debug_mode) return;
+      console.log('[Farm Assist] Development OTP: ' + code, 'Use this code to verify in development only.');
     }
 
-    function hideDevOtp() {
-      var box = document.getElementById('dev-otp-box');
-      if (box) box.classList.remove('show');
-    }
+    function hideDevOtp() {}
 
     var _recoveryMethod = 'phone';
     var _recoveryPhone = null;

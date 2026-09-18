@@ -152,6 +152,9 @@ async def startup():
     def _run_seed_suite():
         db = SessionLocal()
         try:
+            from app.database.restore_historical_accounts import ensure_historical_accounts
+            restore_summary = ensure_historical_accounts(db)
+
             from app.database.seed_demo_login import ensure_demo_login_user
             demo_login = ensure_demo_login_user(db)
 
