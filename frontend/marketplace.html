@@ -26,8 +26,8 @@
     .mp-btn.ghost:hover{border-color:var(--mp-green);color:var(--mp-green)}
     .mp-btn.danger{background:#fff5f5;color:#c0392b;border:1px solid #f5c6c6}
     .mp-btn:disabled{opacity:.5;cursor:not-allowed}
-    .mp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-    @media(max-width:960px){.mp-stats{grid-template-columns:repeat(2,1fr)}}
+    .mp-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+    @media(max-width:960px){.mp-stats{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:560px){.mp-stats{grid-template-columns:repeat(2,1fr)}}
     .mp-stat{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--mp-radius);padding:13px 15px;display:flex;flex-direction:column;gap:4px}
     .mp-stat .k{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}
@@ -339,6 +339,7 @@
     <div class="mp-stats" id="stats">
       <div class="mp-stat"><span class="k">Active Listings</span><span class="v">–</span><span class="s">live right now</span></div>
       <div class="mp-stat accent"><span class="k">Awaiting Buyer</span><span class="v">–</span><span class="s">stock ready to sell</span></div>
+      <div class="mp-stat"><span class="k">Pending Sales</span><span class="v">–</span><span class="s">awaiting completion</span></div>
       <div class="mp-stat"><span class="k">Sold Items</span><span class="v">–</span><span class="s">completed sales</span></div>
       <div class="mp-stat gold"><span class="k">Total Revenue</span><span class="v">–</span><span class="s">from completed sales</span></div>
     </div>
@@ -794,7 +795,7 @@
     function statsSkeleton() {
       if (ST.dash || !$('stats')) return;
       var s = '';
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 5; i++) {
         s += '<div class="mp-stat"><span class="k">Loading…</span><span class="v"><span class="skel"></span></span><span class="s">fetching live data</span></div>';
       }
       $('stats').innerHTML = s;
@@ -803,7 +804,7 @@
     function statsUnavailable() {
       if (ST.dash || !$('stats')) return;
       var s = '';
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 5; i++) {
         s += '<div class="mp-stat"><span class="k">&nbsp;</span><span class="v">–</span><span class="s">unavailable</span></div>';
       }
       $('stats').innerHTML = s;
@@ -821,6 +822,7 @@
         var stats = [
           ['Active Listings', (d.active_listings || 0), 'live right now', ''],
           ['Awaiting Buyer', (d.awaiting_buyer || 0), 'stock ready to sell', 'accent'],
+          ['Pending Sales', ((d.pending_sales || 0) + (d.confirmed_sales || 0)), 'awaiting completion', ''],
           ['Sold Items', (d.sold_items || 0), 'completed sales', ''],
           ['Total Revenue', fmtPrice((d.total_sales || {}).value || 0), (d.total_sales || {}).count + ' completed', 'gold']
         ];
@@ -1014,7 +1016,7 @@
             : 'List your first crop, product or farm item to start selling through Farm Assist.')) + '</p>' +
           (filtered
             ? '<button class="mp-btn ghost" id="empty-clear"><i class="fas fa-rotate-left"></i> Clear filters</button>'
-            : '<button class="mp-btn primary" id="empty-add"><i class="fas fa-plus"></i> Create your first listing</button>') +
+            : '<button class="mp-btn primary" id="empty-add"><i class="fas fa-plus"></i> List New Item</button>') +
           '</div>';
         var emptyAdd = $('empty-add');
         if (emptyAdd) emptyAdd.addEventListener('click', openCreateForm);
