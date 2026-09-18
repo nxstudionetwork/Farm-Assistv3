@@ -44,6 +44,9 @@
     .mp-tab.active{background:var(--mp-green);border-color:var(--mp-green);color:#fff}
     .mp-tab .tab-count{background:var(--bg-card-soft);border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px}
     .mp-tab.active .tab-count{background:var(--soft-green);color:var(--mp-green)}
+    .mp-actions .tab-count{background:var(--bg-card-soft);border-radius:10px;padding:1px 7px;font-size:10px;margin-left:2px;color:var(--text-secondary)}
+    .mp-actions .mp-btn.active{background:var(--soft-green);border-color:var(--mp-green);color:var(--mp-green)}
+    .mp-actions .mp-btn.active .tab-count{background:var(--mp-green);color:#fff}
     .mp-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
     .mp-search{position:relative;flex:1;min-width:200px}
     .mp-search input{width:100%;padding:10px 14px 10px 36px;border-radius:var(--mp-radius-sm);border:1px solid var(--border-light);background:var(--bg-card-soft);font-size:13px;color:var(--text-primary);outline:none}
@@ -115,6 +118,8 @@
     .is-table-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--mp-radius);overflow:hidden}
     .sale-row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--border-light);flex-wrap:wrap}
     .sale-row:last-child{border-bottom:none}
+    .is-table-card .sale-row:hover{background:var(--bg-card-soft)}
+    .is-table-card .sale-row .t{cursor:pointer}
     .sale-thumb{width:46px;height:46px;border-radius:8px;object-fit:cover;background:#e9ecef;flex-shrink:0}
     .sale-thumb-fallback{width:46px;height:46px;border-radius:8px;background:linear-gradient(135deg,#C9760A,#E8A83D);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
     .sale-info{flex:1;min-width:170px}
@@ -143,9 +148,11 @@
     .enq-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
     .mp-sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1039;display:none}
     .mp-sheet-bg.open{display:block}
+    .mp-sheet-bg.full{background:rgba(0,0,0,.55)}
     .mp-sheet{position:fixed;z-index:1040;background:var(--bg-card);display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.16,1,.3,1)}
     .mp-sheet.bottom{bottom:0;left:0;right:0;max-height:92vh;border-radius:var(--mp-radius) var(--mp-radius) 0 0;transform:translateY(100%)}
     .mp-sheet.bottom.open{transform:translateY(0)}
+    .mp-sheet.bottom.full{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;z-index:1650;border-radius:0}
     .mp-sheet-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border-light)}
     .mp-sheet-head h3{margin:0;font-size:16px;font-weight:800}
     .mp-sheet-head button{background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer}
@@ -310,7 +317,7 @@
     <!-- QUICK ACTIONS -->
     <div class="mp-actions">
       <button class="mp-btn primary" id="quick-add"><i class="fas fa-plus"></i> &nbsp;List New Item</button>
-      <button class="mp-btn ghost" id="my-listings-btn"><i class="fas fa-boxes-stacked"></i> My Listings</button>
+      <button class="mp-btn ghost" id="my-listings-btn"><i class="fas fa-boxes-stacked"></i> My Listings <span class="tab-count" id="cnt-listings">0</span></button>
     </div>
 
     <!-- BACKEND STATUS BANNER -->
@@ -346,7 +353,6 @@
 
     <!-- MARKETPLACE NAVIGATION (single horizontal bar) -->
     <div class="mp-tabs" id="tabs" role="tablist" aria-label="Marketplace sections">
-      <button class="mp-tab active" data-tab="listings" role="tab" aria-selected="true"><i class="fas fa-boxes-stacked"></i> Listings <span class="tab-count" id="cnt-listings">0</span></button>
       <button class="mp-tab" data-tab="active"><i class="fas fa-bullseye"></i> Active <span class="tab-count" id="cnt-active">0</span></button>
       <button class="mp-tab" data-tab="pending"><i class="fas fa-clock"></i> Pending <span class="tab-count" id="cnt-pending">0</span></button>
       <button class="mp-tab" data-tab="sold"><i class="fas fa-check-circle"></i> Sold <span class="tab-count" id="cnt-sold">0</span></button>
@@ -355,10 +361,19 @@
       <button class="mp-tab" data-tab="insights"><i class="fas fa-lightbulb"></i> Insights</button>
     </div>
 
-    <!-- TAB: LISTINGS (default) -->
+    <!-- TAB: LISTINGS / MY LISTINGS (default, orders-page style) -->
     <section id="tab-listings" class="mp-tabpane">
       <div class="mp-pane-body">
         <div class="mp-hint"><i class="fas fa-circle-info"></i> Manage every item you are selling, including sold and cancelled listings.</div>
+        <div class="mp-status-pills" id="l-status-pills">
+          <button class="mp-pill active" data-status="">All</button>
+          <button class="mp-pill" data-status="active">Active</button>
+          <button class="mp-pill" data-status="pending">Pending</button>
+          <button class="mp-pill" data-status="paused">Paused</button>
+          <button class="mp-pill" data-status="sold">Sold</button>
+          <button class="mp-pill" data-status="expired">Expired</button>
+          <button class="mp-pill" data-status="cancelled">Cancelled</button>
+        </div>
         <div class="mp-toolbar" id="listings-tools">
           <div class="mp-search"><i class="fas fa-magnifying-glass"></i><input id="l-search" maxlength="60" placeholder="Search your listings"></div>
           <select class="mp-tbfield" id="f-cat"><option value="">All categories</option></select>
@@ -370,7 +385,7 @@
           <button class="mp-btn ghost" id="f-apply"><i class="fas fa-magnifying-glass"></i> Apply</button>
           <button class="mp-btn ghost" id="f-reset"><i class="fas fa-rotate-left"></i> Reset</button>
         </div>
-        <div class="is-grid" id="l-grid"></div>
+        <div class="is-table-card" id="l-grid"></div>
         <button class="mp-loadmore" id="l-more" style="display:none">Load more</button>
       </div>
     </section>
@@ -672,16 +687,22 @@
       return 'Something went wrong. Please try again.';
     }
     function openSheet(id) {
-      $('sheet-bg').classList.add('open');
+      var bg = $('sheet-bg');
+      bg.classList.add('open');
+      bg.classList.toggle('full', id === 'sheet-listing');
       $(id).classList.add('open');
+      $(id).classList.toggle('full', id === 'sheet-listing');
     }
     function closeSheet(id) {
       $(id).classList.remove('open');
+      $(id).classList.remove('full');
       if (!document.querySelector('.mp-sheet.open')) $('sheet-bg').classList.remove('open');
+      $('sheet-bg').classList.remove('full');
     }
     function closeAllSheets() {
-      document.querySelectorAll('.mp-sheet.open').forEach(function (s) { s.classList.remove('open'); });
+      document.querySelectorAll('.mp-sheet.open').forEach(function (s) { s.classList.remove('open'); s.classList.remove('full'); });
       $('sheet-bg').classList.remove('open');
+      $('sheet-bg').classList.remove('full');
     }
     function setBtn(el, busy, busyHtml, normalHtml) {
       if (!el) return;
@@ -960,10 +981,14 @@
     }
 
     function skeletonGrid() {
-      var h = '';
-      for (var i = 0; i < 6; i++) h += '<div class="mp-skel"></div>';
-      if ($('l-grid')) $('l-grid').innerHTML = h;
-      if ($('active-grid')) $('active-grid').innerHTML = h;
+      var rowHtml = '';
+      for (var i = 0; i < 6; i++) {
+        rowHtml += '<div class="sale-row"><div class="sale-thumb" style="background:var(--bg-card-soft)"></div><div class="mp-skel" style="height:48px;flex:1;border:none;animation:mpSh 1.2s infinite"></div></div>';
+      }
+      var cardHtml = '';
+      for (var j = 0; j < 6; j++) cardHtml += '<div class="mp-skel"></div>';
+      if ($('l-grid')) $('l-grid').innerHTML = rowHtml;
+      if ($('active-grid')) $('active-grid').innerHTML = cardHtml;
     }
 
     function gridError(el, message, retryFn, detailLine) {
@@ -1024,7 +1049,40 @@
         if (emptyClear) emptyClear.addEventListener('click', resetFilters);
         return;
       }
-      grid.innerHTML = ST.listings.map(listingCard).join('');
+      grid.innerHTML = ST.listings.map(listingRow).join('');
+    }
+
+    function listingRow(l) {
+      var actions = '';
+      if (l.status === 'active' || l.status === 'pending') {
+        actions += '<button class="mp-link-btn hot" data-act="sale" data-id="' + esc(l.id) + '"><i class="fas fa-check-circle"></i> Mark Sold</button>';
+      }
+      if (l.status === 'active') {
+        actions += '<button class="mp-link-btn" data-act="pause" data-id="' + esc(l.id) + '"><i class="fas fa-pause"></i> Pause</button>';
+      } else if (l.status === 'paused') {
+        actions += '<button class="mp-link-btn" data-act="resume" data-id="' + esc(l.id) + '"><i class="fas fa-play"></i> Resume</button>';
+      }
+      actions += '<button class="mp-link-btn" data-act="edit" data-id="' + esc(l.id) + '"><i class="fas fa-pen"></i> Edit</button>';
+      actions += '<button class="mp-link-btn" data-act="view" data-id="' + esc(l.id) + '"><i class="fas fa-eye"></i> View</button>';
+      if (l.status !== 'sold') {
+        actions += '<button class="mp-link-btn danger" data-act="del" data-id="' + esc(l.id) + '"><i class="fas fa-trash"></i> Delete</button>';
+      }
+      return '<div class="sale-row">' +
+        thumb(l, 'fa-seedling') +
+        '<div class="sale-info">' +
+        '<div class="t" onclick="window.__mpView && window.__mpView(\'' + esc(l.id) + '\')">' + esc(l.title) + '</div>' +
+        '<div class="m">' + statusChip(l.status || '—') +
+        '<span><i class="fas fa-boxes"></i> ' + qtyFmt(l.remaining_quantity, l.unit) + ' left</span>' +
+        (l.location ? '<span><i class="fas fa-location-dot"></i> ' + esc(l.location) + '</span>' : '') +
+        (l.created_at ? '<span><i class="far fa-calendar"></i> ' + esc(timeAgo(l.created_at)) + '</span>' : '') +
+        '</div></div>' +
+        '<div class="sale-right">' +
+        '<div style="text-align:right">' +
+        '<div class="sale-amount">' + fmtPrice(l.price) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-secondary)">per ' + esc(l.unit) + '</div>' +
+        '</div>' +
+        '<div class="sale-btns">' + actions + '</div>' +
+        '</div></div>';
     }
 
     function listingCard(l) {
@@ -1785,6 +1843,13 @@
         t.setAttribute('aria-selected', t.dataset.tab === section ? 'true' : 'false');
       });
 
+      // My Listings button reflects the active pane
+      var mlb = $('my-listings-btn');
+      if (mlb) mlb.classList.toggle('active', pane === 'listings');
+
+      // Keep the listings status pills in sync
+      if (pane === 'listings') setActivePills('l-status-pills', listStatus || $('f-status').value || '');
+
       // Load content for the selected pane
       if (pane === 'listings') loadListings(true);
       else if (pane === 'active') loadActiveListings(true);
@@ -1795,8 +1860,6 @@
         loadSales(false);
       } else if (pane === 'enquiries') loadEnquiries(false);
       else if (pane === 'insights') loadInsights();
-      
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     /* ───────── Events ───────── */
@@ -1844,6 +1907,17 @@
       // Tabs
       document.querySelectorAll('.mp-tab').forEach(function (t) {
         t.addEventListener('click', function () { switchTab(t.dataset.tab); });
+      });
+
+      // My Listings status pills (orders-page style quick filter)
+      $('l-status-pills').addEventListener('click', function (e) {
+        var pill = e.target.closest('.mp-pill');
+        if (!pill) return;
+        ST.listStatus = pill.dataset.status || '';
+        syncStatusField();
+        setActivePills('l-status-pills', ST.listStatus);
+        page = 1;
+        loadListings(true);
       });
 
       // Listings toolbar (search / filter / sort)
