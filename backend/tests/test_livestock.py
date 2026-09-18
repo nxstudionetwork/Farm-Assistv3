@@ -152,6 +152,41 @@ def test_livestock_crud_and_records(token_a):
         assert r.status_code == 200, path
         assert len(r.json()["data"]) == 1, path
 
+    # update each record type (PUT) and verify persistence
+    def _first(path):
+        rows = client.get(f"/api/v1/livestock/{aid}/{path}", headers=h).json()["data"]
+        assert rows, path
+        return rows[0]
+
+    id_keys = {
+        "health": "record_id", "vaccinations": "vacc_id", "treatments": "treatment_id",
+        "feeding": "feed_id", "breeding": "breeding_id", "weight": "weight_id",
+        "production": "production_id", "expenses": "expense_id",
+    }
+    payloads = {
+        "health": {"health_status": "critical", "notes": "updated"},
+        "vaccinations": {"vaccine_name": "FMD-II", "dose": "3ml"},
+        "treatments": {"issue": "leg-updated", "status": "completed"},
+        "feeding": {"feed_type": "Silage", "quantity": "6 kg"},
+        "breeding": {"pregnancy_status": "delivered", "offspring_count": 1},
+        "weight": {"weight_kg": 365.5, "notes": "edited"},
+        "production": {"product_type": "milk", "quantity": 6, "unit": "litres"},
+        "expenses": {"amount": 300, "vendor": "New Vendor"},
+    }
+    for path, key in id_keys.items():
+        rec = _first(path)
+        rid = rec[key]
+        r = client.put(f"/api/v1/livestock/{aid}/{path}/{rid}", json=payloads[path], headers=h)
+        assert r.status_code == 200, f"{path}: {r.text}"
+    assert _first("health")["health_status"] == "critical"
+    assert _first("vaccinations")["vaccine_name"] == "FMD-II"
+    assert _first("treatments")["status"] == "completed"
+    assert _first("feeding")["feed_type"] == "Silage"
+    assert _first("breeding")["pregnancy_status"] == "delivered"
+    assert abs(float(_first("weight")["weight_kg"]) - 365.5) < 0.001
+    assert abs(float(_first("production")["quantity"]) - 6) < 0.001
+    assert abs(float(_first("expenses")["amount"]) - 300) < 0.001
+
     # attention surfaced from real records (follow-up overdue + vaccination upcoming + delivery upcoming)
     att = client.get("/api/v1/livestock/attention/summary", headers=h)
     all_ev = att.json()["data"]["all"]
@@ -200,6 +235,15 @@ def test_cross_farmer_isolation(token_a):
     assert r.status_code == 404
     r = client.get("/api/v1/livestock", headers=h_b)
     assert r.json()["data"] == []
+
+    # sub-record update isolation
+    client.post(f"/api/v1/livestock/{aid}/health", json={
+        "record_date": _today(), "health_status": "healthy",
+    }, headers=h_a)
+    rid = client.get(f"/api/v1/livestock/{aid}/health", headers=h_a).json()["data"][0]["record_id"]
+    assert client.get(f"/api/v1/livestock/{aid}/health", headers=h_b).status_code == 404
+    r = client.put(f"/api/v1/livestock/{aid}/health/{rid}", json={"health_status": "critical"}, headers=h_b)
+    assert r.status_code == 404
 
 
 def test_no_fake_zero_or_undefined(token_a):

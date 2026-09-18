@@ -62,6 +62,7 @@ class Livestock(Base):
     weight_records = relationship("LivestockWeightRecord", back_populates="animal", cascade="all, delete-orphan")
     production_records = relationship("LivestockProductionRecord", back_populates="animal", cascade="all, delete-orphan")
     expense_records = relationship("LivestockExpenseRecord", back_populates="animal", cascade="all, delete-orphan")
+    photos = relationship("LivestockPhoto", back_populates="animal", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_livestock_user_type", "user_id", "animal_type"),
@@ -236,3 +237,25 @@ class LivestockExpenseRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     animal = relationship("Livestock", back_populates="expense_records")
+
+
+class LivestockPhoto(Base):
+    """One real photo per row. Stored via the authenticated /storage/upload
+    endpoint, persisted here with a non-empty photo_url. No fake entries."""
+
+    __tablename__ = "livestock_photos"
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    photo_id = Column(String(20), unique=True, index=True)
+    animal_id = Column(String(36), ForeignKey("livestock.id"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+
+    photo_url = Column(String(500), nullable=False)
+    caption = Column(String(200), nullable=True)
+    sort_order = Column(Integer, default=0)
+    is_primary = Column(Boolean, default=False)
+    photo_type = Column(String(20), default="vault")
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    animal = relationship("Livestock", back_populates="photos")

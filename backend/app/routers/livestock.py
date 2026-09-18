@@ -24,6 +24,7 @@ from app.models.livestock import (
     LivestockWeightRecord,
     LivestockProductionRecord,
     LivestockExpenseRecord,
+    LivestockPhoto,
 )
 from app.utils.notification_helper import create_notification
 from app.models.notification import Notification
@@ -1568,3 +1569,155 @@ def get_animal_full(
             "attention": upcoming,
         },
     }
+
+
+# ─────────────────────────────────────────────────────────
+# PHOTO VAULT — multiple photos per animal (real storage)
+# ─────────────────────────────────────────────────────────
+
+class LivestockPhotoCreate(BaseModel):
+    photo_url: str
+    caption: Optional[str] = None
+    sort_order: int = 0
+    is_primary: bool = False
+    photo_type: str = "vault"
+
+
+class LivestockPhotoUpdate(BaseModel):
+    caption: Optional[str] = None
+    sort_order: Optional[int] = None
+    is_primary: Optional[bool] = None
+    photo_type: Optional[str] = None
+
+
+def _get_photo_or_404(db, animal_id: str, photo_id: str, uid: str) -> LivestockPhoto:
+    photo = db.query(LivestockPhoto).filter(
+        LivestockPhoto.id == photo_id,
+        LivestockPhoto.animal_id == animal_id,
+        LivestockPhoto.user_id == uid,
+    ).first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    return photo
+
+
+def _photo_dict(p: LivestockPhoto) -> dict:
+    return {
+        "id": p.id,
+        "photo_id": p.photo_id,
+        "animal_id": p.animal_id,
+        "photo_url": p.photo_url,
+        "caption": p.caption,
+        "sort_order": p.sort_order,
+        "is_primary": p.is_primary,
+        "photo_type": p.photo_type,
+        "created_at": p.created_at,
+    }
+
+
+@router.get("/{animal_id}/photos")
+def list_photos(
+    animal_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _get_animal_or_404(db, animal_id, current_user.id)
+    photos = db.query(LivestockPhoto).filter(
+        LivestockPhoto.animal_id == animal_id,
+        LivestockPhoto.user_id == current_user.id,
+    ).order_by(LivestockPhoto.sort_order.asc(), LivestockPhoto.created_at.desc()).all()
+    return {"status": "success", "data": [_photo_dict(p) for p in photos]}
+
+
+@router.post("/{animal_id}/photos")
+def add_photo(
+    animal_id: str,
+    payload: LivestockPhotoCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _get_animal_or_404(db, animal_id, current_user.id)
+    if not payload.photo_url or not payload.photo_url.strip():
+        raise HTTPException(status_code=400, detail="photo_url is required")
+
+    photo = LivestockPhoto(
+        id=generate_id("FA-LPH", db, LivestockPhoto),
+        photo_id=generate_id("PH", db, LivestockPhoto),
+        animal_id=animal_id,
+        user_id=current_user.id,
+        photo_url=payload.photo_url.strip(),
+        caption=payload.caption,
+        sort_order=payload.sort_order,
+        is_primary=payload.is_primary,
+        photo_type=payload.photo_type or "vault",
+    )
+
+    if payload.is_primary:
+        for other in db.query(LivestockPhoto).filter(
+            LivestockPhoto.animal_id == animal_id,
+            LivestockPhoto.user_id == current_user.id,
+            LivestockPhoto.id != photo.id,
+        ).all():
+            other.is_primary = False
+
+    db.add(photo)
+    db.commit()
+    db.refresh(photo)
+
+    try:
+        create_notification(
+            db=db,
+            user_id=current_user.id,
+            title="Photo Added",
+            message=f"A photo was added to the livestock photo vault.",
+            notification_type="system",
+            icon="fa-camera",
+            action_url="livestock.html",
+        )
+    except Exception:
+        db.rollback()
+
+    return {"status": "success", "message": "Photo added to vault", "data": _photo_dict(photo)}
+
+
+@router.put("/{animal_id}/photos/{photo_id}")
+def update_photo(
+    animal_id: str,
+    photo_id: str,
+    payload: LivestockPhotoUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    photo = _get_photo_or_404(db, animal_id, photo_id, current_user.id)
+    if payload.caption is not None:
+        photo.caption = payload.caption
+    if payload.sort_order is not None:
+        photo.sort_order = payload.sort_order
+    if payload.photo_type is not None:
+        photo.photo_type = payload.photo_type
+    if payload.is_primary is not None:
+        photo.is_primary = payload.is_primary
+        if payload.is_primary:
+            for other in db.query(LivestockPhoto).filter(
+                LivestockPhoto.animal_id == animal_id,
+                LivestockPhoto.user_id == current_user.id,
+                LivestockPhoto.id != photo.id,
+            ).all():
+                other.is_primary = False
+
+    db.commit()
+    db.refresh(photo)
+    return {"status": "success", "message": "Photo updated", "data": _photo_dict(photo)}
+
+
+@router.delete("/{animal_id}/photos/{photo_id}")
+def delete_photo(
+    animal_id: str,
+    photo_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    photo = _get_photo_or_404(db, animal_id, photo_id, current_user.id)
+    db.delete(photo)
+    db.commit()
+    return {"status": "success", "message": "Photo removed from vault", "data": None}
