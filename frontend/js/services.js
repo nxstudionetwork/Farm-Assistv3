@@ -712,6 +712,19 @@ Backend: FastAPI served from the same origin (port 8000).
     getFilters: function () {
       return http('GET', '/tools-equipment/filters').then(unwrap);
     },
+    browse: function (params) {
+      var qs = '';
+      if (params) {
+        var parts = [];
+        Object.keys(params).forEach(function (k) {
+          if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+            parts.push(k + '=' + encodeURIComponent(params[k]));
+          }
+        });
+        qs = parts.join('&');
+      }
+      return http('GET', '/tools-equipment/browse' + (qs ? '?' + qs : '')).then(unwrap);
+    },
     getRecommended: function (params) {
       var qs = '';
       if (params && params.limit) qs = '?limit=' + encodeURIComponent(params.limit);
@@ -749,6 +762,49 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     getMyRentals: function () {
       return http('GET', '/tools-equipment/rentals/my-bookings').then(unwrap);
+    },
+    getRentalDetail: function (id) {
+      return http('GET', '/tools-equipment/rentals/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getRentalAvailability: function (id, params) {
+      var qs = '';
+      if (params) {
+        var parts = [];
+        Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== '') parts.push(k + '=' + encodeURIComponent(params[k])); });
+        qs = parts.join('&');
+      }
+      return http('GET', '/tools-equipment/rentals/' + encodeURIComponent(id) + '/availability' + (qs ? '?' + qs : '')).then(unwrap);
+    },
+    cancelRentalBooking: function (bookingId) {
+      return http('PATCH', '/tools-equipment/rentals/bookings/' + encodeURIComponent(bookingId)).then(unwrap);
+    },
+    getActivity: function (limit) {
+      var qs = limit ? '?limit=' + encodeURIComponent(limit) : '';
+      return http('GET', '/tools-equipment/activity' + qs).then(unwrap);
+    },
+    getMyListings: function () {
+      return http('GET', '/tools-equipment/mylistings').then(unwrap);
+    },
+    createRentListing: function (data) {
+      return http('POST', '/tools-equipment/mylistings/rent', data).then(unwrap);
+    },
+    updateRentListing: function (id, data) {
+      return http('PUT', '/tools-equipment/mylistings/rent/' + encodeURIComponent(id), data).then(unwrap);
+    },
+    setRentListingStatus: function (id, data) {
+      return http('PATCH', '/tools-equipment/mylistings/rent/' + encodeURIComponent(id) + '/status', data).then(unwrap);
+    },
+    deleteRentListing: function (id) {
+      return http('DELETE', '/tools-equipment/mylistings/rent/' + encodeURIComponent(id)).then(unwrap);
+    },
+    createBuyListing: function (data) {
+      return http('POST', '/tools-equipment/mylistings/buy', data).then(unwrap);
+    },
+    updateBuyListing: function (id, data) {
+      return http('PUT', '/tools-equipment/mylistings/buy/' + encodeURIComponent(id), data).then(unwrap);
+    },
+    deleteBuyListing: function (id) {
+      return http('DELETE', '/tools-equipment/mylistings/buy/' + encodeURIComponent(id)).then(unwrap);
     },
 
     // Legacy compatibility for worker equipment rental
@@ -2139,11 +2195,17 @@ Backend: FastAPI served from the same origin (port 8000).
     addHealth: function (animalId, data) {
       return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/health', data).then(unwrap);
     },
+    updateHealth: function (animalId, recordId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId) + '/health/' + encodeURIComponent(recordId), data).then(unwrap);
+    },
     vaccinations: function (animalId) {
       return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/vaccinations').then(unwrap);
     },
     addVaccination: function (animalId, data) {
       return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/vaccinations', data).then(unwrap);
+    },
+    updateVaccination: function (animalId, vaccId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId) + '/vaccinations/' + encodeURIComponent(vaccId), data).then(unwrap);
     },
     treatments: function (animalId) {
       return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/treatments').then(unwrap);
@@ -2151,11 +2213,17 @@ Backend: FastAPI served from the same origin (port 8000).
     addTreatment: function (animalId, data) {
       return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/treatments', data).then(unwrap);
     },
+    updateTreatment: function (animalId, treatmentId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId) + '/treatments/' + encodeURIComponent(treatmentId), data).then(unwrap);
+    },
     feeding: function (animalId) {
       return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/feeding').then(unwrap);
     },
     addFeeding: function (animalId, data) {
       return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/feeding', data).then(unwrap);
+    },
+    updateFeeding: function (animalId, feedId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId) + '/feeding/' + encodeURIComponent(feedId), data).then(unwrap);
     },
     breeding: function (animalId) {
       return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/breeding').then(unwrap);
@@ -2163,11 +2231,17 @@ Backend: FastAPI served from the same origin (port 8000).
     addBreeding: function (animalId, data) {
       return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/breeding', data).then(unwrap);
     },
+    updateBreeding: function (animalId, breedingId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId) + '/breeding/' + encodeURIComponent(breedingId), data).then(unwrap);
+    },
     weight: function (animalId) {
       return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/weight').then(unwrap);
     },
     addWeight: function (animalId, data) {
       return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/weight', data).then(unwrap);
+    },
+    updateWeight: function (animalId, weightId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId) + '/weight/' + encodeURIComponent(weightId), data).then(unwrap);
     },
     production: function (animalId) {
       return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/production').then(unwrap);
@@ -2175,11 +2249,29 @@ Backend: FastAPI served from the same origin (port 8000).
     addProduction: function (animalId, data) {
       return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/production', data).then(unwrap);
     },
+    updateProduction: function (animalId, productionId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId) + '/production/' + encodeURIComponent(productionId), data).then(unwrap);
+    },
     expenses: function (animalId) {
       return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/expenses').then(unwrap);
     },
     addExpense: function (animalId, data) {
       return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/expenses', data).then(unwrap);
+    },
+    photos: function (animalId) {
+      return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/photos').then(unwrap);
+    },
+    addPhoto: function (animalId, data) {
+      return http('POST', '/livestock/' + encodeURIComponent(animalId) + '/photos', data).then(unwrap);
+    },
+    updatePhoto: function (animalId, photoId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId) + '/photos/' + encodeURIComponent(photoId), data).then(unwrap);
+    },
+    deletePhoto: function (animalId, photoId) {
+      return http('DELETE', '/livestock/' + encodeURIComponent(animalId) + '/photos/' + encodeURIComponent(photoId)).then(unwrap);
+    },
+    updateExpense: function (animalId, expenseId, data) {
+      return http('PUT', '/livestock/' + encodeURIComponent(animalId) + '/expenses/' + encodeURIComponent(expenseId), data).then(unwrap);
     }
   };
 
@@ -2320,6 +2412,26 @@ Backend: FastAPI served from the same origin (port 8000).
   };
 
   /* =========================================================================
+   * CROP HEALTH SERVICE — care dashboard (no scanning / diagnosis)
+   * ========================================================================= */
+  var CropHealthService = {
+    overview: function (farmId, plotId, cycleId) {
+      return http('GET', '/crop-health/overview' + monQ({
+        farm_id: farmId,
+        plot_id: plotId,
+        cycle_id: cycleId
+      })).then(unwrap);
+    },
+    aiOverview: function (farmId, plotId, cycleId) {
+      return http('GET', '/crop-health/ai-overview' + monQ({
+        farm_id: farmId,
+        plot_id: plotId,
+        cycle_id: cycleId
+      })).then(unwrap);
+    }
+  };
+
+  /* =========================================================================
    * STORAGE / FILE SERVICE
    * ========================================================================= */
   var StorageService = {
@@ -2410,6 +2522,7 @@ Backend: FastAPI served from the same origin (port 8000).
     Sensor: SensorService,
     Monitoring: MonitoringService,
     SoilIrrigation: SoilIrrigationService,
+    CropHealth: CropHealthService,
     FileStorage: StorageService,
     Documents: DocumentService,
     FarmBuzz: FarmBuzzService,
@@ -2455,6 +2568,7 @@ Backend: FastAPI served from the same origin (port 8000).
   global.SensorService = SensorService;
   global.MonitoringService = MonitoringService;
   global.SoilIrrigationService = SoilIrrigationService;
+  global.CropHealthService = CropHealthService;
   global.StorageService = StorageService;
   global.DocumentService = DocumentService;
   global.NewsService = NewsService;
