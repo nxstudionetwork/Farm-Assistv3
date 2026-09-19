@@ -2512,18 +2512,6 @@ Backend: FastAPI served from the same origin (port 8000).
   /* =========================================================================
    * MARKET PRICE SERVICE
    * ========================================================================= */
-  var MarketPriceService = {
-    list: function (params) {
-      return http('GET', '/market-prices' + monQ(params)).then(unwrap);
-    },
-    commodities: function () {
-      return http('GET', '/market-prices/commodities').then(unwrap);
-    },
-    trends: function (commodity, days) {
-      return http('GET', '/market-prices/trends' + monQ({ commodity: commodity, days: days })).then(unwrap);
-    }
-  };
-
   /* =========================================================================
    * USER SETTINGS SERVICE
    * ========================================================================= */
