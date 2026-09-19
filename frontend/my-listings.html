@@ -66,6 +66,32 @@
     .mp-link-btn.hot{color:var(--mp-amber)}
     .mp-loadmore{display:block;margin:18px auto 0;padding:10px 24px;border-radius:var(--mp-radius-sm);border:1px solid var(--border-light);background:var(--bg-card);color:var(--text-secondary);font-size:12px;font-weight:700;cursor:pointer}
     .mp-loadmore:hover{color:var(--mp-green);border-color:var(--mp-green)}
+    .req{color:#c0392b}
+    .mp-field-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    @media(max-width:480px){.mp-field-row3{grid-template-columns:1fr 1fr}}
+    .mp-img-grid{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .mp-img-box{position:relative;width:74px;height:74px;border-radius:8px;overflow:hidden;border:1px solid var(--border-light)}
+    .mp-img-box img{width:100%;height:100%;object-fit:cover}
+    .mp-img-box .rm{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .mp-img-add{width:74px;height:74px;border:1px dashed #bbb;border-radius:8px;color:#999;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;background:var(--bg-card)}
+    .mp-img-add small{font-size:9px;font-weight:600}
+    .mp-buyer-hint{background:#fef8ec;border:1px solid #f1e3bc;color:#8a6d1b;font-size:12px;padding:10px 12px;border-radius:8px;margin-bottom:12px;display:flex;gap:8px;align-items:center}
+    /* ── Activity sheet (enquiries + sale history for a listing) ── */
+    .act-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+    .act-tab{padding:7px 13px;border-radius:18px;border:1px solid var(--border-light);background:var(--bg-card);color:var(--text-secondary);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s}
+    .act-tab.active{background:var(--mp-green);color:#fff;border-color:var(--mp-green)}
+    .act-row{display:flex;gap:12px;padding:13px 14px;border-bottom:1px solid var(--border-light);flex-wrap:wrap}
+    .act-row:last-child{border-bottom:none}
+    .act-avatar{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:var(--soft-green,#e8f5e9);color:var(--mp-green);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;overflow:hidden}
+    .act-avatar img{width:100%;height:100%;object-fit:cover}
+    .act-info{flex:1;min-width:170px}
+    .act-info .t{font-size:12.5px;font-weight:700;color:var(--text-primary)}
+    .act-info .m{font-size:11px;color:var(--text-secondary);display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+    .act-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .act-reply-box{width:100%;margin-top:8px;display:flex;flex-direction:column;gap:8px}
+    .act-reply-box textarea{width:100%;padding:10px 12px;border:1px solid var(--border-light);border-radius:8px;background:var(--bg-card-soft);color:var(--text-primary);font-size:12.5px;outline:none;font-family:inherit;box-sizing:border-box}
+    .act-reply-box textarea:focus{border-color:var(--mp-green)}
+    .act-reply-btns{display:flex;gap:8px;justify-content:flex-end}
     .mp-empty{border:1px dashed var(--border-light);border-radius:var(--mp-radius);padding:44px 24px;text-align:center;grid-column:1/-1}
     .mp-empty i{font-size:42px;opacity:.35;margin-bottom:12px;display:block}
     .mp-empty h4{font-size:16px;font-weight:800;color:var(--text-primary);margin:0 0 4px}
@@ -78,9 +104,11 @@
     @keyframes mpSh{0%{background-position:200% 0}100%{background-position:-200% 0}}
     .mp-sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1039;display:none}
     .mp-sheet-bg.open{display:block}
+    .mp-sheet-bg.full{background:rgba(0,0,0,.55)}
     .mp-sheet{position:fixed;z-index:1040;background:var(--bg-card);display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.16,1,.3,1)}
     .mp-sheet.bottom{bottom:0;left:0;right:0;max-height:92vh;border-radius:var(--mp-radius) var(--mp-radius) 0 0;transform:translateY(100%)}
     .mp-sheet.bottom.open{transform:translateY(0)}
+    .mp-sheet.bottom.full{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;z-index:1650;border-radius:0}
     .mp-sheet-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border-light)}
     .mp-sheet-head h3{margin:0;font-size:16px;font-weight:800}
     .mp-sheet-head button{background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer}
@@ -195,6 +223,100 @@
     </div>
   </div>
 
+  <!-- SHEET: LISTING FORM (create / edit) -->
+  <div class="mp-sheet bottom" id="ml-sheet-listing">
+    <div class="mp-sheet-head"><h3 id="ml-listing-title"><i class="fas fa-box-open" style="color:var(--mp-green);margin-right:6px"></i>Add a new listing</h3><button data-close-sheet="ml-sheet-listing">×</button></div>
+    <div class="mp-sheet-body">
+      <form class="mp-form" id="ml-listing-form">
+        <div class="mp-field"><label><span class="req">*</span> What are you selling?</label><input id="lb-title" maxlength="200" placeholder="e.g. Freshly harvested Sonam rice, used Mahindra tractor"></div>
+        <div class="mp-field-row">
+          <div class="mp-field"><label><span class="req">*</span> Type</label><select id="lb-group"><option value="produce">Produce / Crop</option><option value="items">Farm Item / Equipment</option></select></div>
+          <div class="mp-field"><label><span class="req">*</span> Category</label><select id="lb-cat"></select></div>
+        </div>
+        <div class="mp-field-row3">
+          <div class="mp-field"><label><span class="req">*</span> Quantity</label><input id="lb-qty" type="number" min="0.1" step="0.01" placeholder="e.g. 200"></div>
+          <div class="mp-field"><label><span class="req">*</span> Unit</label><select id="lb-unit"></select></div>
+          <div class="mp-field"><label><span class="req">*</span> Price per unit (₹)</label><input id="lb-price" type="number" min="1" step="0.01" placeholder="e.g. 42"></div>
+        </div>
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Pricing</label><select id="lb-pricing"><option value="fixed">Fixed price</option><option value="negotiable">Negotiable</option></select></div>
+          <div class="mp-field"><label>Location</label><input id="lb-location" maxlength="200" placeholder="Village / Mandal / District"></div>
+        </div>
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Availability</label><input id="lb-availability" maxlength="60" placeholder="e.g. Ready now, Next week"></div>
+          <div class="mp-field"><label>Harvest date</label><input id="lb-harvest" maxlength="20" placeholder="e.g. 2026-09-01"></div>
+        </div>
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Grade / Quality</label><input id="lb-quality" maxlength="200" placeholder="e.g. Grade A, Organic"></div>
+          <div class="mp-field"><label>Contact method</label><select id="lb-contact"><option value="in-app">In-app chat</option><option value="phone">Phone call</option><option value="whatsapp">WhatsApp</option></select></div>
+        </div>
+        <div id="lb-item-fields" style="display:none">
+          <div class="mp-field-row">
+            <div class="mp-field"><label>Condition</label><select id="lb-condition"><option value="new">New</option><option value="used">Used</option></select></div>
+            <div class="mp-field"><label>Age (years)</label><input id="lb-age" maxlength="60" placeholder="e.g. 2 years"></div>
+            <div class="mp-field"><label>Brand</label><input id="lb-brand" maxlength="100" placeholder="e.g. Mahindra"></div>
+          </div>
+          <div class="mp-field-row">
+            <div class="mp-field"><label>Model</label><input id="lb-model" maxlength="100" placeholder="e.g. Bhoomiputra"></div>
+            <div class="mp-field"><label>Usage details</label><input id="lb-usage" maxlength="2000" placeholder="e.g. Used for 2 seasons, well maintained"></div>
+          </div>
+          <div class="mp-field"><label>Condition detail</label><textarea id="lb-condition-detail" maxlength="2000" placeholder="Describe scratches, working condition, spares included…"></textarea></div>
+        </div>
+        <div class="mp-field"><label>Description &amp; notes</label><textarea id="lb-desc" maxlength="5000" placeholder="Describe quality, quantity details, delivery options, negotiability…"></textarea></div>
+        <div class="mp-field"><label>Photos (up to 5)</label>
+          <div class="mp-img-grid" id="lb-images"></div>
+          <input type="file" id="lb-img-input" accept="image/*" multiple style="display:none">
+        </div>
+        <div class="mp-form-foot">
+          <button type="button" class="mp-btn ghost" data-close-sheet="ml-sheet-listing">Cancel</button>
+          <button type="submit" class="mp-btn primary" id="lb-submit" style="min-width:150px;justify-content:center"><i class="fas fa-check"></i> Save Listing</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SHEET: RECORD SALE -->
+  <div class="mp-sheet bottom" id="ml-sheet-sale">
+    <div class="mp-sheet-head"><h3 id="ml-sale-title"><i class="fas fa-check-circle" style="color:var(--mp-green);margin-right:6px"></i>Record a sale</h3><button data-close-sheet="ml-sheet-sale">×</button></div>
+    <div class="mp-sheet-body">
+      <div class="mp-buyer-hint" id="ml-sale-hint"><i class="fas fa-circle-info"></i><span></span></div>
+      <form class="mp-form" id="ml-sale-form">
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Buyer name</label><input id="sb-name" maxlength="200" placeholder="e.g. Bharath Mills, Ramu"></div>
+          <div class="mp-field"><label>Buyer phone</label><input id="sb-phone" maxlength="20" placeholder="10-digit phone"></div>
+        </div>
+        <div class="mp-field-row3">
+          <div class="mp-field"><label><span class="req">*</span> Quantity</label><input id="sb-qty" type="number" min="0.1" step="0.01"></div>
+          <div class="mp-field"><label><span class="req">*</span> Unit price (₹)</label><input id="sb-price" type="number" min="1" step="0.01"></div>
+          <div class="mp-field"><label>Payment</label><select id="sb-payment"><option value="pending">Pending</option><option value="partial">Partial</option><option value="paid">Paid</option></select></div>
+        </div>
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Sale status</label><select id="sb-status"><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option></select></div>
+          <div class="mp-field"><label>Delivery</label><select id="sb-delivery"><option value="pending">Pending</option><option value="pickup">Pickup</option><option value="delivered">Delivered</option></select></div>
+        </div>
+        <div class="mp-field"><label>Notes</label><textarea id="sb-notes" maxlength="2000" placeholder="Any agreement details…"></textarea></div>
+        <div class="mp-form-foot">
+          <button type="button" class="mp-btn ghost" data-close-sheet="ml-sheet-sale">Cancel</button>
+          <button type="submit" class="mp-btn primary" id="sb-submit" style="min-width:150px;justify-content:center"><i class="fas fa-check"></i> Save Sale</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SHEET: ACTIVITY (buyer enquiries + sale history for one listing) -->
+  <div class="mp-sheet bottom" id="ml-sheet-activity">
+    <div class="mp-sheet-head"><h3><i class="fas fa-chart-simple" style="color:var(--mp-green);margin-right:6px"></i>Listing activity</h3><button data-close-sheet="ml-sheet-activity">×</button></div>
+    <div class="mp-sheet-body">
+      <div class="mp-buyer-hint" id="ml-act-listing" style="background:var(--bg-card-soft);border-color:var(--border-light);color:var(--text-secondary);margin-bottom:12px"><i class="fas fa-box-open"></i><span></span></div>
+      <div class="act-tabs">
+        <button type="button" class="act-tab active" data-apanel="enquiries"><i class="fas fa-comments"></i> Buyer enquiries <span id="ml-act-enq-count">0</span></button>
+        <button type="button" class="act-tab" data-apanel="sales"><i class="fas fa-chart-line"></i> Sale history <span id="ml-act-sale-count">0</span></button>
+      </div>
+      <div id="ml-act-enq" class="is-table-card"></div>
+      <div id="ml-act-sales" class="is-table-card" style="display:none"></div>
+    </div>
+  </div>
+
   <div class="ml-bottom-cta">
     <div class="inner">
       <a class="mp-btn ghost" href="marketplace.html"><i class="fas fa-arrow-left"></i> Marketplace</a>
@@ -217,6 +339,8 @@
     var LIMIT = 24, page = 1;
     var FILTERS = { status: '', search: '', group: '', category: '', minPrice: '', maxPrice: '', location: '', sort: 'newest' };
     var ITEMS = [], TOTAL = 0;
+    var UNITS = ['kg', 'g', 'quintal', 'tonne', 'bag', 'pack', 'bundle', 'piece', 'set', 'unit', 'litre', 'dozen'];
+    var FORM = { mode: 'create', listing: null, images: [], saleListing: null, activityId: null };
 
     function $(id) { return document.getElementById(id); }
     function esc(s) {
@@ -241,10 +365,23 @@
       var map = {
         active: { t: 'Active', c: 'ok' }, pending: { t: 'Pending', c: 'warn' },
         sold: { t: 'Sold', c: 'el' }, paused: { t: 'Paused', c: 'warn' },
-        expired: { t: 'Expired', c: 'bad' }, cancelled: { t: 'Cancelled', c: 'bad' }
+        expired: { t: 'Expired', c: 'bad' }, cancelled: { t: 'Cancelled', c: 'bad' },
+        new: { t: 'New', c: 'info' }, replied: { t: 'Responded', c: 'el' },
+        negotiating: { t: 'Negotiating', c: 'warn' }, closed: { t: 'Closed', c: 'bad' },
+        accepted: { t: 'Accepted', c: 'ok' }, rejected: { t: 'Declined', c: 'bad' },
+        completed: { t: 'Completed', c: 'ok' }, confirmed: { t: 'Confirmed', c: 'info' },
+        paid: { t: 'Paid', c: 'ok' }, partial: { t: 'Partial', c: 'warn' },
+        pickup: { t: 'Pickup', c: 'info' }, delivered: { t: 'Delivered', c: 'ok' }
       };
       var m = map[st] || { t: st || '—', c: 'el' };
       return '<span class="chip ' + m.c + '">' + m.t + '</span>';
+    }
+    function initials(name) {
+      name = (name || '').trim().split(/\s+/).filter(Boolean);
+      if (!name.length) return '?';
+      var a = (name[0][0] || '?').toUpperCase();
+      var b = name.length > 1 && name[name.length - 1][0] ? name[name.length - 1][0].toUpperCase() : '';
+      return a + b;
     }
     function toast(msg, type) {
       var el = document.createElement('div');
@@ -260,11 +397,23 @@
       return 'Something went wrong. Please try again.';
     }
     function firstImage(l) { var imgs = (l && l.images) || []; return imgs.length ? imgs[0].url : null; }
-    function openSheet(id) { $('ml-sheet-bg').classList.add('open'); $(id).classList.add('open'); }
-    function closeSheet(id) { $(id).classList.remove('open'); if (!document.querySelector('.mp-sheet.open')) $('ml-sheet-bg').classList.remove('open'); }
+    function openSheet(id) {
+      var bg = $('ml-sheet-bg');
+      bg.classList.add('open');
+      bg.classList.toggle('full', id === 'ml-sheet-listing');
+      $(id).classList.add('open');
+      $(id).classList.toggle('full', id === 'ml-sheet-listing');
+    }
+    function closeSheet(id) {
+      $(id).classList.remove('open');
+      $(id).classList.remove('full');
+      if (!document.querySelector('.mp-sheet.open')) $('ml-sheet-bg').classList.remove('open');
+      $('ml-sheet-bg').classList.remove('full');
+    }
     function closeAllSheets() {
-      document.querySelectorAll('.mp-sheet.open').forEach(function (s) { s.classList.remove('open'); });
+      document.querySelectorAll('.mp-sheet.open').forEach(function (s) { s.classList.remove('open'); s.classList.remove('full'); });
       $('ml-sheet-bg').classList.remove('open');
+      $('ml-sheet-bg').classList.remove('full');
     }
     function setBtn(el, busy, busyHtml, normalHtml) {
       if (!el) return;
@@ -342,6 +491,7 @@
         actions += '<button class="mp-link-btn" data-act="resume" data-id="' + esc(l.id) + '"><i class="fas fa-play"></i> Resume</button>';
       }
       actions += '<button class="mp-link-btn" data-act="edit" data-id="' + esc(l.id) + '"><i class="fas fa-pen"></i> Edit</button>';
+      actions += '<button class="mp-link-btn" data-act="activity" data-id="' + esc(l.id) + '"><i class="fas fa-chart-simple"></i> Activity</button>';
       actions += '<button class="mp-link-btn" data-act="view" data-id="' + esc(l.id) + '"><i class="fas fa-eye"></i> View</button>';
       if (l.status !== 'sold') {
         actions += '<button class="mp-link-btn danger" data-act="del" data-id="' + esc(l.id) + '"><i class="fas fa-trash"></i> Delete</button>';
@@ -393,12 +543,13 @@
         var actions = '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:flex-end">' +
           '<button class="mp-btn ghost" data-close-sheet="ml-sheet-detail">Close</button>';
         if (l.status === 'active' || l.status === 'pending') {
-          actions += '<a class="mp-btn primary" href="marketplace.html?sale=' + esc(encodeURIComponent(l.id)) + '" style="text-decoration:none"><i class="fas fa-check-circle"></i> Mark Sold</a>';
+          actions += '<button class="mp-btn primary" data-act="sale" data-id="' + esc(l.id) + '"><i class="fas fa-check-circle"></i> Mark Sold</button>';
         }
         if (l.status === 'paused') {
           actions += '<button class="mp-btn ghost" data-act="resume" data-id="' + esc(l.id) + '"><i class="fas fa-play"></i> Resume</button>';
         }
-        actions += '<a class="mp-btn ghost" href="marketplace.html?edit=' + esc(encodeURIComponent(l.id)) + '" style="text-decoration:none"><i class="fas fa-pen"></i> Edit</a>' +
+        actions += '<button class="mp-btn ghost" data-act="edit" data-id="' + esc(l.id) + '"><i class="fas fa-pen"></i> Edit</button>' +
+          '<button class="mp-btn ghost" data-act="activity" data-id="' + esc(l.id) + '"><i class="fas fa-chart-simple"></i> Activity</button>' +
           '</div>';
         $('ml-detail-body').innerHTML =
           '<div class="ml-detail">' +
@@ -418,13 +569,20 @@
     }
 
     /* ───────── Actions ───────── */
-    function newListing() { window.location.href = 'marketplace.html?create=1'; }
+    function newListing() { openCreateForm(); }
 
     function onAction(id, act) {
       if (!SVC) return;
       if (act === 'view') { viewDetail(id); return; }
-      if (act === 'edit') { window.location.href = 'marketplace.html?edit=' + encodeURIComponent(id); return; }
-      if (act === 'sale') { window.location.href = 'marketplace.html?sale=' + encodeURIComponent(id); return; }
+      if (act === 'activity') { openActivity(id); return; }
+      if (act === 'edit') {
+        SVC.getListing(id).then(function (l) { openEditForm(l); }).catch(function (e) { toast(errMsg(e), 'error'); });
+        return;
+      }
+      if (act === 'sale') {
+        SVC.getListing(id).then(function (l) { openSaleForm(l, null); }).catch(function (e) { toast(errMsg(e), 'error'); });
+        return;
+      }
       if (act === 'pause') {
         SVC.updateListingStatus(id, 'paused').then(function () {
           toast('Listing paused.');
@@ -454,6 +612,322 @@
       $('ml-confirm-text').textContent = text;
       $('ml-confirm-ok').onclick = function () { closeSheet('ml-sheet-confirm'); fn(); };
       openSheet('ml-sheet-confirm');
+    }
+
+    /* ───────── Listing form (create / edit) ───────── */
+    function openCreateForm() {
+      FORM.mode = 'create';
+      FORM.listing = null;
+      FORM.images = [];
+      $('ml-listing-title').innerHTML = '<i class="fas fa-plus" style="color:var(--mp-green);margin-right:6px"></i>Add a new listing';
+      var form = $('ml-listing-form');
+      form.reset();
+      $('lb-group').value = 'produce';
+      $('lb-unit').innerHTML = UNITS.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join('');
+      $('lb-unit').value = 'kg';
+      updateCategoryOptions();
+      renderFormImages();
+      openSheet('ml-sheet-listing');
+    }
+
+    function openEditForm(listing) {
+      FORM.mode = 'edit';
+      FORM.listing = listing;
+      FORM.images = (listing.images || []).map(function (im) { return im.url; });
+      $('ml-listing-title').innerHTML = '<i class="fas fa-pen" style="color:var(--mp-green);margin-right:6px"></i>Edit listing';
+      var form = $('ml-listing-form');
+      form.reset();
+      $('lb-title').value = listing.title || '';
+      $('lb-group').value = (listing.category && listing.category.group) || 'produce';
+      $('lb-unit').innerHTML = UNITS.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join('');
+      $('lb-unit').value = listing.unit || 'kg';
+      updateCategoryOptions();
+      $('lb-cat').value = listing.category_id || '';
+      $('lb-qty').value = listing.quantity || '';
+      $('lb-price').value = listing.price || '';
+      $('lb-pricing').value = listing.pricing_type || 'fixed';
+      $('lb-location').value = listing.location || '';
+      $('lb-availability').value = listing.availability || '';
+      $('lb-harvest').value = listing.harvest_date || '';
+      $('lb-quality').value = listing.quality_grade || '';
+      $('lb-contact').value = listing.contact_method || 'in-app';
+      $('lb-condition').value = listing.condition_type || 'new';
+      $('lb-age').value = listing.age_year || '';
+      $('lb-brand').value = listing.brand || '';
+      $('lb-model').value = listing.model || '';
+      $('lb-usage').value = listing.usage_details || '';
+      $('lb-condition-detail').value = listing.condition_detail || '';
+      $('lb-desc').value = listing.description || '';
+      renderFormImages();
+      openSheet('ml-sheet-listing');
+    }
+
+    function updateCategoryOptions() {
+      var group = $('lb-group').value;
+      $('lb-group').value = group;
+      $('lb-item-fields').style.display = group === 'items' ? '' : 'none';
+      if (!window._ML_CATS) return;
+      var cats = window._ML_CATS[group] || [];
+      $('lb-cat').innerHTML = '<option value="">Select category…</option>' + cats.map(function (c) {
+        return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>';
+      }).join('');
+    }
+
+    function renderFormImages() {
+      var grid = $('lb-images');
+      var html = FORM.images.map(function (u, i) {
+        return '<div class="mp-img-box"><img src="' + esc(u) + '" alt="photo ' + (i + 1) + '"><button type="button" class="rm" data-rm="' + i + '"><i class="fas fa-xmark"></i></button></div>';
+      }).join('');
+      if (FORM.images.length < 5) {
+        html += '<button type="button" class="mp-img-add" id="img-add"><i class="fas fa-camera"></i><small>Add photo</small></button>';
+      }
+      grid.innerHTML = html;
+      var add = $('img-add');
+      if (add) add.addEventListener('click', function () { $('lb-img-input').click(); });
+      grid.querySelectorAll('.rm').forEach(function (b) {
+        b.addEventListener('click', function () {
+          FORM.images.splice(Number(b.dataset.rm), 1);
+          renderFormImages();
+        });
+      });
+    }
+
+    function uploadImages(files) {
+      var token = localStorage.getItem('fa-auth-token');
+      var batch = [];
+      for (var i = 0; i < files.length && FORM.images.length < 5; i++) {
+        (function (file) {
+          batch.push(new Promise(function (resolve, reject) {
+            var fd = new FormData();
+            fd.append('file', file);
+            fd.append('subdir', 'marketplace');
+            fetch(BASE_URL + '/storage/upload', {
+              method: 'POST',
+              headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+              body: fd
+            }).then(function (r) {
+              return r.json().catch(function () { return {}; }).then(function (d) {
+                if (!r.ok) {
+                  var err = new Error((d && d.detail) || ('HTTP ' + r.status));
+                  err.status = r.status;
+                  reject(err);
+                  return;
+                }
+                resolve(d && d.data && d.data.url);
+              });
+            }).catch(reject);
+          }));
+        })(files[i]);
+      }
+      return Promise.all(batch);
+    }
+
+    function submitListingForm(ev) {
+      ev.preventDefault();
+      var title = $('lb-title').value.trim();
+      var cat = $('lb-cat').value;
+      var qty = Number($('lb-qty').value);
+      var price = Number($('lb-price').value);
+      if (!title) return toast('Please enter a listing title.', 'error');
+      if (!cat) return toast('Please select a category.', 'error');
+      if (!(qty > 0)) return toast('Quantity must be greater than zero.', 'error');
+      if (!(price > 0)) return toast('Price must be greater than zero.', 'error');
+
+      var isItem = $('lb-group').value === 'items';
+      var payload = {
+        title: title,
+        category_id: cat,
+        quantity: qty,
+        unit: $('lb-unit').value,
+        price: price,
+        pricing_type: $('lb-pricing').value,
+        location: $('lb-location').value.trim() || null,
+        availability: $('lb-availability').value.trim() || null,
+        harvest_date: $('lb-harvest').value.trim() || null,
+        quality_grade: $('lb-quality').value.trim() || null,
+        contact_method: $('lb-contact').value,
+        description: $('lb-desc').value.trim() || null,
+        images: FORM.images,
+      };
+      if (FORM.mode === 'create') payload.status = 'active';
+      if (isItem) {
+        payload.condition_type = $('lb-condition').value;
+        payload.age_year = $('lb-age').value.trim() || null;
+        payload.brand = $('lb-brand').value.trim() || null;
+        payload.model = $('lb-model').value.trim() || null;
+        payload.usage_details = $('lb-usage').value.trim() || null;
+        payload.condition_detail = $('lb-condition-detail').value.trim() || null;
+      }
+
+      var btn = $('lb-submit');
+      setBtn(btn, true, '<i class="fas fa-spinner fa-spin"></i> Saving…', '<i class="fas fa-check"></i> Save Listing');
+      var req = FORM.mode === 'edit'
+        ? SVC.updateListing(FORM.listing.id, payload)
+        : SVC.createListing(payload);
+      req.then(function () {
+        toast(FORM.mode === 'edit' ? 'Listing updated.' : 'Listing created successfully!', 'success');
+        closeSheet('ml-sheet-listing');
+        load(true);
+        refreshCount();
+      }).catch(function (e) {
+        toast(errMsg(e), 'error');
+        setBtn(btn, false, '', '<i class="fas fa-check"></i> Save Listing');
+      });
+    }
+
+    /* ───────── Record / manage sale ───────── */
+    function openSaleForm(listing) {
+      FORM.saleListing = listing;
+      $('ml-sale-title').innerHTML = '<i class="fas fa-check-circle" style="color:var(--mp-green);margin-right:6px"></i>Record a sale';
+      var form = $('ml-sale-form');
+      form.reset();
+      var hint = $('ml-sale-hint');
+      hint.style.display = '';
+      hint.innerHTML = '<i class="fas fa-circle-info"></i><span>Recording a <b>Completed</b> sale marks <b>' + esc(listing.title) + '</b> as sold and reduces your available stock.</span>';
+      var remaining = Number(listing.remaining_quantity !== undefined ? listing.remaining_quantity : listing.quantity);
+      $('sb-qty').value = remaining || '';
+      $('sb-price').value = listing.price || '';
+      $('sb-payment').value = 'pending';
+      $('sb-status').value = 'completed';
+      $('sb-delivery').value = 'pickup';
+      $('sb-notes').value = '';
+      openSheet('ml-sheet-sale');
+    }
+
+    function submitSaleForm(ev) {
+      ev.preventDefault();
+      var qty = Number($('sb-qty').value);
+      var price = Number($('sb-price').value);
+      if (!(qty > 0)) return toast('Quantity must be greater than zero.', 'error');
+      if (!(price > 0)) return toast('Unit price must be greater than zero.', 'error');
+
+      var payload = {
+        buyer_name: $('sb-name').value.trim() || null,
+        buyer_phone: $('sb-phone').value.trim() || null,
+        quantity: qty,
+        unit_price: price,
+        payment_status: $('sb-payment').value,
+        status: $('sb-status').value,
+        delivery_status: $('sb-delivery').value,
+        notes: $('sb-notes').value.trim() || null
+      };
+
+      var btn = $('sb-submit');
+      setBtn(btn, true, '<i class="fas fa-spinner fa-spin"></i> Saving…', '<i class="fas fa-check"></i> Save Sale');
+      SVC.recordSale(FORM.saleListing.id, payload).then(function () {
+        toast('Sale recorded.');
+        closeSheet('ml-sheet-sale');
+        load(true);
+        refreshCount();
+      }).catch(function (e) {
+        toast(errMsg(e), 'error');
+        setBtn(btn, false, '', '<i class="fas fa-check"></i> Save Sale');
+      });
+    }
+
+    /* ───────── Listing activity (buyer enquiries + sale history) ───────── */
+    function openActivity(id) {
+      FORM.activityId = id;
+      var it = ITEMS.filter(function (x) { return x.id === id; })[0];
+      $('ml-act-listing').innerHTML = '<i class="fas fa-box-open"></i><span>' + esc((it && it.title) || 'Listing') + ' — enquiries and sale history for this item.</span>';
+      openSheet('ml-sheet-activity');
+      loadActivity();
+    }
+
+    function loadActivity() {
+      var id = FORM.activityId;
+      if (!id || !SVC) return;
+      var box = $('ml-act-enq');
+      box.innerHTML = '<div class="mp-empty"><i class="fas fa-spinner fa-pulse"></i><h4>Loading activity…</h4></div>';
+      Promise.all([
+        SVC.listEnquiries({ page: 1, limit: 100 }),
+        SVC.listSales({ page: 1, limit: 100 })
+      ]).then(function (rs) {
+        var enqs = ((rs[0] && rs[0].items) || []).filter(function (e) { return e.listing_id === id; });
+        var sales = ((rs[1] && rs[1].items) || []).filter(function (s) { return s.listing_id === id; });
+        $('ml-act-enq-count').textContent = enqs.length;
+        $('ml-act-sale-count').textContent = sales.length;
+        renderActivityEnqs(enqs);
+        renderActivitySales(sales);
+      }).catch(function (e) {
+        box.innerHTML = '<div class="mp-grid-error"><i class="fas fa-plug-circle-xmark"></i><p>' + esc(errMsg(e)) + '</p></div>';
+      });
+    }
+
+    function renderActivityEnqs(enqs) {
+      var box = $('ml-act-enq');
+      if (!enqs.length) {
+        box.innerHTML = '<div class="mp-empty"><i class="fas fa-comments"></i><h4>No buyer enquiries</h4><p>Enquiries buyers send on this listing will appear here with the buyer, quantity and offered price.</p></div>';
+        return;
+      }
+      box.innerHTML = enqs.map(function (en) {
+        var buyer = en.buyer || {};
+        var name = en.buyer_name || buyer.full_name || 'Buyer';
+        var canReply = en.status !== 'rejected' && en.status !== 'completed' && en.status !== 'closed';
+        var avatar = buyer.profile_image
+          ? '<img src="' + esc(buyer.profile_image) + '" alt="">'
+          : esc(initials(name));
+        return '<div class="act-row">' +
+          '<div class="act-avatar">' + avatar + '</div>' +
+          '<div class="act-info">' +
+          '<div class="t">' + esc(name) + '</div>' +
+          '<div class="m">' + statusChip(en.status) +
+          (en.requested_quantity ? '<span><i class="fas fa-boxes"></i> ' + esc(qtyFmt(en.requested_quantity, (en.listing && en.listing.unit) || '')) + '</span>' : '') +
+          (en.offered_price ? '<span><i class="fas fa-hand-holding-dollar"></i> ' + fmtPrice(en.offered_price) + '</span>' : '') +
+          (en.buyer_phone ? '<span><i class="fas fa-phone"></i> ' + esc(en.buyer_phone) + '</span>' : '') +
+          '<span><i class="far fa-calendar"></i> ' + esc(timeAgo(en.created_at)) + '</span>' +
+          '</div>' +
+          '<div class="act-reply-box" id="act-reply-' + esc(en.id) + '" style="display:none">' +
+          '<textarea placeholder="Write your reply here… It is sent through Messages." maxlength="4000"></textarea>' +
+          '<div class="act-reply-btns">' +
+          '<button type="button" class="mp-btn ghost" data-close-reply="' + esc(en.id) + '">Cancel</button>' +
+          '<button type="button" class="mp-btn primary" data-send-reply="' + esc(en.id) + '" style="min-width:130px;justify-content:center"><i class="fas fa-paper-plane"></i> Send</button>' +
+          '</div></div>' +
+          '</div>' +
+          '<div class="act-actions">' +
+          '<button class="mp-link-btn" data-act-reply="' + esc(en.id) + '" style="' + (canReply ? '' : 'pointer-events:none;opacity:.4') + '"><i class="fas fa-reply"></i> Reply</button>' +
+          '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function renderActivitySales(sales) {
+      var box = $('ml-act-sales');
+      if (!sales.length) {
+        box.innerHTML = '<div class="mp-empty"><i class="fas fa-chart-line"></i><h4>No sale records</h4><p>Sales recorded for this listing will appear here with status and amount.</p></div>';
+        return;
+      }
+      box.innerHTML = sales.map(function (s) {
+        return '<div class="act-row">' +
+          '<div class="act-avatar"><i class="fas fa-sack-dollar"></i></div>' +
+          '<div class="act-info">' +
+          '<div class="t">' + esc(s.buyer_name || (s.buyer && s.buyer.full_name) || 'Buyer') + '</div>' +
+          '<div class="m">' + statusChip(s.status) + statusChip(s.payment_status) + statusChip(s.delivery_status) +
+          '<span><i class="fas fa-boxes"></i> ' + esc(qtyFmt(s.quantity, (s.listing && s.listing.unit) || '')) + '</span>' +
+          '<span><i class="far fa-calendar"></i> ' + esc(timeAgo(s.sold_at || s.created_at)) + '</span>' +
+          '</div>' +
+          (s.notes ? '<div class="desc" style="background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:8px;padding:8px 10px;font-size:11.5px;color:var(--text-secondary);margin-top:6px">' + esc(s.notes) + '</div>' : '') +
+          '</div>' +
+          '<div class="act-actions"><div class="sale-amount">' + fmtPrice(s.total_amount) + '</div></div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function submitActivityReply(id) {
+      if (!SVC || !id) return;
+      var area = $('act-reply-' + id);
+      var ta = area ? area.querySelector('textarea') : null;
+      var msg = ta ? ta.value.trim() : '';
+      if (!msg) return toast('Please write a reply first.', 'error');
+      var btn = area ? area.querySelector('[data-send-reply]') : null;
+      setBtn(btn, true, '<i class="fas fa-spinner fa-spin"></i> Sending…', '<i class="fas fa-paper-plane"></i> Send');
+      SVC.replyEnquiry(id, msg).then(function () {
+        toast('Reply sent through Messages.');
+        loadActivity();
+      }).catch(function (e) {
+        toast(errMsg(e), 'error');
+        setBtn(btn, false, '', '<i class="fas fa-paper-plane"></i> Send');
+      });
     }
 
     function refreshCount() {
@@ -502,11 +976,13 @@
       load(true);
     }
     function fillCategories(d) {
+      window._ML_CATS = d || { produce: [], items: [] };
       var opts = '<option value="">All categories</option>';
       (d.produce || []).concat(d.items || []).forEach(function (c) {
         opts += '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>';
       });
       $('mflt-cat').innerHTML = opts;
+      updateCategoryOptions();
     }
 
     /* ───────── Boot ───────── */
@@ -552,6 +1028,53 @@
       $('ml-sheet-bg').addEventListener('click', closeAllSheets);
       document.querySelectorAll('[data-close-sheet]').forEach(function (b) {
         b.addEventListener('click', function () { closeSheet(b.dataset.closeSheet); });
+      });
+
+      // Listing form (create / edit)
+      $('lb-group').addEventListener('change', updateCategoryOptions);
+      $('lb-img-input').addEventListener('change', function () {
+        var files = Array.prototype.slice.call(this.files || []);
+        this.value = '';
+        if (!files.length) return;
+        uploadImages(files).then(function (urls) {
+          urls.forEach(function (u) { if (u && FORM.images.length < 5) FORM.images.push(u); });
+          renderFormImages();
+        }).catch(function (e) { toast(errMsg(e) || 'Upload failed', 'error'); });
+      });
+      $('ml-listing-form').addEventListener('submit', submitListingForm);
+      $('ml-sale-form').addEventListener('submit', submitSaleForm);
+
+      // Activity sheet tab switching
+      document.querySelectorAll('.act-tab').forEach(function (t) {
+        t.addEventListener('click', function () {
+          document.querySelectorAll('.act-tab').forEach(function (x) { x.classList.toggle('active', x === t); });
+          var p = t.dataset.apanel;
+          $('ml-act-enq').style.display = p === 'enquiries' ? '' : 'none';
+          $('ml-act-sales').style.display = p === 'sales' ? '' : 'none';
+        });
+      });
+
+      // Activity reply actions (delegated so re-rendered rows keep working)
+      document.addEventListener('click', function (e) {
+        var rep = e.target.closest('[data-act-reply]');
+        if (rep) {
+          var box = $('act-reply-' + rep.dataset.actReply);
+          if (box) box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+          e.preventDefault();
+          return;
+        }
+        var closeRep = e.target.closest('[data-close-reply]');
+        if (closeRep) {
+          var box2 = $('act-reply-' + closeRep.dataset.closeReply);
+          if (box2) box2.style.display = 'none';
+          e.preventDefault();
+          return;
+        }
+        var sendRep = e.target.closest('[data-send-reply]');
+        if (sendRep) {
+          submitActivityReply(sendRep.dataset.sendReply);
+          e.preventDefault();
+        }
       });
 
       if (SVC) {

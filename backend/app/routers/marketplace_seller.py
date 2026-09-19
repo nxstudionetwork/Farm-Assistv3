@@ -288,18 +288,45 @@ def _sale_payload(db: Session, sale: MarketplaceSale) -> dict:
     }
 
 
+def _buyer_profile(db: Session, user: Optional[User]) -> Optional[dict]:
+    """Public buyer contact card authorised to the seller who received the enquiry.
+
+    The seller already holds the buyer's phone (the buyer wrote to them), so the
+    buyer's profile image and farm location are part of the same authorised
+    contact card — no extra private data is exposed.
+    """
+    if user is None:
+        return None
+    location = None
+    p = user.farmer_profile if isinstance(user.farmer_profile, FarmerProfile) else None
+    if p and p.farm_location:
+        location = p.farm_location
+    if not location:
+        addrs = db.query(UserAddress).filter(UserAddress.user_id == user.id).all()
+        if addrs:
+            primary = next((a for a in addrs if a.is_primary), addrs[0])
+            parts = [x for x in [primary.village, primary.mandal, primary.district, primary.state] if x]
+            location = ", ".join(parts) or None
+    return {
+        "id": user.id,
+        "full_name": user.full_name,
+        "phone_number": user.phone_number,
+        "farmer_id": user.farmer_id,
+        "profile_image": user.profile_image,
+        "location": location,
+    }
+
+
 def _enquiry_payload(db: Session, enquiry: MarketplaceEnquiry) -> dict:
     listing = db.query(MarketplaceListing).filter(MarketplaceListing.id == enquiry.listing_id).first()
     buyer = None
     if enquiry.buyer_user_id:
         u = db.query(User).filter(User.id == enquiry.buyer_user_id).first()
         if u:
-            buyer = {
-                "id": u.id,
-                "full_name": enquiry.buyer_name or u.full_name,
-                "phone_number": enquiry.buyer_phone or u.phone_number,
-                "farmer_id": u.farmer_id,
-            }
+            buyer = _buyer_profile(db, u)
+            if buyer:
+                buyer["full_name"] = enquiry.buyer_name or u.full_name
+                buyer["phone_number"] = enquiry.buyer_phone or u.phone_number
     return {
         "id": enquiry.id,
         "listing_id": enquiry.listing_id,
