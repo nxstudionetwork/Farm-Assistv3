@@ -193,6 +193,10 @@ ADDITIVE_COLUMNS = {
     "marketplace_listings": [
         ("is_deleted", "BOOLEAN DEFAULT 0"),
     ],
+    "marketplace_enquiries": [
+        ("requested_quantity", "FLOAT"),
+        ("offered_price", "FLOAT"),
+    ],
     "marketplace_orders": [
         ("received_at", "DATETIME"),
         ("cancelled_at", "DATETIME"),

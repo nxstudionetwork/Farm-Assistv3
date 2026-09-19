@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="my-listings" data-hide-nav="true">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Listings - Farm Assist</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root{--mp-accent:#C9760A;--mp-green:#2D8659;--mp-amber:#B8860B;--mp-radius:12px;--mp-radius-sm:8px}
+    html,body{overflow-x:hidden;max-width:100vw}
+    *{box-sizing:border-box}
+    body{background:var(--bg, #f4f6f5);margin:0;font-family:inherit;-webkit-tap-highlight-color:transparent}
+    .ml-top{position:sticky;top:0;z-index:900;background:var(--bg-card,#fff);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px;padding:12px 16px}
+    .ml-top .back{background:var(--bg-card-soft);border:1px solid var(--border-light);width:38px;height:38px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-secondary);cursor:pointer;font-size:15px;text-decoration:none;flex-shrink:0}
+    .ml-top .back:hover{color:var(--mp-green);border-color:var(--mp-green)}
+    .ml-top h1{margin:0;font-size:18px;font-weight:800;color:var(--text-primary);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ml-top h1 i{color:var(--mp-accent);margin-right:8px}
+    .ml-top .cnt{font-size:12px;font-weight:700;color:var(--text-secondary);background:var(--bg-card-soft);border:1px solid var(--border-light);padding:5px 11px;border-radius:15px;flex-shrink:0}
+    .ml-page{max-width:980px;margin:0 auto;padding:16px 16px 90px}
+    .ml-cta{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap}
+    .ml-cta p{margin:0;font-size:12.5px;color:var(--text-muted);flex:1;min-width:200px}
+    .mp-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:var(--mp-radius-sm);border:none;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;text-decoration:none;flex-shrink:0}
+    .mp-btn.primary{background:var(--mp-green);color:#fff}
+    .mp-btn.primary:hover{filter:brightness(1.1)}
+    .mp-btn.ghost{background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-light)}
+    .mp-btn.ghost:hover{border-color:var(--mp-green);color:var(--mp-green)}
+    .mp-btn.danger{background:#fff5f5;color:#c0392b;border:1px solid #f5c6c6}
+    .mp-btn:disabled{opacity:.5;cursor:not-allowed}
+    .mp-status-pills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;margin-bottom:12px}
+    .mp-status-pills::-webkit-scrollbar{display:none}
+    .mp-pill{padding:7px 13px;border-radius:18px;border:1px solid var(--border-light);background:var(--bg-card);color:var(--text-secondary);font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .15s;flex-shrink:0}
+    .mp-pill:hover{border-color:var(--mp-green);color:var(--mp-green)}
+    .mp-pill.active{background:var(--mp-green);color:#fff;border-color:var(--mp-green)}
+    .mp-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+    .mp-search{flex:1;min-width:200px;position:relative;display:flex;align-items:center}
+    .mp-search i{position:absolute;left:12px;color:var(--text-muted);font-size:12px}
+    .mp-search input{width:100%;padding:11px 12px 11px 34px;border:1px solid var(--border-light);border-radius:10px;background:var(--bg-card);color:var(--text-primary);font-size:13px;outline:none}
+    .mp-search input:focus{border-color:var(--mp-green)}
+    .mp-tbfield{flex:0 1 auto;min-width:110px;padding:9px 10px;border:1px solid var(--border-light);border-radius:10px;background:var(--bg-card-soft);color:var(--text-secondary);font-size:12.5px}
+    .mp-tbfield:focus{outline:none;border-color:var(--mp-green)}
+    @media(max-width:560px){.mp-tbfield{flex:1 1 calc(50% - 8px);min-width:0}}
+    .is-table-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--mp-radius);overflow:hidden}
+    .sale-row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--border-light);flex-wrap:wrap}
+    .sale-row:last-child{border-bottom:none}
+    .is-table-card .sale-row:hover{background:var(--bg-card-soft)}
+    .is-table-card .sale-row .t{cursor:pointer}
+    .sale-thumb{width:46px;height:46px;border-radius:8px;object-fit:cover;background:#e9ecef;flex-shrink:0}
+    .sale-thumb-fallback{width:46px;height:46px;border-radius:8px;background:linear-gradient(135deg,#C9760A,#E8A83D);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .sale-info{flex:1;min-width:170px}
+    .sale-info .t{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:2px}
+    .sale-info .m{font-size:11px;color:var(--text-secondary);display:flex;gap:8px;flex-wrap:wrap}
+    .sale-info .m i{font-size:10px}
+    .sale-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .sale-amount{font-size:14px;font-weight:800;color:var(--mp-green);white-space:nowrap}
+    .chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px}
+    .chip.el{background:var(--bg-card-soft);color:var(--text-secondary)}
+    .chip.ok{background:#e8f5e9;color:#2e7d32}
+    .chip.warn{background:#fff8e1;color:#b7791f}
+    .chip.bad{background:#ffebee;color:#c62828}
+    .chip.info{background:#e8f0fe;color:#1a56db}
+    .sale-btns{display:flex;gap:6px}
+    .mp-link-btn{background:none;border:none;color:var(--mp-green);font-size:11px;font-weight:700;cursor:pointer;padding:4px 6px;display:inline-flex;align-items:center;gap:4px;transition:opacity .15s}
+    .mp-link-btn:hover{opacity:.75}
+    .mp-link-btn.danger{color:#c0392b}
+    .mp-link-btn.hot{color:var(--mp-amber)}
+    .mp-loadmore{display:block;margin:18px auto 0;padding:10px 24px;border-radius:var(--mp-radius-sm);border:1px solid var(--border-light);background:var(--bg-card);color:var(--text-secondary);font-size:12px;font-weight:700;cursor:pointer}
+    .mp-loadmore:hover{color:var(--mp-green);border-color:var(--mp-green)}
+    .mp-empty{border:1px dashed var(--border-light);border-radius:var(--mp-radius);padding:44px 24px;text-align:center;grid-column:1/-1}
+    .mp-empty i{font-size:42px;opacity:.35;margin-bottom:12px;display:block}
+    .mp-empty h4{font-size:16px;font-weight:800;color:var(--text-primary);margin:0 0 4px}
+    .mp-empty p{font-size:13px;color:var(--text-muted);max-width:460px;margin:0 auto 14px}
+    .mp-grid-error{background:var(--bg-card);border:1px dashed var(--border-light);border-radius:var(--mp-radius);padding:28px 18px;text-align:center}
+    .mp-grid-error i{font-size:30px;color:#E5A9A5;display:block;margin-bottom:10px}
+    .mp-grid-error p{margin:0 0 14px;font-size:13px;color:var(--text-secondary)}
+    .mp-gerr-detail{display:block;font-size:11px;color:var(--text-muted);margin:-6px 0 12px;word-break:break-all}
+    .mp-skel{height:66px;border-radius:var(--mp-radius);border:1px solid var(--border-light);background:linear-gradient(90deg,#eef4ef,#f9fbf9,#eef4ef);background-size:200% 100%;animation:mpSh 1.2s infinite;margin-bottom:10px}
+    @keyframes mpSh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .mp-sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1039;display:none}
+    .mp-sheet-bg.open{display:block}
+    .mp-sheet{position:fixed;z-index:1040;background:var(--bg-card);display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.16,1,.3,1)}
+    .mp-sheet.bottom{bottom:0;left:0;right:0;max-height:92vh;border-radius:var(--mp-radius) var(--mp-radius) 0 0;transform:translateY(100%)}
+    .mp-sheet.bottom.open{transform:translateY(0)}
+    .mp-sheet-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border-light)}
+    .mp-sheet-head h3{margin:0;font-size:16px;font-weight:800}
+    .mp-sheet-head button{background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer}
+    .mp-sheet-body{padding:16px 18px;overflow-y:auto}
+    .mp-form{display:flex;flex-direction:column;gap:12px}
+    .mp-field{display:flex;flex-direction:column;gap:5px}
+    .mp-field label{font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px}
+    .mp-field input,.mp-field select{padding:10px 12px;border:1px solid var(--border-light);border-radius:var(--mp-radius-sm);background:var(--bg-card-soft);color:var(--text-primary);font-size:13px;outline:none;font-family:inherit;width:100%;box-sizing:border-box}
+    .mp-field input:focus,.mp-field select:focus{border-color:var(--mp-green)}
+    .mp-field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:480px){.mp-field-row{grid-template-columns:1fr}}
+    .mp-form-foot{display:flex;gap:10px;justify-content:flex-end}
+    .ml-detail{display:flex;flex-direction:column;gap:10px}
+    .ml-detail .hero{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+    .ml-detail .hero img{width:92px;height:92px;border-radius:11px;object-fit:cover;background:#e9ecef;flex-shrink:0}
+    .ml-detail .hero .fallback{width:92px;height:92px;border-radius:11px;background:linear-gradient(135deg,#C9760A,#E8A83D);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+    .ml-detail .hero .info{flex:1;min-width:190px}
+    .ml-detail .hero .info h3{margin:0 0 4px;font-size:16px;font-weight:800;color:var(--text-primary)}
+    .ml-detail .hero .info .sub{font-size:11.5px;color:var(--text-muted);margin-bottom:6px}
+    .ml-detail .price{font-size:18px;font-weight:800;color:var(--mp-green)}
+    .ml-detail .price small{font-size:11px;color:var(--text-muted);font-weight:600}
+    .ml-detail .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    @media(max-width:480px){.ml-detail .grid{grid-template-columns:1fr}}
+    .ml-detail .kv{background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:9px;padding:10px 12px}
+    .ml-detail .kv .k{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+    .ml-detail .kv .v{font-size:13px;color:var(--text-primary);font-weight:600;word-break:break-word}
+    .ml-detail .desc{background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:9px;padding:12px;font-size:12.5px;color:var(--text-secondary);line-height:1.5}
+    .mp-toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:auto}
+    .is-toast{background:#1d2a22;color:#fff;padding:11px 18px;border-radius:22px;font-size:13px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.18);max-width:86vw;text-align:center}
+    .is-toast.error{background:#b03030}
+    .ml-bottom-cta{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card,#fff);border-top:1px solid var(--border-light);padding:11px 16px calc(11px + env(safe-area-inset-bottom));z-index:899}
+    .ml-bottom-cta .inner{max-width:980px;margin:0 auto;display:flex;gap:10px}
+    .ml-bottom-cta .inner .mp-btn{flex:1;justify-content:center;max-width:300px}
+    @media(max-width:640px){.ml-bottom-cta .inner .mp-btn{max-width:none}}
+  </style>
+</head>
+<body>
+  <div class="ml-top">
+    <a class="back" href="marketplace.html" aria-label="Back to Marketplace"><i class="fas fa-arrow-left"></i></a>
+    <h1><i class="fas fa-boxes-stacked"></i>My Listings</h1>
+    <span class="cnt" id="count-label">0</span>
+  </div>
+
+  <div class="ml-page">
+    <div class="ml-cta">
+      <p><i class="fas fa-circle-info" style="color:var(--mp-green);margin-right:6px"></i>Manage every item you are selling. View, edit, pause, mark as sold or delete your listings.</p>
+      <button class="mp-btn primary" id="new-listing"><i class="fas fa-plus"></i> List New Item</button>
+    </div>
+
+    <div class="mp-status-pills" id="ml-pills">
+      <button class="mp-pill active" data-status="">All <span id="cnt-total">0</span></button>
+      <button class="mp-pill" data-status="active">Active</button>
+      <button class="mp-pill" data-status="pending">Pending</button>
+      <button class="mp-pill" data-status="paused">Paused</button>
+      <button class="mp-pill" data-status="sold">Sold</button>
+      <button class="mp-pill" data-status="expired">Expired</button>
+      <button class="mp-pill" data-status="cancelled">Cancelled</button>
+    </div>
+
+    <div class="mp-toolbar" id="ml-tools">
+      <div class="mp-search"><i class="fas fa-magnifying-glass"></i><input id="ml-search" maxlength="60" placeholder="Search your listings"></div>
+      <button type="button" class="mp-btn ghost" id="ml-filter-open"><i class="fas fa-sliders"></i> Filter</button>
+    </div>
+
+    <div class="is-table-card" id="ml-grid"></div>
+    <button class="mp-loadmore" id="ml-more" style="display:none">Load more</button>
+  </div>
+
+  <!-- SHEET: FILTER -->
+  <div class="mp-sheet-bg" id="ml-sheet-bg"></div>
+  <div class="mp-sheet bottom" id="ml-sheet-filter">
+    <div class="mp-sheet-head"><h3><i class="fas fa-sliders" style="color:var(--mp-green);margin-right:6px"></i>Filter your listings</h3><button data-close-sheet="ml-sheet-filter">×</button></div>
+    <div class="mp-sheet-body">
+      <form class="mp-form" id="ml-filter-form">
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Listing type</label><select id="mflt-group"><option value="">All types</option><option value="produce">Produce / Crop</option><option value="items">Farm Item / Equipment</option></select></div>
+          <div class="mp-field"><label>Category</label><select id="mflt-cat"><option value="">All categories</option></select></div>
+        </div>
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Status</label><select id="mflt-status"><option value="">All statuses</option><option value="active">Active</option><option value="pending">Pending</option><option value="paused">Paused</option><option value="sold">Sold</option><option value="expired">Expired</option><option value="cancelled">Cancelled</option></select></div>
+          <div class="mp-field"><label>Sort by</label><select id="mflt-sort"><option value="newest">Newest first</option><option value="price_asc">Price: Low to High</option><option value="price_desc">Price: High to Low</option></select></div>
+        </div>
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Min price (₹)</label><input id="mflt-min" type="number" min="0" step="0.01" placeholder="Any"></div>
+          <div class="mp-field"><label>Max price (₹)</label><input id="mflt-max" type="number" min="0" step="0.01" placeholder="Any"></div>
+        </div>
+        <div class="mp-field"><label>Location</label><input id="mflt-loc" maxlength="60" placeholder="Village / Mandal / District"></div>
+        <div class="mp-form-foot">
+          <button type="button" class="mp-btn ghost" id="mflt-reset"><i class="fas fa-rotate-left"></i> Reset Filters</button>
+          <button type="button" class="mp-btn ghost" data-close-sheet="ml-sheet-filter">Close</button>
+          <button type="submit" class="mp-btn primary" style="min-width:130px;justify-content:center"><i class="fas fa-check"></i> Apply Filters</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SHEET: DETAIL -->
+  <div class="mp-sheet bottom" id="ml-sheet-detail">
+    <div class="mp-sheet-head"><h3><i class="fas fa-eye" style="color:var(--mp-green);margin-right:6px"></i>Listing details</h3><button data-close-sheet="ml-sheet-detail">×</button></div>
+    <div class="mp-sheet-body" id="ml-detail-body"></div>
+  </div>
+
+  <!-- SHEET: CONFIRM -->
+  <div class="mp-sheet bottom" id="ml-sheet-confirm">
+    <div class="mp-sheet-head"><h3 id="ml-confirm-title">Confirm</h3><button data-close-sheet="ml-sheet-confirm">×</button></div>
+    <div class="mp-sheet-body">
+      <p id="ml-confirm-text" style="font-size:13px;color:var(--text-secondary);margin:0 0 16px"></p>
+      <div class="mp-form-foot">
+        <button class="mp-btn ghost" data-close-sheet="ml-sheet-confirm">Cancel</button>
+        <button class="mp-btn danger" id="ml-confirm-ok"><i class="fas fa-check"></i> Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ml-bottom-cta">
+    <div class="inner">
+      <a class="mp-btn ghost" href="marketplace.html"><i class="fas fa-arrow-left"></i> Marketplace</a>
+      <button class="mp-btn primary" id="new-listing-2"><i class="fas fa-plus"></i> List New Item</button>
+    </div>
+  </div>
+
+  <div class="mp-toast-wrap" id="ml-toast-wrap"></div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var BASE_URL = (window.API && API.config && API.config.BASE_URL) || (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL) || 'http://localhost:8000/api/v1';
+    var SVC = window.MarketplaceSellerService;
+    var LIMIT = 24, page = 1;
+    var FILTERS = { status: '', search: '', group: '', category: '', minPrice: '', maxPrice: '', location: '', sort: 'newest' };
+    var ITEMS = [], TOTAL = 0;
+
+    function $(id) { return document.getElementById(id); }
+    function esc(s) {
+      return String(s === null || s === undefined ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function fmtPrice(v) { return '₹' + Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
+    function qtyFmt(v, u) { return (Number(v) || 0) + ' ' + (u || ''); }
+    function timeAgo(dateStr) {
+      if (!dateStr) return '';
+      var t = new Date(dateStr.replace(' ', 'T'));
+      if (isNaN(t)) return '';
+      var s = Math.floor((Date.now() - t.getTime()) / 1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return Math.floor(s / 60) + 'm ago';
+      if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+      if (s < 604800) return Math.floor(s / 86400) + 'd ago';
+      return t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    function statusChip(st) {
+      var map = {
+        active: { t: 'Active', c: 'ok' }, pending: { t: 'Pending', c: 'warn' },
+        sold: { t: 'Sold', c: 'el' }, paused: { t: 'Paused', c: 'warn' },
+        expired: { t: 'Expired', c: 'bad' }, cancelled: { t: 'Cancelled', c: 'bad' }
+      };
+      var m = map[st] || { t: st || '—', c: 'el' };
+      return '<span class="chip ' + m.c + '">' + m.t + '</span>';
+    }
+    function toast(msg, type) {
+      var el = document.createElement('div');
+      el.className = 'is-toast ' + (type || 'success');
+      el.textContent = msg;
+      $('ml-toast-wrap').appendChild(el);
+      setTimeout(function () { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(function () { el.remove(); }, 320); }, 2600);
+    }
+    function errMsg(e) {
+      if (e && e.data && e.data.detail) return e.data.detail;
+      if (e && e.data && e.data.errors && e.data.errors.length) return e.data.errors[0].message;
+      if (e && e.message) return e.message;
+      return 'Something went wrong. Please try again.';
+    }
+    function firstImage(l) { var imgs = (l && l.images) || []; return imgs.length ? imgs[0].url : null; }
+    function openSheet(id) { $('ml-sheet-bg').classList.add('open'); $(id).classList.add('open'); }
+    function closeSheet(id) { $(id).classList.remove('open'); if (!document.querySelector('.mp-sheet.open')) $('ml-sheet-bg').classList.remove('open'); }
+    function closeAllSheets() {
+      document.querySelectorAll('.mp-sheet.open').forEach(function (s) { s.classList.remove('open'); });
+      $('ml-sheet-bg').classList.remove('open');
+    }
+    function setBtn(el, busy, busyHtml, normalHtml) {
+      if (!el) return;
+      if (busy) { el.disabled = true; el.innerHTML = busyHtml; }
+      else { el.disabled = false; el.innerHTML = normalHtml; }
+    }
+
+    /* ───────── Loading ───────── */
+    function query() {
+      var q = { page: page, limit: LIMIT };
+      if (FILTERS.status) q.status = FILTERS.status;
+      if (FILTERS.search) q.search = FILTERS.search;
+      if (FILTERS.group) q.group = FILTERS.group;
+      if (FILTERS.category) q.category_id = FILTERS.category;
+      if (FILTERS.location) q.location = FILTERS.location;
+      if (FILTERS.minPrice !== '' && !isNaN(Number(FILTERS.minPrice))) q.min_price = Number(FILTERS.minPrice);
+      if (FILTERS.maxPrice !== '' && !isNaN(Number(FILTERS.maxPrice))) q.max_price = Number(FILTERS.maxPrice);
+      if (FILTERS.sort && FILTERS.sort !== 'newest') q.sort = FILTERS.sort;
+      return q;
+    }
+
+    function load(reset) {
+      if (!SVC) return;
+      if (reset !== false && page > 1) page = 1;
+      var grid = $('ml-grid');
+      if (!ITEMS.length && reset !== false) {
+        var sk = '';
+        for (var i = 0; i < 5; i++) sk += '<div class="mp-skel"></div>';
+        grid.innerHTML = sk;
+      }
+      SVC.listListings(query()).then(function (d) {
+        ITEMS = reset === false ? ITEMS.concat(d.items || []) : (d.items || []);
+        TOTAL = d.total || 0;
+        render();
+        $('ml-more').style.display = TOTAL > ITEMS.length ? '' : 'none';
+        $('count-label').textContent = TOTAL;
+        $('cnt-total').textContent = TOTAL;
+      }).catch(function (e) {
+        grid.innerHTML = '<div class="mp-grid-error"><i class="fas fa-plug-circle-xmark"></i><p>' + esc(errMsg(e) || 'Unable to load listings') + '</p><button class="mp-btn ghost" id="ml-retry"><i class="fas fa-rotate-right"></i> Retry</button></div>';
+        var btn = $('ml-retry');
+        if (btn) btn.addEventListener('click', function () { load(true); });
+      });
+    }
+
+    function render() {
+      var grid = $('ml-grid');
+      if (!ITEMS.length) {
+        var active = FILTERS.status || FILTERS.search || FILTERS.group || FILTERS.category || FILTERS.location || FILTERS.minPrice !== '' || FILTERS.maxPrice !== '';
+        grid.innerHTML = '<div class="mp-empty"><i class="fas ' + (active ? 'fa-filter' : 'fa-box-open') + '"></i>' +
+          '<h4>' + (active ? 'No listings match your filters' : 'No listings yet') + '</h4>' +
+          '<p>' + (active
+            ? 'Try changing the search text, category, status, location or price range.'
+            : 'List your first crop, produce or farm item to start selling through Farm Assist.') + '</p>' +
+          (active
+            ? '<button class="mp-btn ghost" id="ml-clear-filters"><i class="fas fa-rotate-left"></i> Clear filters</button>'
+            : '<button class="mp-btn primary" id="ml-empty-add"><i class="fas fa-plus"></i> List New Item</button>') +
+          '</div>';
+        var ca = $('ml-clear-filters');
+        if (ca) ca.addEventListener('click', resetAllFilters);
+        var ea = $('ml-empty-add');
+        if (ea) ea.addEventListener('click', newListing);
+        return;
+      }
+      grid.innerHTML = ITEMS.map(row).join('');
+    }
+
+    function row(l) {
+      var actions = '';
+      if (l.status === 'active' || l.status === 'pending') {
+        actions += '<button class="mp-link-btn hot" data-act="sale" data-id="' + esc(l.id) + '"><i class="fas fa-check-circle"></i> Mark Sold</button>';
+      }
+      if (l.status === 'active') {
+        actions += '<button class="mp-link-btn" data-act="pause" data-id="' + esc(l.id) + '"><i class="fas fa-pause"></i> Pause</button>';
+      } else if (l.status === 'paused') {
+        actions += '<button class="mp-link-btn" data-act="resume" data-id="' + esc(l.id) + '"><i class="fas fa-play"></i> Resume</button>';
+      }
+      actions += '<button class="mp-link-btn" data-act="edit" data-id="' + esc(l.id) + '"><i class="fas fa-pen"></i> Edit</button>';
+      actions += '<button class="mp-link-btn" data-act="view" data-id="' + esc(l.id) + '"><i class="fas fa-eye"></i> View</button>';
+      if (l.status !== 'sold') {
+        actions += '<button class="mp-link-btn danger" data-act="del" data-id="' + esc(l.id) + '"><i class="fas fa-trash"></i> Delete</button>';
+      }
+      var url = firstImage(l);
+      var thumbHtml = url
+        ? '<img class="sale-thumb" src="' + esc(url) + '" alt="">'
+        : '<div class="sale-thumb-fallback"><i class="fas fa-seedling"></i></div>';
+      return '<div class="sale-row">' +
+        thumbHtml +
+        '<div class="sale-info">' +
+        '<div class="t" data-act="view" data-id="' + esc(l.id) + '">' + esc(l.title) + '</div>' +
+        '<div class="m">' + statusChip(l.status || '—') +
+        '<span><i class="fas fa-boxes"></i> ' + qtyFmt(l.remaining_quantity, l.unit) + ' left</span>' +
+        (l.location ? '<span><i class="fas fa-location-dot"></i> ' + esc(l.location) + '</span>' : '') +
+        (l.created_at ? '<span><i class="far fa-calendar"></i> ' + esc(timeAgo(l.created_at)) + '</span>' : '') +
+        '</div></div>' +
+        '<div class="sale-right">' +
+        '<div style="text-align:right">' +
+        '<div class="sale-amount">' + fmtPrice(l.price) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted)">per ' + esc(l.unit) + '</div>' +
+        '</div>' +
+        '<div class="sale-btns">' + actions + '</div>' +
+        '</div></div>';
+    }
+
+    /* ───────── Detail ───────── */
+    function viewDetail(id) {
+      if (!SVC) return;
+      SVC.getListing(id).then(function (l) {
+        var url = firstImage(l);
+        var heroImg = url
+          ? '<img src="' + esc(url) + '" alt="">'
+          : '<div class="fallback"><i class="fas fa-seedling"></i></div>';
+        var contact = l.contact_method === 'phone' ? 'Phone' : l.contact_method === 'whatsapp' ? 'WhatsApp' : 'In-app chat';
+        var pairs = [
+          ['Category', (l.category && l.category.name) || '—'],
+          ['Quantity', qtyFmt(l.remaining_quantity !== undefined ? l.remaining_quantity : l.quantity, l.unit)],
+          ['Price', fmtPrice(l.price) + (l.pricing_type === 'negotiable' ? ' (negotiable)' : '')],
+          ['Location', l.location || '—'],
+          ['Availability', l.availability || '—'],
+          ['Contact', contact],
+          ['Status', statusChip(l.status || '—')],
+          ['Listed', timeAgo(l.created_at) || '—']
+        ];
+        if (l.quality_grade) pairs.push(['Grade', l.quality_grade]);
+        if (l.brand) pairs.push(['Brand', l.brand]);
+        if (l.model) pairs.push(['Model', l.model]);
+        var actions = '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:flex-end">' +
+          '<button class="mp-btn ghost" data-close-sheet="ml-sheet-detail">Close</button>';
+        if (l.status === 'active' || l.status === 'pending') {
+          actions += '<a class="mp-btn primary" href="marketplace.html?sale=' + esc(encodeURIComponent(l.id)) + '" style="text-decoration:none"><i class="fas fa-check-circle"></i> Mark Sold</a>';
+        }
+        if (l.status === 'paused') {
+          actions += '<button class="mp-btn ghost" data-act="resume" data-id="' + esc(l.id) + '"><i class="fas fa-play"></i> Resume</button>';
+        }
+        actions += '<a class="mp-btn ghost" href="marketplace.html?edit=' + esc(encodeURIComponent(l.id)) + '" style="text-decoration:none"><i class="fas fa-pen"></i> Edit</a>' +
+          '</div>';
+        $('ml-detail-body').innerHTML =
+          '<div class="ml-detail">' +
+          '<div class="hero">' + heroImg +
+          '<div class="info"><h3>' + esc(l.title) + '</h3>' +
+          '<div class="sub">' + statusChip(l.status || '—') + ' · Listed ' + esc(timeAgo(l.created_at) || '—') + '</div>' +
+          '<div class="price">' + fmtPrice(l.price) + ' <small>per ' + esc(l.unit) + '</small></div>' +
+          '</div></div>' +
+          '<div class="grid">' + pairs.map(function (p) {
+            return '<div class="kv"><div class="k">' + esc(p[0]) + '</div><div class="v">' + esc(p[1]) + '</div></div>';
+          }).join('') + '</div>' +
+          (l.description ? '<div class="desc">' + esc(l.description) + '</div>' : '') +
+          actions +
+          '</div>';
+        openSheet('ml-sheet-detail');
+      }).catch(function (e) { toast(errMsg(e), 'error'); });
+    }
+
+    /* ───────── Actions ───────── */
+    function newListing() { window.location.href = 'marketplace.html?create=1'; }
+
+    function onAction(id, act) {
+      if (!SVC) return;
+      if (act === 'view') { viewDetail(id); return; }
+      if (act === 'edit') { window.location.href = 'marketplace.html?edit=' + encodeURIComponent(id); return; }
+      if (act === 'sale') { window.location.href = 'marketplace.html?sale=' + encodeURIComponent(id); return; }
+      if (act === 'pause') {
+        SVC.updateListingStatus(id, 'paused').then(function () {
+          toast('Listing paused.');
+          load(true); refreshCount();
+        }).catch(function (e) { toast(errMsg(e), 'error'); });
+        return;
+      }
+      if (act === 'resume') {
+        SVC.updateListingStatus(id, 'active').then(function () {
+          toast('Listing is active again.');
+          load(true); refreshCount();
+        }).catch(function (e) { toast(errMsg(e), 'error'); });
+        return;
+      }
+      if (act === 'del') {
+        showConfirm('Delete listing?', 'This listing will be removed from the marketplace. If it has sale history, the listing is hidden but your sales records stay safe.', function () {
+          SVC.deleteListing(id).then(function () {
+            toast('Listing deleted.');
+            load(true); refreshCount();
+          }).catch(function (e) { toast(errMsg(e), 'error'); });
+        });
+      }
+    }
+
+    function showConfirm(title, text, fn) {
+      $('ml-confirm-title').textContent = title;
+      $('ml-confirm-text').textContent = text;
+      $('ml-confirm-ok').onclick = function () { closeSheet('ml-sheet-confirm'); fn(); };
+      openSheet('ml-sheet-confirm');
+    }
+
+    function refreshCount() {
+      if (!SVC) return;
+      SVC.listListings({ page: 1, limit: 1 }).then(function (d) {
+        $('count-label').textContent = d.total || 0;
+        $('cnt-total').textContent = d.total || 0;
+      }).catch(function () {});
+    }
+
+    /* ───────── Filters ───────── */
+    function setActivePills(value) {
+      document.querySelectorAll('#ml-pills .mp-pill').forEach(function (p) {
+        p.classList.toggle('active', p.dataset.status === (value || ''));
+      });
+    }
+    function openFilters() {
+      $('mflt-group').value = FILTERS.group || '';
+      $('mflt-cat').value = FILTERS.category || '';
+      $('mflt-status').value = FILTERS.status || '';
+      $('mflt-min').value = FILTERS.minPrice || '';
+      $('mflt-max').value = FILTERS.maxPrice || '';
+      $('mflt-loc').value = FILTERS.location || '';
+      $('mflt-sort').value = FILTERS.sort || 'newest';
+      openSheet('ml-sheet-filter');
+    }
+    function applyFilters(ev) {
+      if (ev) ev.preventDefault();
+      FILTERS.group = $('mflt-group').value;
+      FILTERS.category = $('mflt-cat').value;
+      FILTERS.status = $('mflt-status').value;
+      FILTERS.minPrice = $('mflt-min').value;
+      FILTERS.maxPrice = $('mflt-max').value;
+      FILTERS.location = $('mflt-loc').value.trim();
+      FILTERS.sort = $('mflt-sort').value;
+      setActivePills(FILTERS.status);
+      closeSheet('ml-sheet-filter');
+      page = 1;
+      load(true);
+    }
+    function resetAllFilters() {
+      FILTERS = { status: '', search: '', group: '', category: '', minPrice: '', maxPrice: '', location: '', sort: 'newest' };
+      $('ml-search').value = '';
+      setActivePills('');
+      page = 1;
+      load(true);
+    }
+    function fillCategories(d) {
+      var opts = '<option value="">All categories</option>';
+      (d.produce || []).concat(d.items || []).forEach(function (c) {
+        opts += '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>';
+      });
+      $('mflt-cat').innerHTML = opts;
+    }
+
+    /* ───────── Boot ───────── */
+    function boot() {
+      if (!window.UserStore || !UserStore.isLoggedIn()) {
+        window.location.href = 'login.html';
+        return;
+      }
+      $('ml-search').addEventListener('keydown', function (e) { if (e.key === 'Enter') { FILTERS.search = this.value.trim(); page = 1; load(true); } });
+      $('ml-filter-open').addEventListener('click', openFilters);
+      $('ml-filter-form').addEventListener('submit', applyFilters);
+      $('mflt-reset').addEventListener('click', function () {
+        FILTERS = { status: '', search: '', group: '', category: '', minPrice: '', maxPrice: '', location: '', sort: 'newest' };
+        $('ml-search').value = '';
+        setActivePills('');
+        closeSheet('ml-sheet-filter');
+        page = 1;
+        load(true);
+      });
+      $('ml-pills').addEventListener('click', function (e) {
+        var pill = e.target.closest('.mp-pill');
+        if (!pill) return;
+        FILTERS.status = pill.dataset.status || '';
+        setActivePills(FILTERS.status);
+        $('mflt-status').value = FILTERS.status;
+        page = 1;
+        load(true);
+      });
+      $('ml-grid').addEventListener('click', function (e) {
+        var t = e.target.closest('.t');
+        if (t) { onAction(t.dataset.id, 'view'); return; }
+        var btn = e.target.closest('[data-act]');
+        if (btn) onAction(btn.dataset.id, btn.dataset.act);
+      });
+      $('ml-sheet-detail').querySelector('[data-close-sheet]').addEventListener('click', function () { closeSheet('ml-sheet-detail'); });
+      $('ml-detail-body').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-act]');
+        if (btn) { closeSheet('ml-sheet-detail'); onAction(btn.dataset.id, btn.dataset.act); }
+      });
+      $('ml-more').addEventListener('click', function () { page += 1; load(false); });
+      $('new-listing').addEventListener('click', newListing);
+      $('new-listing-2').addEventListener('click', newListing);
+      $('ml-sheet-bg').addEventListener('click', closeAllSheets);
+      document.querySelectorAll('[data-close-sheet]').forEach(function (b) {
+        b.addEventListener('click', function () { closeSheet(b.dataset.closeSheet); });
+      });
+
+      if (SVC) {
+        SVC.categories().then(fillCategories).catch(function () {});
+      }
+      load(true);
+      refreshCount();
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  })();
+  </script>
+</body>
+</html>

@@ -139,6 +139,33 @@
     .mp-link-btn.danger{color:#c0392b}
     .enq-row{display:flex;gap:12px;padding:14px;border-bottom:1px solid var(--border-light);flex-wrap:wrap}
     .enq-row:last-child{border-bottom:none}
+    .mp-inline-link{color:var(--mp-green);font-weight:700;text-decoration:underline;cursor:pointer}
+    .mp-set-group{display:flex;flex-direction:column;gap:2px;margin:4px 0 10px}
+    .mp-set-title{font-size:13px;font-weight:800;color:var(--text-primary)}
+    .mp-set-title i{color:var(--mp-green);margin-right:6px}
+    .mp-set-sub{font-size:11.5px;color:var(--text-muted)}
+    .mp-set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--border-light)}
+    .mp-set-info{flex:1;min-width:0}
+    .mp-set-info b{display:block;font-size:13px;color:var(--text-primary)}
+    .mp-set-info span{display:block;font-size:11.5px;color:var(--text-muted);margin-top:2px;line-height:1.4}
+    .mp-switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0}
+    .mp-switch input{opacity:0;width:0;height:0}
+    .mp-switch i{position:absolute;cursor:pointer;inset:0;background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:26px;transition:.2s}
+    .mp-switch i::before{content:'';position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.2s}
+    .mp-switch input:checked+i{background:var(--mp-green);border-color:var(--mp-green)}
+    .mp-switch input:checked+i::before{transform:translateX(20px)}
+    .ins-grid-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+    .ins-sum-item{background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:10px;padding:12px}
+    .ins-sum-item .k{font-size:11px;color:var(--text-muted);font-weight:600}
+    .ins-sum-item .v{font-size:18px;font-weight:800;color:var(--text-primary);margin-top:2px}
+    .ins-sum-item .v.mv{font-size:13px;line-height:1.4}
+    .ed-sum{display:flex;flex-direction:column;gap:10px}
+    .ed-pair{display:flex;gap:10px}
+    .ed-pair>div{flex:1;background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:10px;padding:11px 13px}
+    .ed-pair>div.full{flex:1 1 100%}
+    .ed-lb{font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
+    .ed-val{font-size:13.5px;color:var(--text-primary);font-weight:600;word-break:break-word}
+    .ed-msg{background:var(--bg-card-soft);border:1px solid var(--border-light);border-radius:10px;padding:13px;font-size:13px;color:var(--text-primary);line-height:1.55}
     .enq-avatar{width:42px;height:42px;border-radius:50%;background:var(--soft-green);color:var(--mp-green);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
     .enq-body{flex:1;min-width:180px}
     .enq-body .t{font-size:13px;font-weight:700;margin-bottom:2px}
@@ -317,7 +344,8 @@
     <!-- QUICK ACTIONS -->
     <div class="mp-actions">
       <button class="mp-btn primary" id="quick-add"><i class="fas fa-plus"></i> &nbsp;List New Item</button>
-      <button class="mp-btn ghost" id="my-listings-btn"><i class="fas fa-boxes-stacked"></i> My Listings <span class="tab-count" id="cnt-listings">0</span></button>
+      <button class="mp-btn ghost" id="my-listings-btn" type="button"><i class="fas fa-boxes-stacked"></i> My Listings <span class="tab-count" id="cnt-listings">0</span></button>
+      <button class="mp-btn ghost" id="settings-btn" type="button"><i class="fas fa-gear"></i> Marketplace Settings</button>
     </div>
 
     <!-- BACKEND STATUS BANNER -->
@@ -361,50 +389,13 @@
       <button class="mp-tab" data-tab="insights"><i class="fas fa-lightbulb"></i> Insights</button>
     </div>
 
-    <!-- TAB: LISTINGS / MY LISTINGS (default, orders-page style) -->
-    <section id="tab-listings" class="mp-tabpane">
-      <div class="mp-pane-body">
-        <div class="mp-hint"><i class="fas fa-circle-info"></i> Manage every item you are selling, including sold and cancelled listings.</div>
-        <div class="mp-status-pills" id="l-status-pills">
-          <button class="mp-pill active" data-status="">All</button>
-          <button class="mp-pill" data-status="active">Active</button>
-          <button class="mp-pill" data-status="pending">Pending</button>
-          <button class="mp-pill" data-status="paused">Paused</button>
-          <button class="mp-pill" data-status="sold">Sold</button>
-          <button class="mp-pill" data-status="expired">Expired</button>
-          <button class="mp-pill" data-status="cancelled">Cancelled</button>
-        </div>
-        <div class="mp-toolbar" id="listings-tools">
-          <div class="mp-search"><i class="fas fa-magnifying-glass"></i><input id="l-search" maxlength="60" placeholder="Search your listings"></div>
-          <select class="mp-tbfield" id="f-cat"><option value="">All categories</option></select>
-          <input class="mp-tbfield" id="f-loc" maxlength="60" placeholder="Location">
-          <select class="mp-tbfield" id="f-status"><option value="">All statuses</option><option value="active">Active</option><option value="pending">Pending</option><option value="paused">Paused</option><option value="sold">Sold</option><option value="expired">Expired</option><option value="cancelled">Cancelled</option></select>
-          <input class="mp-tbfield" id="f-min" type="number" min="0" step="0.01" placeholder="Min ₹">
-          <input class="mp-tbfield" id="f-max" type="number" min="0" step="0.01" placeholder="Max ₹">
-          <select class="mp-tbfield" id="f-sort"><option value="newest">Newest first</option><option value="price_asc">Price: Low to High</option><option value="price_desc">Price: High to Low</option></select>
-          <button class="mp-btn ghost" id="f-apply"><i class="fas fa-magnifying-glass"></i> Apply</button>
-          <button class="mp-btn ghost" id="f-reset"><i class="fas fa-rotate-left"></i> Reset</button>
-        </div>
-        <div class="is-table-card" id="l-grid"></div>
-        <button class="mp-loadmore" id="l-more" style="display:none">Load more</button>
-      </div>
-    </section>
-
     <!-- TAB: ACTIVE -->
     <section id="tab-active" class="mp-tabpane" style="display:none">
       <div class="mp-pane-body">
-        <div class="mp-hint"><i class="fas fa-circle-info"></i> Currently active listings that are visible to buyers.</div>
+        <div class="mp-hint"><i class="fas fa-circle-info"></i> Currently active listings that are visible to buyers. View all your listing history in <a href="my-listings.html" class="mp-inline-link">My Listings</a>.</div>
         <div class="mp-toolbar" id="active-tools">
           <div class="mp-search"><i class="fas fa-magnifying-glass"></i><input id="active-search" maxlength="60" placeholder="Search active listings"></div>
-          <select class="mp-tbfield" id="active-cat"><option value="">All categories</option></select>
-          <input class="mp-tbfield" id="active-loc" maxlength="60" placeholder="Location">
-          <select class="mp-tbfield" id="active-sort">
-            <option value="newest">Newest first</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-          </select>
-          <button class="mp-btn ghost" id="active-apply"><i class="fas fa-magnifying-glass"></i> Apply</button>
-          <button class="mp-btn ghost" id="active-reset"><i class="fas fa-rotate-left"></i> Reset</button>
+          <button type="button" class="mp-btn ghost" id="filter-open"><i class="fas fa-sliders"></i> Filter</button>
         </div>
         <div class="is-grid" id="active-grid"></div>
         <button class="mp-loadmore" id="active-more" style="display:none">Load more</button>
@@ -454,8 +445,10 @@
           <button class="mp-pill active" data-status="">All</button>
           <button class="mp-pill" data-status="new">New</button>
           <button class="mp-pill" data-status="replied">Responded</button>
+          <button class="mp-pill" data-status="negotiating">Negotiating</button>
           <button class="mp-pill" data-status="accepted">Accepted</button>
           <button class="mp-pill" data-status="completed">Completed</button>
+          <button class="mp-pill" data-status="closed">Closed</button>
           <button class="mp-pill" data-status="rejected">Declined</button>
         </div>
         <div class="is-table-card" id="enq-list"></div>
@@ -468,6 +461,10 @@
       <div class="mp-pane-body">
         <div class="ins-kpis" id="ins-kpis"></div>
         <div class="ins-panel">
+          <h4><i class="fas fa-store" style="color:var(--mp-green);margin-right:6px"></i>Marketplace Summary</h4>
+          <div class="ins-grid-summary" id="ins-summary"></div>
+        </div>
+        <div class="ins-panel">
           <h4><i class="fas fa-chart-column" style="color:var(--mp-green);margin-right:6px"></i>Sales Trend (last 6 months)</h4>
           <div class="trend-bars" id="ins-trend"></div>
         </div>
@@ -477,6 +474,90 @@
         </div>
       </div>
     </section>
+  </div>
+
+  <!-- SHEET: FILTER PANEL (active listings) -->
+  <div class="mp-sheet-bg" id="sheet-bg"></div>
+  <div class="mp-sheet bottom" id="sheet-filter">
+    <div class="mp-sheet-head"><h3><i class="fas fa-sliders" style="color:var(--mp-green);margin-right:6px"></i>Filter listings</h3><button type="button" data-close-sheet="sheet-filter">×</button></div>
+    <div class="mp-sheet-body">
+      <form class="mp-form" id="filter-form">
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Listing type</label><select id="flt-group"><option value="">All types</option><option value="produce">Produce / Crop</option><option value="items">Farm Item / Equipment</option></select></div>
+          <div class="mp-field"><label>Category</label><select id="flt-cat"><option value="">All categories</option></select></div>
+        </div>
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Min price (₹)</label><input id="flt-min" type="number" min="0" step="0.01" placeholder="Any"></div>
+          <div class="mp-field"><label>Max price (₹)</label><input id="flt-max" type="number" min="0" step="0.01" placeholder="Any"></div>
+        </div>
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Location</label><input id="flt-loc" maxlength="60" placeholder="Village / Mandal / District"></div>
+          <div class="mp-field"><label>Availability</label><input id="flt-avail" maxlength="60" placeholder="e.g. Ready now"></div>
+        </div>
+        <div class="mp-field"><label>Sort by</label><select id="flt-sort"><option value="newest">Newest first</option><option value="price_asc">Price: Low to High</option><option value="price_desc">Price: High to Low</option></select></div>
+        <div class="mp-form-foot">
+          <button type="button" class="mp-btn ghost" id="flt-reset"><i class="fas fa-rotate-left"></i> Reset Filters</button>
+          <button type="button" class="mp-btn ghost" data-close-sheet="sheet-filter">Close</button>
+          <button type="submit" class="mp-btn primary" id="flt-apply" style="min-width:130px;justify-content:center"><i class="fas fa-check"></i> Apply Filters</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SHEET: MARKETPLACE SETTINGS -->
+  <div class="mp-sheet bottom" id="sheet-settings">
+    <div class="mp-sheet-head"><h3><i class="fas fa-gear" style="color:var(--mp-green);margin-right:6px"></i>Marketplace Settings</h3><button type="button" data-close-sheet="sheet-settings">×</button></div>
+    <div class="mp-sheet-body">
+      <form class="mp-form" id="settings-form">
+        <div class="mp-set-group">
+          <div class="mp-set-title"><i class="fas fa-star"></i> Prioritise</div>
+          <div class="mp-set-sub">Choose what matters for your selling page.</div>
+        </div>
+        <div class="mp-set-row">
+          <div class="mp-set-info"><b>Make me available as a buyer</b><span>Let other farmers find you to buy their produce and farm items.</span></div>
+          <label class="mp-switch"><input type="checkbox" id="st-available-buyer"><i></i></label>
+        </div>
+        <div class="mp-set-group">
+          <div class="mp-set-title"><i class="fas fa-screwdriver-wrench"></i> Buyer interaction</div>
+          <div class="mp-set-sub">Controls how buyers can reach you and your listings.</div>
+        </div>
+        <div class="mp-set-row">
+          <div class="mp-set-info"><b>Allow buyer enquiries</b><span>Enable buyers to send enquiries on your active listings.</span></div>
+          <label class="mp-switch"><input type="checkbox" id="st-allow-enquiries"><i></i></label>
+        </div>
+        <div class="mp-set-row">
+          <div class="mp-set-info"><b>Show contact option to buyers</b><span>Display your chosen contact method (phone / WhatsApp / in-app).</span></div>
+          <label class="mp-switch"><input type="checkbox" id="st-show-contact"><i></i></label>
+        </div>
+        <div class="mp-set-row">
+          <div class="mp-set-info"><b>Show location to buyers</b><span>Display the farm location on your listings.</span></div>
+          <label class="mp-switch"><input type="checkbox" id="st-show-location"><i></i></label>
+        </div>
+        <div class="mp-set-row">
+          <div class="mp-set-info"><b>Allow negotiation</b><span>Let buyers negotiate the price of negotiable listings.</span></div>
+          <label class="mp-switch"><input type="checkbox" id="st-allow-negotiation"><i></i></label>
+        </div>
+        <div class="mp-set-row">
+          <div class="mp-set-info"><b>Default listing visibility</b><span>Status applied to new listings until you publish them.</span></div>
+          <select class="mp-tbfield" id="st-default-visibility" style="flex:0 1 auto;min-width:150px"><option value="active">Active (visible to buyers)</option><option value="pending">Pending (draft)</option></select>
+        </div>
+        <div class="mp-set-group">
+          <div class="mp-set-title"><i class="fas fa-bell"></i> Notifications</div>
+        </div>
+        <div class="mp-set-row">
+          <div class="mp-set-info"><b>Receive enquiry notifications</b><span>Get notified when a buyer sends a new enquiry.</span></div>
+          <label class="mp-switch"><input type="checkbox" id="st-enq-notify"><i></i></label>
+        </div>
+        <div class="mp-set-row">
+          <div class="mp-set-info"><b>Notify me when an item is sold</b><span>Get notified as soon as one of your listings is sold.</span></div>
+          <label class="mp-switch"><input type="checkbox" id="st-sold-notify"><i></i></label>
+        </div>
+        <div class="mp-form-foot">
+          <button type="button" class="mp-btn ghost" data-close-sheet="sheet-settings">Cancel</button>
+          <button type="submit" class="mp-btn primary" id="st-submit" style="min-width:150px;justify-content:center"><i class="fas fa-check"></i> Save Settings</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- SHEET: LISTING FORM -->
@@ -582,6 +663,12 @@
     </div>
   </div>
 
+  <!-- SHEET: ENQUIRY DETAIL -->
+  <div class="mp-sheet bottom" id="sheet-enq-detail">
+    <div class="mp-sheet-head"><h3><i class="fas fa-comments" style="color:var(--mp-green);margin-right:6px"></i>Buyer enquiry</h3><button data-close-sheet="sheet-enq-detail">×</button></div>
+    <div class="mp-sheet-body" id="enq-detail-body"></div>
+  </div>
+
   <!-- SHEET: INVOICE -->
   <div class="mp-sheet bottom" id="sheet-invoice">
     <div class="mp-sheet-head"><h3><i class="fas fa-file-invoice" style="color:var(--mp-green);margin-right:6px"></i>Sale invoice</h3><button data-close-sheet="sheet-invoice">×</button></div>
@@ -612,18 +699,12 @@
     var SVC = window.MarketplaceSellerService;
     var PAGE = 1, LIST_LIMIT = 24, page = 1, pageLimit = 24;
     var ST = {
-      tab: 'listings',
+      tab: 'active',
       dash: null,
       cats: { produce: [], items: [] },
-      listings: [],
-      listTotal: 0,
-      listStatus: '',
-      search: '',
-      category: '',
-      location: '',
-      minPrice: '',
-      maxPrice: '',
-      sort: 'newest',
+      activeListings: [],
+      activeTotal: 0,
+      activeFilters: { group: '', category: '', minPrice: '', maxPrice: '', location: '', availability: '', sort: 'newest' },
       buyers: [],
       sales: [],
       salesTotal: 0,
@@ -634,7 +715,9 @@
       enqs: [],
       enqTotal: 0,
       enqStatus: '',
+      enqDetail: null,
       insights: null,
+      settings: null,
       formImages: [],
       formMode: 'create',
       editListing: null,
@@ -715,6 +798,7 @@
         sold: { t: 'Sold', c: 'el' }, paused: { t: 'Paused', c: 'warn' },
         expired: { t: 'Expired', c: 'bad' }, cancelled: { t: 'Cancelled', c: 'bad' },
         new: { t: 'New', c: 'info' }, replied: { t: 'Responded', c: 'el' },
+        negotiating: { t: 'Negotiating', c: 'warn' }, closed: { t: 'Closed', c: 'bad' },
         accepted: { t: 'Accepted', c: 'ok' }, completed: { t: 'Completed', c: 'ok' }, rejected: { t: 'Declined', c: 'bad' },
         confirmed: { t: 'Confirmed', c: 'info' }, completed: { t: 'Completed', c: 'ok' },
         paid: { t: 'Paid', c: 'ok' }, partial: { t: 'Partial', c: 'warn' },
@@ -778,10 +862,27 @@
       }
       bindEvents();
       checkBackend();
+      var params = new URLSearchParams(window.location.search || '');
+      var createParam = params.get('create');
+      var editId = params.get('edit');
+      var saleId = params.get('sale');
       loadCategories().then(function () {
         loadDashboard();
-        // Show the unified listings tab by default
-        switchTab('listings');
+        loadSettings();
+        if (createParam === '1') { openCreateForm(); switchTab('active'); }
+        else if (editId) {
+          SVC.getListing(editId).then(function (l) {
+            openEditForm(l);
+            switchTab('active');
+          }).catch(function (e) { toast(errMsg(e) || 'Could not load the listing to edit.', 'error'); switchTab('active'); });
+        }
+        else if (saleId) {
+          SVC.getListing(saleId).then(function (l) {
+            openSaleForm(l, null);
+            switchTab('active');
+          }).catch(function (e) { toast(errMsg(e) || 'Could not load the listing.', 'error'); switchTab('active'); });
+        }
+        else switchTab('active');
       }).catch(function (e) {
         showApiBanner('Marketplace data did not load', backendReason(e), true);
         switchTab('active');
@@ -801,12 +902,10 @@
         });
         var allOpts = '<option value="">All categories</option>' + produceOpts + itemsOpts;
         $('lb-cat').innerHTML = '<option value="">Select category…</option>' + produceOpts + itemsOpts;
-        var fcat = $('f-cat');
-        if (fcat) fcat.innerHTML = allOpts;
+        var fltCat = $('flt-cat');
+        if (fltCat) fltCat.innerHTML = allOpts;
         var fcat2 = $('f-c2');
         if (fcat2) fcat2.innerHTML = allOpts;
-        var activeCat = $('active-cat');
-        if (activeCat) activeCat.innerHTML = allOpts;
       }).catch(function () {
         $('lb-cat').innerHTML = '<option value="">Select category…</option>';
       });
@@ -873,44 +972,30 @@
       }).catch(function () {});
     }
 
-    /* ───────── My Listings ───────── */
-    function listingQuery(override) {
-      var o = override || {};
-      var q = { page: o.page || page, limit: LIST_LIMIT };
-      var st = ST.listStatus || $('f-status').value;
-      if (st) q.status = st;
-      if (ST.search) q.search = ST.search;
-      if (ST.category) q.category_id = ST.category;
-      if (ST.location) q.location = ST.location;
-      if (ST.minPrice !== '' && ST.minPrice !== null && ST.minPrice !== undefined && !isNaN(Number(ST.minPrice))) q.min_price = Number(ST.minPrice);
-      if (ST.maxPrice !== '' && ST.maxPrice !== null && ST.maxPrice !== undefined && !isNaN(Number(ST.maxPrice))) q.max_price = Number(ST.maxPrice);
-      if (ST.sort && ST.sort !== 'newest') q.sort = ST.sort;
-      return q;
-    }
-
     /* ───────── Active Listings ───────── */
     function loadActiveListings(reset) {
       if (!SVC) return;
       if (reset !== false && page > 1) page = 1;
       var q = { page: page, limit: LIST_LIMIT, status: 'active' };
+      var f = ST.activeFilters;
       var activeSearch = $('active-search') ? $('active-search').value.trim() : '';
-      var activeCat = $('active-cat') ? $('active-cat').value : '';
-      var activeLoc = $('active-loc') ? $('active-loc').value.trim() : '';
-      var activeSort = $('active-sort') ? $('active-sort').value : 'newest';
-      
       if (activeSearch) q.search = activeSearch;
-      if (activeCat) q.category_id = activeCat;
-      if (activeLoc) q.location = activeLoc;
-      if (activeSort && activeSort !== 'newest') q.sort = activeSort;
-      
+      if (f.group) q.group = f.group;
+      if (f.category) q.category_id = f.category;
+      if (f.location) q.location = f.location;
+      if (f.availability) q.availability = f.availability;
+      if (f.minPrice !== '' && f.minPrice !== null && f.minPrice !== undefined && !isNaN(Number(f.minPrice))) q.min_price = Number(f.minPrice);
+      if (f.maxPrice !== '' && f.maxPrice !== null && f.maxPrice !== undefined && !isNaN(Number(f.maxPrice))) q.max_price = Number(f.maxPrice);
+      if (f.sort && f.sort !== 'newest') q.sort = f.sort;
+
       skeletonGrid();
-      
+
       SVC.listListings(q).then(function (d) {
-        ST.listings = reset === false ? ST.listings.concat((d.items || [])) : (d.items || []);
-        ST.listTotal = d.total || 0;
+        ST.activeListings = reset === false ? ST.activeListings.concat((d.items || [])) : (d.items || []);
+        ST.activeTotal = d.total || 0;
         renderActiveListings();
-        var hasMore = d.total > ST.listings.length;
-        if ($('active-more')) $('active-more').style.display = hasMore && ST.listings.length ? '' : 'none';
+        var hasMore = d.total > ST.activeListings.length;
+        if ($('active-more')) $('active-more').style.display = hasMore && ST.activeListings.length ? '' : 'none';
       }).catch(function (e) {
         if ($('active-grid')) {
           gridError($('active-grid'), errMsg(e), function () { loadActiveListings(true); }, (e && e.reqUrl) ? ('Failed to load: ' + e.reqUrl) : '');
@@ -921,13 +1006,13 @@
     function renderActiveListings() {
       var grid = $('active-grid');
       if (!grid) return;
-      if (!ST.listings.length) {
+      if (!ST.activeListings.length) {
         grid.innerHTML = '<div class="mp-empty"><i class="fas fa-bullseye"></i><h4>No active listings</h4><p>Your active items will appear here. List new items to start selling.</p><button class="mp-btn primary" id="active-add"><i class="fas fa-plus"></i> List New Item</button></div>';
         var addBtn = $('active-add');
         if (addBtn) addBtn.addEventListener('click', openCreateForm);
         return;
       }
-      grid.innerHTML = ST.listings.filter(function(l) { return l.status === 'active'; }).map(listingCard).join('');
+      grid.innerHTML = ST.activeListings.filter(function(l) { return l.status === 'active'; }).map(listingCard).join('');
     }
 
     /* ───────── Pending Sales ───────── */
@@ -987,7 +1072,6 @@
       }
       var cardHtml = '';
       for (var j = 0; j < 6; j++) cardHtml += '<div class="mp-skel"></div>';
-      if ($('l-grid')) $('l-grid').innerHTML = rowHtml;
       if ($('active-grid')) $('active-grid').innerHTML = cardHtml;
     }
 
@@ -1000,89 +1084,6 @@
         '</div>';
       var btn = el.querySelector('[data-retry]');
       if (btn && retryFn) btn.addEventListener('click', retryFn);
-    }
-
-    function loadListings(reset) {
-      if (!SVC) return;
-      if (reset !== false && page > 1) page = 1;
-      var q = listingQuery();
-      skeletonGrid();
-      SVC.listListings(q).then(function (d) {
-        ST.listings = reset === false ? ST.listings.concat((d.items || [])) : (d.items || []);
-        ST.listTotal = d.total || 0;
-        var cl = $('cnt-listings');
-        if (cl) cl.textContent = ST.listTotal;
-        renderListings();
-        var hasMore = d.total > ST.listings.length;
-        var moreBtn = $('l-more');
-        if (moreBtn) moreBtn.style.display = hasMore && ST.listings.length ? '' : 'none';
-      }).catch(function (e) {
-        gridError($('l-grid'), errMsg(e), function () { loadListings(true); }, (e && e.reqUrl) ? ('Failed to load: ' + e.reqUrl) : '');
-      });
-    }
-
-    function renderListings() {
-      var grid = $('l-grid');
-      if (!ST.listings.length) {
-        var st = ST.listStatus || $('f-status').value;
-        var filtered = !!st || ST.search || ST.category || ST.location || ST.minPrice !== '' || ST.maxPrice !== '';
-        var m = {
-          active: ['No active listings', 'Your active items will appear here.'],
-          pending: ['No pending listings', 'Listings usually turn active right after you publish them.'],
-          sold: ['No sold listings', 'Mark an item as Sold and it will show up here.'],
-          paused: ['No paused listings', 'Paused listings stay hidden until you resume them.'],
-          expired: ['No expired listings', 'Expired listings don\u2019t appear to buyers anymore.'],
-          cancelled: ['No cancelled listings', 'Cancelled listings are no longer visible to buyers.']
-        }[st];
-        grid.innerHTML = '<div class="mp-empty"><i class="fas ' + (filtered ? 'fa-filter' : 'fa-box-open') + '"></i>' +
-          '<h4>' + (m ? m[0] : (filtered ? 'No listings match your filters' : 'No listings yet')) + '</h4>' +
-          '<p>' + (m ? m[1] : (filtered
-            ? 'Try changing the search text, category, location, price range or status.'
-            : 'List your first crop, product or farm item to start selling through Farm Assist.')) + '</p>' +
-          (filtered
-            ? '<button class="mp-btn ghost" id="empty-clear"><i class="fas fa-rotate-left"></i> Clear filters</button>'
-            : '<button class="mp-btn primary" id="empty-add"><i class="fas fa-plus"></i> List New Item</button>') +
-          '</div>';
-        var emptyAdd = $('empty-add');
-        if (emptyAdd) emptyAdd.addEventListener('click', openCreateForm);
-        var emptyClear = $('empty-clear');
-        if (emptyClear) emptyClear.addEventListener('click', resetFilters);
-        return;
-      }
-      grid.innerHTML = ST.listings.map(listingRow).join('');
-    }
-
-    function listingRow(l) {
-      var actions = '';
-      if (l.status === 'active' || l.status === 'pending') {
-        actions += '<button class="mp-link-btn hot" data-act="sale" data-id="' + esc(l.id) + '"><i class="fas fa-check-circle"></i> Mark Sold</button>';
-      }
-      if (l.status === 'active') {
-        actions += '<button class="mp-link-btn" data-act="pause" data-id="' + esc(l.id) + '"><i class="fas fa-pause"></i> Pause</button>';
-      } else if (l.status === 'paused') {
-        actions += '<button class="mp-link-btn" data-act="resume" data-id="' + esc(l.id) + '"><i class="fas fa-play"></i> Resume</button>';
-      }
-      actions += '<button class="mp-link-btn" data-act="edit" data-id="' + esc(l.id) + '"><i class="fas fa-pen"></i> Edit</button>';
-      actions += '<button class="mp-link-btn" data-act="view" data-id="' + esc(l.id) + '"><i class="fas fa-eye"></i> View</button>';
-      if (l.status !== 'sold') {
-        actions += '<button class="mp-link-btn danger" data-act="del" data-id="' + esc(l.id) + '"><i class="fas fa-trash"></i> Delete</button>';
-      }
-      return '<div class="sale-row">' +
-        thumb(l, 'fa-seedling') +
-        '<div class="sale-info">' +
-        '<div class="t" onclick="window.__mpView && window.__mpView(\'' + esc(l.id) + '\')">' + esc(l.title) + '</div>' +
-        '<div class="m">' + statusChip(l.status || '—') +
-        '<span><i class="fas fa-boxes"></i> ' + qtyFmt(l.remaining_quantity, l.unit) + ' left</span>' +
-        (l.location ? '<span><i class="fas fa-location-dot"></i> ' + esc(l.location) + '</span>' : '') +
-        (l.created_at ? '<span><i class="far fa-calendar"></i> ' + esc(timeAgo(l.created_at)) + '</span>' : '') +
-        '</div></div>' +
-        '<div class="sale-right">' +
-        '<div style="text-align:right">' +
-        '<div class="sale-amount">' + fmtPrice(l.price) + '</div>' +
-        '<div style="font-size:11px;color:var(--text-secondary)">per ' + esc(l.unit) + '</div>' +
-        '</div>' +
-        '<div class="sale-btns">' + actions + '</div>' +
-        '</div></div>';
     }
 
     function listingCard(l) {
@@ -1335,16 +1336,15 @@
         toast(ST.formMode === 'edit' ? 'Listing updated.' : 'Listing created successfully!', 'success');
         closeSheet('sheet-listing');
         loadDashboard();
-        loadListings(true);
-        if (ST.formMode === 'create') { /* stay on listings tab */ }
+        loadActiveListings(true);
       }).catch(function (e) {
         toast(errMsg(e), 'error');
         setBtn(btn, false, '', '<i class="fas fa-check"></i> Save Listing');
       });
     }
 
-    /* ───────── Listing actions ───────── */
-    function onListingAction(id, act) {
+    /* ───────── Active listing actions ───────── */
+    function onActiveAction(id, act) {
       if (!SVC) return;
       if (act === 'view') { openListingDetail(id); return; }
       if (act === 'edit') {
@@ -1358,14 +1358,14 @@
       if (act === 'pause') {
         SVC.updateListingStatus(id, 'paused').then(function () {
           toast('Listing paused.');
-          loadDashboard(); loadListings(true);
+          loadDashboard(); loadActiveListings(true);
         }).catch(function (e) { toast(errMsg(e), 'error'); });
         return;
       }
       if (act === 'resume') {
         SVC.updateListingStatus(id, 'active').then(function () {
           toast('Listing is active again.');
-          loadDashboard(); loadListings(true);
+          loadDashboard(); loadActiveListings(true);
         }).catch(function (e) { toast(errMsg(e), 'error'); });
         return;
       }
@@ -1373,15 +1373,10 @@
         showConfirm('Delete listing?', 'This listing will be removed from the marketplace. If it has sale history, the listing is hidden but your sales records stay safe.', function () {
           SVC.deleteListing(id).then(function () {
             toast('Listing deleted.');
-            loadDashboard(); loadListings(true);
+            loadDashboard(); loadActiveListings(true);
           }).catch(function (e) { toast(errMsg(e), 'error'); });
         });
       }
-    }
-
-    function syncStatusField() {
-      var sel = $('f-status');
-      if (sel) sel.value = ST.listStatus;
     }
 
     /* ───────── Invoice ───────── */
@@ -1622,7 +1617,7 @@
       req.then(function () {
         toast(ST.editSale ? 'Sale updated.' : 'Sale recorded.');
         closeSheet('sheet-sale');
-        loadSales(false); loadDashboard(); loadListings(true);
+        loadSales(false); loadDashboard(); loadActiveListings(true);
         if ($('tab-sold').style.display !== 'none') loadSold(false);
       }).catch(function (e) {
         toast(errMsg(e), 'error');
@@ -1659,16 +1654,24 @@
         var name = en.buyer_name || buyer.full_name || 'Buyer';
         var li = en.listing || {};
         var actions = '';
-        if (en.status !== 'rejected' && en.status !== 'completed') {
+        actions += '<button class="mp-link-btn" data-enq="detail" data-id="' + esc(en.id) + '"><i class="fas fa-eye"></i> View</button>';
+        if (en.status !== 'rejected' && en.status !== 'completed' && en.status !== 'closed') {
           actions += '<button class="mp-link-btn" data-enq="reply" data-id="' + esc(en.id) + '"><i class="fas fa-reply"></i> Reply</button>';
         }
         if (en.status === 'new' || en.status === 'replied') {
+          actions += '<button class="mp-link-btn" data-enq="negotiate" data-id="' + esc(en.id) + '"><i class="fas fa-handshake"></i> Negotiate</button>';
+        }
+        if (en.status === 'new' || en.status === 'replied' || en.status === 'negotiating') {
           actions += '<button class="mp-link-btn" data-enq="accept" data-id="' + esc(en.id) + '"><i class="fas fa-check"></i> Accept</button>';
           actions += '<button class="mp-link-btn danger" data-enq="reject" data-id="' + esc(en.id) + '"><i class="fas fa-xmark"></i> Decline</button>';
         }
         if (en.status === 'accepted') {
           actions += '<button class="mp-link-btn" data-enq="complete" data-id="' + esc(en.id) + '"><i class="fas fa-flag-checkered"></i> Complete</button>';
         }
+        var extra = '';
+        if (en.requested_quantity) extra += ' <span title="Requested quantity"><i class="fas fa-boxes"></i> ' + esc(qtyFmt(en.requested_quantity, li.unit || '')) + '</span>';
+        if (en.offered_price) extra += ' <span title="Offered price"><i class="fas fa-hand-holding-dollar"></i> ' + fmtPrice(en.offered_price) + '</span>';
+        if (extra) extra = '<div class="enq-extra">' + extra + '</div>';
         return '<div class="enq-row">' +
           '<div class="enq-avatar">' + esc(initials(name)) + '</div>' +
           '<div class="enq-body">' +
@@ -1676,6 +1679,7 @@
           '<div class="l">About <b>' + esc(li.title || 'listing') + '</b> · ' + statusChip(en.status) +
           (en.buyer_phone ? ' · <i class="fas fa-phone"></i> ' + esc(en.buyer_phone) : '') + '</div>' +
           '<div class="msg">' + esc(en.message) + '</div>' +
+          extra +
           '</div>' +
           '<div class="enq-actions">' + actions + '</div>' +
           '</div>';
@@ -1684,10 +1688,19 @@
 
     function onEnqAction(id, act) {
       if (!SVC) return;
+      var en = ST.enqs.filter(function (e) { return e.id === id; })[0];
+      if (act === 'detail' && en) { openEnquiryDetail(en); return; }
       if (act === 'reply') {
-        ST.replyEnquiry = ST.enqs.filter(function (e) { return e.id === id; })[0] || null;
+        ST.replyEnquiry = en || null;
         $('rp-msg').value = '';
         openSheet('sheet-reply');
+        return;
+      }
+      if (act === 'negotiate') {
+        SVC.updateEnquiryStatus(id, 'negotiating').then(function () {
+          toast('Negotiation started — keep the conversation going from Messages.');
+          loadEnquiries(false);
+        }).catch(function (e) { toast(errMsg(e), 'error'); });
         return;
       }
       if (act === 'accept') {
@@ -1702,13 +1715,60 @@
           toast('Enquiry declined.');
           loadEnquiries(false);
         }).catch(function (e) { toast(errMsg(e), 'error'); });
+        return;
       }
       if (act === 'complete') {
         SVC.updateEnquiryStatus(id, 'completed').then(function () {
           toast('Enquiry marked as completed.');
           loadEnquiries(false);
         }).catch(function (e) { toast(errMsg(e), 'error'); });
+        return;
       }
+      if (act === 'close') {
+        SVC.updateEnquiryStatus(id, 'closed').then(function () {
+          toast('Enquiry closed.');
+          loadEnquiries(false);
+        }).catch(function (e) { toast(errMsg(e), 'error'); });
+      }
+    }
+
+    function openEnquiryDetail(en) {
+      ST.enqDetail = en;
+      var buyer = en.buyer || {};
+      var li = en.listing || {};
+      var name = en.buyer_name || buyer.full_name || 'Buyer';
+      var detailBtn = function (label, icon, enq, cls) {
+        return '<button class="mp-btn ' + (cls || 'ghost') + '" data-enq-btn="' + enq + '" data-id="' + esc(en.id) + '"><i class="fas ' + icon + '"></i> ' + label + '</button>';
+      };
+      var actions = '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:flex-end">';
+      actions += detailBtn('Close', 'fa-xmark', 'close', 'ghost');
+      if (en.status !== 'rejected' && en.status !== 'completed' && en.status !== 'closed') actions += detailBtn('Reply', 'fa-reply', 'reply', 'ghost');
+      if (en.status === 'new' || en.status === 'replied') actions += detailBtn('Negotiate', 'fa-handshake', 'negotiate', 'ghost');
+      if (en.status === 'new' || en.status === 'replied' || en.status === 'negotiating') {
+        actions += detailBtn('Accept', 'fa-check', 'accept', 'primary');
+        actions += detailBtn('Decline', 'fa-xmark', 'reject', 'danger');
+      }
+      if (en.status === 'accepted') actions += detailBtn('Complete', 'fa-flag-checkered', 'complete', 'primary');
+      actions += '</div>';
+
+      $('enq-detail-body').innerHTML =
+        '<div class="ed-title">' + esc(li.title || 'Listing not found') + '</div>' +
+        '<div style="margin:4px 0 14px">' + statusChip(en.status) + '</div>' +
+        '<div class="ed-sum">' +
+        '<div class="ed-pair">' +
+        '<div><div class="ed-lb">Buyer</div><div class="ed-val">' + esc(name) + '</div></div>' +
+        '<div><div class="ed-lb">Phone</div><div class="ed-val">' + esc(en.buyer_phone || '—') + '</div></div>' +
+        '</div>' +
+        '<div class="ed-pair">' +
+        (en.requested_quantity ? '<div><div class="ed-lb">Requested quantity</div><div class="ed-val">' + esc(qtyFmt(en.requested_quantity, li.unit || '')) + '</div></div>' : '') +
+        (en.offered_price ? '<div><div class="ed-lb">Offered price</div><div class="ed-val">' + fmtPrice(en.offered_price) + '</div></div>' : '') +
+        '</div>' +
+        '<div class="ed-pair"><div class="full"><div class="ed-lb">Sent on</div><div class="ed-val">' + esc(timeAgo(en.created_at)) + '</div></div></div>' +
+        '<div class="ed-lb" style="margin-top:2px">Message</div>' +
+        '<div class="ed-msg">' + esc(en.message) + '</div>' +
+        '</div>' +
+        actions;
+      openSheet('sheet-enq-detail');
     }
 
     function submitReplyForm(ev) {
@@ -1753,42 +1813,153 @@
         kpis.innerHTML = '';
         $('ins-trend').innerHTML = '<div class="mp-empty" style="grid-column:1;width:100%"><i class="fas fa-chart-pie"></i><h4>No sales data yet</h4><p>Once you complete your first sales, your selling performance and trends will appear here.</p></div>';
         $('ins-cats').innerHTML = '';
-        return;
+      } else {
+        kpis.innerHTML = [
+          ['Items Sold', d.total_items_sold || 0],
+          ['Quantity Sold', qtyFmt(d.total_quantity_sold, '')],
+          ['Total Revenue', fmtPrice(d.total_sales_value), 'highlight'],
+          ['Best Category', d.most_sold_category || '—']
+        ].map(function (k) {
+          return '<div class="ins-kpi"><div class="k">' + k[0] + '</div><div class="v' + (k[2] ? ' highlight' : '') + '">' + (k[1] === null || k[1] === undefined ? '—' : k[1]) + '</div></div>';
+        }).join('');
+
+        var trend = d.sales_trend || [];
+        if (trend.length) {
+          var maxVal = Math.max.apply(null, trend.map(function (t) { return t.value || 0; }));
+          maxVal = maxVal || 1;
+          $('ins-trend').innerHTML = trend.map(function (t) {
+            var pct = Math.max(4, Math.round(((t.value || 0) / maxVal) * 100));
+            var labelArr = (t.month || '').split('-');
+            var lbl = labelArr.length === 2 ? labelArr[1] + '/' + labelArr[0].slice(2) : t.month;
+            return '<div class="trend-col"><div class="bar" style="height:' + pct + '%"><span>' + (t.value ? '₹' + Number(t.value).toLocaleString('en-IN') : '0') + '</span></div><div class="lbl">' + lbl + '</div></div>';
+          }).join('');
+        } else {
+          $('ins-trend').innerHTML = '<div class="mp-empty" style="width:100%"><i class="fas fa-chart-column"></i><h4>No monthly trend yet</h4><p>Sales over the last 6 months will be shown here.</p></div>';
+        }
+
+        var cats = Object.keys(d.category_totals || {}).map(function (k) {
+          return { name: k, value: d.category_totals[k] };
+        }).sort(function (a, b) { return b.value - a.value; });
+        if (cats.length) {
+          var maxCat = cats[0].value || 1;
+          $('ins-cats').innerHTML = cats.map(function (c) {
+            return '<div class="cat-row"><div class="nm">' + esc(c.name) + '</div><div class="track"><i style="width:' + Math.max(6, Math.round((c.value / maxCat) * 100)) + '%"></i></div><div class="amt">' + fmtPrice(c.value) + '</div></div>';
+          }).join('');
+        } else {
+          $('ins-cats').innerHTML = '<p style="font-size:12px;color:var(--text-muted);margin:0">No category data yet.</p>';
+        }
       }
-      kpis.innerHTML = [
-        ['Items Sold', d.total_items_sold || 0],
-        ['Quantity Sold', qtyFmt(d.total_quantity_sold, '')],
-        ['Total Revenue', fmtPrice(d.total_sales_value), 'highlight'],
-        ['Best Category', d.most_sold_category || '—']
-      ].map(function (k) {
-        return '<div class="ins-kpi"><div class="k">' + k[0] + '</div><div class="v' + (k[2] ? ' highlight' : '') + '">' + (k[1] === null || k[1] === undefined ? '—' : k[1]) + '</div></div>';
+
+      // Marketplace summary is always real data.
+      var sum = $('ins-summary');
+      var items = [
+        ['Total Listings', d.total_listings || 0, ''],
+        ['Active Listings', d.active_listings || 0, ''],
+        ['Sold Listings', d.sold_listings || 0, ''],
+        ['Pending Sales', d.pending_sales || 0, ''],
+        ['Cancelled Sales', d.cancelled_sales || 0, ''],
+        ['Buyer Enquiries', d.enquiry_count || 0, '']
+      ];
+      var mv = d.most_viewed;
+      if (mv) items.push(['Most Viewed', esc(mv.title) + ' · ' + (mv.views || 0) + ' views', 'mv']);
+      sum.innerHTML = items.map(function (k) {
+        return '<div class="ins-sum-item"><div class="k">' + k[0] + '</div><div class="v' + (k[2] ? ' ' + k[2] : '') + '">' + (k[1] === null || k[1] === undefined ? '—' : k[1]) + '</div></div>';
       }).join('');
+    }
 
-      var trend = d.sales_trend || [];
-      if (trend.length) {
-        var maxVal = Math.max.apply(null, trend.map(function (t) { return t.value || 0; }));
-        maxVal = maxVal || 1;
-        $('ins-trend').innerHTML = trend.map(function (t) {
-          var pct = Math.max(4, Math.round(((t.value || 0) / maxVal) * 100));
-          var labelArr = (t.month || '').split('-');
-          var lbl = labelArr.length === 2 ? labelArr[1] + '/' + labelArr[0].slice(2) : t.month;
-          return '<div class="trend-col"><div class="bar" style="height:' + pct + '%"><span>' + (t.value ? '₹' + Number(t.value).toLocaleString('en-IN') : '0') + '</span></div><div class="lbl">' + lbl + '</div></div>';
-        }).join('');
-      } else {
-        $('ins-trend').innerHTML = '<div class="mp-empty" style="width:100%"><i class="fas fa-chart-column"></i><h4>No monthly trend yet</h4><p>Sales over the last 6 months will be shown here.</p></div>';
-      }
+    /* ───────── Marketplace settings ───────── */
+    function loadSettings() {
+      if (!$('sheet-settings')) return;
+      var token = localStorage.getItem('fa-auth-token');
+      if (!token) return;
+      fetch(BASE_URL + '/marketplace/settings', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+      }).then(function (r) { return r.json().then(function (d) { return r.ok ? d : Promise.reject(d); }); })
+        .then(function (d) {
+          var s = (d.data && d.data.settings) || {};
+          ST.settings = s;
+          $('st-available-buyer').checked = !!s.available_as_buyer;
+          $('st-allow-enquiries').checked = s.allow_buyer_enquiries !== false;
+          $('st-show-contact').checked = s.show_contact_to_buyers !== false;
+          $('st-show-location').checked = s.show_location_to_buyers !== false;
+          $('st-allow-negotiation').checked = s.allow_negotiation !== false;
+          $('st-enq-notify').checked = s.receive_enquiry_notifications !== false;
+          $('st-sold-notify').checked = s.notify_when_sold !== false;
+          $('st-default-visibility').value = s.default_listing_visibility || 'active';
+        }).catch(function () {});
+    }
 
-      var cats = Object.keys(d.category_totals || {}).map(function (k) {
-        return { name: k, value: d.category_totals[k] };
-      }).sort(function (a, b) { return b.value - a.value; });
-      if (cats.length) {
-        var maxCat = cats[0].value || 1;
-        $('ins-cats').innerHTML = cats.map(function (c) {
-          return '<div class="cat-row"><div class="nm">' + esc(c.name) + '</div><div class="track"><i style="width:' + Math.max(6, Math.round((c.value / maxCat) * 100)) + '%"></i></div><div class="amt">' + fmtPrice(c.value) + '</div></div>';
-        }).join('');
-      } else {
-        $('ins-cats').innerHTML = '<p style="font-size:12px;color:var(--text-muted);margin:0">No category data yet.</p>';
-      }
+    function saveSettings(ev) {
+      ev.preventDefault();
+      var token = localStorage.getItem('fa-auth-token');
+      if (!token) return toast('Please sign in again.', 'error');
+      var btn = $('st-submit');
+      setBtn(btn, true, '<i class="fas fa-spinner fa-spin"></i> Saving…', '<i class="fas fa-check"></i> Save Settings');
+      fetch(BASE_URL + '/marketplace/settings', {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          available_as_buyer: $('st-available-buyer').checked,
+          allow_buyer_enquiries: $('st-allow-enquiries').checked,
+          show_contact_to_buyers: $('st-show-contact').checked,
+          show_location_to_buyers: $('st-show-location').checked,
+          allow_negotiation: $('st-allow-negotiation').checked,
+          receive_enquiry_notifications: $('st-enq-notify').checked,
+          notify_when_sold: $('st-sold-notify').checked,
+          default_listing_visibility: $('st-default-visibility').value
+        })
+      }).then(function (r) { return r.json().then(function (d) { return r.ok ? d : Promise.reject(d); }); })
+        .then(function (d) {
+          ST.settings = (d.data && d.data.settings) || ST.settings;
+          closeSheet('sheet-settings');
+          toast('Marketplace settings saved.');
+        }).catch(function (e) {
+          toast(errMsg(e) || 'Failed to save settings.', 'error');
+        }).finally(function () {
+          setBtn(btn, false, '', '<i class="fas fa-check"></i> Save Settings');
+        });
+    }
+
+    /* ───────── Filter panel ───────── */
+    function openFilterPanel() {
+      var f = ST.activeFilters;
+      $('flt-group').value = f.group || '';
+      $('flt-cat').value = f.category || '';
+      $('flt-min').value = f.minPrice || '';
+      $('flt-max').value = f.maxPrice || '';
+      $('flt-loc').value = f.location || '';
+      $('flt-avail').value = f.availability || '';
+      $('flt-sort').value = f.sort || 'newest';
+      openSheet('sheet-filter');
+    }
+
+    function applyActiveFilters(ev) {
+      if (ev) ev.preventDefault();
+      ST.activeFilters.group = $('flt-group').value;
+      ST.activeFilters.category = $('flt-cat').value;
+      ST.activeFilters.minPrice = $('flt-min').value;
+      ST.activeFilters.maxPrice = $('flt-max').value;
+      ST.activeFilters.location = $('flt-loc').value.trim();
+      ST.activeFilters.availability = $('flt-avail').value.trim();
+      ST.activeFilters.sort = $('flt-sort').value;
+      closeSheet('sheet-filter');
+      page = 1;
+      loadActiveListings(true);
+    }
+
+    function resetActiveFilters() {
+      ST.activeFilters = { group: '', category: '', minPrice: '', maxPrice: '', location: '', availability: '', sort: 'newest' };
+      $('flt-group').value = '';
+      $('flt-cat').value = '';
+      $('flt-min').value = '';
+      $('flt-max').value = '';
+      $('flt-loc').value = '';
+      $('flt-avail').value = '';
+      $('flt-sort').value = 'newest';
+      closeSheet('sheet-filter');
+      page = 1;
+      loadActiveListings(true);
     }
 
     /* ───────── Confirm dialog ───────── */
@@ -1801,18 +1972,13 @@
 
     /* ───────── Tabs / subviews ───────── */
     function switchTab(tab) {
-      tab = tab || 'listings';
+      tab = tab || 'active';
       var section = tab;
       var pane = tab;
-      var listStatus = '';
       
       // Map tabs to their content panes
-      if (section === 'listings') {
-        pane = 'listings';
-        listStatus = '';
-      } else if (section === 'active') {
+      if (section === 'active') {
         pane = 'active';
-        listStatus = 'active';
       } else if (section === 'pending') {
         pane = 'pending';
         ST.saleStatus = 'pending';
@@ -1828,11 +1994,9 @@
       }
 
       ST.tab = section;
-      ST.listStatus = listStatus;
-      syncStatusField();
 
       // Hide all tab panes, then show the selected pane
-      ['listings', 'active', 'pending', 'sold', 'sales', 'enquiries', 'insights'].forEach(function (t) {
+      ['active', 'pending', 'sold', 'sales', 'enquiries', 'insights'].forEach(function (t) {
         var el = $('tab-' + t);
         if (el) el.style.display = t === pane ? '' : 'none';
       });
@@ -1843,53 +2007,20 @@
         t.setAttribute('aria-selected', t.dataset.tab === section ? 'true' : 'false');
       });
 
-      // My Listings button reflects the active pane
-      var mlb = $('my-listings-btn');
-      if (mlb) mlb.classList.toggle('active', pane === 'listings');
-
-      // Keep the listings status pills in sync
-      if (pane === 'listings') setActivePills('l-status-pills', listStatus || $('f-status').value || '');
-
       // Load content for the selected pane
-      if (pane === 'listings') loadListings(true);
-      else if (pane === 'active') loadActiveListings(true);
+      if (pane === 'active') loadActiveListings(true);
       else if (pane === 'pending') loadPendingSales(false);
       else if (pane === 'sold') loadSold(false);
       else if (pane === 'sales') {
         setActivePills('s-status-pills', ST.saleStatus);
         loadSales(false);
-      } else if (pane === 'enquiries') loadEnquiries(false);
-      else if (pane === 'insights') loadInsights();
+      } else if (pane === 'enquiries') {
+        setActivePills('e-status-pills', ST.enqStatus);
+        loadEnquiries(false);
+      } else if (pane === 'insights') loadInsights();
     }
 
     /* ───────── Events ───────── */
-    function applyFilters() {
-      ST.search = $('l-search').value.trim();
-      ST.category = $('f-cat').value;
-      ST.location = $('f-loc').value.trim();
-      ST.minPrice = $('f-min').value;
-      ST.maxPrice = $('f-max').value;
-      ST.sort = $('f-sort').value;
-      page = 1;
-      loadListings(true);
-    }
-
-    function resetFilters() {
-      ['l-search', 'f-loc', 'f-min', 'f-max'].forEach(function (id) { $(id).value = ''; });
-      $('f-cat').value = '';
-      $('f-status').value = '';
-      $('f-sort').value = 'newest';
-      ST.listStatus = '';
-      ST.search = '';
-      ST.category = '';
-      ST.location = '';
-      ST.minPrice = '';
-      ST.maxPrice = '';
-      ST.sort = 'newest';
-      syncStatusField();
-      loadListings(true);
-    }
-
     function bindEvents() {
       $('api-banner-retry').addEventListener('click', function () { window.location.reload(); });
       $('api-banner-swap').addEventListener('click', function () {
@@ -1898,72 +2029,38 @@
       });
       $('quick-add').addEventListener('click', openCreateForm);
       $('intro-add').addEventListener('click', openCreateForm);
-      
+
       var myListingsBtn = $('my-listings-btn');
       if (myListingsBtn) {
-        myListingsBtn.addEventListener('click', function () { switchTab('listings'); });
+        myListingsBtn.addEventListener('click', function () {
+          window.location.href = 'my-listings.html';
+        });
       }
+      var settingsBtn = $('settings-btn');
+      if (settingsBtn) {
+        settingsBtn.addEventListener('click', function () { loadSettings(); openSheet('sheet-settings'); });
+      }
+
+      // Filter panel
+      var filterOpen = $('filter-open');
+      if (filterOpen) filterOpen.addEventListener('click', openFilterPanel);
+      var filterForm = $('filter-form');
+      if (filterForm) filterForm.addEventListener('submit', applyActiveFilters);
+      var fltReset = $('flt-reset');
+      if (fltReset) fltReset.addEventListener('click', resetActiveFilters);
+      var activeSearch = $('active-search');
+      if (activeSearch) {
+        activeSearch.addEventListener('keydown', function (e) { if (e.key === 'Enter') loadActiveListings(true); });
+      }
+
+      // Settings form
+      var settingsForm = $('settings-form');
+      if (settingsForm) settingsForm.addEventListener('submit', saveSettings);
 
       // Tabs
       document.querySelectorAll('.mp-tab').forEach(function (t) {
         t.addEventListener('click', function () { switchTab(t.dataset.tab); });
       });
-
-      // My Listings status pills (orders-page style quick filter)
-      $('l-status-pills').addEventListener('click', function (e) {
-        var pill = e.target.closest('.mp-pill');
-        if (!pill) return;
-        ST.listStatus = pill.dataset.status || '';
-        syncStatusField();
-        setActivePills('l-status-pills', ST.listStatus);
-        page = 1;
-        loadListings(true);
-      });
-
-      // Listings toolbar (search / filter / sort)
-      $('f-apply').addEventListener('click', applyFilters);
-      $('f-reset').addEventListener('click', resetFilters);
-      $('l-search').addEventListener('keydown', function (e) { if (e.key === 'Enter') applyFilters(); });
-      $('f-sort').addEventListener('change', applyFilters);
-      $('f-status').addEventListener('change', function () {
-        ST.listStatus = $('f-status').value;
-        page = 1;
-        document.querySelectorAll('.mp-tab').forEach(function (t) {
-          t.classList.toggle('active', t.dataset.tab === (ST.listStatus === 'active' ? 'active' : ST.listStatus === 'pending' ? 'pending' : 'listings'));
-        });
-        loadListings(true);
-      });
-
-      // Active listings toolbar
-      var activeApply = $('active-apply');
-      var activeReset = $('active-reset');
-      if (activeApply) {
-        activeApply.addEventListener('click', function () {
-          ST.search = $('active-search').value.trim();
-          ST.category = $('active-cat').value;
-          ST.location = $('active-loc').value.trim();
-          ST.sort = $('active-sort').value;
-          page = 1;
-          loadActiveListings(true);
-        });
-      }
-      if (activeReset) {
-        activeReset.addEventListener('click', function () {
-          $('active-search').value = '';
-          $('active-cat').value = '';
-          $('active-loc').value = '';
-          $('active-sort').value = 'newest';
-          ST.search = '';
-          ST.category = '';
-          ST.location = '';
-          ST.sort = 'newest';
-          loadActiveListings(true);
-        });
-      }
-      var activeSearch = $('active-search');
-      if (activeSearch) {
-        activeSearch.addEventListener('keydown', function (e) { if (e.key === 'Enter') { if (activeApply) activeApply.click(); } });
-      }
 
       // Sales-history category filter
       $('f-c2').addEventListener('change', function () {
@@ -1988,11 +2085,28 @@
         });
       });
 
-      // Listing grid actions
-      $('l-grid').addEventListener('click', function (e) {
+      // Active listing card actions
+      $('active-grid').addEventListener('click', function (e) {
         var btn = e.target.closest('[data-act]');
-        if (btn) onListingAction(btn.dataset.id, btn.dataset.act);
+        if (btn) onActiveAction(btn.dataset.id, btn.dataset.act);
       });
+
+      // Enquiry detail actions
+      var enqDetailBody = $('enq-detail-body');
+      if (enqDetailBody) {
+        enqDetailBody.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-enq-btn]');
+          if (btn) {
+            closeSheet('sheet-enq-detail');
+            onEnqAction(btn.dataset.id, btn.dataset.enqBtn);
+            return;
+          }
+          var view = e.target.closest('[data-enq-view]');
+          if (view) { onEnqAction(view.dataset.id, 'detail'); return; }
+          var reply = e.target.closest('[data-enq-reply]');
+          if (reply) { onEnqAction(reply.dataset.id, 'reply'); return; }
+        });
+      }
 
       // Sold items / invoice actions
       $('sold-list').addEventListener('click', function (e) {
@@ -2022,7 +2136,6 @@
       }
 
       // Load more
-      $('l-more').addEventListener('click', function () { page += 1; loadListings(false); });
       var activeMore = $('active-more');
       if (activeMore) {
         activeMore.addEventListener('click', function () { page += 1; loadActiveListings(false); });

@@ -31,6 +31,7 @@ from app.models.marketplace import (
     MarketplaceEnquiry,
     MarketplaceSale,
     MarketplaceBuyerRecommendation,
+    MarketplaceSellerSettings,
 )
 from app.models.messages import Conversation, ConversationParticipant, Message
 
@@ -45,7 +46,7 @@ MAX_IMAGES = 5
 UNITS = ["kg", "g", "quintal", "tonne", "bag", "pack", "bundle", "piece", "set", "unit", "litre", "dozen"]
 PRICING_TYPES = ["fixed", "negotiable"]
 CONTACT_METHODS = ["in-app", "phone", "whatsapp"]
-ENQUIRY_STATUSES = ["new", "replied", "accepted", "completed", "rejected"]
+ENQUIRY_STATUSES = ["new", "replied", "negotiating", "accepted", "completed", "closed", "rejected"]
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +172,17 @@ class BuyerMessage(BaseModel):
 
 class BuyerRecommendUpdate(BaseModel):
     recommended: bool
+
+
+class SellerSettingsUpdate(BaseModel):
+    available_as_buyer: Optional[bool] = None
+    allow_buyer_enquiries: Optional[bool] = None
+    show_contact_to_buyers: Optional[bool] = None
+    receive_enquiry_notifications: Optional[bool] = None
+    show_location_to_buyers: Optional[bool] = None
+    allow_negotiation: Optional[bool] = None
+    default_listing_visibility: Optional[str] = None
+    notify_when_sold: Optional[bool] = None
 
 
 def _category_payload(cat):
@@ -302,6 +314,8 @@ def _enquiry_payload(db: Session, enquiry: MarketplaceEnquiry) -> dict:
         "buyer_name": enquiry.buyer_name,
         "buyer_phone": enquiry.buyer_phone,
         "message": enquiry.message,
+        "requested_quantity": enquiry.requested_quantity,
+        "offered_price": enquiry.offered_price,
         "status": enquiry.status,
         "conversation_id": enquiry.conversation_id,
         "created_at": str(enquiry.created_at) if enquiry.created_at else None,
@@ -531,6 +545,32 @@ def sales_insights(
                 "sold_at": payload["sold_at"] or payload["created_at"],
             })
 
+    # Supporting marketplace counts (always derived from real data).
+    listing_query = db.query(MarketplaceListing).filter(MarketplaceListing.user_id == uid)
+    total_listings = listing_query.count()
+    active_listings = listing_query.filter(
+        MarketplaceListing.status == "active", MarketplaceListing.is_active == True  # noqa: E712
+    ).count()
+    sold_listings = listing_query.filter(MarketplaceListing.status == "sold").count()
+    pending_sales = 0
+    cancelled_sales = 0
+    if listing_ids:
+        pending_sales = db.query(func.count(MarketplaceSale.id)).filter(
+            MarketplaceSale.listing_id.in_(listing_ids), MarketplaceSale.status == "pending"
+        ).scalar() or 0
+        cancelled_sales = db.query(func.count(MarketplaceSale.id)).filter(
+            MarketplaceSale.listing_id.in_(listing_ids), MarketplaceSale.status == "cancelled"
+        ).scalar() or 0
+    enquiry_count = 0
+    if listing_ids:
+        enquiry_count = db.query(func.count(MarketplaceEnquiry.id)).filter(
+            MarketplaceEnquiry.listing_id.in_(listing_ids)
+        ).scalar() or 0
+    most_viewed = None
+    best_viewed = listing_query.order_by(MarketplaceListing.total_views.desc()).first()
+    if best_viewed and (best_viewed.total_views or 0) > 0:
+        most_viewed = {"title": best_viewed.title, "views": best_viewed.total_views}
+
     return {
         "status": "success",
         "data": {
@@ -543,8 +583,93 @@ def sales_insights(
             "sales_trend": trend,
             "recent_sales": recent,
             "sale_count": len(completed),
+            "total_listings": total_listings,
+            "active_listings": active_listings,
+            "sold_listings": sold_listings,
+            "pending_sales": pending_sales,
+            "cancelled_sales": cancelled_sales,
+            "enquiry_count": enquiry_count,
+            "most_viewed": most_viewed,
         },
     }
+
+
+DEFAULT_SELLER_SETTINGS = {
+    "available_as_buyer": False,
+    "allow_buyer_enquiries": True,
+    "show_contact_to_buyers": True,
+    "receive_enquiry_notifications": True,
+    "show_location_to_buyers": True,
+    "allow_negotiation": True,
+    "default_listing_visibility": "active",
+    "notify_when_sold": True,
+}
+
+
+def _settings_payload(settings: Optional[MarketplaceSellerSettings]) -> dict:
+    row = settings
+    merged = dict(DEFAULT_SELLER_SETTINGS)
+    if row is not None:
+        for key in DEFAULT_SELLER_SETTINGS:
+            value = getattr(row, key, None)
+            if value is not None:
+                merged[key] = value
+    merged["created_at"] = str(row.created_at) if row and row.created_at else None
+    merged["updated_at"] = str(row.updated_at) if row and row.updated_at else None
+    return merged
+
+
+@router.get("/settings")
+def get_seller_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    settings = db.query(MarketplaceSellerSettings).filter(
+        MarketplaceSellerSettings.user_id == current_user.id
+    ).first()
+    return {"status": "success", "data": {"settings": _settings_payload(settings)}}
+
+
+@router.put("/settings")
+def update_seller_settings(
+    payload: SellerSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    settings = db.query(MarketplaceSellerSettings).filter(
+        MarketplaceSellerSettings.user_id == current_user.id
+    ).first()
+
+    now = datetime.utcnow()
+    if settings is None:
+        settings = MarketplaceSellerSettings(user_id=current_user.id)
+        for key, value in DEFAULT_SELLER_SETTINGS.items():
+            setattr(settings, key, value)
+        settings.created_at = now
+        db.add(settings)
+
+    set_fields = {
+        "available_as_buyer": payload.available_as_buyer,
+        "allow_buyer_enquiries": payload.allow_buyer_enquiries,
+        "show_contact_to_buyers": payload.show_contact_to_buyers,
+        "receive_enquiry_notifications": payload.receive_enquiry_notifications,
+        "show_location_to_buyers": payload.show_location_to_buyers,
+        "allow_negotiation": payload.allow_negotiation,
+        "notify_when_sold": payload.notify_when_sold,
+    }
+    for field, value in set_fields.items():
+        if value is not None:
+            setattr(settings, field, bool(value))
+
+    if payload.default_listing_visibility is not None:
+        if payload.default_listing_visibility not in ("active", "pending"):
+            raise HTTPException(status_code=400, detail="Default visibility must be 'active' or 'pending'")
+        settings.default_listing_visibility = payload.default_listing_visibility
+
+    settings.updated_at = now
+    db.commit()
+    db.refresh(settings)
+    return {"status": "success", "data": {"settings": _settings_payload(settings)}}
 
 
 # ---------------------------------------------------------------------------

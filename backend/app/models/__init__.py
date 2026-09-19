@@ -16,6 +16,7 @@ from app.models.marketplace import (
     Payment, DeliveryTracking, EquipmentMetadata, FarmerRecentlyViewed,
     MarketplaceCategory, MarketplaceListing, MarketplaceListingImage,
     MarketplaceEnquiry, MarketplaceSale, MarketplaceBuyerRecommendation,
+    MarketplaceSellerSettings,
 )
 from app.models.government import (
     GovernmentScheme, SchemeApplication, SchemeDocument,

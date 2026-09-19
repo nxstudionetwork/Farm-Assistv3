@@ -367,7 +367,9 @@ class MarketplaceEnquiry(Base):
     buyer_name = Column(String(200), nullable=True)
     buyer_phone = Column(String(20), nullable=True)
     message = Column(Text, nullable=False)
-    status = Column(String(20), default="new", index=True)  # new | replied | accepted | rejected
+    requested_quantity = Column(Float, nullable=True)
+    offered_price = Column(Float, nullable=True)
+    status = Column(String(20), default="new", index=True)  # new | replied | negotiating | accepted | closed | rejected
     conversation_id = Column(String(36), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -427,4 +429,30 @@ class MarketplaceSale(Base):
 
     listing = relationship("MarketplaceListing", back_populates="sales")
     buyer = relationship("User", foreign_keys=[buyer_user_id])
+
+
+class MarketplaceSellerSettings(Base):
+    """Marketplace preferences persisted per farmer (1:1 with users.id).
+
+    These settings control how the farmer's selling hub behaves: whether the
+    farmer is available as a buyer, whether buyer enquiries are accepted, how
+    contact/location details are shown and what the default visibility should
+    be for newly created listings. Every value lives in the database so the
+    state survives logins and browser changes - localStorage is never the
+    source of truth.
+    """
+
+    __tablename__ = "marketplace_seller_settings"
+
+    user_id = Column(String(36), ForeignKey("users.id"), primary_key=True)
+    available_as_buyer = Column(Boolean, default=False, nullable=False)
+    allow_buyer_enquiries = Column(Boolean, default=True, nullable=False)
+    show_contact_to_buyers = Column(Boolean, default=True, nullable=False)
+    receive_enquiry_notifications = Column(Boolean, default=True, nullable=False)
+    show_location_to_buyers = Column(Boolean, default=True, nullable=False)
+    allow_negotiation = Column(Boolean, default=True, nullable=False)
+    default_listing_visibility = Column(String(20), default="active", nullable=False)  # active | pending
+    notify_when_sold = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
