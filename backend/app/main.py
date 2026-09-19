@@ -227,6 +227,28 @@ async def startup():
 
             from app.database.seed_sensor_devices import seed_sensor_devices
             sensor_catalogue = seed_sensor_devices(db)
+
+            # Content catalogue (farm techniques, learning courses, experts hub,
+            # government schemes, insurance products). Each seeder is idempotent
+            # and restores the full published catalogue on every boot so a fresh
+            # or wiped database never leaves these pages empty.
+            from app.models.community import Expert
+            from app.models.insurance import InsuranceProduct
+
+            from app.database.seed_techniques import seed_techniques as _seed_techniques
+            techniques_summary = _seed_techniques(db)
+
+            from app.database.seed_learning import seed_learning as _seed_learning
+            learning_summary = _seed_learning(db)
+
+            from app.database.seed_experts import seed_experts as _seed_experts
+            experts_summary = {"created": _seed_experts(db), "total": db.query(Expert).count()}
+
+            from app.database.seed_schemes import seed as _seed_schemes
+            schemes_summary = _seed_schemes(db)
+
+            from app.database.seed_insurance_products import seed_insurance_products as _seed_insurance_products
+            insurance_summary = {"created": _seed_insurance_products(db), "total": db.query(InsuranceProduct).count()}
         finally:
             db.close()
         return {
@@ -240,6 +262,11 @@ async def startup():
             "input": input_summary,
             "workers": workers_summary,
             "sensor_catalogue": sensor_catalogue,
+            "techniques": techniques_summary,
+            "learning": learning_summary,
+            "experts": experts_summary,
+            "schemes": schemes_summary,
+            "insurance": insurance_summary,
         }
 
     created = demo_summary = market_seeded = input_summary = None
@@ -248,6 +275,7 @@ async def startup():
     tools_summary = None
     workers_summary = None
     sensors_catalogue_report = None
+    techniques_summary = learning_summary = experts_summary = schemes_summary = insurance_summary = None
     for _attempt in range(1, 5):
         try:
             _report = _run_seed_suite()
@@ -261,6 +289,11 @@ async def startup():
             input_summary = _report["input"]
             workers_summary = _report["workers"]
             sensors_catalogue_report = _report["sensor_catalogue"]
+            techniques_summary = _report["techniques"]
+            learning_summary = _report["learning"]
+            experts_summary = _report["experts"]
+            schemes_summary = _report["schemes"]
+            insurance_summary = _report["insurance"]
             break
         except OperationalError as _exc:
             print(f"Startup seeding attempt {_attempt} aborted (database busy: {_exc}); retrying...")
@@ -282,6 +315,20 @@ async def startup():
         )
 
     print(f"{settings.APP_NAME} v{settings.APP_VERSION} started. DB tables created.")
+    if techniques_summary is not None:
+        print("Farm techniques catalogue ready (Techniques Hub fully populated).")
+    if learning_summary:
+        print(f"Learning centre ready: {learning_summary.get('total_courses')} courses "
+              f"(created {learning_summary.get('created')}, existing {learning_summary.get('already_existing')}).")
+    if experts_summary and experts_summary.get("total"):
+        print(f"Experts Hub ready: {experts_summary['total']} experts "
+              f"(created {experts_summary.get('created')}).")
+    if schemes_summary and schemes_summary.get("total"):
+        print(f"Government schemes ready: {schemes_summary['total']} verified schemes "
+              f"(added {schemes_summary.get('added')}).")
+    if insurance_summary and insurance_summary.get("total"):
+        print(f"Insurance products ready: {insurance_summary['total']} products "
+              f"(created {insurance_summary.get('created')}).")
     if created:
         print(f"Seeded {created} community groups.")
     if demo_summary and not demo_summary.get("skipped"):

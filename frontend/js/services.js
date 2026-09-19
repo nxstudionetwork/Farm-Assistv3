@@ -1637,23 +1637,6 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
-  var SoilIrrigationService = {
-    overview: function(farmId, plotId, cropId) {
-      return http('GET', '/soil-irrigation/overview' + buildQuery({
-        farm_id: farmId,
-        plot_id: plotId,
-        crop_id: cropId
-      })).then(unwrap);
-    },
-    aiOverview: function(farmId, plotId, cropId) {
-      return http('GET', '/soil-irrigation/ai-overview' + buildQuery({
-        farm_id: farmId,
-        plot_id: plotId,
-        crop_id: cropId
-      })).then(unwrap);
-    }
-  };
-
   var StorageService = {
     upload: function (file, subdir) {
       var formData = new FormData();
@@ -2458,20 +2441,62 @@ Backend: FastAPI served from the same origin (port 8000).
    * SOIL IRRIGATION SERVICE
    * ========================================================================= */
   var SoilIrrigationService = {
-    overview: function (farmId) {
-      return http('GET', '/soil-irrigation/overview' + monQ({ farm_id: farmId })).then(unwrap);
+    getSoilRecords: function(farmId, plotId, cropId, limit) {
+      return http('GET', '/soil-irrigation/soil-records' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId,
+        crop_id: cropId,
+        limit: limit
+      })).then(unwrap);
     },
-    records: function (params) {
-      return http('GET', '/soil-irrigation/records' + monQ(params)).then(unwrap);
+    getLatestSoilData: function(farmId, plotId, cropId) {
+      return http('GET', '/soil-irrigation/soil-latest' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId,
+        crop_id: cropId
+      })).then(unwrap);
     },
-    create: function (payload) {
-      return http('POST', '/soil-irrigation/records', payload).then(unwrap);
+    getIrrigationRecords: function(farmId, plotId, cropId, days, limit) {
+      return http('GET', '/soil-irrigation/irrigation-records' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId,
+        crop_id: cropId,
+        days: days,
+        limit: limit
+      })).then(unwrap);
     },
-    update: function (id, payload) {
-      return http('PUT', '/soil-irrigation/records/' + encodeURIComponent(id), payload).then(unwrap);
+    getIrrigationSummary: function(farmId, plotId, cropId, days) {
+      return http('GET', '/soil-irrigation/irrigation-summary' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId,
+        crop_id: cropId,
+        days: days
+      })).then(unwrap);
     },
-    delete: function (id) {
-      return http('DELETE', '/soil-irrigation/records/' + encodeURIComponent(id)).then(unwrap);
+    getCropContext: function(farmId, plotId) {
+      return http('GET', '/soil-irrigation/crop-context' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId
+      })).then(unwrap);
+    },
+    getSoilHealthStatus: function(farmId, plotId) {
+      return http('GET', '/soil-irrigation/soil-health-status' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId
+      })).then(unwrap);
+    },
+    getIrrigationStatus: function(farmId, plotId) {
+      return http('GET', '/soil-irrigation/irrigation-status' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId
+      })).then(unwrap);
+    },
+    aiOverview: function(farmId, plotId, cropId) {
+      return http('GET', '/soil-irrigation/ai-overview' + buildQuery({
+        farm_id: farmId,
+        plot_id: plotId,
+        crop_id: cropId
+      })).then(unwrap);
     }
   };
 

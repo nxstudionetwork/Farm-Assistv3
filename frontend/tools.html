@@ -1192,8 +1192,401 @@
       from { opacity: 0; transform: translateY(12px); }
       to { opacity: 1; transform: translateY(0); }
     }
+<style>
+    /* Farm Assist Tools & Equipment - Extended components (booked/activity/listings) */
+    .te-quick-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 18px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+    }
+
+    .te-quick-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      color: var(--te-dark-green);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 999px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .te-quick-chip:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .te-quick-chip i {
+      color: var(--te-primary-green);
+      font-size: 15px;
+    }
+
+    .te-quick-chip .te-badge-count {
+      border-color: #ffffff;
+    }
+
+    /* Availability tags */
+    .te-avail-tag {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      padding: 4px 9px;
+      border-radius: 8px;
+      background: rgba(20, 70, 45, 0.06);
+    }
+
+    .te-avail-tag.avail-available { background: #e6f4e9; color: #1e7d3b; }
+    .te-avail-tag.avail-booked { background: #fff3e0; color: #c65d0e; }
+    .te-avail-tag.avail-unavailable { background: #fdecea; color: #b3261e; }
+
+    .te-verified-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #e6f4e9;
+      color: #1e7d3b;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .te-cond-chip {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #4a6b57;
+      background: #f0f6f1;
+      border: 1px solid var(--te-border-green);
+      border-radius: 999px;
+      padding: 2px 9px;
+      margin: 2px 4px 2px 0;
+    }
+
+    /* Search + Filter toolbar */
+    .te-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+      margin-top: 18px;
+    }
+
+    .te-search-bar { position: relative; flex: 1; min-width: 0; }
+    .te-search-bar i { margin-right: 0; }
+    .te-search-bar input { padding-right: 40px; min-width: 0; }
+
+    .te-search-clear {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #eef3ef;
+      border: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      color: #4a6b57;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .te-search-clear:hover { background: #dfe8e1; color: #1e3526; }
+
+    .te-filter-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--te-primary-green);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      padding: 0 18px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(27, 94, 63, 0.2);
+    }
+
+    .te-filter-toggle:hover { background: #145031; transform: translateY(-1px); }
+    .te-filter-toggle .te-badge-count { background: #ffffff; color: var(--te-primary-green); }
+
+    .te-sidebar.hidden-filters { display: none; }
+
+    @media (max-width: 700px) {
+      .te-toolbar { flex-direction: column; }
+      .te-filter-toggle { padding: 13px 16px; width: 100%; }
+    }
+
+    /* Mode chips (Rent / Buy / New) on cards */
+    .te-mode-chip {
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 6px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .te-mode-chip.rent { background: #eef2e6; color: #586b2d; border: 1px solid #d9e0c4; }
+    .te-mode-chip.buy { background: #e6f0f7; color: #1f5c8b; border: 1px solid #cde0ef; }
+
+    .te-new-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #c89620;
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Related equipment strip */
+    .te-related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+      gap: 10px;
+    }
+
+    .te-related-card {
+      background: #f8faf8;
+      border: 1px solid #e2ede5;
+      border-radius: 12px;
+      padding: 8px;
+      display: block;
+      transition: all 0.15s ease;
+    }
+
+    .te-related-card:hover {
+      border-color: var(--te-primary-green);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .te-related-card img, .te-related-fallback {
+      width: 100%;
+      height: 76px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+
+    .te-related-fallback {
+      background: #eef3ef;
+      color: var(--te-forest-green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .te-related-name {
+      font-size: 12px;
+      font-weight: 800;
+      color: #24402d;
+      line-height: 1.3;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .te-related-price { font-size: 12px; font-weight: 800; color: var(--te-primary-green); }
+    .te-share-btn { border: 1px solid var(--te-border-green); color: #41604d; }
+
+    /* Activity timeline */
+    .te-activity-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 2px;
+      border-bottom: 1px solid #eef3ef;
+    }
+
+    .te-activity-item:last-child { border-bottom: none; }
+
+    .te-activity-icon {
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+      border-radius: 12px;
+      background: var(--te-light-green);
+      color: var(--te-primary-green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .te-activity-title { font-size: 13px; font-weight: 800; color: #24402d; line-height: 1.35; }
+    .te-activity-sub { font-size: 11px; color: var(--te-muted); margin-top: 2px; }
+    .te-activity-time { font-size: 10px; color: #93a99b; font-weight: 700; margin-top: 2px; }
+
+    /* My Listings */
+    .te-listing-item {
+      display: flex;
+      gap: 12px;
+      background: #f8faf8;
+      border: 1px solid #e2ede5;
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    .te-listing-thumb {
+      width: 64px;
+      height: 56px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #eef3ef;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--te-forest-green);
+    }
+
+    .te-listing-info { flex: 1; min-width: 0; }
+    .te-listing-name { font-size: 13px; font-weight: 800; color: #24402d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .te-listing-meta { font-size: 11px; color: var(--te-muted); margin-top: 3px; }
+
+    .te-listing-status {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+
+    .te-listing-status.ok { background: #e6f4e9; color: #1e7d3b; }
+    .te-listing-status.off { background: #fdecea; color: #b3261e; }
+
+    .te-listing-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+    .te-icon-btn {
+      background: #ffffff;
+      border: 1px solid var(--te-border-green);
+      border-radius: 9px;
+      width: 32px;
+      height: 32px;
+      color: #41604d;
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .te-icon-btn:hover { border-color: var(--te-primary-green); color: var(--te-primary-green); }
+    .te-icon-btn.danger:hover { border-color: #c0392b; color: #c0392b; }
+
+    /* Listing editor form */
+    .te-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .te-form-grid .full { grid-column: 1 / -1; }
+
+    .te-form-grid label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #2c4533;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .te-form-grid input, .te-form-grid select, .te-form-grid textarea {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #c9decb;
+      border-radius: 10px;
+      background: #fff;
+      color: #213527;
+      font-size: 13px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+
+    .te-form-grid textarea { resize: vertical; }
+
+    .te-form-grid input:focus, .te-form-grid select:focus, .te-form-grid textarea:focus {
+      outline: none;
+      border-color: var(--te-primary-green);
+      box-shadow: 0 0 0 3px rgba(27, 94, 63, 0.12);
+    }
+
+    .te-listing-type-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .te-listing-type-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid var(--te-border-green);
+      background: #ffffff;
+      color: #41604d;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .te-listing-type-btn.active {
+      background: var(--te-primary-green);
+      color: #ffffff;
+      border-color: var(--te-primary-green);
+    }
+
+    .te-rent-desc {
+      background: #eef7ef;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #3d5644;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 640px) {
+      .te-form-grid { grid-template-columns: 1fr; }
+      .te-header-actions { display: none; }
+      .te-quick-row { margin-top: 14px; }
+    }
   </style>
 </head>
+
 <body>
 
 <div class="te-container">
@@ -1206,6 +1599,13 @@
         <p>Reliable agricultural tools, equipment, and machinery for everyday farm work.</p>
       </div>
       <div class="te-header-actions">
+        <button class="te-action-btn" id="btnOpenBooked" title="My Bookings" aria-label="Rental bookings">
+          <i class="fas fa-calendar-check"></i>
+          <span class="te-badge-count" id="bookedBadgeCount" style="display:none;">0</span>
+        </button>
+        <button class="te-action-btn" id="btnOpenActivity" title="Activity" aria-label="Recent activity">
+          <i class="fas fa-clock-rotate-left"></i>
+        </button>
         <button class="te-action-btn" id="btnOpenSaved" title="Saved Wishlist" aria-label="Saved equipment">
           <i class="fa-regular fa-heart"></i>
           <span class="te-badge-count" id="wishBadgeCount" style="display:none;">0</span>
@@ -1220,9 +1620,12 @@
       </div>
     </div>
 
-    <!-- Mode Switcher: Buy vs Rent -->
+    <!-- Mode Switcher: All / Rent / Buy (default = All, mixed catalogue) -->
     <div class="te-mode-tabs" id="modeTabs">
-      <button class="te-mode-btn active" data-mode="buy" id="modeBuyBtn">
+      <button class="te-mode-btn active" data-mode="all" id="modeAllBtn">
+        <i class="fas fa-layer-group"></i> All Equipment
+      </button>
+      <button class="te-mode-btn" data-mode="buy" id="modeBuyBtn">
         <i class="fas fa-shopping-bag"></i> Buy Tools & Equipment
       </button>
       <button class="te-mode-btn" data-mode="rent" id="modeRentBtn">
@@ -1230,10 +1633,44 @@
       </button>
     </div>
 
-    <!-- Live Debounced Search Bar -->
-    <div class="te-search-bar">
-      <i class="fas fa-search"></i>
-      <input type="search" id="teSearchInput" placeholder="Search tools, equipment, pumps, sprayers, cultivators..." aria-label="Search tools and equipment">
+    <!-- Quick actions row -->
+    <div class="te-quick-row" aria-label="Quick actions">
+      <button class="te-quick-chip" id="btnQuickCart" title="Your Cart">
+        <i class="fas fa-shopping-cart"></i> Cart
+        <span class="te-badge-count" id="quickCartCount" style="display:none;">0</span>
+      </button>
+      <button class="te-quick-chip" id="btnQuickBooked" title="Rental bookings">
+        <i class="fas fa-calendar-check"></i> Booked
+        <span class="te-badge-count" id="quickBookedCount" style="display:none;">0</span>
+      </button>
+      <button class="te-quick-chip" id="btnQuickOrders" title="Orders history">
+        <i class="fas fa-box"></i> Orders
+      </button>
+      <button class="te-quick-chip" id="btnQuickSaved" title="Saved equipment">
+        <i class="fa-regular fa-heart"></i> Saved
+        <span class="te-badge-count" id="quickWishCount" style="display:none;">0</span>
+      </button>
+      <button class="te-quick-chip" id="btnQuickActivity" title="Recent activity">
+        <i class="fas fa-clock-rotate-left"></i> Activity
+      </button>
+      <button class="te-quick-chip" id="btnQuickMyListings" title="My Listings">
+        <i class="fas fa-store"></i> My Listings
+      </button>
+    </div>
+
+    <!-- Search + Filter Toolbar -->
+    <div class="te-toolbar">
+      <div class="te-search-bar">
+        <i class="fas fa-search"></i>
+        <input type="search" id="teSearchInput" placeholder="Search tractors, power tillers, sprayers, cultivators, seed drills, pumps..." aria-label="Search tools and equipment">
+        <button type="button" class="te-search-clear" id="btnClearSearch" title="Clear search" aria-label="Clear search" style="display:none;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <button type="button" class="te-filter-toggle" id="btnToggleFilters" aria-label="Toggle filters panel">
+        <i class="fas fa-sliders-h"></i> Filters
+        <span class="te-badge-count" id="filterCountBadge" style="display:none;">0</span>
+      </button>
     </div>
   </section>
 
@@ -1300,9 +1737,36 @@
       </div>
 
       <div class="te-filter-group">
+        <label for="filterCondition">Condition</label>
+        <select class="te-filter-select" id="filterCondition">
+          <option value="all">All Conditions</option>
+          <option value="New">New / Brand New</option>
+          <option value="Like new">Like New</option>
+          <option value="Used">Gently Used</option>
+          <option value="Refurbished">Refurbished</option>
+        </select>
+      </div>
+
+      <div class="te-filter-group">
+        <label for="filterAvailability">Availability</label>
+        <select class="te-filter-select" id="filterAvailability">
+          <option value="all">Any Availability</option>
+          <option value="available_now">Available Now</option>
+          <option value="in_stock">In Stock / Available</option>
+        </select>
+      </div>
+
+      <div class="te-filter-group">
         <label for="filterBrand">Brand</label>
         <select class="te-filter-select" id="filterBrand">
           <option value="all">All Brands</option>
+        </select>
+      </div>
+
+      <div class="te-filter-group">
+        <label for="filterLocation">Location</label>
+        <select class="te-filter-select" id="filterLocation">
+          <option value="all">All Locations</option>
         </select>
       </div>
 
@@ -1315,8 +1779,50 @@
       </div>
 
       <div class="te-filter-group">
+        <label for="filterRateRange">Rental Rate (per day, ₹)</label>
+        <select class="te-filter-select" id="filterRateRange">
+          <option value="all">Any Daily Rate</option>
+          <option value="0-1000">Up to ₹1,000</option>
+          <option value="1000-3000">₹1,000 – ₹3,000</option>
+          <option value="3000-6000">₹3,000 – ₹6,000</option>
+          <option value="6000-12000">₹6,000 – ₹12,000</option>
+          <option value="12000-99999999">₹12,000 and above</option>
+        </select>
+      </div>
+
+      <div class="te-filter-group">
         <label class="te-checkbox-label">
           <input type="checkbox" id="filterInStock"> In Stock Only
+        </label>
+      </div>
+
+      <div class="te-filter-group">
+        <label class="te-checkbox-label">
+          <input type="checkbox" id="filterVerifiedSellers"> Verified Sellers Only
+        </label>
+      </div>
+
+      <div class="te-filter-group">
+        <label class="te-checkbox-label">
+          <input type="checkbox" id="filterDeliveryAvailable"> Delivery Available
+        </label>
+      </div>
+
+      <div class="te-filter-group">
+        <label class="te-checkbox-label">
+          <input type="checkbox" id="filterPickupAvailable"> Local Pickup Available
+        </label>
+      </div>
+
+      <div class="te-filter-group">
+        <label class="te-checkbox-label">
+          <input type="checkbox" id="filterHighRated"> 4★ & Above
+        </label>
+      </div>
+
+      <div class="te-filter-group">
+        <label class="te-checkbox-label">
+          <input type="checkbox" id="filterNewArrivals"> Only Recently Added
         </label>
       </div>
 
@@ -1335,7 +1841,8 @@
         <div>
           <label style="font-size:12px;color:var(--te-muted);margin-right:6px;font-weight:700;">Sort By:</label>
           <select class="te-sort-select" id="sortSelect">
-            <option value="relevance:asc">Relevance</option>
+            <option value="relevance:asc">Recommended</option>
+            <option value="popular:desc">Most Popular</option>
             <option value="price:asc">Price: Low to High</option>
             <option value="price:desc">Price: High to Low</option>
             <option value="rating:desc">Highest Rated</option>
@@ -1454,6 +1961,176 @@
   <div class="te-drawer-body" id="wishDrawerBody"></div>
 </div>
 
+<!-- BOOKED (RENTAL BOOKINGS) DRAWER -->
+<div class="te-drawer-backdrop" id="bookedBackdrop"></div>
+<div class="te-drawer" id="bookedDrawer">
+  <div class="te-drawer-header">
+    <h3><i class="fas fa-calendar-check" style="color:var(--te-primary-green);"></i> Booked Rentals</h3>
+    <button style="background:none;border:none;font-size:18px;color:#557260;cursor:pointer;" id="btnCloseBookedDrawer">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="te-drawer-body" id="bookedDrawerBody">
+    <div class="te-empty-state">
+      <i class="fas fa-calendar-check"></i>
+      <h3>No rental bookings yet</h3>
+      <p>Bookings you make for farm machinery will appear here.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIVITY DRAWER -->
+<div class="te-drawer-backdrop" id="activityBackdrop"></div>
+<div class="te-drawer" id="activityDrawer">
+  <div class="te-drawer-header">
+    <h3><i class="fas fa-clock-rotate-left" style="color:var(--te-forest-green);"></i> Recent Activity</h3>
+    <button style="background:none;border:none;font-size:18px;color:#557260;cursor:pointer;" id="btnCloseActivityDrawer">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="te-drawer-body" id="activityDrawerBody">
+    <div class="te-empty-state">
+      <i class="fas fa-clock-rotate-left"></i>
+      <h3>No activity yet</h3>
+      <p>Your views, bookings, and orders will show up here.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MY LISTINGS DRAWER -->
+<div class="te-drawer-backdrop" id="listingsBackdrop"></div>
+<div class="te-drawer" id="listingsDrawer" style="width:430px;max-width:92vw;">
+  <div class="te-drawer-header">
+    <h3><i class="fas fa-store" style="color:var(--te-primary-green);"></i> My Listings</h3>
+    <button style="background:none;border:none;font-size:18px;color:#557260;cursor:pointer;" id="btnCloseListingsDrawer">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="te-drawer-body" id="listingsDrawerBody">
+    <div class="te-empty-state">
+      <i class="fas fa-store"></i>
+      <h3>You haven't listed anything</h3>
+      <p>List your tools or equipment to reach local farmers.</p>
+    </div>
+  </div>
+  <div class="te-drawer-footer" style="border-top:1px solid #e2ede5;">
+    <button class="te-btn-cart" id="btnOpenListingModal" style="width:100%;padding:12px;font-size:14px;">
+      <i class="fas fa-plus"></i> Add New Listing
+    </button>
+  </div>
+</div>
+
+<!-- ADD / EDIT LISTING MODAL -->
+<div class="te-modal" id="listingModal">
+  <div class="te-dialog" style="max-width:580px;">
+    <button class="te-dialog-close" id="btnCloseListingModal"><i class="fas fa-times"></i></button>
+    <h2 style="font-size:20px;font-weight:800;color:var(--te-dark-green);margin:0 0 6px 0;" id="listingModalTitle">
+      <i class="fas fa-plus" style="color:var(--te-primary-green);margin-right:8px;"></i> Add New Listing
+    </h2>
+    <p style="font-size:12px;color:var(--te-muted);margin:0 0 14px 0;">List an item to Buy (farmers purchase from you) or to Rent (farmers hire your machinery).</p>
+    <div class="te-listing-type-tabs" id="listingTypeTabs">
+      <button type="button" class="te-listing-type-btn active" data-ltype="rent" id="ltypeRent">
+        <i class="fas fa-calendar-alt"></i> Rent It
+      </button>
+      <button type="button" class="te-listing-type-btn" data-ltype="buy" id="ltypeBuy">
+        <i class="fas fa-tag"></i> Sell It
+      </button>
+    </div>
+    <form id="listingForm">
+      <input type="hidden" id="lsfListingId">
+      <div class="te-form-grid">
+        <div class="full">
+          <label for="lsfName">Item Name *</label>
+          <input type="text" id="lsfName" required maxlength="120" placeholder="e.g. Mahindra tractor, knapsack sprayer, water pump...">
+        </div>
+        <div>
+          <label for="lsfCategory">Category *</label>
+          <select id="lsfCategory" required></select>
+        </div>
+        <div>
+          <label for="lsfType">Equipment Type</label>
+          <input type="text" id="lsfType" placeholder="e.g. Tractor, Sprayer">
+        </div>
+        <div id="lsfPriceWrap">
+          <label for="lsfPrice">Selling Price (₹) *</label>
+          <input type="number" id="lsfPrice" min="0" step="1" placeholder="e.g. 85000">
+        </div>
+        <div id="lsfRateWrap" style="display:none;">
+          <label for="lsfRate">Daily Rate (₹/day) *</label>
+          <input type="number" id="lsfRate" min="1" step="1" placeholder="e.g. 1200">
+        </div>
+        <div id="lsfDepositWrap" style="display:none;">
+          <label for="lsfDeposit">Security Deposit (₹)</label>
+          <input type="number" id="lsfDeposit" min="0" step="1" placeholder="Optional">
+        </div>
+        <div>
+          <label for="lsfCondition">Condition</label>
+          <select id="lsfCondition">
+            <option value="New">New</option>
+            <option value="Like new">Like New</option>
+            <option value="Used">Gently Used</option>
+            <option value="Refurbished">Refurbished</option>
+          </select>
+        </div>
+        <div>
+          <label for="lsfBrand">Brand</label>
+          <input type="text" id="lsfBrand" placeholder="e.g. Mahindra, Stihl">
+        </div>
+        <div>
+          <label for="lsfPowerSource">Power Source</label>
+          <select id="lsfPowerSource">
+            <option value="Manual">Manual</option>
+            <option value="Battery">Battery</option>
+            <option value="Electric">Electric</option>
+            <option value="Fuel">Fuel (Petrol/Diesel)</option>
+            <option value="Solar">Solar</option>
+          </select>
+        </div>
+        <div id="lsfWindowWrap" style="display:none;">
+          <label for="lsfMinDays">Min Rental Period (days)</label>
+          <input type="number" id="lsfMinDays" min="1" max="90" value="1">
+        </div>
+        <div class="full">
+          <label for="lsfLocation">Location</label>
+          <input type="text" id="lsfLocation" placeholder="Village / town, district">
+        </div>
+        <div class="full">
+          <label for="lsfUse">Suitable Farm Activity</label>
+          <select id="lsfUse">
+            <option value="Land preparation">Land Preparation & Tillage</option>
+            <option value="Planting">Planting & Sowing</option>
+            <option value="Irrigation">Irrigation & Watering</option>
+            <option value="Weeding">Weeding & Inter-Cultivation</option>
+            <option value="Spraying">Spraying & Protection</option>
+            <option value="Harvesting">Harvesting & Cutting</option>
+            <option value="Safety">Farmer Safety</option>
+            <option value="Storage">Crop Storage</option>
+            <option value="Transport">Farm Transport</option>
+          </select>
+        </div>
+        <div class="full">
+          <label for="lsfDescription">Description</label>
+          <textarea id="lsfDescription" rows="3" maxlength="600" placeholder="Short description of your item"></textarea>
+        </div>
+        <div class="full" style="display:flex;gap:18px;flex-wrap:wrap;padding-top:2px;">
+          <label class="te-checkbox-label" style="display:inline-flex;">
+            <input type="checkbox" id="lsfDeliveryAvailable"> Delivery Available
+          </label>
+          <label class="te-checkbox-label" style="display:inline-flex;">
+            <input type="checkbox" id="lsfPickupAvailable" checked> Local Pickup Available
+          </label>
+          <label class="te-checkbox-label" style="display:inline-flex;">
+            <input type="checkbox" id="lsfIsAvailable" checked> Available now
+          </label>
+        </div>
+      </div>
+      <button type="submit" class="te-btn-cart" style="width:100%;padding:12px;font-size:14px;margin-top:14px;" id="btnSubmitListing">
+        <i class="fas fa-check"></i> Save Listing
+      </button>
+    </form>
+  </div>
+</div>
+
 <!-- CHECKOUT / BUY NOW MODAL -->
 <div class="te-modal" id="checkoutModal">
   <div class="te-dialog" style="max-width:540px;">
@@ -1500,6 +2177,14 @@
   </div>
 </div>
 
+<!-- RENTAL DETAILS MODAL (Rent Mode) -->
+<div class="te-modal" id="rentDetailModal">
+  <div class="te-dialog" style="max-width:560px;">
+    <button class="te-dialog-close" id="btnCloseRentDetailModal"><i class="fas fa-times"></i></button>
+    <div id="rentDetailContent" class="te-detail-content"></div>
+  </div>
+</div>
+
 <!-- RENTAL BOOKING MODAL (Rent Mode) -->
 <div class="te-modal" id="rentalBookingModal">
   <div class="te-dialog" style="max-width:520px;">
@@ -1508,6 +2193,7 @@
       <i class="fas fa-calendar-alt" style="color:var(--te-primary-green);margin-right:8px;"></i> Book Farm Machinery
     </h2>
     <div id="rentalModalInfo" style="margin-bottom:16px;"></div>
+    <div id="rentalModalAvail" style="margin-bottom:14px;"></div>
     <form id="rentalBookingForm">
       <input type="hidden" id="rbEquipId">
       <div style="margin-bottom:12px;">
@@ -1518,9 +2204,15 @@
         <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">Duration (Days)</label>
         <input type="number" class="te-filter-input" id="rbDays" min="1" max="90" value="1" required>
       </div>
-      <div style="background:#eef7ef;padding:12px;border-radius:10px;margin-bottom:16px;display:flex;justify-content:space-between;font-weight:800;font-size:15px;color:var(--te-dark-green);">
-        <span>Estimated Rental Total:</span>
-        <span id="rbTotalLabel">₹0</span>
+      <div style="font-size:12px;color:var(--te-muted);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;" id="rbPeriodLabel">
+        <i class="fas fa-calendar-day"></i> <span></span>
+      </div>
+      <div style="background:#eef7ef;padding:12px;border-radius:10px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;color:var(--te-dark-green);">
+          <span>Estimated Rental Total:</span>
+          <span id="rbTotalLabel">₹0</span>
+        </div>
+        <div id="rbDepositLabel" style="font-size:11px;color:var(--te-muted);font-weight:700;margin-top:6px;"></div>
       </div>
       <button type="submit" class="te-btn-cart" style="width:100%;padding:12px;font-size:14px;" id="btnConfirmRental">
         <i class="fas fa-calendar-check"></i> Confirm Rental Booking
@@ -1546,7 +2238,7 @@
 
   // --- STATE ---
   var state = {
-    mode: 'buy', // 'buy' or 'rent'
+    mode: 'all', // 'all', 'buy' or 'rent'
     page: 1,
     limit: 20,
     totalPages: 1,
@@ -1555,9 +2247,18 @@
     powerSource: 'all',
     suitableUse: 'all',
     brand: 'all',
+    condition: 'all',
+    availability: 'all',
+    location: 'all',
     minPrice: null,
     maxPrice: null,
+    rateRange: 'all',
     inStock: false,
+    verifiedSellers: false,
+    deliveryAvailable: false,
+    pickupAvailable: false,
+    highRatedOnly: false,
+    newArrivalsOnly: false,
     sortBy: 'relevance',
     sortOrder: 'asc',
     items: [],
@@ -1567,10 +2268,59 @@
     wishlist: [],
     cart: { items: [], total: 0, count: 0 },
     comparedIds: [],
-    directCheckoutItem: null
+    directCheckoutItem: null,
+    fetchError: false,
+    listings: { rent: [], buy: [], book_count: 0 },
+    activity: [],
+    listingEditor: { type: 'rent', id: null }
   };
 
   var debounceTimer = null;
+  var drawerOpen = function (name) {
+    var backdrop = document.getElementById(name + 'Backdrop');
+    var drawer = document.getElementById(name + 'Drawer');
+    if (backdrop) backdrop.classList.add('open');
+    if (drawer) drawer.classList.add('open');
+  };
+  var drawerClose = function (name) {
+    var backdrop = document.getElementById(name + 'Backdrop');
+    var drawer = document.getElementById(name + 'Drawer');
+    if (backdrop) backdrop.classList.remove('open');
+    if (drawer) drawer.classList.remove('open');
+  };
+
+  function isLoggedIn() {
+    return !!(window.UserStore && UserStore.isLoggedIn());
+  }
+
+  function requireLogin() {
+    if (!isLoggedIn()) {
+      toast('Please sign in to continue.');
+      window.location.href = 'signin.html';
+      return false;
+    }
+    return true;
+  }
+
+  function setBadge(id, count) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = count;
+    el.style.display = count > 0 ? 'flex' : 'none';
+  }
+
+  function fmtDate(ts) {
+    if (!ts) return 'Unknown';
+    var d = new Date(ts * 1000);
+    if (isNaN(d.getTime())) d = new Date(ts);
+    if (isNaN(d.getTime())) return 'Unknown';
+    var now = new Date();
+    var diffDays = Math.floor((now - d) / 86400000);
+    if (diffDays <= 0) return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return diffDays + 'd ago';
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  }
 
   // --- UTILITIES ---
   function esc(str) {
@@ -1665,6 +2415,37 @@
       });
       brandSelect.innerHTML = bHtml;
     }
+
+    var locSelect = document.getElementById('filterLocation');
+    if (locSelect && data.locations) {
+      var lHtml = '<option value="all">All Locations</option>';
+      data.locations.forEach(function (l) {
+        lHtml += '<option value="' + esc(l) + '">' + esc(l) + '</option>';
+      });
+      locSelect.innerHTML = lHtml;
+    }
+
+    if (data.has_verified_sellers === false) {
+      var vEl = document.getElementById('filterVerifiedSellers');
+      if (vEl) {
+        vEl.disabled = true;
+        vEl.closest('.te-checkbox-label').title = 'No verified farmer sellers available';
+      }
+    }
+
+    if (data.conditions) {
+      var cond = data.conditions || [];
+      if (cond.length) {
+        var condSelect = document.getElementById('filterCondition');
+        if (condSelect) {
+          var cHtml = '<option value="all">All Conditions</option>';
+          cond.forEach(function (c) {
+            cHtml += '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+          });
+          condSelect.innerHTML = cHtml;
+        }
+      }
+    }
   }
 
   // --- RENDER PRODUCT CARDS (BUY MODE) ---
@@ -1674,6 +2455,7 @@
     var inStock = p.in_stock && (p.stock_quantity > 0);
     var stockClass = inStock ? (p.stock_quantity <= 5 ? 'te-stock-low' : 'te-stock-in') : 'te-stock-out';
     var stockLabel = inStock ? (p.stock_quantity <= 5 ? 'Low Stock' : 'In Stock') : 'Out of Stock';
+    var isNew = p.recently_added || (p.created_at && (Date.now() - new Date(p.created_at).getTime()) < 3 * 86400000);
 
     var imgHtml = p.image_url
       ? '<img src="' + esc(p.image_url) + '" class="te-card-img" alt="' + esc(p.alt_text || p.name) + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'te-card-fallback\\\'><i class=\\\'fas fa-tools\\\'></i></div>\'">'
@@ -1682,6 +2464,7 @@
     return '<article class="te-card" data-id="' + esc(p.id) + '">' +
       '<div class="te-card-img-wrap">' +
         imgHtml +
+        (isNew ? '<span class="te-new-badge"><i class="fas fa-sparkles"></i> NEW</span>' : '') +
         '<button class="te-wish-btn ' + (isWish ? 'saved' : '') + '" data-wish="' + esc(p.id) + '" aria-label="Save to Wishlist">' +
           '<i class="' + (isWish ? 'fas' : 'far') + ' fa-heart"></i>' +
         '</button>' +
@@ -1689,10 +2472,16 @@
       '</div>' +
       '<div class="te-card-body">' +
         '<div class="te-card-brand-cat">' +
+          '<span class="te-mode-chip buy">Buy</span>' +
           (p.brand ? '<span>' + esc(p.brand) + '</span>' : '') +
           (p.power_source ? '<span>' + esc(p.power_source) + '</span>' : '') +
         '</div>' +
         '<h3 class="te-card-title" data-detail="' + esc(p.id) + '">' + esc(p.name) + '</h3>' +
+        '<div style="margin:2px 0 4px;">' +
+          (p.source === 'marketplace' && p.seller && p.seller.is_verified ? '<span class="te-verified-badge"><i class="fas fa-badge-check"></i> Verified Seller</span>' : '') +
+          (p.source === 'catalogue' ? '<span class="te-verified-badge" style="background:#eef2e6;color:#586b2d;"><i class="fas fa-warehouse"></i> Farm Assist Catalogue</span>' : '') +
+          (p.condition && p.condition !== 'New' ? '<span class="te-cond-chip">' + esc(p.condition) + '</span>' : '') +
+        '</div>' +
         (p.suitable_use ? '<div class="te-card-use-badge"><i class="fas fa-check-circle"></i> Best for: ' + esc(p.suitable_use) + '</div>' : '') +
         '<div class="te-card-price-row">' +
           '<span class="te-price">' + rupees(p.price) + '</span>' +
@@ -1722,34 +2511,51 @@
   // --- RENDER RENTAL CARDS (RENT MODE) ---
   function renderRentalCard(r) {
     var isAvail = r.is_available;
+    var status = r.availability_status || (isAvail ? 'available' : 'booked');
+    var statusLabel = r.availability_label || (isAvail ? 'Available for Rent' : 'Booked');
+    var statusClass = status === 'available' ? 'avail-available'
+      : status === 'unavailable' ? 'avail-unavailable' : 'avail-booked';
     var imgHtml = r.image_url
       ? '<img src="' + esc(r.image_url) + '" class="te-card-img" alt="' + esc(r.name) + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'te-card-fallback\\\'><i class=\\\'fas fa-tractor\\\'></i></div>\'">'
       : '<div class="te-card-fallback"><i class="fas fa-tractor"></i></div>';
 
+    var nextAvail = r.next_available_date
+      ? '<div style="font-size:11px;color:#c0650e;font-weight:700;margin-top:2px;"><i class="fas fa-circle-info"></i> Free again from ' + esc(r.next_available_date) + '</div>'
+      : '';
+    var ownerTag = (r.listing_status && r.listing_status.toLowerCase() === 'active' && r.owner_name)
+      ? '<span class="te-verified-badge" style="margin-left:4px;"><i class="fas fa-user-check"></i> ' + esc(r.owner_name) + '</span>'
+      : '<span class="te-verified-badge" style="background:#eef2e6;color:#586b2d;margin-left:4px;"><i class="fas fa-warehouse"></i> Farm Assist Catalogue</span>';
+
     return '<article class="te-card" data-id="' + esc(r.id) + '">' +
       '<div class="te-card-img-wrap">' +
         imgHtml +
-        '<span class="te-stock-tag ' + (isAvail ? 'te-stock-in' : 'te-stock-out') + '">' +
-          (isAvail ? 'Available for Rent' : 'Booked') +
-        '</span>' +
+        (r.recently_added ? '<span class="te-new-badge"><i class="fas fa-sparkles"></i> NEW</span>' : '') +
+        '<span class="te-avail-tag ' + statusClass + '"><i class="fas fa-circle"></i> ' + esc(statusLabel) + '</span>' +
       '</div>' +
       '<div class="te-card-body">' +
         '<div class="te-card-brand-cat">' +
+          '<span class="te-mode-chip rent">Rent</span>' +
           '<span>' + esc(r.brand || 'Machinery') + '</span>' +
           '<span><i class="fas fa-map-marker-alt"></i> ' + esc(r.location || 'Local Area') + '</span>' +
         '</div>' +
         '<h3 class="te-card-title">' + esc(r.name) + '</h3>' +
-        '<div class="te-card-use-badge"><i class="fas fa-gear"></i> ' + esc(r.type || 'Tractor') + ' · ' + esc(r.model || 'Commercial') + '</div>' +
+        '<div style="display:flex;align-items:center;flex-wrap:wrap;margin:2px 0 4px;">' +
+          '<span class="te-cond-chip"><i class="fas fa-gear"></i> ' + esc(r.type || 'Tractor') + '</span>' +
+          ownerTag +
+        '</div>' +
         '<div class="te-card-price-row">' +
           '<span class="te-price">' + rupees(r.daily_rate) + '<small style="font-size:11px;color:var(--te-muted);"> / day</small></span>' +
-          (r.hourly_rate ? '<span style="font-size:12px;color:#557260;">(' + rupees(r.hourly_rate) + '/hr)</span>' : '') +
+          '<span class="te-discount" style="background:transparent;font-size:11px;font-weight:700;color:#557260;">Deposit ' + rupees(r.deposit_amount || 0) + '</span>' +
         '</div>' +
-        '<p style="font-size:12px;color:var(--te-muted);line-height:1.4;margin:4px 0 12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
+        '<p style="font-size:12px;color:var(--te-muted);line-height:1.4;margin:4px 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
           esc(r.description || 'Reliable high-capacity agricultural machinery.') +
         '</p>' +
-        '<div class="te-card-actions">' +
-          '<button class="te-btn-cart" style="width:100%;" data-rent="' + esc(r.id) + '" ' + (isAvail ? '' : 'disabled') + '>' +
-            '<i class="fas fa-calendar-check"></i> Book for Rent' +
+        (r.booking_count > 0 ? '<div style="font-size:11px;color:#59665c;font-weight:700;margin-bottom:8px;"><i class="fas fa-users"></i> Booked ' + r.booking_count + ' time' + (r.booking_count > 1 ? 's' : '') + '</div>' : '') +
+        nextAvail +
+        '<div class="te-card-actions" style="margin-top:10px;">' +
+          '<button class="te-btn-view" style="flex:1;" data-rentdetail="' + esc(r.id) + '"><i class="fas fa-eye"></i> Details</button>' +
+          '<button class="te-btn-cart" style="flex:1;" data-rent="' + esc(r.id) + '" ' + (isAvail ? '' : 'disabled') + '>' +
+            '<i class="fas fa-calendar-check"></i> Book' +
           '</button>' +
         '</div>' +
       '</div>' +
@@ -1764,14 +2570,20 @@
     if (!grid) return;
 
     if (!items || items.length === 0) {
-      var emptyMsg = state.search
-        ? 'No tools or equipment match "' + esc(state.search) + '". Try clearing filters.'
-        : 'No tools or equipment are available right now.';
+      var isErr = !!state.fetchError;
+      var emptyIcon = isErr ? 'fa-wifi' : 'fa-toolbox';
+      var emptyTitle = isErr ? 'Could not load equipment' : (state.search ? 'No Matching Equipment' : 'No equipment found');
+      var emptyMsg = isErr
+        ? 'The server did not respond. Check your connection and try again.'
+        : 'Try changing your search or filters to find more tools and equipment.';
       grid.innerHTML = '<div class="te-empty-state">' +
-        '<i class="fas fa-toolbox"></i>' +
-        '<h3>' + (state.search ? 'No Matching Equipment' : 'No tools or equipment available right now.') + '</h3>' +
+        '<i class="fas ' + emptyIcon + '"></i>' +
+        '<h3>' + emptyTitle + '</h3>' +
         '<p>' + emptyMsg + '</p>' +
-        (state.search ? '<button class="te-btn-view" id="btnResetSearch" style="margin:0 auto;display:inline-flex;">Clear Search</button>' : '') +
+        '<div style="display:flex;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap;">' +
+          (isErr ? '<button class="te-btn-cart" data-action="retry" style="padding:10px 16px;"><i class="fas fa-redo"></i> Retry</button>' : '') +
+          '<button class="te-btn-view" data-action="reset-filters" style="padding:10px 16px;"><i class="fas fa-eraser"></i> Clear Filters</button>' +
+        '</div>' +
       '</div>';
       if (countLabel) countLabel.textContent = '0 items found';
       if (mobileCount) mobileCount.textContent = '0 items';
@@ -1781,7 +2593,9 @@
     }
 
     var html = items.map(function (item) {
-      return state.mode === 'rent' ? renderRentalCard(item) : renderCard(item);
+      if (state.mode === 'rent') return renderRentalCard(item);
+      if (state.mode === 'buy') return renderCard(item);
+      return (item.mode === 'rent') ? renderRentalCard(item) : renderCard(item);
     }).join('');
 
     grid.innerHTML = reset ? html : grid.innerHTML + html;
@@ -1802,7 +2616,7 @@
     var carousel = document.getElementById('recommendationsCarousel');
     if (!sec || !carousel) return;
 
-    if (state.mode !== 'buy' || !items || items.length === 0) {
+    if (state.mode === 'rent' || !items || items.length === 0) {
       sec.style.display = 'none';
       return;
     }
@@ -1828,7 +2642,7 @@
     var carousel = document.getElementById('recentCarousel');
     if (!sec || !carousel) return;
 
-    if (state.mode !== 'buy' || !items || items.length === 0) {
+    if (state.mode === 'rent' || !items || items.length === 0) {
       sec.style.display = 'none';
       return;
     }
@@ -1977,14 +2791,19 @@
             '<button class="te-btn-cart" style="flex:1;padding:12px;background:#c89620;" data-buynow="' + esc(p.id) + '" ' + (inStock ? '' : 'disabled') + '>' +
               '<i class="fas fa-bolt"></i> Buy Now' +
             '</button>' +
-            '<button class="te-wish-btn ' + (isWish ? 'saved' : '') + '" data-wish="' + esc(p.id) + '" style="position:static;width:44px;height:44px;border-radius:10px;border:1px solid var(--te-border-green);">' +
+            '<button class="te-wish-btn ' + (isWish ? 'saved' : '') + '" data-wish="' + esc(p.id) + '" style="position:static;width:44px;height:44px;border-radius:10px;border:1px solid var(--te-border-green);" aria-label="Save to Wishlist" title="Save">' +
               '<i class="' + (isWish ? 'fas' : 'far') + ' fa-heart"></i>' +
+            '</button>' +
+            '<button class="te-wish-btn te-share-btn" onclick="window.shareThis(\'' + esc(p.name) + '\')" style="position:static;width:44px;height:44px;border-radius:10px;" aria-label="Share equipment" title="Share">' +
+              '<i class="fas fa-share-nodes"></i>' +
             '</button>' +
           '</div>' +
         '</div>' +
-      '</div>';
+      '</div>' +
+      '<div id="relatedEquipmentBox" style="display:none;margin-top:20px;"></div>';
 
       document.getElementById('detailContent').innerHTML = html;
+      appendRelated('buy', p.category && p.category.slug, p.id);
       toggleModal('detailModal', true);
 
       // Refresh recently viewed after view
@@ -2001,25 +2820,86 @@
     if (el) el.classList.add('active');
   };
 
+  // --- RELATED EQUIPMENT + SHARE ---
+  function appendRelated(kind, categorySlug, excludeId) {
+    var box = document.getElementById('relatedEquipmentBox');
+    if (!box) return;
+    if (!categorySlug) { box.style.display = 'none'; return; }
+    API.Equipment.browse({ page: 1, limit: 6, mode: kind, category: categorySlug }).then(function (res) {
+      var data = (res && res.data) || res || {};
+      var items = (data.items || []).filter(function (it) {
+        return String(it.id) !== String(excludeId);
+      }).slice(0, 4);
+      if (!items.length) { box.style.display = 'none'; return; }
+      box.style.display = 'block';
+      box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin:0 0 12px;">' +
+        '<i class="fas fa-th-large" style="color:var(--te-primary-green);"></i>' +
+        '<span style="font-size:15px;font-weight:800;color:var(--te-dark-green);">Related Equipment</span>' +
+      '</div>' +
+      '<div class="te-related-grid">' + items.map(function (it) {
+        var img = it.image_url
+          ? '<img src="' + esc(it.image_url) + '" alt="' + esc(it.name) + '">'
+          : '<div class="te-related-fallback"><i class="fas fa-' + (kind === 'rent' ? 'tractor' : 'tools') + '"></i></div>';
+        var price = kind === 'rent' ? rupees(it.daily_rate) + '/day' : rupees(it.price);
+        return '<a class="te-related-card" ' + (kind === 'rent' ? 'data-rentdetail="' + esc(it.id) + '"' : 'data-detail="' + esc(it.id) + '"') + '>' +
+          img +
+          '<div class="te-related-name">' + esc(it.name) + '</div>' +
+          '<div class="te-related-price">' + price + '</div>' +
+        '</a>';
+      }).join('') + '</div>';
+    }).catch(function () {
+      box.style.display = 'none';
+    });
+  }
+
+  window.shareThis = function (name) {
+    var url = window.location.href.split('#')[0] + '#tools-equipment';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () {
+        toast('Link to ' + name + ' copied — share with other farmers!');
+      }).catch(function () {
+        toast('Link copied: ' + url);
+      });
+    } else {
+      toast('Link: ' + url);
+    }
+  };
+
   // --- RENTAL BOOKING MODAL ---
   function openRentalModal(id) {
     var equip = state.items.find(function (x) { return x.id === id; });
-    if (!equip) return;
+    if (!equip || !isLoggedIn()) {
+      if (!equip) return;
+      requireLogin();
+      return;
+    }
 
     var infoEl = document.getElementById('rentalModalInfo');
+    var availEl = document.getElementById('rentalModalAvail');
     document.getElementById('rbEquipId').value = equip.id;
     var today = new Date().toISOString().split('T')[0];
+    var minDays = equip.min_duration_days || 1;
     document.getElementById('rbDate').value = today;
-    document.getElementById('rbDays').value = 1;
+    document.getElementById('rbDate').min = today;
+    document.getElementById('rbDays').value = minDays;
+    document.getElementById('rbDays').min = minDays;
 
     infoEl.innerHTML = '<div style="background:#f4faf5;padding:12px;border-radius:12px;display:flex;gap:12px;align-items:center;">' +
       '<img src="' + esc(equip.image_url) + '" style="width:70px;height:60px;object-fit:cover;border-radius:8px;">' +
       '<div>' +
         '<div style="font-size:14px;font-weight:800;color:var(--te-dark-green);">' + esc(equip.name) + '</div>' +
         '<div style="font-size:12px;color:var(--te-muted);">' + esc(equip.type) + ' · ' + esc(equip.location) + '</div>' +
-        '<div style="font-size:14px;font-weight:800;color:var(--te-primary-green);margin-top:2px;">' + rupees(equip.daily_rate) + ' / day</div>' +
+        '<div style="font-size:14px;font-weight:800;color:var(--te-primary-green);margin-top:2px;">' + rupees(equip.daily_rate) + ' / day' +
+          (minDays > 1 ? '<small style="font-size:11px;color:var(--te-muted);"> · Min ' + minDays + ' days</small>' : '') +
+        '</div>' +
       '</div>' +
     '</div>';
+
+    availEl.innerHTML = '<div class="te-rent-desc"><i class="fas fa-circle-info"></i>&nbsp; ' +
+      (equip.next_available_date
+        ? 'Currently booked.<br>Available again from <b>' + esc(equip.next_available_date) + '</b>.'
+        : 'This item shows live availability. Dates already booked by other farmers are blocked automatically.') +
+      '</div>';
 
     updateRentalTotal();
     toggleModal('rentalBookingModal', true);
@@ -2031,18 +2911,460 @@
     var equip = state.items.find(function (x) { return x.id === id; });
     var rate = equip ? equip.daily_rate : 0;
     document.getElementById('rbTotalLabel').textContent = rupees(rate * days);
+
+    var startStr = document.getElementById('rbDate').value;
+    var start = startStr ? new Date(startStr + 'T00:00:00') : null;
+    var endEl = document.getElementById('rbPeriodLabel');
+    if (endEl && start && !isNaN(start.getTime())) {
+      var end = new Date(start.getTime() + days * 86400000);
+      var opts = { day: 'numeric', month: 'short' };
+      endEl.innerHTML = '<i class="fas fa-calendar-day"></i> <span>Rent period: ' +
+        start.toLocaleDateString('en-IN', opts) + ' – ' + end.toLocaleDateString('en-IN', opts) +
+        ' (' + days + ' day' + (days > 1 ? 's' : '') + ')</span>';
+    } else if (endEl && startStr) {
+      endEl.innerHTML = '<i class="fas fa-calendar-day"></i> <span>Rent period: ' + days + ' day(s)</span>';
+    }
+
+    var depEl = document.getElementById('rbDepositLabel');
+    if (depEl) {
+      var dep = equip ? (equip.deposit_amount || 0) : 0;
+      depEl.innerHTML = dep > 0
+        ? 'Includes refundable security deposit of ' + rupees(dep) + ' (returned after inspection).'
+        : 'No security deposit required for this item.';
+    }
+  }
+
+  // --- RENTAL DETAILS MODAL ---
+  function openRentDetailModal(id) {
+    API.Equipment.getRentalDetail(id).then(function (res) {
+      var r = (res && res.data) || res;
+      if (!r) return;
+
+      var isAvail = r.is_available;
+      var status = r.availability_status || (isAvail ? 'available' : 'booked');
+      var statusLabel = r.availability_label || (isAvail ? 'Available for Rent' : 'Booked');
+      var statusClass = status === 'available' ? 'avail-available'
+        : status === 'unavailable' ? 'avail-unavailable' : 'avail-booked';
+
+      var imgHtml = r.image_url
+        ? '<img src="' + esc(r.image_url) + '" class="te-gallery-main" style="width:100%;height:auto;" alt="' + esc(r.name) + '">'
+        : '<div class="te-card-fallback" style="height:200px;"><i class="fas fa-tractor"></i></div>';
+
+      var providerTag = (r.listing_status && r.listing_status.toLowerCase() === 'active' && r.owner_name)
+        ? '<span class="te-verified-badge"><i class="fas fa-user-check"></i> Lended by ' + esc(r.owner_name) + '</span>'
+        : '<span class="te-verified-badge" style="background:#eef2e6;color:#586b2d;"><i class="fas fa-warehouse"></i> Farm Assist Catalogue</span>';
+
+      var availabilityNote = !isAvail
+        ? '<div class="te-rent-desc" style="margin-top:10px;"><i class="fas fa-circle-info"></i> Currently booked' +
+          (r.next_available_date ? ' — free again from <b>' + esc(r.next_available_date) + '</b>.' : '.') + '</div>'
+        : '<div class="te-rent-desc" style="margin-top:10px;"><i class="fas fa-check-circle"></i> Available for new bookings.</div>';
+
+      var minDays = r.min_duration_days || 1;
+      var html = '<div class="te-detail-grid">' +
+        '<div>' + imgHtml + '</div>' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:700;color:var(--te-muted);margin-bottom:4px;">' +
+            esc(r.brand || 'Machinery') + ' · ' + esc(r.type || 'Tractor') +
+          '</div>' +
+          '<h2 style="font-size:22px;font-weight:800;color:var(--te-dark-green);margin:0 0 8px 0;">' + esc(r.name) + '</h2>' +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
+            '<span class="te-avail-tag ' + statusClass + '" style="position:static;">' + esc(statusLabel) + '</span>' +
+            providerTag +
+          '</div>' +
+          '<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px;">' +
+            '<span style="font-size:24px;font-weight:900;color:var(--te-primary-green);">' + rupees(r.daily_rate) + '/day</span>' +
+            (r.deposit_amount ? '<span style="font-size:12px;color:var(--te-muted);font-weight:700;">+ ' + rupees(r.deposit_amount) + ' deposit</span>' : '') +
+          '</div>' +
+          (r.description ? '<p style="font-size:13px;color:#3d5644;line-height:1.6;margin-bottom:10px;">' + esc(r.description) + '</p>' : '') +
+          '<table class="te-specs-table">' +
+            '<tbody>' +
+              '<tr><td>Location</td><td>' + esc(r.location || '-') + '</td></tr>' +
+              '<tr><td>Type</td><td>' + esc(r.type || '-') + '</td></tr>' +
+              '<tr><td>Model</td><td>' + esc(r.model || '-') + '</td></tr>' +
+              '<tr><td>Power Source</td><td>' + esc(r.power_source || '-') + '</td></tr>' +
+              '<tr><td>Operating Width</td><td>' + esc(r.operating_width || '-') + '</td></tr>' +
+              '<tr><td>Min Rental Period</td><td>' + minDays + ' day(s)</td></tr>' +
+              '<tr><td>Bookings Made</td><td>' + (r.booking_count || 0) + '</td></tr>' +
+            '</tbody>' +
+          '</table>' +
+          availabilityNote +
+          '<div style="display:flex;gap:10px;margin-top:16px;">' +
+            '<button class="te-btn-cart" style="flex:1;padding:12px;" data-rent="' + esc(r.id) + '" ' + (isAvail ? '' : 'disabled') + '>' +
+              '<i class="fas fa-calendar-check"></i> Book for Rent' +
+            '</button>' +
+            '<button class="te-wish-btn te-share-btn" onclick="window.shareThis(\'' + esc(r.name) + '\')" style="position:static;width:44px;height:44px;border-radius:10px;" aria-label="Share equipment" title="Share">' +
+              '<i class="fas fa-share-nodes"></i>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="relatedEquipmentBox" style="display:none;margin-top:20px;"></div>';
+
+      document.getElementById('rentDetailContent').innerHTML = html;
+      appendRelated('rent', r.category_slug, r.id);
+      toggleModal('rentDetailModal', true);
+
+      var b = document.querySelector('#rentDetailContent [data-rent="' + r.id + '"]');
+      if (b) {
+        b.addEventListener('click', function () {
+          state.items = [r];
+          toggleModal('rentDetailModal', false);
+          openRentalModal(r.id);
+        });
+      }
+    }).catch(function () {
+      toast('Could not load rental details.');
+    });
+  }
+
+  // --- BOOKED (RENTAL BOOKINGS) DRAWER ---
+  function loadBooked() {
+    var body = document.getElementById('bookedDrawerBody');
+    if (!body) return;
+
+    if (!isLoggedIn()) {
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-lock"></i><h3>Sign in to see bookings</h3><p>View your rental bookings after signing in.</p></div>';
+      return;
+    }
+
+    body.innerHTML = '<div class="te-skeleton" style="height:80px;margin-bottom:10px;"></div>'.repeat(3);
+
+    API.Equipment.getMyRentals().then(function (res) {
+      var bookings = (res && res.data && res.data.items) || (res && res.items) || [];
+      setBadge('bookedBadgeCount', bookings.length);
+      setBadge('quickBookedCount', bookings.length);
+
+      if (!bookings.length) {
+        body.innerHTML = '<div class="te-empty-state"><i class="fas fa-calendar-check"></i><h3>No rental bookings yet</h3><p>Bookings you make for farm machinery will appear here.</p></div>';
+        return;
+      }
+
+      body.innerHTML = bookings.map(function (b) {
+        var equip = b.equipment || {};
+        var cancelled = b.status === 'cancelled';
+        var statusLabel = (b.status || 'requested').toUpperCase();
+        var statusClass = cancelled ? 'off' : 'ok';
+        var dateStr = b.booking_date ? new Date(b.booking_date).toLocaleDateString('en-IN') : '—';
+        var img = equip.image_url
+          ? '<img src="' + esc(equip.image_url) + '" class="te-listing-thumb" style="width:56px;height:52px;">'
+          : '<div class="te-listing-thumb"><i class="fas fa-tractor"></i></div>';
+        return '<div class="te-listing-item">' +
+          img +
+          '<div class="te-listing-info">' +
+            '<div class="te-listing-name">' + esc(equip.name || 'Equipment') + '</div>' +
+            '<div class="te-listing-meta"><i class="fas fa-calendar"></i> ' + dateStr + ' · ' + (b.duration_days || 0) + ' day(s) · ' + rupees(b.total_cost) + '</div>' +
+            '<div class="te-listing-actions">' +
+              '<span class="te-listing-status ' + statusClass + '">' + esc(statusLabel) + '</span>' +
+              (cancelled ? '' : '<button class="te-icon-btn danger" data-cancelbooking="' + esc(b.id) + '" title="Cancel booking"><i class="fas fa-times"></i></button>') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }).catch(function () {
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Failed to load bookings</h3></div>';
+    });
+  }
+
+  // --- ACTIVITY DRAWER ---
+  function loadActivity() {
+    var body = document.getElementById('activityDrawerBody');
+    if (!body) return;
+
+    if (!isLoggedIn()) {
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-lock"></i><h3>Sign in to see activity</h3><p>Track your views, bookings, and orders after signing in.</p></div>';
+      return;
+    }
+
+    body.innerHTML = '<div class="te-skeleton" style="height:70px;margin-bottom:8px;"></div>'.repeat(3);
+
+    API.Equipment.getActivity({ limit: 50 }).then(function (res) {
+      var act = (res && res.data && res.data.items) || (res && res.items) || [];
+      if (!act.length) {
+        body.innerHTML = '<div class="te-empty-state"><i class="fas fa-clock-rotate-left"></i><h3>No activity yet</h3><p>Views, bookings, and orders will appear here.</p></div>';
+        return;
+      }
+
+      body.innerHTML = act.map(function (a) {
+        var icon = a.kind === 'booking' ? 'fa-calendar-check' : a.kind === 'order' ? 'fa-box' : 'fa-eye';
+        var title = '';
+        if (a.kind === 'booking') {
+          title = (a.booking && (a.booking.equipment || {}).name) ? 'Booked ' + esc(a.booking.equipment.name) : 'Rental booking';
+        } else if (a.kind === 'order') {
+          title = a.order && a.order.order_id ? 'Order ' + esc(a.order.order_id) + ' (' + (a.action || 'placed') + ')' : 'Order update';
+        } else {
+          title = 'Viewed ' + (a.product ? esc(a.product.name) : 'equipment details');
+        }
+        var sub = a.detail || '';
+        return '<div class="te-activity-item">' +
+          '<div class="te-activity-icon"><i class="fas ' + icon + '"></i></div>' +
+          '<div>' +
+            '<div class="te-activity-title">' + title + '</div>' +
+            (sub ? '<div class="te-activity-sub">' + esc(sub) + '</div>' : '') +
+            '<div class="te-activity-time">' + fmtDate(a.created_ts) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }).catch(function () {
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Failed to load activity</h3></div>';
+    });
+  }
+
+  // --- MY LISTINGS DRAWER ---
+  function renderListings(data) {
+    var body = document.getElementById('listingsDrawerBody');
+    if (!body) return;
+    var rent = (data && data.rent) || [];
+    var buy = (data && data.buy) || [];
+    setBadge('quickListingsCount', rent.length + buy.length);
+
+    if (!rent.length && !buy.length) {
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-store"></i><h3>You have no listings yet</h3><p>List your tools or equipment to reach local farmers.</p></div>';
+      return;
+    }
+
+    var html = '';
+    if (rent.length) {
+      html += '<div style="font-size:12px;font-weight:800;color:var(--te-forest-green);letter-spacing:0.4px;margin:0 0 8px;">FOR RENT</div>';
+      html += rent.map(function (r) {
+        var archived = String(r.listing_status || 'active') === 'inactive';
+        var paused = !archived && (r.is_available === false || r.is_unavailable === true);
+        var statusText = archived ? 'HIDDEN' : paused ? 'PAUSED' : 'AVAILABLE';
+        var statusClass = archived || paused ? 'off' : 'ok';
+        var img = r.image_url
+          ? '<img src="' + esc(r.image_url) + '" class="te-listing-thumb">'
+          : '<div class="te-listing-thumb"><i class="fas fa-tractor"></i></div>';
+        return '<div class="te-listing-item">' +
+          img +
+          '<div class="te-listing-info">' +
+            '<div class="te-listing-name">' + esc(r.name) + '</div>' +
+            '<div class="te-listing-meta">' + rupees(r.daily_rate) + '/day · ' + esc(r.type || 'Equipment') + '</div>' +
+            '<div class="te-listing-actions">' +
+              '<span class="te-listing-status ' + statusClass + '">' + statusText + '</span>' +
+              '<button class="te-icon-btn" data-listingedit="rent:' + esc(r.id) + '" title="Edit"><i class="fas fa-pen"></i></button>' +
+              (archived ? '' : '<button class="te-icon-btn" data-listingtoggle="rent:' + esc(r.id) + '" title="' + (paused ? 'Make available' : 'Pause listing') + '"><i class="fas fa-power-off"></i></button>') +
+              '<button class="te-icon-btn danger" data-listingdel="rent:' + esc(r.id) + '" title="Delete"><i class="fas fa-trash-alt"></i></button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+    if (buy.length) {
+      html += '<div style="font-size:12px;font-weight:800;color:var(--te-forest-green);letter-spacing:0.4px;margin:14px 0 8px;">FOR SALE</div>';
+      html += buy.map(function (p) {
+        var archived = p.is_active === false;
+        var inStock = !archived && (p.in_stock !== false);
+        var img = p.image_url
+          ? '<img src="' + esc(p.image_url) + '" class="te-listing-thumb">'
+          : '<div class="te-listing-thumb"><i class="fas fa-tag"></i></div>';
+        return '<div class="te-listing-item">' +
+          img +
+          '<div class="te-listing-info">' +
+            '<div class="te-listing-name">' + esc(p.name) + '</div>' +
+            '<div class="te-listing-meta">' + rupees(p.price) + ' · ' + esc(p.condition || 'New') + '</div>' +
+            '<div class="te-listing-actions">' +
+              '<span class="te-listing-status ' + (archived || !inStock ? 'off' : 'ok') + '">' + (archived ? 'HIDDEN' : inStock ? 'IN STOCK' : 'OUT OF STOCK') + '</span>' +
+              '<button class="te-icon-btn" data-listingedit="buy:' + esc(p.id) + '" title="Edit"><i class="fas fa-pen"></i></button>' +
+              '<button class="te-icon-btn danger" data-listingdel="buy:' + esc(p.id) + '" title="Delete"><i class="fas fa-trash-alt"></i></button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+    body.innerHTML = html;
+  }
+
+  function loadMyListings() {
+    var body = document.getElementById('listingsDrawerBody');
+    if (!body) return;
+
+    if (!isLoggedIn()) {
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-lock"></i><h3>Sign in to manage listings</h3><p>List tools and equipment as verified farm seller.</p></div>';
+      return;
+    }
+
+    body.innerHTML = '<div class="te-skeleton" style="height:70px;margin-bottom:8px;"></div>'.repeat(3);
+
+    API.Equipment.getMyListings().then(function (res) {
+      state.listings = (res && res.data) || res || { rent: [], buy: [], book_count: 0 };
+      renderListings(state.listings);
+    }).catch(function () {
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Failed to load your listings</h3></div>';
+    });
+  }
+
+  // --- LISTING EDITOR ---
+  function populateListingCategories() {
+    var sel = document.getElementById('lsfCategory');
+    if (!sel) return;
+    if (state.categories && state.categories.length) {
+      sel.innerHTML = state.categories.map(function (c) {
+        return '<option value="' + esc(c.slug) + '">' + esc(c.name) + '</option>';
+      }).join('');
+    }
+  }
+
+  function openListingEditor(type, item) {
+    if (!isLoggedIn()) { requireLogin(); return; }
+    if (!state.categories.length) {
+      API.Equipment.getCategories().then(function (res) {
+        state.categories = (res && res.data && res.data.items) || [];
+        populateListingCategories();
+        openListingEditor(type, item);
+      });
+      return;
+    }
+    populateListingCategories();
+    state.listingEditor = { type: type || 'rent', id: (item && item.id) || null };
+    setListingTypeTab(state.listingEditor.type);
+
+    document.getElementById('lsfListingId').value = state.listingEditor.id || '';
+    document.getElementById('listingModalTitle').innerHTML =
+      '<i class="fas fa-' + (state.listingEditor.id ? 'pen' : 'plus') + '" style="color:var(--te-primary-green);margin-right:8px;"></i> ' +
+      (state.listingEditor.id ? 'Edit Listing' : 'Add New Listing');
+
+    var f = {
+      name: item ? item.name : '',
+      type: item ? item.type : '',
+      brand: item ? item.brand : '',
+      condition: item ? item.condition || 'New' : 'New',
+      power_source: item ? item.power_source || 'Manual' : 'Manual',
+      location: item ? item.location : '',
+      suitable_use: item ? item.suitable_use || 'Land preparation' : 'Land preparation',
+      description: item ? item.description : '',
+      price: (item && item.mode !== 'rent') ? (item.price || '') : '',
+      rate: (item && item.mode === 'rent') ? (item.daily_rate || '') : '',
+      deposit: (item && item.mode === 'rent') ? (item.deposit_amount || '') : '',
+      min_days: (item && item.mode === 'rent') ? (item.min_duration_days || 1) : 1,
+      category: (item && (item.category_slug || (item.category && item.category.slug))) || (state.categories[0] && state.categories[0].slug) || '',
+      delivery: !!(item && item.delivery_available),
+      pickup: (item && item.pickup_available !== false),
+      available: !(item && item.is_unavailable)
+    };
+    document.getElementById('lsfName').value = f.name;
+    document.getElementById('lsfType').value = f.type;
+    document.getElementById('lsfBrand').value = f.brand;
+    document.getElementById('lsfCondition').value = f.condition;
+    document.getElementById('lsfPowerSource').value = f.power_source;
+    document.getElementById('lsfLocation').value = f.location;
+    document.getElementById('lsfUse').value = f.suitable_use;
+    document.getElementById('lsfDescription').value = f.description;
+    document.getElementById('lsfPrice').value = f.price;
+    document.getElementById('lsfRate').value = f.rate;
+    document.getElementById('lsfDeposit').value = f.deposit;
+    document.getElementById('lsfMinDays').value = f.min_days;
+    document.getElementById('lsfDeliveryAvailable').checked = f.delivery;
+    document.getElementById('lsfPickupAvailable').checked = f.pickup;
+    document.getElementById('lsfIsAvailable').checked = f.available;
+    if (f.category && document.getElementById('lsfCategory').value !== f.category) {
+      document.getElementById('lsfCategory').value = f.category;
+    }
+
+    toggleModal('listingModal', true);
+  }
+
+  function setListingTypeTab(type) {
+    state.listingEditor.type = type;
+    document.getElementById('ltypeRent').classList.toggle('active', type === 'rent');
+    document.getElementById('ltypeBuy').classList.toggle('active', type === 'buy');
+    var isRent = type === 'rent';
+    document.getElementById('lsfPriceWrap').style.display = isRent ? 'none' : 'block';
+    document.getElementById('lsfRateWrap').style.display = isRent ? 'block' : 'none';
+    document.getElementById('lsfDepositWrap').style.display = isRent ? 'block' : 'none';
+    document.getElementById('lsfWindowWrap').style.display = isRent ? 'block' : 'none';
+  }
+
+  function collectListingPayload() {
+    var isRent = state.listingEditor.type === 'rent';
+    var payload = {
+      name: document.getElementById('lsfName').value.trim(),
+      category_slug: document.getElementById('lsfCategory').value,
+      type: document.getElementById('lsfType').value.trim() || 'Equipment',
+      condition: document.getElementById('lsfCondition').value,
+      brand: document.getElementById('lsfBrand').value.trim(),
+      power_source: document.getElementById('lsfPowerSource').value,
+      location: document.getElementById('lsfLocation').value.trim(),
+      suitable_use: document.getElementById('lsfUse').value,
+      description: document.getElementById('lsfDescription').value.trim(),
+      delivery_available: document.getElementById('lsfDeliveryAvailable').checked,
+      pickup_available: document.getElementById('lsfPickupAvailable').checked,
+      is_available: document.getElementById('lsfIsAvailable').checked
+    };
+    if (isRent) {
+      payload.daily_rate = parseFloat(document.getElementById('lsfRate').value) || 0;
+      payload.deposit_amount = parseFloat(document.getElementById('lsfDeposit').value) || null;
+      payload.min_duration_days = parseInt(document.getElementById('lsfMinDays').value, 10) || 1;
+    } else {
+      payload.price = parseFloat(document.getElementById('lsfPrice').value) || 0;
+    }
+    return payload;
+  }
+
+  function submitListing(e) {
+    e.preventDefault();
+    if (!isLoggedIn()) { requireLogin(); return; }
+    var type = state.listingEditor.type;
+    var id = state.listingEditor.id;
+    var payload = collectListingPayload();
+    if (!payload.name) { toast('Please enter an item name.'); return; }
+    if (type === 'rent' && (!payload.daily_rate || payload.daily_rate <= 0)) { toast('Please enter a valid daily rental rate.'); return; }
+    if (type === 'buy' && (!payload.price || payload.price <= 0)) { toast('Please enter a valid selling price.'); return; }
+
+    var promise = id
+      ? API.Equipment.updateRentListing(id, payload)
+      : API.Equipment.createRentListing(payload);
+    if (type === 'buy') {
+      promise = id
+        ? API.Equipment.updateBuyListing(id, payload)
+        : API.Equipment.createBuyListing(payload);
+    }
+
+    promise.then(function () {
+      toggleModal('listingModal', false);
+      toast(id ? 'Listing updated successfully!' : 'Listing published successfully!');
+      loadMyListings();
+    }).catch(function (err) {
+      toast(err && err.message ? err.message : 'Could not save your listing.');
+    });
+  }
+
+  function deleteListing(kind, id) {
+    if (!confirm('Delete this listing permanently?')) return;
+    var promise = kind === 'buy'
+      ? API.Equipment.deleteBuyListing(id)
+      : API.Equipment.deleteRentListing(id);
+    promise.then(function () {
+      toast('Listing deleted.');
+      loadMyListings();
+    }).catch(function (err) {
+      toast(err && err.message ? err.message : 'Could not delete listing.');
+    });
+  }
+
+  function toggleListing(kind, id) {
+    var item = null;
+    var list = kind === 'rent' ? state.listings.rent || [] : state.listings.buy || [];
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(id)) { item = list[i]; break; }
+    }
+    var active;
+    if (kind === 'rent') {
+      active = !(item && item.is_unavailable);
+      API.Equipment.setRentListingStatus(id, { is_available: !active }).then(function () {
+        toast(!active ? 'Listing is now available to rent.' : 'Listing paused.');
+        loadMyListings();
+      }).catch(function (err) {
+        toast(err && err.message ? err.message : 'Could not update listing.');
+      });
+    }
   }
 
   // --- CART PANEL ---
   function refreshCartBadge() {
     API.Marketplace.getCart().then(function (res) {
       state.cart = (res && res.data) || res || { items: [], total: 0, count: 0 };
-      var badge = document.getElementById('cartBadgeCount');
-      if (badge) {
-        var cnt = state.cart.count || (state.cart.items ? state.cart.items.length : 0);
-        badge.textContent = cnt;
-        badge.style.display = cnt > 0 ? 'flex' : 'none';
-      }
+      var cnt = state.cart.count || (state.cart.items ? state.cart.items.length : 0);
+      setBadge('cartBadgeCount', cnt);
+      setBadge('quickCartCount', cnt);
     }).catch(function () {
       state.cart = { items: [], total: 0, count: 0 };
     });
@@ -2126,11 +3448,8 @@
 
     API.Marketplace.getWishlist().then(function (res) {
       state.wishlist = (res && res.data && res.data.items) || (res && res.items) || [];
-      var badge = document.getElementById('wishBadgeCount');
-      if (badge) {
-        badge.textContent = state.wishlist.length;
-        badge.style.display = state.wishlist.length > 0 ? 'flex' : 'none';
-      }
+      setBadge('wishBadgeCount', state.wishlist.length);
+      setBadge('quickWishCount', state.wishlist.length);
 
       if (!state.wishlist.length) {
         body.innerHTML = '<div class="te-empty-state"><i class="far fa-heart"></i><h3>No saved equipment</h3><p>Tap the heart icon on any product to save it.</p></div>';
@@ -2162,50 +3481,108 @@
       renderSkeletons();
     }
 
-    if (state.mode === 'rent') {
-      // Fetch Rental Machinery
-      API.Equipment.listRentals({
-        page: state.page,
-        limit: state.limit,
-        search: state.search,
-        type: state.category !== 'all' ? state.category : null,
-        min_rate: state.minPrice,
-        max_rate: state.maxPrice
-      }).then(function (res) {
-        var data = (res && res.data) || res || {};
-        var items = data.items || [];
-        state.totalPages = data.total_pages || 1;
-        state.items = reset ? items : state.items.concat(items);
-        renderProducts(state.items, reset);
-      }).catch(function () {
-        renderProducts([], true);
-      });
-      return;
-    }
-
-    // Fetch Tools & Equipment Products (Buy Mode)
-    API.Equipment.listProducts({
+    var params = {
       page: state.page,
       limit: state.limit,
       search: state.search,
       category: state.category !== 'all' ? state.category : null,
+      mode: state.mode !== 'all' ? state.mode : null,
       power_source: state.powerSource !== 'all' ? state.powerSource : null,
       suitable_use: state.suitableUse !== 'all' ? state.suitableUse : null,
       brand: state.brand !== 'all' ? state.brand : null,
+      condition: state.condition !== 'all' ? state.condition : null,
+      availability: state.availability !== 'all' ? state.availability : null,
+      location: state.location !== 'all' ? state.location : null,
+      rate_range: state.rateRange !== 'all' ? state.rateRange : null,
       min_price: state.minPrice,
       max_price: state.maxPrice,
       in_stock: state.inStock ? true : null,
+      verified_sellers: state.verifiedSellers ? true : null,
+      delivery_available: state.deliveryAvailable ? true : null,
+      pickup_available: state.pickupAvailable ? true : null,
+      min_rating: state.highRatedOnly ? 4 : null,
+      recently_added_days: state.newArrivalsOnly ? 3 : null,
       sort_by: state.sortBy,
       sort_order: state.sortOrder
-    }).then(function (res) {
+    };
+
+    API.Equipment.browse(params).then(function (res) {
       var data = (res && res.data) || res || {};
       var items = data.items || [];
+      state.fetchError = false;
       state.totalPages = data.total_pages || 1;
+      state.totalCount = data.total || items.length;
       state.items = reset ? items : state.items.concat(items);
       renderProducts(state.items, reset);
     }).catch(function () {
+      state.fetchError = true;
       renderProducts([], true);
     });
+  }
+
+  function refreshDrawerBadges() {
+    if (isLoggedIn()) {
+      API.Equipment.getMyRentals().then(function (res) {
+        var bookings = (res && res.data && res.data.items) || (res && res.items) || [];
+        setBadge('bookedBadgeCount', bookings.length);
+        setBadge('quickBookedCount', bookings.length);
+      }).catch(function () {});
+    }
+  }
+
+  // --- FILTER HELPERS ---
+  function collectFilterState() {
+    state.powerSource = document.getElementById('filterPower').value;
+    state.suitableUse = document.getElementById('filterUse').value;
+    state.brand = document.getElementById('filterBrand').value;
+    state.condition = document.getElementById('filterCondition').value;
+    state.availability = document.getElementById('filterAvailability').value;
+    state.location = document.getElementById('filterLocation').value;
+    state.rateRange = document.getElementById('filterRateRange').value;
+    var minP = parseFloat(document.getElementById('filterMinPrice').value);
+    var maxP = parseFloat(document.getElementById('filterMaxPrice').value);
+    state.minPrice = isNaN(minP) ? null : minP;
+    state.maxPrice = isNaN(maxP) ? null : maxP;
+    state.inStock = document.getElementById('filterInStock').checked;
+    state.verifiedSellers = document.getElementById('filterVerifiedSellers').checked;
+    state.deliveryAvailable = document.getElementById('filterDeliveryAvailable').checked;
+    state.pickupAvailable = document.getElementById('filterPickupAvailable').checked;
+    state.highRatedOnly = document.getElementById('filterHighRated').checked;
+    state.newArrivalsOnly = document.getElementById('filterNewArrivals').checked;
+
+    var count = 0;
+    ['filterPower', 'filterUse', 'filterBrand', 'filterCondition', 'filterAvailability', 'filterLocation', 'filterRateRange'].forEach(function (id) {
+      if (document.getElementById(id).value !== 'all') count++;
+    });
+    if (state.minPrice !== null) count++;
+    if (state.maxPrice !== null) count++;
+    ['filterInStock', 'filterVerifiedSellers', 'filterDeliveryAvailable', 'filterPickupAvailable', 'filterHighRated', 'filterNewArrivals'].forEach(function (id) {
+      if (document.getElementById(id).checked) count++;
+    });
+    state.activeFilterCount = count;
+    var mfc = document.getElementById('mobileFilterCount');
+    if (mfc) mfc.textContent = count;
+    setBadge('filterCountBadge', count);
+  }
+
+  function resetAllFilters() {
+    document.getElementById('filterPower').value = 'all';
+    document.getElementById('filterUse').value = 'all';
+    document.getElementById('filterBrand').value = 'all';
+    document.getElementById('filterCondition').value = 'all';
+    document.getElementById('filterAvailability').value = 'all';
+    document.getElementById('filterLocation').value = 'all';
+    document.getElementById('filterRateRange').value = 'all';
+    document.getElementById('filterMinPrice').value = '';
+    document.getElementById('filterMaxPrice').value = '';
+    document.getElementById('filterInStock').checked = false;
+    document.getElementById('filterVerifiedSellers').checked = false;
+    document.getElementById('filterDeliveryAvailable').checked = false;
+    document.getElementById('filterPickupAvailable').checked = false;
+    document.getElementById('filterHighRated').checked = false;
+    document.getElementById('filterNewArrivals').checked = false;
+    collectFilterState();
+    fetchProducts(true);
   }
 
   function loadRecommendations() {
@@ -2292,8 +3669,18 @@
   // --- EVENT LISTENERS ---
   document.addEventListener('click', function (e) {
     var target = e.target;
-    var btn = target.closest('button, [data-cat], [data-detail], [data-add], [data-wish], [data-rent], [data-cartqty], [data-cartremove], [data-cancelorder], [data-uncompare]');
+    var btn = target.closest('button, a, [data-cat], [data-detail], [data-add], [data-wish], [data-rent], [data-rentdetail], [data-cartqty], [data-cartremove], [data-cancelorder], [data-uncompare], [data-cancelbooking], [data-listingedit], [data-listingdel], [data-listingtoggle], [data-action]');
     if (!btn) return;
+
+    // Empty-state / error-state actions
+    if (btn.dataset.action === 'reset-filters') {
+      resetAllFilters();
+      return;
+    }
+    if (btn.dataset.action === 'retry') {
+      fetchProducts(true);
+      return;
+    }
 
     // Category Pill Click
     if (btn.dataset.cat !== undefined) {
@@ -2308,6 +3695,12 @@
     // View Details Click
     if (btn.dataset.detail) {
       openDetailModal(btn.dataset.detail);
+      return;
+    }
+
+    // Rent Details Click
+    if (btn.dataset.rentdetail) {
+      openRentDetailModal(btn.dataset.rentdetail);
       return;
     }
 
@@ -2393,6 +3786,50 @@
       document.querySelectorAll('[data-compare="' + unId + '"]').forEach(function (c) { c.checked = false; });
       return;
     }
+
+    // Cancel Rental Booking
+    if (btn.dataset.cancelbooking) {
+      var bId = btn.dataset.cancelbooking;
+      if (!confirm('Cancel this rental booking?')) return;
+      API.Equipment.cancelRentalBooking(bId).then(function () {
+        toast('Booking cancelled.');
+        loadBooked();
+        refreshDrawerBadges();
+        fetchProducts(true);
+      }).catch(function (err) {
+        toast(err && err.message ? err.message : 'Could not cancel this booking.');
+      });
+      return;
+    }
+
+    // Listing Edit
+    if (btn.dataset.listingedit) {
+      var parts = btn.dataset.listingedit.split(':');
+      var kind = parts[0], lid = parts[1];
+      var item = null;
+      var list = kind === 'rent' ? (state.listings.rent || []) : (state.listings.buy || []);
+      for (var li = 0; li < list.length; li++) {
+        if (String(list[li].id) === String(lid)) { item = list[li]; break; }
+      }
+      var type = kind === 'rent' ? 'rent' : 'buy';
+      var editItem = item || { id: lid, mode: type };
+      openListingEditor(type, editItem);
+      return;
+    }
+
+    // Listing Delete
+    if (btn.dataset.listingdel) {
+      var dp = btn.dataset.listingdel.split(':');
+      deleteListing(dp[0], dp[1]);
+      return;
+    }
+
+    // Listing Toggle Availability
+    if (btn.dataset.listingtoggle) {
+      var tp = btn.dataset.listingtoggle.split(':');
+      toggleListing(tp[0], tp[1]);
+      return;
+    }
   });
 
   // Compare Checkbox Change
@@ -2416,29 +3853,57 @@
   });
 
   // Mode Switcher Buttons
-  document.getElementById('modeBuyBtn').addEventListener('click', function () {
-    state.mode = 'buy';
-    document.getElementById('modeBuyBtn').classList.add('active');
-    document.getElementById('modeRentBtn').classList.remove('active');
-    document.getElementById('recommendationsSection').style.display = 'block';
-    fetchProducts(true);
-  });
+  var modeBtns = {
+    all: document.getElementById('modeAllBtn'),
+    buy: document.getElementById('modeBuyBtn'),
+    rent: document.getElementById('modeRentBtn')
+  };
 
-  document.getElementById('modeRentBtn').addEventListener('click', function () {
-    state.mode = 'rent';
-    document.getElementById('modeRentBtn').classList.add('active');
-    document.getElementById('modeBuyBtn').classList.remove('active');
-    document.getElementById('recommendationsSection').style.display = 'none';
+  function setMode(mode) {
+    state.mode = mode;
+    Object.keys(modeBtns).forEach(function (m) {
+      if (modeBtns[m]) modeBtns[m].classList.toggle('active', m === mode);
+    });
+    var isRentOnly = mode === 'rent';
+    document.getElementById('recommendationsSection').style.display = isRentOnly ? 'none' : 'block';
+    document.getElementById('recentSection').style.display = isRentOnly ? 'none' : 'block';
     fetchProducts(true);
-  });
+  }
+
+  if (modeBtns.all) modeBtns.all.addEventListener('click', function () { setMode('all'); });
+  if (modeBtns.buy) modeBtns.buy.addEventListener('click', function () { setMode('buy'); });
+  if (modeBtns.rent) modeBtns.rent.addEventListener('click', function () { setMode('rent'); });
 
   // Search input debouncing
-  document.getElementById('teSearchInput').addEventListener('input', function (e) {
+  var searchInput = document.getElementById('teSearchInput');
+  var clearSearchBtn = document.getElementById('btnClearSearch');
+  searchInput.addEventListener('input', function (e) {
+    if (clearSearchBtn) clearSearchBtn.style.display = e.target.value ? 'inline-flex' : 'none';
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(function () {
       state.search = e.target.value.trim();
       fetchProducts(true);
     }, 300);
+  });
+  if (clearSearchBtn) clearSearchBtn.addEventListener('click', function () {
+    searchInput.value = '';
+    if (clearSearchBtn) clearSearchBtn.style.display = 'none';
+    state.search = '';
+    document.getElementById('teSearchInput').focus();
+    fetchProducts(true);
+  });
+
+  // Filter panel toggle (mobile: opens sidebar drawer; desktop: collapses sidebar)
+  var filterToggleBtn = document.getElementById('btnToggleFilters');
+  if (filterToggleBtn) filterToggleBtn.addEventListener('click', function () {
+    var sidebar = document.getElementById('filterSidebar');
+    if (!sidebar) return;
+    var isNarrow = window.innerWidth <= 960;
+    if (isNarrow) {
+      sidebar.classList.toggle('mobile-open');
+    } else {
+      sidebar.classList.toggle('hidden-filters');
+    }
   });
 
   // Sort dropdown change
@@ -2459,38 +3924,15 @@
 
   // Filter Apply
   document.getElementById('btnApplyFilters').addEventListener('click', function () {
-    state.powerSource = document.getElementById('filterPower').value;
-    state.suitableUse = document.getElementById('filterUse').value;
-    state.brand = document.getElementById('filterBrand').value;
-    var minP = parseFloat(document.getElementById('filterMinPrice').value);
-    var maxP = parseFloat(document.getElementById('filterMaxPrice').value);
-    state.minPrice = isNaN(minP) ? null : minP;
-    state.maxPrice = isNaN(maxP) ? null : maxP;
-    state.inStock = document.getElementById('filterInStock').checked;
-
+    collectFilterState();
     var sidebar = document.getElementById('filterSidebar');
     if (sidebar) sidebar.classList.remove('mobile-open');
-
     fetchProducts(true);
   });
 
   // Clear Filters
   document.getElementById('btnClearFilters').addEventListener('click', function () {
-    document.getElementById('filterPower').value = 'all';
-    document.getElementById('filterUse').value = 'all';
-    document.getElementById('filterBrand').value = 'all';
-    document.getElementById('filterMinPrice').value = '';
-    document.getElementById('filterMaxPrice').value = '';
-    document.getElementById('filterInStock').checked = false;
-
-    state.powerSource = 'all';
-    state.suitableUse = 'all';
-    state.brand = 'all';
-    state.minPrice = null;
-    state.maxPrice = null;
-    state.inStock = false;
-
-    fetchProducts(true);
+    resetAllFilters();
   });
 
   // Mobile Filter Drawer Toggle
@@ -2509,50 +3951,130 @@
   document.getElementById('btnOpenCart').addEventListener('click', function () {
     refreshCartBadge();
     renderCartDrawer();
-    document.getElementById('cartBackdrop').classList.add('open');
-    document.getElementById('cartDrawer').classList.add('open');
+    drawerOpen('cart');
   });
 
   document.getElementById('btnCloseCartDrawer').addEventListener('click', function () {
-    document.getElementById('cartBackdrop').classList.remove('open');
-    document.getElementById('cartDrawer').classList.remove('open');
+    drawerClose('cart');
   });
 
   document.getElementById('cartBackdrop').addEventListener('click', function () {
-    document.getElementById('cartBackdrop').classList.remove('open');
-    document.getElementById('cartDrawer').classList.remove('open');
+    drawerClose('cart');
   });
 
   document.getElementById('btnOpenOrders').addEventListener('click', function () {
+    if (!requireLogin()) return;
     loadOrders();
-    document.getElementById('ordersBackdrop').classList.add('open');
-    document.getElementById('ordersDrawer').classList.add('open');
+    drawerOpen('orders');
   });
 
   document.getElementById('btnCloseOrdersDrawer').addEventListener('click', function () {
-    document.getElementById('ordersBackdrop').classList.remove('open');
-    document.getElementById('ordersDrawer').classList.remove('open');
+    drawerClose('orders');
   });
 
   document.getElementById('ordersBackdrop').addEventListener('click', function () {
-    document.getElementById('ordersBackdrop').classList.remove('open');
-    document.getElementById('ordersDrawer').classList.remove('open');
+    drawerClose('orders');
   });
 
   document.getElementById('btnOpenSaved').addEventListener('click', function () {
+    if (!requireLogin()) return;
     loadWishlist();
-    document.getElementById('wishBackdrop').classList.add('open');
-    document.getElementById('wishDrawer').classList.add('open');
+    drawerOpen('wish');
   });
 
   document.getElementById('btnCloseWishDrawer').addEventListener('click', function () {
-    document.getElementById('wishBackdrop').classList.remove('open');
-    document.getElementById('wishDrawer').classList.remove('open');
+    drawerClose('wish');
   });
 
   document.getElementById('wishBackdrop').addEventListener('click', function () {
-    document.getElementById('wishBackdrop').classList.remove('open');
-    document.getElementById('wishDrawer').classList.remove('open');
+    drawerClose('wish');
+  });
+
+  // Header: Booked Drawer
+  document.getElementById('btnOpenBooked').addEventListener('click', function () {
+    if (!requireLogin()) return;
+    loadBooked();
+    drawerOpen('booked');
+  });
+
+  document.getElementById('btnCloseBookedDrawer').addEventListener('click', function () {
+    drawerClose('booked');
+  });
+
+  document.getElementById('bookedBackdrop').addEventListener('click', function () {
+    drawerClose('booked');
+  });
+
+  // Header: Activity Drawer
+  document.getElementById('btnOpenActivity').addEventListener('click', function () {
+    if (!requireLogin()) return;
+    loadActivity();
+    drawerOpen('activity');
+  });
+
+  document.getElementById('btnCloseActivityDrawer').addEventListener('click', function () {
+    drawerClose('activity');
+  });
+
+  document.getElementById('activityBackdrop').addEventListener('click', function () {
+    drawerClose('activity');
+  });
+
+  // My Listings Drawer
+  document.getElementById('btnQuickMyListings').addEventListener('click', function () {
+    if (!requireLogin()) return;
+    loadMyListings();
+    drawerOpen('listings');
+  });
+
+  document.getElementById('btnCloseListingsDrawer').addEventListener('click', function () {
+    drawerClose('listings');
+  });
+
+  document.getElementById('listingsBackdrop').addEventListener('click', function () {
+    drawerClose('listings');
+  });
+
+  document.getElementById('btnOpenListingModal').addEventListener('click', function () {
+    openListingEditor('rent', null);
+  });
+
+  // Listing Modal: type tabs + close + submit
+  document.getElementById('ltypeRent').addEventListener('click', function () { setListingTypeTab('rent'); });
+  document.getElementById('ltypeBuy').addEventListener('click', function () { setListingTypeTab('buy'); });
+  document.getElementById('btnCloseListingModal').addEventListener('click', function () { toggleModal('listingModal', false); });
+  document.getElementById('listingForm').addEventListener('submit', submitListing);
+  document.getElementById('btnCloseRentDetailModal').addEventListener('click', function () { toggleModal('rentDetailModal', false); });
+
+  // Quick action chips
+  document.getElementById('btnQuickCart').addEventListener('click', function () {
+    refreshCartBadge();
+    renderCartDrawer();
+    drawerOpen('cart');
+  });
+
+  document.getElementById('btnQuickBooked').addEventListener('click', function () {
+    if (!requireLogin()) return;
+    loadBooked();
+    drawerOpen('booked');
+  });
+
+  document.getElementById('btnQuickOrders').addEventListener('click', function () {
+    if (!requireLogin()) return;
+    loadOrders();
+    drawerOpen('orders');
+  });
+
+  document.getElementById('btnQuickSaved').addEventListener('click', function () {
+    if (!requireLogin()) return;
+    loadWishlist();
+    drawerOpen('wish');
+  });
+
+  document.getElementById('btnQuickActivity').addEventListener('click', function () {
+    if (!requireLogin()) return;
+    loadActivity();
+    drawerOpen('activity');
   });
 
   // Modals Close buttons
@@ -2560,6 +4082,15 @@
   document.getElementById('btnCloseCompareModal').addEventListener('click', function () { toggleModal('compareModal', false); });
   document.getElementById('btnCloseCheckoutModal').addEventListener('click', function () { toggleModal('checkoutModal', false); });
   document.getElementById('btnCloseRentalModal').addEventListener('click', function () { toggleModal('rentalBookingModal', false); });
+  document.getElementById('btnCloseRentDetailModal').addEventListener('click', function () { toggleModal('rentDetailModal', false); });
+  document.getElementById('btnCloseListingModal').addEventListener('click', function () { toggleModal('listingModal', false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      ['detailModal', 'compareModal', 'checkoutModal', 'rentalBookingModal', 'rentDetailModal', 'listingModal'].forEach(function (id) {
+        toggleModal(id, false);
+      });
+    }
+  });
 
   // Compare Launch & Clear
   document.getElementById('btnLaunchCompare').addEventListener('click', launchCompareModal);
@@ -2672,6 +4203,7 @@
     }).then(function (res) {
       toggleModal('rentalBookingModal', false);
       toast('Machinery successfully booked for ' + days + ' day(s)!');
+      refreshDrawerBadges();
       fetchProducts(true);
     }).catch(function (err) {
       toast(err.message || 'Could not book rental equipment.');
@@ -2692,9 +4224,10 @@
       populateFilters(fData);
     });
 
-    // 3. Load Cart & Wishlist
+    // 3. Load Cart, Wishlist & remote badges
     refreshCartBadge();
     loadWishlist();
+    refreshDrawerBadges();
 
     // 4. Load Recommendations & Recently Viewed
     loadRecommendations();

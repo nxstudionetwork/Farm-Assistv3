@@ -850,7 +850,7 @@
           '<div class="ins-card-name">' + esc(p.name || p.product_name) + '</div>' +
           '<div class="ins-card-provider">' + esc(firstDef([p.provider, p.provider_id, p.insurance_id])) + '</div>' +
         '</div>' +
-        '<button class="ins-save-btn ' + (saved ? 'saved' : '') + '" onclick="InsuranceApp.toggleSave(\'' + prodId(p) + '\')" title="Save"><i class="fas ' + (saved ? 'bookmark' : 'bookmark-regular') + '"></i></button>' +
+        '<button class="ins-save-btn ' + (saved ? 'saved' : '') + '" onclick="InsuranceApp.toggleSave(\'' + prodId(p) + '\')" title="Save"><i class="' + (saved ? 'fas' : 'far') + ' fa-bookmark"></i></button>' +
       '</div>' +
       '<div class="ins-card-tags">' + tags + '</div>' +
       '<div class="ins-card-desc">' + esc(firstDef([p.short_description, p.description, p.eligibility])) + '</div>' +
@@ -1088,7 +1088,19 @@
 
   /* ================= Apply ================= */
   window.InsuranceApp.openApply = function (productId) {
-    if (!productId && currentProduct) productId = prodId(currentProduct);
+    if (!productId) {
+      if (currentProduct) {
+        productId = prodId(currentProduct);
+      } else {
+        var eligIdEl = document.getElementById('ins-elig-product-id');
+        if (eligIdEl && eligIdEl.value) {
+          productId = eligIdEl.value;
+          for (var i = 0; i < eligProducts.length; i++) {
+            if (prodId(eligProducts[i]) === productId) { currentProduct = eligProducts[i]; break; }
+          }
+        }
+      }
+    }
     if (!productId) { showToast('Please select an insurance plan first.', 'info'); return; }
 
     var p = currentProduct;

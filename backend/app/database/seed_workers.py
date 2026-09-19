@@ -14,7 +14,7 @@ if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
 from app.database.connection import SessionLocal, engine, Base
-from app.models.worker import Worker
+from app.models.worker import Worker, WorkerAvailability
 from app.models.farm import Farm
 from app.utils.auth import generate_id
 
@@ -80,6 +80,36 @@ BIOS = [
 ]
 
 
+_AVAIL_DAYS = 7
+_AVAIL_START = "06:00"
+_AVAIL_END = "18:00"
+
+
+def seed_worker_availability(db) -> int:
+    """Ensure every Worker has 7 weekly availability rows."""
+    workers = db.query(Worker).all()
+    added = 0
+    for w in workers:
+        covered = set(
+            r[0] for r in db.query(WorkerAvailability.day_of_week)
+            .filter(WorkerAvailability.worker_id == w.id).all()
+        )
+        for day in range(_AVAIL_DAYS):
+            if day in covered:
+                continue
+            db.add(WorkerAvailability(
+                worker_id=w.id,
+                day_of_week=day,
+                start_time=_AVAIL_START,
+                end_time=_AVAIL_END,
+                is_available=(day % _AVAIL_DAYS != 3),
+            ))
+            added += 1
+    if added:
+        db.commit()
+    return added
+
+
 def _pick(pool, seed):
     return pool[seed % len(pool)]
 
@@ -87,7 +117,8 @@ def _pick(pool, seed):
 def seed_workers(db, min_workers=MIN_WORKERS):
     existing = db.query(Worker).count()
     if existing >= min_workers:
-        return {"workers_seeded": 0, "total_workers": existing}
+        avail_added = seed_worker_availability(db)
+        return {"workers_seeded": 0, "total_workers": existing, "availability_seeded": avail_added}
 
     locations = db.query(Farm.village, Farm.district, Farm.state).filter(
         Farm.is_active == True
@@ -134,7 +165,8 @@ def seed_workers(db, min_workers=MIN_WORKERS):
         added += 1
 
     db.commit()
-    return {"workers_seeded": added, "total_workers": db.query(Worker).count()}
+    avail_added = seed_worker_availability(db)
+    return {"workers_seeded": added, "total_workers": db.query(Worker).count(), "availability_seeded": avail_added}
 
 
 def main():

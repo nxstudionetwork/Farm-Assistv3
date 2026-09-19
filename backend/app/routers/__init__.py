@@ -7,4 +7,5 @@ from app.routers import wallet
 from app.routers import documents
 from app.routers import tools_equipment
 from app.routers import soil_irrigation
+from app.routers import crop_health
 

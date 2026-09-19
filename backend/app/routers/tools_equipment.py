@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, and_, desc, asc
+from sqlalchemy import or_, and_, desc, asc, func
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
@@ -35,6 +35,7 @@ from app.models.marketplace import (
     MarketplaceCartItem,
     MarketplaceOrder,
     OrderItem,
+    MarketplaceWishlist,
 )
 from app.equipment_taxonomy import (
     CATEGORY_SLUGS,
@@ -139,6 +140,9 @@ def _equipment_payload(db: Session, product: Product) -> dict:
     operating_width = (meta.operating_width if meta else None) or tags.get("operating_width")
     capacity = (meta.capacity if meta else None) or tags.get("capacity")
     location = (meta.location if meta else None) or tags.get("location")
+    condition = (meta.condition if meta else None) or tags.get("condition")
+    delivery_available = meta.delivery_available if meta else None
+    pickup_available = meta.pickup_available if meta else None
 
     crops = sorted({c.crop_name for c in product.crops}) if product.crops else []
     specifications = tags.get("specifications") if isinstance(tags.get("specifications"), dict) else None
@@ -182,6 +186,9 @@ def _equipment_payload(db: Session, product: Product) -> dict:
         "operating_width": operating_width,
         "capacity": capacity,
         "location": location,
+        "condition": condition,
+        "delivery_available": delivery_available,
+        "pickup_available": pickup_available,
         "catalog": bool(tags.get("source") == "catalogue"),
         "crops": crops,
         "crop_names": [c.title() for c in crops],
@@ -226,12 +233,17 @@ def _rent_types_for_category(db: Session, slug: str) -> list:
     return labels
 
 
-def _rental_payload(e: Equipment) -> dict:
+def _rental_payload(db: Session, e: Equipment, booking_counts: Optional[dict] = None) -> dict:
     slug = slug_for_type(e.type)
     cat = CATEGORY_BY_SLUG.get(slug, {})
     images = []
     if e.image_url:
         images.append(e.image_url)
+
+    # Live availability derived from real bookings (never fabricated).
+    avail = _availability_payload(db, e)
+    counts = booking_counts or {}
+    created = e.created_at or datetime.utcnow()
     return {
         "id": e.id,
         "equipment_id": e.equipment_id,
@@ -249,13 +261,97 @@ def _rental_payload(e: Equipment) -> dict:
         "images": images,
         "description": e.description,
         "is_available": e.is_available,
+        "condition": e.condition,
+        "listing_status": e.listing_status,
         "owner_id": e.owner_id,
-        "provider": "Farm Assist Catalogue" if not e.owner_id else None,
+        "provider": None,
+        "booking_count": counts.get(e.id, 0),
+        "recently_added": bool(created and (datetime.utcnow() - created).days <= 30),
         "category_slug": slug,
         "category_name": cat.get("name", "Other Equipment"),
+        "availability_status": avail["status"],
+        "availability_label": avail["label"],
+        "available_now": avail["available_now"],
+        "next_available_date": avail["next_available_date"],
         "mode": "rent",
         "created_at": str(e.created_at) if e.created_at else None,
     }
+
+
+ACTIVE_BOOKING_STATUS = ("requested", "confirmed")
+
+
+def _active_bookings(db: Session, equip_id: str) -> list:
+    return (
+        db.query(EquipmentBooking)
+        .filter(
+            EquipmentBooking.equipment_id == equip_id,
+            EquipmentBooking.status.in_(ACTIVE_BOOKING_STATUS),
+        )
+        .all()
+    )
+
+
+def _booking_window(b: EquipmentBooking):
+    """Booking occupies [start, start + duration_days). Returns ISO strings."""
+    start = b.booking_date or ""
+    end = ""
+    if start:
+        try:
+            _s = datetime.strptime(start, "%Y-%m-%d")
+            end = (_s + timedelta(days=b.duration_days or 1)).strftime("%Y-%m-%d")
+        except Exception:
+            end = ""
+    return start, end
+
+
+def _next_available_date(db: Session, equip: Equipment, active: Optional[list] = None) -> Optional[str]:
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    active = _active_bookings(db, equip.id) if active is None else active
+    if equip.is_available and not active:
+        return today
+    if not active:
+        return None
+    ends = []
+    for b in active:
+        _s, e = _booking_window(b)
+        if e:
+            ends.append(e)
+    return min(ends) if ends else None
+
+
+def _availability_payload(db: Session, equip: Equipment) -> dict:
+    active = _active_bookings(db, equip.id)
+    next_date = _next_available_date(db, equip, active)
+    if not equip.is_available:
+        return {
+            "status": "unavailable",
+            "label": "Unavailable",
+            "available_now": False,
+            "next_available_date": next_date,
+            "active_bookings": len(active),
+        }
+    if active:
+        return {
+            "status": "booked",
+            "label": "Booked",
+            "available_now": False,
+            "next_available_date": next_date,
+            "active_bookings": len(active),
+        }
+    return {
+        "status": "available",
+        "label": "Available Now",
+        "available_now": True,
+        "next_available_date": next_date,
+        "active_bookings": 0,
+    }
+
+
+def _range_overlaps(s1: str, e1: str, s2: str, e2: str) -> bool:
+    if not (s1 and e1 and s2 and e2):
+        return False
+    return s2 < e1 and s1 < e2
 
 
 def _rental_booking_payload(db: Session, b: EquipmentBooking) -> dict:
@@ -446,45 +542,82 @@ def list_equipment_products(
 
 
 # ---------------------------------------------------------------------------
-# 2. CATEGORIES
+# 2. CATEGORIES (spec-driven taxonomy with real BUY + RENT counts)
 # ---------------------------------------------------------------------------
 @router.get("/categories")
 def list_equipment_categories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    categories = db.query(ProductCategory).filter(
-        ProductCategory.slug.in_(EQUIPMENT_CATEGORY_SLUGS)
-    ).all()
+    existing = {
+        c.slug: c
+        for c in db.query(ProductCategory)
+        .filter(ProductCategory.slug.in_(CATEGORY_SLUGS))
+        .all()
+    }
 
-    # If no slug match found, get all categories with equipment products
-    if not categories:
-        categories = db.query(ProductCategory).all()
+    # Pre-taxonomy databases: fall back to any category holding equipment products.
+    if not existing:
+        items = []
+        for cat in db.query(ProductCategory).all():
+            count = (
+                db.query(Product)
+                .filter(Product.category_id == cat.id, Product.is_active == True)  # noqa: E712
+                .count()
+            )
+            if not count:
+                continue
+            items.append({
+                "id": cat.id,
+                "name": cat.name,
+                "slug": cat.slug,
+                "icon": cat.icon or "fa-toolbox",
+                "rentable": False,
+                "count": count,
+                "buy_count": count,
+                "rent_count": 0,
+            })
+        items.sort(key=lambda c: (-c["count"], c["name"]))
+        return {
+            "status": "success",
+            "data": {"items": items, "total_categories": len(items)},
+        }
 
     items = []
-    for cat in categories:
-        count = db.query(Product).filter(
-            Product.category_id == cat.id,
-            Product.is_active == True,
-        ).count()
+    for slug in CATEGORY_SLUGS:
+        info = CATEGORY_BY_SLUG[slug]
+        pc = existing.get(slug)
+        buy_count = 0
+        if pc:
+            buy_count = (
+                db.query(Product)
+                .filter(Product.category_id == pc.id, Product.is_active == True)  # noqa: E712
+                .count()
+            )
+        rent_count = 0
+        if info["rentable"]:
+            labels = _rent_types_for_category(db, slug)
+            if labels:
+                rent_count = (
+                    db.query(Equipment)
+                    .filter(Equipment.type.in_(labels), Equipment.listing_status == "active")
+                    .count()
+                )
         items.append({
-            "id": cat.id,
-            "name": cat.name,
-            "slug": cat.slug,
-            "icon": cat.icon or "fa-toolbox",
-            "rentable": CATEGORY_BY_SLUG.get(cat.slug, {}).get("rentable", False),
-            "count": count,
+            "id": pc.id if pc else None,
+            "name": info["name"],
+            "slug": slug,
+            "icon": info["icon"],
+            "rentable": info["rentable"],
+            "count": buy_count + rent_count,
+            "buy_count": buy_count,
+            "rent_count": rent_count,
         })
 
-    # Sort categories with highest count first
     items.sort(key=lambda c: (-c["count"], c["name"]))
-
     return {
         "status": "success",
-        "data": {
-            "items": items,
-            "total_categories": len(items),
-        },
+        "data": {"items": items, "total_categories": len(items)},
     }
 
 
@@ -545,7 +678,11 @@ def list_equipment_filters(
         if r[0] != "general"
     ]
 
-    # Sellers
+    # Sellers (scoped to tools-equipment products that actually carry a marketplace seller)
+    seller_ids = [
+        r[0]
+        for r in base_q.filter(Product.seller_id.isnot(None)).with_entities(Product.seller_id).distinct().all()
+    ]
     sellers = [
         {
             "id": s.id,
@@ -553,22 +690,57 @@ def list_equipment_filters(
             "location": s.location,
             "is_verified": bool(s.is_verified),
         }
-        for s in db.query(Seller).order_by(Seller.shop_name).all()
+        for s in db.query(Seller)
+        .filter(Seller.id.in_(seller_ids) if seller_ids else False)
+        .order_by(Seller.shop_name)
+        .all()
     ]
 
     # Min/Max Price
     min_price_row = base_q.with_entities(Product.price).order_by(Product.price.asc()).first()
     max_price_row = base_q.with_entities(Product.price).order_by(Product.price.desc()).first()
 
-    # Locations (from equipment metadata)
-    locations = [
+    # Locations (from equipment metadata + rental machinery)
+    locations = sorted({
         r[0]
         for r in db.query(EquipmentMetadata.location)
         .filter(EquipmentMetadata.location.isnot(None), EquipmentMetadata.location != "")
         .distinct()
-        .order_by(EquipmentMetadata.location)
         .all()
-    ]
+    } | {
+        r[0]
+        for r in db.query(Equipment.location)
+        .filter(Equipment.location.isnot(None), Equipment.location != "")
+        .distinct()
+        .all()
+    })
+
+    # Conditions (from buy metadata + rental machinery; only real values)
+    conditions = sorted({
+        r[0]
+        for r in db.query(EquipmentMetadata.condition)
+        .filter(EquipmentMetadata.condition.isnot(None), EquipmentMetadata.condition != "")
+        .distinct()
+        .all()
+    } | {
+        r[0]
+        for r in db.query(Equipment.condition)
+        .filter(Equipment.condition.isnot(None), Equipment.condition != "")
+        .distinct()
+        .all()
+    })
+
+    # Rental daily-rate range (for the unified price filter in ALL/RENT modes)
+    min_rate_row = db.query(Equipment.daily_rate).order_by(Equipment.daily_rate.asc()).first()
+    max_rate_row = db.query(Equipment.daily_rate).order_by(Equipment.daily_rate.desc()).first()
+    rate_range = {
+        "min": float(min_rate_row[0]) if min_rate_row and min_rate_row[0] is not None else 100.0,
+        "max": float(max_rate_row[0]) if max_rate_row and max_rate_row[0] is not None else 10000.0,
+    }
+
+    has_verified_sellers = bool(
+    any(s["is_verified"] for s in sellers)
+)
 
     return {
         "status": "success",
@@ -579,10 +751,13 @@ def list_equipment_filters(
             "crops": crops,
             "sellers": sellers,
             "locations": locations,
+            "conditions": conditions,
             "price_range": {
-                "min": float(min_price_row[0]) if min_price_row else 100.0,
-                "max": float(max_price_row[0]) if max_price_row else 50000.0,
+                "min": float(min_price_row[0]) if min_price_row and min_price_row[0] is not None else 100.0,
+                "max": float(max_price_row[0]) if max_price_row and max_price_row[0] is not None else 50000.0,
             },
+            "rate_range": rate_range,
+            "has_verified_sellers": has_verified_sellers,
         },
     }
 
@@ -795,6 +970,894 @@ def compare_equipment(
 
 
 # ---------------------------------------------------------------------------
+# 8. UNIFIED BROWSE (ALL | RENT | BUY)
+# ---------------------------------------------------------------------------
+# A single catalogue used by the Tools & Equipment page: Buy products and Rent
+# machinery are merged server-side with one faceted filter set, one sort, and
+# shared pagination. Availability is computed from real bookings.
+# ---------------------------------------------------------------------------
+
+
+class RentListingCreate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=200)
+    type: str = Field(..., min_length=2, max_length=100)
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    description: Optional[str] = None
+    daily_rate: float = Field(..., gt=0)
+    hourly_rate: Optional[float] = Field(default=None, ge=0)
+    deposit_amount: Optional[float] = Field(default=None, ge=0)
+    min_duration_days: int = Field(default=1, ge=1, le=90)
+    rental_terms: Optional[str] = None
+    location: Optional[str] = None
+    condition: Optional[str] = None
+    image_url: Optional[str] = None
+    is_available: bool = True
+
+
+class BuyListingCreate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=200)
+    category: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    category_slug: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    brand: Optional[str] = None
+    description: Optional[str] = None
+    price: float = Field(..., gt=0)
+    stock_quantity: float = Field(default=1, ge=0)
+    condition: Optional[str] = None
+    location: Optional[str] = None
+    image_url: Optional[str] = None
+    delivery_available: bool = True
+    pickup_available: bool = True
+
+
+class ListingStatusUpdate(BaseModel):
+    is_available: bool
+
+
+def _provider_name(db: Session, e: Equipment) -> str:
+    if e.owner_id:
+        owner = db.query(User).filter(User.id == e.owner_id).first()
+        if owner and owner.full_name:
+            return owner.full_name
+    return "Farm Assist Catalogue"
+
+
+def _is_recent_created(created) -> bool:
+    return bool(created and (datetime.utcnow() - created).total_seconds() <= 30 * 86400)
+
+
+def _buy_filtered(
+    db,
+    search=None,
+    category=None,
+    brand=None,
+    location=None,
+    condition=None,
+    power_source=None,
+    suitable_use=None,
+    min_price=None,
+    max_price=None,
+    in_stock=False,
+    delivery_available=False,
+    pickup_available=False,
+    verified_sellers=False,
+    min_rating=None,
+    recently_added_days=None,
+    availability_now=False,
+):
+    q = _equipment_base_query(db)
+
+    if search:
+        term = f"%{search.strip()}%"
+        q = q.filter(
+            or_(
+                Product.name.ilike(term),
+                Product.brand.ilike(term),
+                Product.description.ilike(term),
+                EquipmentMetadata.equipment_type.ilike(term),
+                EquipmentMetadata.suitable_use.ilike(term),
+                EquipmentMetadata.power_source.ilike(term),
+            )
+        )
+
+    if category and category != "all":
+        cat_obj = (
+            db.query(ProductCategory)
+            .filter(
+                or_(
+                    ProductCategory.slug == category,
+                    ProductCategory.id == category,
+                    ProductCategory.name.ilike(f"%{category}%"),
+                )
+            )
+            .first()
+        )
+        if cat_obj:
+            type_labels = [cat_obj.name]
+            if cat_obj.slug in RENT_TYPE_BY_SLUG:
+                type_labels.append(RENT_TYPE_BY_SLUG[cat_obj.slug])
+            conds = [Product.category_id == cat_obj.id]
+            for label in type_labels:
+                conds.append(EquipmentMetadata.equipment_type.ilike(f"%{label}%"))
+            q = q.filter(or_(*conds))
+
+    if location and location != "all":
+        term = f"%{location.strip()}%"
+        q = q.filter(
+            or_(
+                EquipmentMetadata.location.ilike(term),
+                Product.tags.like(f'%"location": "%{location}%"'),
+            )
+        )
+
+    if brand and brand != "all":
+        q = q.filter(Product.brand == brand)
+    if condition and condition != "all":
+        q = q.filter(EquipmentMetadata.condition == condition)
+    if power_source and power_source != "all":
+        q = q.filter(EquipmentMetadata.power_source.ilike(f"%{power_source}%"))
+    if suitable_use and suitable_use != "all":
+        q = q.filter(EquipmentMetadata.suitable_use.ilike(f"%{suitable_use}%"))
+
+    if min_price is not None:
+        q = q.filter(Product.price >= min_price)
+    if max_price is not None:
+        q = q.filter(Product.price <= max_price)
+
+    if in_stock or availability_now:
+        q = q.filter(Product.stock_quantity > 0)
+    if delivery_available:
+        q = q.filter(EquipmentMetadata.delivery_available == True)  # noqa: E712
+    if pickup_available:
+        q = q.filter(EquipmentMetadata.pickup_available == True)  # noqa: E712
+    if verified_sellers:
+        verified_ids = [r[0] for r in db.query(Seller.id).filter(Seller.is_verified == True).all()]  # noqa: E712
+        if verified_ids:
+            q = q.filter(Product.seller_id.in_(verified_ids))
+        else:
+            q = q.filter(Product.id.in_([]))
+    if min_rating is not None:
+        q = q.filter(Product.rating >= min_rating)
+    if recently_added_days:
+        q = q.filter(Product.created_at >= datetime.utcnow() - timedelta(days=recently_added_days))
+
+    return q.all()
+
+
+def _rent_filtered(
+    db,
+    search=None,
+    category=None,
+    brand=None,
+    location=None,
+    condition=None,
+    min_price=None,
+    max_price=None,
+    availability_now=False,
+    recently_added_days=None,
+):
+    q = db.query(Equipment).filter(Equipment.listing_status == "active")
+
+    if search:
+        term = f"%{search.strip()}%"
+        q = q.filter(
+            or_(
+                Equipment.name.ilike(term),
+                Equipment.brand.ilike(term),
+                Equipment.description.ilike(term),
+                Equipment.type.ilike(term),
+                Equipment.location.ilike(term),
+            )
+        )
+
+    if category and category != "all":
+        labels = _rent_types_for_category(db, category)
+        q = q.filter(Equipment.type.in_(labels) if labels else Equipment.type.in_(["__none__"]))
+
+    if brand and brand != "all":
+        q = q.filter(Equipment.brand.ilike(f"%{brand}%"))
+    if location and location != "all":
+        q = q.filter(Equipment.location.ilike(f"%{location}%"))
+    if condition and condition != "all":
+        q = q.filter(Equipment.condition == condition)
+
+    if min_price is not None:
+        q = q.filter(Equipment.daily_rate >= min_price)
+    if max_price is not None:
+        q = q.filter(Equipment.daily_rate <= max_price)
+
+    if availability_now:
+        active_sub = (
+            db.query(EquipmentBooking.equipment_id)
+            .filter(EquipmentBooking.status.in_(ACTIVE_BOOKING_STATUS))
+            .distinct()
+        )
+        q = q.filter(
+            Equipment.is_available == True,  # noqa: E712
+            ~Equipment.id.in_(active_sub),
+        )
+
+    if recently_added_days:
+        q = q.filter(Equipment.created_at >= datetime.utcnow() - timedelta(days=recently_added_days))
+
+    return q.all()
+
+
+_EPOCH = datetime(1970, 1, 1)
+
+
+def _epoch_ts(value) -> float:
+    if not value:
+        return 0.0
+    try:
+        return (value - _EPOCH).total_seconds()
+    except Exception:
+        return 0.0
+
+
+def _relevance(product_or_equip, search, name_attr="name") -> int:
+    name = (getattr(product_or_equip, name_attr) or "").lower()
+    term = (search or "").strip().lower()
+    if name == term:
+        return 0
+    if name.startswith(term):
+        return 1
+    if term in name:
+        return 2
+    return 3
+
+
+def _buy_sort_key(p, sort_by, search):
+    name = (p.name or "").lower()
+    if sort_by == "price":
+        return (float(p.price or 0), name)
+    if sort_by == "rating":
+        return ((p.rating or 0), name)
+    if sort_by == "created_at":
+        return (_epoch_ts(p.created_at), name)
+    if sort_by == "popular":
+        pop = (p.total_reviews or 0)
+        return (pop, name)
+    if sort_by == "name":
+        return (0, name)
+    if search:
+        return (_relevance(p, search), name)
+    return (_epoch_ts(p.created_at), name)
+
+
+def _rent_sort_key(e, sort_by, search, booking_counts):
+    name = (e.name or "").lower()
+    if sort_by == "price":
+        return (float(e.daily_rate or 0), name)
+    if sort_by == "rating":
+        return (0.0, name)
+    if sort_by == "created_at":
+        return (_epoch_ts(e.created_at), name)
+    if sort_by == "popular":
+        return ((booking_counts or {}).get(e.id, 0), name)
+    if sort_by == "name":
+        return (0, name)
+    if search:
+        return (_relevance(e, search), name)
+    return (_epoch_ts(e.created_at), name)
+
+
+@router.get("/browse")
+def browse_equipment(
+    mode: str = Query("all", pattern="^(all|rent|buy)$"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=60),
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    brand: Optional[str] = None,
+    location: Optional[str] = None,
+    condition: Optional[str] = None,
+    power_source: Optional[str] = None,
+    suitable_use: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    in_stock: bool = False,
+    availability: Optional[str] = Query(None, pattern="^(available_now|any)$"),
+    delivery_available: bool = False,
+    pickup_available: bool = False,
+    verified_sellers: bool = False,
+    min_rating: Optional[float] = None,
+    recently_added_days: Optional[int] = None,
+    sort_by: str = Query("relevance", pattern="^(relevance|price|rating|created_at|popular|name)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """One unified, paginated catalogue mixing Buy products and Rent machinery."""
+    availability_now = availability == "available_now"
+    desc_flag = sort_order == "desc"
+
+    candidates = []  # (key0, key1, kind, id, obj)
+
+    booking_counts = None
+    if mode in ("all", "rent") and sort_by == "popular":
+        booking_counts = dict(
+            db.query(
+                EquipmentBooking.equipment_id,
+                func.count(EquipmentBooking.id),
+            )
+            .group_by(EquipmentBooking.equipment_id)
+            .all()
+        )
+
+    if mode in ("all", "buy"):
+        for p in _buy_filtered(
+            db,
+            search=search,
+            category=category,
+            brand=brand,
+            location=location,
+            condition=condition,
+            power_source=power_source,
+            suitable_use=suitable_use,
+            min_price=min_price,
+            max_price=max_price,
+            in_stock=in_stock,
+            delivery_available=delivery_available,
+            pickup_available=pickup_available,
+            verified_sellers=verified_sellers,
+            min_rating=min_rating,
+            recently_added_days=recently_added_days,
+            availability_now=availability_now,
+        ):
+            k0, k1 = _buy_sort_key(p, sort_by, search)
+            candidates.append((k0, k1, "buy", p.id, p))
+
+    if mode in ("all", "rent"):
+        for e in _rent_filtered(
+            db,
+            search=search,
+            category=category,
+            brand=brand,
+            location=location,
+            condition=condition,
+            min_price=min_price,
+            max_price=max_price,
+            availability_now=availability_now,
+            recently_added_days=recently_added_days,
+        ):
+            k0, k1 = _rent_sort_key(e, sort_by, search, booking_counts)
+            candidates.append((k0, k1, "rent", e.id, e))
+
+    candidates.sort(key=lambda c: (c[0], c[1]), reverse=desc_flag)
+
+    total = len(candidates)
+    start = (page - 1) * limit
+    page_items = candidates[start : start + limit]
+
+    items = []
+    for _k0, _k1, kind, _oid, obj in page_items:
+        if kind == "rent":
+            p = _rental_payload(db, obj)
+            p["provider"] = _provider_name(db, obj)
+        else:
+            p = _equipment_payload(db, obj)
+            p["mode"] = "buy"
+        items.append(p)
+
+    buy_total = sum(1 for c in candidates if c[2] == "buy")
+    rent_total = sum(1 for c in candidates if c[2] == "rent")
+
+    return {
+        "status": "success",
+        "data": {
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": max(1, (total + limit - 1) // limit),
+            "items": items,
+            "aggregate": {"total": total, "buy": buy_total, "rent": rent_total},
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# 9. FARM ACTIVITY TIMELINE
+# ---------------------------------------------------------------------------
+@router.get("/activity")
+def get_farm_equipment_activity(
+    limit: int = Query(30, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    events = []
+    uid = current_user.id
+
+    for v in (
+        db.query(FarmerRecentlyViewed)
+        .filter(FarmerRecentlyViewed.user_id == uid)
+        .order_by(desc(FarmerRecentlyViewed.viewed_at))
+        .limit(60)
+        .all()
+    ):
+        p = v.product
+        if not p:
+            continue
+        events.append({
+            "type": "viewed",
+            "title": f"Viewed {p.name}",
+            "subtitle": "Recently viewed",
+            "timestamp": str(v.viewed_at) if v.viewed_at else None,
+            "product_id": p.product_id if p.product_id else p.id,
+            "image_url": p.image_url,
+            "meta": {"price": p.price},
+        })
+
+    for b in (
+        db.query(EquipmentBooking)
+        .filter(EquipmentBooking.farmer_id == uid)
+        .order_by(desc(EquipmentBooking.created_at))
+        .limit(60)
+        .all()
+    ):
+        equip = db.query(Equipment).filter(Equipment.id == b.equipment_id).first()
+        events.append({
+            "type": "booking",
+            "title": f"{b.status.title()} booking · {equip.name if equip else 'Machinery'}",
+            "subtitle": f"{b.booking_date or 'Scheduled'} · {b.duration_days} day(s)",
+            "timestamp": str(b.created_at) if b.created_at else None,
+            "booking_id": b.booking_id,
+            "equipment_id": equip.equipment_id if equip else None,
+            "image_url": equip.image_url if equip else None,
+            "meta": {"status": b.status, "total_cost": b.total_cost},
+        })
+
+    for o in (
+        db.query(MarketplaceOrder)
+        .filter(MarketplaceOrder.user_id == uid)
+        .order_by(desc(MarketplaceOrder.created_at))
+        .limit(60)
+        .all()
+    ):
+        events.append({
+            "type": "order",
+            "title": f"Order {o.order_id} · ₹{int(o.total_amount or 0):,}",
+            "subtitle": f"{o.status.title() if o.status else 'Order'} · {o.items[0].product_name if o.items else 'Equipment order'}",
+            "timestamp": str(o.created_at) if o.created_at else None,
+            "order_id": o.order_id,
+            "image_url": (o.items[0].product.image_url if o.items and o.items[0].product else None),
+            "meta": {"status": o.status, "total_amount": o.total_amount},
+        })
+
+    for w in (
+        db.query(MarketplaceWishlist)
+        .filter(MarketplaceWishlist.user_id == uid)
+        .order_by(desc(MarketplaceWishlist.created_at))
+        .limit(60)
+        .all()
+    ):
+        p = w.product
+        if not p:
+            continue
+        events.append({
+            "type": "saved",
+            "title": f"Saved {p.name}",
+            "subtitle": "Added to saved equipment",
+            "timestamp": str(w.created_at) if w.created_at else None,
+            "product_id": p.product_id if p.product_id else p.id,
+            "image_url": p.image_url,
+            "meta": {"price": p.price},
+        })
+
+    events.sort(key=lambda e: e["timestamp"] or "", reverse=True)
+    events = events[:limit]
+
+    return {
+        "status": "success",
+        "data": {"items": events, "count": len(events)},
+    }
+
+
+# ---------------------------------------------------------------------------
+# 10. MY LISTINGS (My Listings - Rent & Buy) - strictly owner-scoped
+# ---------------------------------------------------------------------------
+@router.get("/mylistings")
+def get_my_listings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rent_rows = (
+        db.query(Equipment)
+        .filter(Equipment.owner_id == current_user.id)
+        .order_by(desc(Equipment.created_at))
+        .all()
+    )
+    booking_counts = {}
+    if rent_rows:
+        booking_counts = dict(
+            db.query(
+                EquipmentBooking.equipment_id,
+                func.count(EquipmentBooking.id),
+            )
+            .filter(EquipmentBooking.equipment_id.in_([e.id for e in rent_rows]))
+            .group_by(EquipmentBooking.equipment_id)
+            .all()
+        )
+
+    rent_items = []
+    for e in rent_rows:
+        p = _rental_payload(db, e, booking_counts)
+        p["provider"] = _provider_name(db, e)
+        rent_items.append(p)
+
+    seller = db.query(Seller).filter(Seller.user_id == current_user.id).first()
+    buy_items = []
+    if seller:
+        for pr in (
+            db.query(Product)
+            .filter(Product.seller_id == seller.id)
+            .order_by(desc(Product.created_at))
+            .all()
+        ):
+            pp = _equipment_payload(db, pr)
+            pp["mode"] = "buy"
+            buy_items.append(pp)
+
+    return {
+        "status": "success",
+        "data": {
+            "rent": rent_items,
+            "buy": buy_items,
+            "counts": {"rent": len(rent_items), "buy": len(buy_items)},
+        },
+    }
+
+
+@router.post("/mylistings/rent", status_code=201)
+def create_rent_listing(
+    payload: RentListingCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = Equipment(
+        equipment_id=generate_id("FA-OWN", db, Equipment),
+        name=payload.name.strip(),
+        type=payload.type.strip(),
+        brand=payload.brand,
+        model=payload.model,
+        description=payload.description,
+        daily_rate=payload.daily_rate,
+        hourly_rate=payload.hourly_rate,
+        deposit_amount=payload.deposit_amount,
+        min_duration_days=payload.min_duration_days,
+        rental_terms=payload.rental_terms,
+        location=payload.location,
+        image_url=payload.image_url,
+        condition=payload.condition,
+        owner_id=current_user.id,
+        is_available=payload.is_available,
+        listing_status="active",
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    p = _rental_payload(db, item)
+    p["provider"] = _provider_name(db, item)
+    return {"status": "success", "message": "Rental listing created", "data": p}
+
+
+@router.put("/mylistings/rent/{equipment_id}")
+def update_rent_listing(
+    equipment_id: str,
+    payload: RentListingCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = (
+        db.query(Equipment)
+        .filter(
+            Equipment.owner_id == current_user.id,
+            or_(Equipment.id == equipment_id, Equipment.equipment_id == equipment_id),
+        )
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Rental listing not found")
+    item.name = payload.name.strip()
+    item.type = payload.type.strip()
+    item.brand = payload.brand
+    item.model = payload.model
+    item.description = payload.description
+    item.daily_rate = payload.daily_rate
+    item.hourly_rate = payload.hourly_rate
+    item.deposit_amount = payload.deposit_amount
+    item.min_duration_days = payload.min_duration_days
+    item.rental_terms = payload.rental_terms
+    item.location = payload.location
+    item.image_url = payload.image_url
+    item.condition = payload.condition
+    item.is_available = payload.is_available
+    db.commit()
+    db.refresh(item)
+    p = _rental_payload(db, item)
+    p["provider"] = _provider_name(db, item)
+    return {"status": "success", "message": "Rental listing updated", "data": p}
+
+
+@router.patch("/mylistings/rent/{equipment_id}/status")
+def set_rent_listing_availability(
+    equipment_id: str,
+    payload: ListingStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = (
+        db.query(Equipment)
+        .filter(
+            Equipment.owner_id == current_user.id,
+            or_(Equipment.id == equipment_id, Equipment.equipment_id == equipment_id),
+        )
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Rental listing not found")
+    item.is_available = payload.is_available
+    db.commit()
+    return {
+        "status": "success",
+        "message": "Listing is now available" if payload.is_available else "Listing marked unavailable",
+        "data": _rental_payload(db, item),
+    }
+
+
+@router.delete("/mylistings/rent/{equipment_id}")
+def delete_rent_listing(
+    equipment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = (
+        db.query(Equipment)
+        .filter(
+            Equipment.owner_id == current_user.id,
+            or_(Equipment.id == equipment_id, Equipment.equipment_id == equipment_id),
+        )
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Rental listing not found")
+    active = _active_bookings(db, item.id)
+    if active:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{item.name} has {len(active)} active booking(s); cancel them before deleting",
+        )
+    item.listing_status = "inactive"
+    item.is_available = False
+    db.commit()
+    return {"status": "success", "message": "Rental listing deactivated"}
+
+
+def _ensure_farmer_seller(db: Session, user: User) -> Seller:
+    seller = db.query(Seller).filter(Seller.user_id == user.id).first()
+    if seller:
+        return seller
+    seller = Seller(
+        seller_id=generate_id("FA-SFL", db, Seller),
+        user_id=user.id,
+        shop_name=f"{user.full_name or 'Farmer'}'s Farm Shop",
+        location=None,
+        rating=0.0,
+        total_sales=0,
+        is_verified=False,
+    )
+    db.add(seller)
+    db.flush()
+    return seller
+
+
+@router.post("/mylistings/buy", status_code=201)
+def create_buy_listing(
+    payload: BuyListingCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    seller = _ensure_farmer_seller(db, current_user)
+    cat_slug = (payload.category_slug or payload.category or "").strip().lower()
+    cat = (
+        db.query(ProductCategory)
+        .filter(ProductCategory.slug == cat_slug)
+        .first()
+    )
+    if not cat:
+        cat = (
+            db.query(ProductCategory)
+            .filter(ProductCategory.slug == "other-equipment")
+            .first()
+        )
+    eq_type = RENT_TYPE_BY_SLUG.get(cat_slug) or (
+        cat.name if cat else payload.category
+    )
+    product = Product(
+        product_id=generate_id("FA-FSL", db, Product),
+        seller_id=seller.id,
+        category_id=cat.id if cat else None,
+        name=payload.name.strip(),
+        description=payload.description,
+        price=payload.price,
+        unit="unit",
+        stock_quantity=payload.stock_quantity,
+        min_order_quantity=1,
+        image_url=payload.image_url,
+        images=[payload.image_url] if payload.image_url else None,
+        brand=payload.brand,
+        rating=0.0,
+        total_reviews=0,
+        is_active=True,
+        supports_cod=True,
+        tags={
+            "source": "farmer",
+            "equipment_type": eq_type,
+            "location": payload.location,
+        },
+    )
+    db.add(product)
+    db.flush()
+    db.add(
+        EquipmentMetadata(
+            product_id=product.id,
+            equipment_type=eq_type,
+            location=payload.location,
+            condition=payload.condition,
+            delivery_available=payload.delivery_available,
+            pickup_available=payload.pickup_available,
+        )
+    )
+    db.commit()
+    db.refresh(product)
+    p = _equipment_payload(db, product)
+    p["mode"] = "buy"
+    return {"status": "success", "message": "Buy listing created", "data": p}
+
+
+@router.put("/mylistings/buy/{product_id}")
+def update_buy_listing(
+    product_id: str,
+    payload: BuyListingCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    seller = db.query(Seller).filter(Seller.user_id == current_user.id).first()
+    if not seller:
+        raise HTTPException(status_code=404, detail="Buy listing not found")
+    product = (
+        db.query(Product)
+        .filter(
+            Product.seller_id == seller.id,
+            or_(Product.id == product_id, Product.product_id == product_id),
+        )
+        .first()
+    )
+    if not product:
+        raise HTTPException(status_code=404, detail="Buy listing not found")
+
+    cat_slug = (payload.category_slug or payload.category or "").strip().lower()
+    cat = (
+        db.query(ProductCategory)
+        .filter(ProductCategory.slug == cat_slug)
+        .first()
+    )
+    if not cat:
+        cat = (
+            db.query(ProductCategory)
+            .filter(ProductCategory.slug == "other-equipment")
+            .first()
+        )
+    eq_type = RENT_TYPE_BY_SLUG.get(cat_slug) or (
+        cat.name if cat else payload.category
+    )
+
+    product.name = payload.name.strip()
+    product.description = payload.description
+    product.price = payload.price
+    product.stock_quantity = payload.stock_quantity
+    product.image_url = payload.image_url
+    product.images = [payload.image_url] if payload.image_url else product.images
+    product.brand = payload.brand
+    product.category_id = cat.id if cat else product.category_id
+    tags = product.tags if isinstance(product.tags, dict) else {}
+    tags["equipment_type"] = eq_type
+    tags["location"] = payload.location
+    product.tags = tags
+
+    meta = product.equipment_metadata
+    if not meta:
+        meta = EquipmentMetadata(product_id=product.id)
+        db.add(meta)
+    meta.equipment_type = eq_type
+    meta.location = payload.location
+    meta.condition = payload.condition
+    meta.delivery_available = payload.delivery_available
+    meta.pickup_available = payload.pickup_available
+
+    db.commit()
+    db.refresh(product)
+    p = _equipment_payload(db, product)
+    p["mode"] = "buy"
+    return {"status": "success", "message": "Buy listing updated", "data": p}
+
+
+@router.delete("/mylistings/buy/{product_id}")
+def delete_buy_listing(
+    product_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    seller = db.query(Seller).filter(Seller.user_id == current_user.id).first()
+    if not seller:
+        raise HTTPException(status_code=404, detail="Buy listing not found")
+    product = (
+        db.query(Product)
+        .filter(
+            Product.seller_id == seller.id,
+            or_(Product.id == product_id, Product.product_id == product_id),
+        )
+        .first()
+    )
+    if not product:
+        raise HTTPException(status_code=404, detail="Buy listing not found")
+    product.is_active = False
+    db.commit()
+    return {"status": "success", "message": "Buy listing deactivated"}
+
+
+# ---------------------------------------------------------------------------
+# 11. RENTAL AVAILABILITY (from real bookings)
+# ---------------------------------------------------------------------------
+@router.get("/rentals/{equipment_id}/availability")
+def get_rental_availability(
+    equipment_id: str,
+    start_date: Optional[str] = None,
+    days: int = Query(1, ge=1, le=90),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    equip = (
+        db.query(Equipment)
+        .filter(or_(Equipment.id == equipment_id, Equipment.equipment_id == equipment_id))
+        .first()
+    )
+    if not equip:
+        raise HTTPException(status_code=404, detail="Rental equipment not found")
+
+    active = _active_bookings(db, equip.id)
+    per_day = None
+    if start_date:
+        try:
+            _s = datetime.strptime(start_date, "%Y-%m-%d")
+        except Exception:
+            raise HTTPException(status_code=400, detail="start_date must be YYYY-MM-DD")
+        per_day = []
+        for i in range(days):
+            day = _s + timedelta(days=i)
+            iso = day.strftime("%Y-%m-%d")
+            end = (day + timedelta(days=1)).strftime("%Y-%m-%d")
+            occupied = any(
+                _range_overlaps(iso, end, *(_booking_window(b))) for b in active
+            )
+            per_day.append({
+                "date": iso,
+                "available": bool(equip.is_available) and not occupied,
+            })
+
+    return {
+        "status": "success",
+        "data": {
+            "equipment_id": equip.equipment_id,
+            "equipment_name": equip.name,
+            "availability": _availability_payload(db, equip),
+            "requested_period": {"start_date": start_date, "days": days},
+            "per_day": per_day,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
 # 7. PRODUCT DETAILS
 # ---------------------------------------------------------------------------
 @router.get("/products/{product_id}")
@@ -969,7 +2032,7 @@ def list_rentals(
             "page": page,
             "limit": limit,
             "total_pages": max(1, (total + limit - 1) // limit),
-            "items": [_rental_payload(e) for e in items],
+            "items": [_rental_payload(db, e) for e in items],
         },
     }
 
@@ -1017,9 +2080,30 @@ def book_rental_equipment(
             detail=f"{equip.type} {equip.name} has a minimum rental period of {min_days} day(s)",
         )
 
+    booking_date = payload.booking_date or datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    if booking_date < today:
+        raise HTTPException(
+            status_code=400,
+            detail="Booking start date cannot be in the past",
+        )
+
+    # No double-booking: reject if the requested window overlaps any active booking.
+    requested_start = booking_date
+    requested_end = (datetime.strptime(booking_date, "%Y-%m-%d") + timedelta(days=payload.duration_days)).strftime("%Y-%m-%d")
+    for existing in _active_bookings(db, equip.id):
+        e_start, e_end = _booking_window(existing)
+        if _range_overlaps(requested_start, requested_end, e_start, e_end):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"{equip.name} is already booked {existing.booking_date or 'shortly'} for "
+                    f"{existing.duration_days} day(s). Choose different dates."
+                ),
+            )
+
     booking_id = generate_id("FA-BKG", db, EquipmentBooking)
     total_cost = (equip.daily_rate or 0) * payload.duration_days
-    booking_date = payload.booking_date or datetime.utcnow().strftime("%Y-%m-%d")
 
     booking = EquipmentBooking(
         booking_id=booking_id,
@@ -1099,4 +2183,4 @@ def get_rental_detail(
     )
     if not equip:
         raise HTTPException(status_code=404, detail="Rental equipment not found")
-    return {"status": "success", "data": _rental_payload(equip)}
+    return {"status": "success", "data": _rental_payload(db, equip)}
