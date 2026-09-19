@@ -1326,6 +1326,22 @@ def browse_equipment(
 
     candidates.sort(key=lambda c: (c[0], c[1]), reverse=desc_flag)
 
+    # Mixed "All" mode must interleave Buy and Rent so every page shows both
+    # types (no single-type pages regardless of sort order).
+    if mode == "all" and candidates:
+        buy_list = [c for c in candidates if c[2] == "buy"]
+        rent_list = [c for c in candidates if c[2] == "rent"]
+        interleaved = []
+        b, r = 0, 0
+        while b < len(buy_list) or r < len(rent_list):
+            if r < len(rent_list):
+                interleaved.append(rent_list[r])
+                r += 1
+            if b < len(buy_list):
+                interleaved.append(buy_list[b])
+                b += 1
+        candidates = interleaved
+
     total = len(candidates)
     start = (page - 1) * limit
     page_items = candidates[start : start + limit]

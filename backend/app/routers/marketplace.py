@@ -390,7 +390,15 @@ def save_wishlist(product_id: str, db: Session = Depends(get_db), current_user: 
 
 @router.delete("/wishlist/{product_id}")
 def remove_wishlist(product_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    saved = db.query(MarketplaceWishlist).filter(MarketplaceWishlist.user_id == current_user.id, MarketplaceWishlist.product_id == product_id).first()
+    product = db.query(Product).filter(
+        (Product.id == product_id) | (Product.product_id == product_id)
+    ).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Saved product not found")
+    saved = db.query(MarketplaceWishlist).filter(
+        MarketplaceWishlist.user_id == current_user.id,
+        MarketplaceWishlist.product_id == product.id,
+    ).first()
     if not saved:
         raise HTTPException(status_code=404, detail="Saved product not found")
     db.delete(saved)
