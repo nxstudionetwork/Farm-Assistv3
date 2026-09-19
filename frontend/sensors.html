@@ -21,8 +21,8 @@
     .sn-banner.warn { background:#fff8e6; border:1px solid #f0d9a8; color:#9a6b00; }
     .sn-banner.err { background:#FFF0F0; border:1px solid #f3c6c6; color:#c0392b; }
     .sn-banner .sn-banner-ico { font-size:15px; }
-    .sn-banner .sn-banner-txt { flex:1; font-weight:600; }
-    .sn-banner .sn-banner-sub { font-weight:400; color:inherit; opacity:.8; }
+    .sn-banner .sn-banner-txt { flex:1; font-weight:600; min-width:0; overflow-wrap:anywhere; }
+    .sn-banner .sn-banner-sub { font-weight:400; color:inherit; opacity:.8; min-width:0; overflow-wrap:anywhere; }
 
     #sn-error { display:none; }
     #sn-error.show { display:flex; }
@@ -138,6 +138,10 @@
     @media (max-width: 560px) {
       .sn-grid { grid-template-columns:1fr; }
       .sn-modal-box { max-width:100%; max-height:96vh; }
+      .sn-banner { flex-direction:column; align-items:flex-start; padding:12px 14px; }
+      .sn-banner .sn-banner-txt, .sn-banner .sn-banner-sub { width:100%; }
+      .sn-banner .btn-secondary { width:100%; justify-content:center; margin-top:2px; }
+      .sn-metrics { grid-template-columns:1fr; }
     }
   </style>
 </head>
@@ -545,6 +549,7 @@
     function refreshAll() {
       if (state.busy) return;
       if (!isAuthed()) { window.location.href = 'login.html'; return; }
+      state.busy = true;
       var btn = document.getElementById('sn-refresh-btn');
       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating sensor data...'; }
       loadAll()
@@ -555,6 +560,7 @@
           liveBanner('err', 'Live connection unavailable.', 'Showing the latest available reading.');
         })
         .finally(function () {
+          state.busy = false;
           if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-rotate"></i> Refresh'; }
         });
     }
@@ -787,7 +793,6 @@
         '</div>' +
         '<div class="sn-detail-actions" style="margin-top:12px">' +
         '<button class="btn-secondary" onclick="openConfigure()" style="padding:7px 12px;font-size:11px"><i class="fas fa-sliders"></i> Configure</button>' +
-        '<button class="btn-secondary" onclick="refreshSensor()" style="padding:7px 12px;font-size:11px"><i class="fas fa-rotate"></i> Refresh</button>' +
         (s.auth_configured ? '<button class="btn-secondary" onclick="rotateToken()" style="padding:7px 12px;font-size:11px"><i class="fas fa-key"></i> Rotate Token</button>' : '') +
         '<button class="btn-secondary" style="padding:7px 12px;font-size:11px;border-color:rgba(214,69,69,.4);color:var(--danger)" onclick="openDisconnect()"><i class="fas fa-plug-circle-xmark"></i> Disconnect</button>' +
         '<button class="btn-secondary" onclick="closeModal(\'detail-modal\')" style="padding:7px 12px;font-size:11px"><i class="fas fa-xmark"></i> Close</button>' +
@@ -892,24 +897,6 @@
       var inDetail = document.getElementById('detail-modal').classList.contains('active');
       if (!inDetail || !state.selected) return;
       loadDetail(id);
-    }
-
-    function refreshSensor() {
-      var s = state.selected;
-      if (!s) return;
-      var body = document.getElementById('sn-detail-body');
-      body.innerHTML = detailShell(s) + '<div class="sn-loading-row" style="margin-top:14px"><i class="fas fa-spinner fa-spin"></i> Updating sensor data...</div>';
-      window.API.Sensor.refresh(s.id)
-        .then(function (fresh) {
-          updateSensorInState(fresh);
-          state.selected = fresh;
-          loadDetail(fresh.id);
-          showToast('Sensor data updated', 'success');
-        })
-        .catch(function (e) {
-          showToast(friendlyError(e, 'Could not refresh sensor data'), 'error');
-          loadDetail(s.id);
-        });
     }
 
     function updateSensorInState(fresh) {
@@ -1371,12 +1358,19 @@
 
     // ---------- polling (controlled, backend-sourced) ----------
 
+    function syncSilent() {
+      if (!isAuthed()) return Promise.resolve(false);
+      if (state.busy) return Promise.resolve(false);
+      state.busy = true;
+      return loadAll().catch(function () { /* silent; next tick retries */ }).finally(function () { state.busy = false; });
+    }
+
     function startPolling() {
       stopPolling();
       state.pollTimer = setInterval(function () {
         if (!isAuthed()) return;
         if (document.hidden) return;
-        loadAll().catch(function () { /* silent; next tick retries */ });
+        syncSilent();
       }, state.pollInterval);
     }
     function stopPolling() {
@@ -1385,7 +1379,7 @@
 
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) stopPolling();
-      else { if (isAuthed()) refreshAll(); startPolling(); }
+      else { syncSilent(); startPolling(); }
     });
 
     // ---------- misc wiring ----------
@@ -1435,7 +1429,6 @@
       openDisconnect: openDisconnect,
       confirmDisconnect: confirmDisconnect,
       reconnectSensor: reconnectSensor,
-      refreshSensor: refreshSensor,
       changeRange: changeRange,
       closeModal: closeModal
     };
