@@ -234,6 +234,7 @@ async def startup():
             # or wiped database never leaves these pages empty.
             from app.models.community import Expert
             from app.models.insurance import InsuranceProduct
+            from app.models.crop import Crop
 
             from app.database.seed_techniques import seed_techniques as _seed_techniques
             techniques_summary = _seed_techniques(db)
@@ -249,6 +250,10 @@ async def startup():
 
             from app.database.seed_insurance_products import seed_insurance_products as _seed_insurance_products
             insurance_summary = {"created": _seed_insurance_products(db), "total": db.query(InsuranceProduct).count()}
+
+            # Crop catalogue used by the My Farm "Add Crop" flow.
+            from app.database.seed_crops import seed_crops as _seed_crops
+            crops_summary = {"created": _seed_crops(db), "total": db.query(Crop).count()}
         finally:
             db.close()
         return {
@@ -267,6 +272,7 @@ async def startup():
             "experts": experts_summary,
             "schemes": schemes_summary,
             "insurance": insurance_summary,
+            "crops": crops_summary,
         }
 
     created = demo_summary = market_seeded = input_summary = None
@@ -276,6 +282,7 @@ async def startup():
     workers_summary = None
     sensors_catalogue_report = None
     techniques_summary = learning_summary = experts_summary = schemes_summary = insurance_summary = None
+    crops_summary = None
     for _attempt in range(1, 5):
         try:
             _report = _run_seed_suite()
@@ -294,6 +301,7 @@ async def startup():
             experts_summary = _report["experts"]
             schemes_summary = _report["schemes"]
             insurance_summary = _report["insurance"]
+            crops_summary = _report["crops"]
             break
         except OperationalError as _exc:
             print(f"Startup seeding attempt {_attempt} aborted (database busy: {_exc}); retrying...")
@@ -329,6 +337,9 @@ async def startup():
     if insurance_summary and insurance_summary.get("total"):
         print(f"Insurance products ready: {insurance_summary['total']} products "
               f"(created {insurance_summary.get('created')}).")
+    if crops_summary and crops_summary.get("total"):
+        print(f"Crop catalogue ready: {crops_summary['total']} crops "
+              f"(created {crops_summary.get('created')}).")
     if created:
         print(f"Seeded {created} community groups.")
     if demo_summary and not demo_summary.get("skipped"):
