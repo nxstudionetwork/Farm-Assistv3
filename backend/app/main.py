@@ -32,6 +32,7 @@ from .routers import (
     learning, techniques, emergency, market_prices,
     insurance, calendar, input_store, tools_equipment,
     marketplace_seller, monitoring, livestock, soil_irrigation,
+    crop_health, marketplace_browse,
 )
 
 
@@ -70,6 +71,7 @@ app.include_router(finance.router)
 app.include_router(workers.router)
 app.include_router(marketplace.router)
 app.include_router(marketplace_seller.router)
+app.include_router(marketplace_browse.router)
 app.include_router(input_store.router)
 app.include_router(government.router)
 app.include_router(community.router)
@@ -104,6 +106,7 @@ app.include_router(tools_equipment.router, prefix="/api/equipment")
 app.include_router(tools_equipment.router, prefix="/api/v1/tools-equipment")
 app.include_router(livestock.router)
 app.include_router(soil_irrigation.router)
+app.include_router(crop_health.router)
 
 
 
@@ -185,6 +188,23 @@ async def startup():
                 from app.database.seed_equipment import seed_equipment
                 eq_summary = seed_equipment(db)
 
+            # Tools & Equipment rich catalogue (18-category taxonomy, BUY + RENT).
+            # The standalone seeder is idempotent; only run it when the taxonomy
+            # categories are still empty so startup stays fast on existing DBs.
+            from app.models.marketplace import Product, ProductCategory
+            from app.equipment_taxonomy import CATEGORY_SLUGS as _TAX_SLUGS
+            tools_catalogue_rows = (
+                db.query(func.count(Product.id))
+                .join(ProductCategory, Product.category_id == ProductCategory.id)
+                .filter(ProductCategory.slug.in_(_TAX_SLUGS), Product.is_active == True)  # noqa: E712
+                .scalar()
+                or 0
+            )
+            tools_summary = None
+            if tools_catalogue_rows < 400:
+                from app.database.seed_tools_equipment import seed as seed_tools_catalogue
+                tools_summary = seed_tools_catalogue(db)
+
             from app.input_store_taxonomy import INPUT_STORE_SLUGS
             from app.models.marketplace import Product, ProductCategory
             input_products = (
@@ -201,6 +221,12 @@ async def startup():
 
             from app.database.seed_soil_irrigation import seed_soil_irrigation_demo
             soil_summary = seed_soil_irrigation_demo(db)
+
+            from app.database.seed_workers import seed_workers as seed_worker_catalogue
+            workers_summary = seed_worker_catalogue(db)
+
+            from app.database.seed_sensor_devices import seed_sensor_devices
+            sensor_catalogue = seed_sensor_devices(db)
         finally:
             db.close()
         return {
@@ -210,12 +236,18 @@ async def startup():
             "mkt": mkt_seeded,
             "market": market_seeded,
             "eq": eq_summary,
+            "tools": tools_summary,
             "input": input_summary,
+            "workers": workers_summary,
+            "sensor_catalogue": sensor_catalogue,
         }
 
     created = demo_summary = market_seeded = input_summary = None
     demo_login = None
     eq_summary = None
+    tools_summary = None
+    workers_summary = None
+    sensors_catalogue_report = None
     for _attempt in range(1, 5):
         try:
             _report = _run_seed_suite()
@@ -225,7 +257,10 @@ async def startup():
             mkt_seeded = _report["mkt"]
             market_seeded = _report["market"]
             eq_summary = _report["eq"]
+            tools_summary = _report["tools"]
             input_summary = _report["input"]
+            workers_summary = _report["workers"]
+            sensors_catalogue_report = _report["sensor_catalogue"]
             break
         except OperationalError as _exc:
             print(f"Startup seeding attempt {_attempt} aborted (database busy: {_exc}); retrying...")
@@ -234,6 +269,17 @@ async def startup():
         print("WARNING: startup seeding did not fully complete after retries; API remains available.")
     if demo_login and demo_login.get("status") == "created":
         print(f"Created demo login account: {demo_login['phone']} / PIN {demo_login['pin']} (farmer {demo_login['farmer_id']})")
+    if workers_summary:
+        print(
+            f"Workers catalogue ready: {workers_summary['total_workers']} workers "
+            f"(added {workers_summary['workers_seeded']}, "
+            f"availability rows {workers_summary['availability_seeded']})."
+        )
+    if sensors_catalogue_report is not None:
+        print(
+            f"Sensor device catalogue seeded: {sensors_catalogue_report.get('devices_seeded', 0)} "
+            "unclaimed devices available to connect."
+        )
 
     print(f"{settings.APP_NAME} v{settings.APP_VERSION} started. DB tables created.")
     if created:
@@ -248,6 +294,14 @@ async def startup():
         print(f"Seeded marketplace sell categories (created {mkt_seeded['categories_created']}, total {mkt_seeded['total']}).")
     if eq_summary:
         print(f"Seeded {eq_summary['products_seeded']} tools & equipment products and {eq_summary['rentals_seeded']} rental machinery.")
+    if tools_summary:
+        print(
+            f"Tools & Equipment catalogue ready: {tools_summary['categories']} categories, "
+            f"created {tools_summary['products_created']} BUY products "
+            f"(moved {tools_summary.get('moved_products', 0)}) and "
+            f"{tools_summary['rentals_created']} RENT machinery "
+            f"(touched {tools_summary.get('touched_rentals', 0)})."
+        )
     if input_summary:
         print(f"Seeded Input Store catalogue: {input_summary['products']} products in {input_summary['categories']} categories.")
 
@@ -377,6 +431,16 @@ if frontend_dir.exists():
     async def old_consultations_redirect():
         from fastapi.responses import RedirectResponse
         return RedirectResponse(url="/expert.html", status_code=301)
+
+    @app.get("/farm-operations")
+    @app.get("/farm-operations/")
+    @app.get("/farm-operations.html")
+    @app.get("/operations")
+    @app.get("/operations/")
+    @app.get("/operations.html")
+    async def old_farm_operations_redirect():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/farm.html", status_code=301)
 
     @app.get("/{full_path:path}")
     @app.post("/{full_path:path}")

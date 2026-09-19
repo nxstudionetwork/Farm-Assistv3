@@ -380,6 +380,12 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     createPlot: function (farmId, data) {
       return http('POST', '/farms/' + farmId + '/plots', data).then(unwrap);
+    },
+    updatePlot: function (plotId, data) {
+      return http('PUT', '/plots/' + plotId, data).then(unwrap);
+    },
+    deletePlot: function (plotId) {
+      return http('DELETE', '/plots/' + plotId).then(unwrap);
     }
   };
 
@@ -2385,8 +2391,66 @@ Backend: FastAPI served from the same origin (port 8000).
     get: function (sensorId) {
       return http('GET', '/sensors/' + encodeURIComponent(sensorId)).then(unwrap);
     },
-    readings: function (sensorType, hours) {
-      return http('GET', '/sensors/' + encodeURIComponent(sensorType) + '/readings' + monQ({ hours: hours })).then(unwrap);
+    /** Supported sensor type catalogue (labels, units, icons) */
+    types: function () {
+      return http('GET', '/sensors/types').then(unwrap);
+    },
+    /** Registered devices not yet connected to any farmer */
+    available: function () {
+      return http('GET', '/sensors/available').then(unwrap);
+    },
+    /** Verify a device id with the backend before connecting */
+    verify: function (payload) {
+      return http('POST', '/sensors/verify', payload).then(unwrap);
+    },
+    /** Connect a verified device to the farmer's farm/plot */
+    connect: function (payload) {
+      return http('POST', '/sensors/connect', payload).then(unwrap);
+    },
+    /** Historical stored readings for one owned sensor */
+    readings: function (sensorId, hours) {
+      return http('GET', '/sensors/' + encodeURIComponent(sensorId) + '/readings' + monQ({ hours: hours })).then(unwrap);
+    },
+    /** Current status + latest reading for one sensor */
+    status: function (sensorId) {
+      return http('GET', '/sensors/' + encodeURIComponent(sensorId) + '/status').then(unwrap);
+    },
+    /** Alerts for one owned sensor */
+    alerts: function (sensorId) {
+      return http('GET', '/sensors/' + encodeURIComponent(sensorId) + '/alerts').then(unwrap);
+    },
+    /** Force-refresh live state from the backend */
+    refresh: function (sensorId) {
+      return http('POST', '/sensors/' + encodeURIComponent(sensorId) + '/refresh').then(unwrap);
+    },
+    /** Reactivate a disconnected sensor */
+    reconnect: function (sensorId) {
+      return http('POST', '/sensors/' + encodeURIComponent(sensorId) + '/reconnect').then(unwrap);
+    },
+    /** Disconnect a sensor (history is retained) */
+    disconnect: function (sensorId) {
+      return http('POST', '/sensors/' + encodeURIComponent(sensorId) + '/disconnect').then(unwrap);
+    },
+    /** Update sensor config: name, farm, plot */
+    update: function (sensorId, payload) {
+      return http('PATCH', '/sensors/' + encodeURIComponent(sensorId), payload).then(unwrap);
+    },
+    /** Aggregate latest readings across the farmer's sensors of a type (back-compat) */
+    getReadings: function (sensorType, hours) {
+      return SensorService.list({ sensor_type: sensorType, per_page: 100 })
+        .then(function (sensors) {
+          if (!sensors || !sensors.length) return [];
+          return Promise.all(sensors.map(function (s) {
+            return SensorService.readings(s.id, hours).catch(function () { return null; });
+          })).then(function (chunks) {
+            var out = [];
+            chunks.forEach(function (c) {
+              if (c && c.length) out = out.concat(c);
+            });
+            out.sort(function (a, b) { return String(a.recorded_at).localeCompare(String(b.recorded_at)); });
+            return out;
+          });
+        });
     }
   };
 
