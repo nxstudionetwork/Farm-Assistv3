@@ -181,11 +181,16 @@ ADDITIVE_COLUMNS = {
         ("device_identifier", "VARCHAR(100)"),
         ("connected_at", "DATETIME"),
         ("last_seen", "DATETIME"),
+        ("auth_token_hash", "VARCHAR(128)"),
+        ("auth_token_prefix", "VARCHAR(16)"),
+        ("metrics_supported", "JSON"),
     ],
     "sensor_readings": [
         ("user_id", "VARCHAR(36)"),
         ("farm_id", "VARCHAR(36)"),
         ("plot_id", "VARCHAR(36)"),
+        ("received_at", "DATETIME"),
+        ("payload", "JSON"),
     ],
     "products": [
         ("supports_cod", "BOOLEAN DEFAULT 1"),

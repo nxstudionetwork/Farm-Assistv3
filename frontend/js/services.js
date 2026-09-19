@@ -2418,6 +2418,42 @@ Backend: FastAPI served from the same origin (port 8000).
     update: function (sensorId, payload) {
       return http('PATCH', '/sensors/' + encodeURIComponent(sensorId), payload).then(unwrap);
     },
+    /** Register the farmer's own physical sensor device (Add Sensor flow) */
+    register: function (payload) {
+      return http('POST', '/sensors/register', payload).then(unwrap);
+    },
+    /** Regenerate the sensor auth token; the returned plaintext is shown once */
+    rotateToken: function (sensorId) {
+      return http('POST', '/sensors/' + encodeURIComponent(sensorId) + '/rotate-token').then(unwrap);
+    },
+    /** Submit authenticated readings as physical hardware (X-Sensor-Token) */
+    ingest: function (payload, authToken) {
+      var headers = { 'Content-Type': 'application/json' };
+      if (authToken) headers['X-Sensor-Token'] = authToken;
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function () { controller.abort(); }, Config.TIMEOUT);
+      return fetch(Config.BASE_URL + '/sensors/data', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      }).then(function (r) {
+        clearTimeout(timeoutId);
+        if (r.status === 204) return { status: 'success', data: null };
+        return parseResponse(r).then(function (data) {
+          if (!r.ok) {
+            var err = new Error((data && data.detail) || 'HTTP ' + r.status);
+            err.status = r.status;
+            err.data = data;
+            throw err;
+          }
+          return data;
+        });
+      }).catch(function (e) {
+        clearTimeout(timeoutId);
+        throw e;
+      });
+    },
     /** Aggregate latest readings across the farmer's sensors of a type (back-compat) */
     getReadings: function (sensorType, hours) {
       return SensorService.list({ sensor_type: sensorType, per_page: 100 })
