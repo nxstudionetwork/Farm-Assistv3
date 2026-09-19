@@ -326,6 +326,14 @@
     .detail-info h3{overflow-wrap:anywhere}
     .is-card-name{overflow-wrap:anywhere}
     @media(max-width:560px){.sale-right{flex-basis:100%;justify-content:flex-start}.sale-btns{width:100%}.cat-row .nm{flex-basis:100px}.mp-tabs{padding:4px 0 10px}.mp-tab{padding:8px 12px;font-size:12px}}
+    /* ── Single shared Filter bar ── */
+    .mp-filterrow{display:flex;align-items:center;gap:10px;margin:0 16px 12px;flex-wrap:wrap}
+    .mp-filterrow .mp-btn{min-width:0;padding:9px 14px}
+    .mp-filterstate{font-size:11px;color:var(--text-muted);font-weight:600}
+    .mp-filterstate b{color:var(--mp-green)}
+    /* ── Browse cards (marketplace Listings tab) ── */
+    .browse-loc{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    @media(max-width:560px){.mp-filterrow{margin:0 12px 10px}}
   </style>
 </head>
 <body>
@@ -381,6 +389,7 @@
 
     <!-- MARKETPLACE NAVIGATION (single horizontal bar) -->
     <div class="mp-tabs" id="tabs" role="tablist" aria-label="Marketplace sections">
+      <button class="mp-tab" data-tab="listings"><i class="fas fa-store"></i> Listings <span class="tab-count" id="cnt-browse">0</span></button>
       <button class="mp-tab" data-tab="active"><i class="fas fa-bullseye"></i> Active <span class="tab-count" id="cnt-active">0</span></button>
       <button class="mp-tab" data-tab="pending"><i class="fas fa-clock"></i> Pending <span class="tab-count" id="cnt-pending">0</span></button>
       <button class="mp-tab" data-tab="sold"><i class="fas fa-check-circle"></i> Sold <span class="tab-count" id="cnt-sold">0</span></button>
@@ -389,13 +398,30 @@
       <button class="mp-tab" data-tab="insights"><i class="fas fa-lightbulb"></i> Insights</button>
     </div>
 
+    <!-- ONE shared Filter button for the marketplace (Listings / Active) -->
+    <div class="mp-filterrow" id="mp-filterrow" style="display:none">
+      <button type="button" class="mp-btn ghost" id="filter-open"><i class="fas fa-sliders"></i> Filter</button>
+      <span class="mp-filterstate" id="filter-state"></span>
+    </div>
+
+    <!-- TAB: LISTINGS (marketplace browse - buy experience) -->
+    <section id="tab-listings" class="mp-tabpane" style="display:none">
+      <div class="mp-pane-body">
+        <div class="mp-hint"><i class="fas fa-circle-info"></i> Browse what other farmers are selling and send an enquiry. Your enquiry goes straight to the seller's Buyer Enquiries and Messages.</div>
+        <div class="mp-toolbar" id="listings-tools">
+          <div class="mp-search"><i class="fas fa-magnifying-glass"></i><input id="listings-search" maxlength="60" placeholder="Search produce, equipment, buyers…"></div>
+        </div>
+        <div class="is-grid" id="listings-grid"></div>
+        <button class="mp-loadmore" id="listings-more" style="display:none">Load more</button>
+      </div>
+    </section>
+
     <!-- TAB: ACTIVE -->
     <section id="tab-active" class="mp-tabpane" style="display:none">
       <div class="mp-pane-body">
         <div class="mp-hint"><i class="fas fa-circle-info"></i> Currently active listings that are visible to buyers. View all your listing history in <a href="my-listings.html" class="mp-inline-link">My Listings</a>.</div>
         <div class="mp-toolbar" id="active-tools">
           <div class="mp-search"><i class="fas fa-magnifying-glass"></i><input id="active-search" maxlength="60" placeholder="Search active listings"></div>
-          <button type="button" class="mp-btn ghost" id="filter-open"><i class="fas fa-sliders"></i> Filter</button>
         </div>
         <div class="is-grid" id="active-grid"></div>
         <button class="mp-loadmore" id="active-more" style="display:none">Load more</button>
@@ -669,6 +695,25 @@
     <div class="mp-sheet-body" id="enq-detail-body"></div>
   </div>
 
+  <!-- SHEET: NEW BUYER ENQUIRY -->
+  <div class="mp-sheet bottom" id="sheet-enq-new">
+    <div class="mp-sheet-head"><h3><i class="fas fa-paper-plane" style="color:var(--mp-green);margin-right:6px"></i>Send enquiry</h3><button data-close-sheet="sheet-enq-new">×</button></div>
+    <div class="mp-sheet-body">
+      <div class="mp-buyer-hint" id="enq-new-listing" style="margin-bottom:12px"><i class="fas fa-box-open"></i><span></span></div>
+      <form class="mp-form" id="enq-new-form">
+        <div class="mp-field-row">
+          <div class="mp-field"><label>Requested quantity</label><input id="enq-new-qty" type="number" min="0.1" step="0.01" placeholder="e.g. 50"></div>
+          <div class="mp-field"><label>Offered price (₹ per unit)</label><input id="enq-new-price" type="number" min="1" step="0.01" placeholder="Optional"></div>
+        </div>
+        <div class="mp-field"><label><span class="req">*</span> Message to seller</label><textarea id="enq-new-msg" maxlength="4000" placeholder="Hello! I am interested in buying this. Is it still available?"></textarea></div>
+        <div class="mp-form-foot">
+          <button type="button" class="mp-btn ghost" data-close-sheet="sheet-enq-new">Cancel</button>
+          <button type="submit" class="mp-btn primary" id="enq-new-submit" style="min-width:150px;justify-content:center"><i class="fas fa-paper-plane"></i> Send Enquiry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- SHEET: INVOICE -->
   <div class="mp-sheet bottom" id="sheet-invoice">
     <div class="mp-sheet-head"><h3><i class="fas fa-file-invoice" style="color:var(--mp-green);margin-right:6px"></i>Sale invoice</h3><button data-close-sheet="sheet-invoice">×</button></div>
@@ -699,12 +744,16 @@
     var SVC = window.MarketplaceSellerService;
     var PAGE = 1, LIST_LIMIT = 24, page = 1, pageLimit = 24;
     var ST = {
-      tab: 'active',
+      tab: 'listings',
       dash: null,
       cats: { produce: [], items: [] },
+      filters: { group: '', category: '', minPrice: '', maxPrice: '', location: '', availability: '', sort: 'newest' },
+      browseListings: [],
+      browseTotal: 0,
+      browsePage: 1,
+      browseLoading: false,
       activeListings: [],
       activeTotal: 0,
-      activeFilters: { group: '', category: '', minPrice: '', maxPrice: '', location: '', availability: '', sort: 'newest' },
       buyers: [],
       sales: [],
       salesTotal: 0,
@@ -716,6 +765,7 @@
       enqTotal: 0,
       enqStatus: '',
       enqDetail: null,
+      enqListing: null,
       insights: null,
       settings: null,
       formImages: [],
@@ -882,10 +932,10 @@
             switchTab('active');
           }).catch(function (e) { toast(errMsg(e) || 'Could not load the listing.', 'error'); switchTab('active'); });
         }
-        else switchTab('active');
+        else switchTab('listings');
       }).catch(function (e) {
         showApiBanner('Marketplace data did not load', backendReason(e), true);
-        switchTab('active');
+        switchTab('listings');
       });
     }
 
@@ -977,7 +1027,7 @@
       if (!SVC) return;
       if (reset !== false && page > 1) page = 1;
       var q = { page: page, limit: LIST_LIMIT, status: 'active' };
-      var f = ST.activeFilters;
+      var f = ST.filters;
       var activeSearch = $('active-search') ? $('active-search').value.trim() : '';
       if (activeSearch) q.search = activeSearch;
       if (f.group) q.group = f.group;
@@ -1084,6 +1134,208 @@
         '</div>';
       var btn = el.querySelector('[data-retry]');
       if (btn && retryFn) btn.addEventListener('click', retryFn);
+    }
+
+    /* ───────── Marketplace Listings (browse / buy experience) ───────── */
+    function fetchAPI(path, opts) {
+      var token = localStorage.getItem('fa-auth-token');
+      opts = opts || {};
+      var headers = { 'Authorization': 'Bearer ' + token };
+      if (opts.body) headers['Content-Type'] = 'application/json';
+      return fetch(BASE_URL + path, {
+        method: opts.method || 'GET',
+        headers: headers,
+        body: opts.body || undefined
+      }).then(function (r) {
+        return r.json().then(function (d) {
+          if (r.ok) return d;
+          var e = new Error((d && d.detail) || ('HTTP ' + r.status));
+          e.status = r.status;
+          e.data = d || {};
+          e.reqUrl = BASE_URL + path;
+          throw e;
+        });
+      });
+    }
+
+    function browseQuery() {
+      var q = { page: ST.browsePage, limit: LIST_LIMIT };
+      var search = $('listings-search') ? $('listings-search').value.trim() : '';
+      if (search) q.search = search;
+      var f = ST.filters;
+      if (f.group) q.group = f.group;
+      if (f.category) q.category_id = f.category;
+      if (f.location) q.location = f.location;
+      if (f.availability) q.availability = f.availability;
+      if (f.minPrice !== '' && f.minPrice !== null && f.minPrice !== undefined && !isNaN(Number(f.minPrice))) q.min_price = Number(f.minPrice);
+      if (f.maxPrice !== '' && f.maxPrice !== null && f.maxPrice !== undefined && !isNaN(Number(f.maxPrice))) q.max_price = Number(f.maxPrice);
+      if (f.sort && f.sort !== 'newest') q.sort = f.sort;
+      return q;
+    }
+
+    function loadBrowseListings(reset) {
+      if (!SVC || ST.browseLoading) return;
+      if (reset !== false && ST.browsePage > 1) ST.browsePage = 1;
+      var grid = $('listings-grid');
+      if (!grid) return;
+      ST.browseLoading = true;
+      grid.innerHTML = '';
+      for (var j = 0; j < 6; j++) grid.insertAdjacentHTML('beforeend', '<div class="mp-skel"></div>');
+
+      fetchAPI('/marketplace/browse/listings?' + buildQueryString(browseQuery())).then(function (d) {
+        var items = (d.data && d.data.items) || [];
+        ST.browseListings = reset === false ? ST.browseListings.concat(items) : items;
+        ST.browseTotal = (d.data && d.data.total) || 0;
+        renderBrowseListings();
+        var moreEl = $('listings-more');
+        if (moreEl) moreEl.style.display = (d.data && d.data.total) > ST.browseListings.length && ST.browseListings.length ? '' : 'none';
+        var cnt = $('cnt-browse');
+        if (cnt) cnt.textContent = (d.data && d.data.total) || 0;
+      }).catch(function (e) {
+        gridError(grid, errMsg(e) || 'Could not load marketplace listings.',
+          function () { loadBrowseListings(true); },
+          (e && e.reqUrl) ? ('Failed to load: ' + e.reqUrl) : '');
+      }).finally(function () { ST.browseLoading = false; });
+    }
+
+    function buildQueryString(params) {
+      var parts = [];
+      Object.keys(params || {}).forEach(function (k) {
+        var v = params[k];
+        if (v !== undefined && v !== null && v !== '') parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
+      });
+      return parts.join('&');
+    }
+
+    function renderBrowseListings() {
+      var grid = $('listings-grid');
+      if (!grid) return;
+      if (!ST.browseListings.length) {
+        grid.innerHTML = '<div class="mp-empty"><i class="fas fa-store"></i><h4>No listings to buy yet</h4><p>Other farmers have not listed anything yet. List your own produce to start selling.</p><button class="mp-btn primary" id="browse-add"><i class="fas fa-plus"></i> List New Item</button></div>';
+        var addBtn = $('browse-add');
+        if (addBtn) addBtn.addEventListener('click', openCreateForm);
+        return;
+      }
+      grid.innerHTML = ST.browseListings.map(browseCard).join('');
+    }
+
+    function browseCard(l) {
+      var url = imgOrFallback(l);
+      var imgHtml = url
+        ? '<img src="' + esc(url) + '" alt="' + esc(l.title) + '" onerror="this.onerror=null;this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="ph-holder" style="display:none"><i class="fas fa-seedling"></i></div>'
+        : '<div class="ph-holder"><i class="fas fa-seedling"></i></div>';
+      var cat = (l.category && l.category.name) || 'Uncategorised';
+      var group = (l.category && l.category.group) || '';
+      var remaining = Number(l.remaining_quantity || 0);
+      var pricingTag = l.pricing_type === 'negotiable' ? ' <span class="per">(negotiable)</span>' : '';
+      var loc = l.location ? '<span class="browse-loc" title="' + esc(l.location) + '"><i class="fas fa-location-dot"></i> ' + esc(l.location) + '</span>' : '';
+      var seller = (l.seller && l.seller.full_name) ? '<span><i class="fas fa-store"></i> ' + esc(l.seller.full_name) + '</span>' : '';
+      var acts = '<button class="mp-mini" data-browse="view" data-id="' + esc(l.id) + '"><i class="fas fa-eye"></i> View</button>';
+      if (l.can_enquire) acts += '<button class="mp-mini hot" data-browse="enquire" data-id="' + esc(l.id) + '"><i class="fas fa-paper-plane"></i> Enquire</button>';
+      return '<article class="is-card">' +
+        '<div class="is-card-img">' + imgHtml + '<span class="status-badge st-active">Available</span></div>' +
+        '<div class="is-card-body">' +
+        '<div class="is-card-cat">' + esc(cat) + (group ? ' · ' + esc(group) : '') + '</div>' +
+        '<div class="is-card-name" data-browse="view" data-id="' + esc(l.id) + '" style="cursor:pointer">' + esc(l.title) + '</div>' +
+        '<div class="is-card-price"><span class="price">' + fmtPrice(l.price) + '</span><span class="per">per ' + esc(l.unit || '') + '</span>' + pricingTag + '</div>' +
+        '<div class="is-card-meta">' +
+        '<span><i class="fas fa-boxes-stacked"></i> ' + qtyFmt(remaining, l.unit) + '</span>' +
+        (loc || '<span><i class="fas fa-location-dot"></i> India</span>') +
+        (seller || '') +
+        '<span><i class="fas fa-eye"></i> ' + (l.total_views || 0) + '</span>' +
+        '</div>' +
+        '<div class="is-card-actions">' + acts + '</div>' +
+        '</div></article>';
+    }
+
+    function openBrowseDetail(id) {
+      if (!SVC) return;
+      var body = $('detail-body');
+      body.innerHTML = '<div class="mp-empty"><i class="fas fa-spinner fa-pulse"></i><h4>Loading listing details…</h4></div>';
+      openSheet('sheet-detail');
+      fetchAPI('/marketplace/browse/listings/' + encodeURIComponent(id)).then(function (d) {
+        var l = d.data || {};
+        var url = imgOrFallback(l);
+        var gallery = url
+          ? '<div class="detail-gallery"><img class="main-img" src="' + esc(url) + '" alt=""><div class="detail-thumbs">' + (l.images || []).map(function (im) { return '<img src="' + esc(im.url) + '" alt="">'; }).join('') + '</div></div>'
+          : '<div class="detail-gallery"><div class="ph-holder"><i class="fas fa-seedling"></i></div></div>';
+        var contactTxt = l.contact_method === 'phone' ? 'Phone' : l.contact_method === 'whatsapp' ? 'WhatsApp' : 'In-app chat';
+        var fields = [
+          (l.quantity ? ['Listed quantity', qtyFmt(l.quantity, l.unit)] : null),
+          (l.price ? ['Price', fmtPrice(l.price) + (l.pricing_type === 'negotiable' ? ' (negotiable)' : ' per ' + l.unit)] : null),
+          (l.availability ? ['Availability', l.availability] : null),
+          (l.quality_grade ? ['Grade', l.quality_grade] : null),
+          (l.condition_type ? ['Condition', l.condition_type === 'used' && l.age_year ? l.condition_type + ' (' + l.age_year + ' yr)' : l.condition_type] : null),
+          (l.brand ? ['Brand', l.brand] : null),
+          (l.model ? ['Model', l.model] : null),
+          ((l.seller && l.seller.full_name) ? ['Seller', l.seller.full_name] : null),
+          (l.location ? ['Location', l.location] : null),
+          (l.contact_method ? ['Contact', contactTxt] : null),
+          (l.created_at ? ['Listed', timeAgo(l.created_at)] : null)
+        ].filter(Boolean);
+        var canEnq = !!l.can_enquire;
+        var ownNote = l.is_owner
+          ? '<p style="font-size:12px;color:var(--mp-green);margin:10px 0 0"><i class="fas fa-user-check"></i> This is one of your listings.</p>'
+          : '';
+        body.innerHTML = '<div class="detail-hero">' + gallery +
+          '<div class="detail-info">' +
+          '<span class="status-badge st-active" style="display:inline-block;padding:3px 9px;border-radius:10px;margin-bottom:8px">Available</span>' +
+          '<h3>' + esc(l.title) + '</h3>' +
+          '<div class="d-cat">' + esc((l.category && l.category.name) || '') + ' · ' + esc((l.category && l.category.group) || '') + '</div>' +
+          '<div class="detail-price">' + fmtPrice(l.price) + '<small> per ' + esc(l.unit || '') + '</small></div>' +
+          '<div class="detail-meta">' + fields.map(function (f) { return '<span><b>' + esc(f[0]) + ':</b> ' + esc(f[1]) + '</span>'; }).join('') + '</div>' +
+          (ownNote || '') +
+          '</div></div>' +
+          (l.description ? '<div class="detail-desc">' + esc(l.description) + '</div>' : '') +
+          (l.condition_detail ? '<h4 style="margin:14px 0 4px;font-size:13px">Condition details</h4><div class="detail-desc">' + esc(l.condition_detail) + '</div>' : '') +
+          (l.usage_details ? '<h4 style="margin:14px 0 4px;font-size:13px">Usage details</h4><div class="detail-desc">' + esc(l.usage_details) + '</div>' : '') +
+          '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
+          '<button class="mp-btn ghost" data-close-sheet="sheet-detail">Close</button>' +
+          (canEnq ? '<button class="mp-btn primary" id="browse-enq"><i class="fas fa-paper-plane"></i> Send Enquiry</button>' : '') +
+          (l.is_owner ? '<a class="mp-btn ghost" href="my-listings.html" style="text-decoration:none;justify-content:center"><i class="fas fa-boxes-stacked"></i> My Listings</a>' : '') +
+          '</div>';
+        var enqBtn = $('browse-enq');
+        if (enqBtn) enqBtn.addEventListener('click', function () { closeSheet('sheet-detail'); openEnquire(l); });
+      }).catch(function (e) {
+        body.innerHTML = '<div class="mp-grid-error"><i class="fas fa-plug-circle-xmark"></i><p>' + esc(errMsg(e) || 'Could not load the listing.') + '</p><button class="mp-btn ghost" data-retry="1"><i class="fas fa-rotate-right"></i> Retry</button></div>';
+        var rb = body.querySelector('[data-retry]');
+        if (rb) rb.addEventListener('click', function () { openBrowseDetail(id); });
+      });
+    }
+
+    function openEnquire(l) {
+      ST.enqListing = l || null;
+      $('enq-new-msg').value = '';
+      $('enq-new-qty').value = '';
+      $('enq-new-price').value = '';
+      $('enq-new-listing').innerHTML = '<i class="fas fa-box-open"></i><span>' + esc((l && l.title) || '') + ' — ' + fmtPrice(l && l.price) + ' per ' + esc((l && l.unit) || '') + '</span>';
+      openSheet('sheet-enq-new');
+    }
+
+    function submitEnquiryForm(ev) {
+      ev.preventDefault();
+      var l = ST.enqListing;
+      if (!l) return toast('Listing is no longer selected.', 'error');
+      var msg = $('enq-new-msg').value.trim();
+      if (!msg) { toast('Please write a message to the seller.', 'error'); $('enq-new-msg').focus(); return; }
+      var token = localStorage.getItem('fa-auth-token');
+      if (!token) return toast('Please sign in again.', 'error');
+      var btn = $('enq-new-submit');
+      setBtn(btn, true, '<i class="fas fa-spinner fa-spin"></i> Sending…', '<i class="fas fa-paper-plane"></i> Send Enquiry');
+      var qty = $('enq-new-qty').value;
+      var price = $('enq-new-price').value;
+      var body = { message: msg };
+      if (qty !== '' && Number(qty) > 0) body.requested_quantity = Number(qty);
+      if (price !== '' && Number(price) > 0) body.offered_price = Number(price);
+      fetchAPI('/marketplace/browse/listings/' + encodeURIComponent(l.id) + '/enquire', { method: 'POST', body: JSON.stringify(body) })
+        .then(function (d) {
+          closeSheet('sheet-enq-new');
+          toast((d && d.message) || 'Your enquiry has been sent to the seller.');
+        }).catch(function (e) {
+          toast(errMsg(e) || 'Could not send the enquiry.', 'error');
+        }).finally(function () {
+          setBtn(btn, false, '', '<i class="fas fa-paper-plane"></i> Send Enquiry');
+        });
     }
 
     function listingCard(l) {
@@ -1922,8 +2174,29 @@
     }
 
     /* ───────── Filter panel ───────── */
+    function updateFilterState() {
+      var el = $('filter-state');
+      if (!el) return;
+      var f = ST.filters || {};
+      var parts = [];
+      if (f.group) parts.push('Type: ' + f.group);
+      if (f.category) {
+        var catName = f.category;
+        var all = (Object.keys(ST.cats || {})).reduce(function (a, k) { return a.concat(ST.cats[k] || []); }, []);
+        var hit = all.filter(function (c) { return c.id === f.category || c.slug === f.category; })[0];
+        if (hit) catName = hit.name;
+        parts.push('Category: ' + catName);
+      }
+      if (f.minPrice !== '' && f.minPrice !== null && f.minPrice !== undefined) parts.push('Min ₹' + f.minPrice);
+      if (f.maxPrice !== '' && f.maxPrice !== null && f.maxPrice !== undefined) parts.push('Max ₹' + f.maxPrice);
+      if (f.location) parts.push('Location: ' + f.location);
+      if (f.availability) parts.push('Availability: ' + f.availability);
+      if (f.sort && f.sort !== 'newest') parts.push('Sort: ' + f.sort);
+      el.innerHTML = parts.length ? '<b>' + parts.length + '</b> filter' + (parts.length > 1 ? 's' : '') + ' applied — ' + esc(parts.join(' · ')) : '';
+    }
+
     function openFilterPanel() {
-      var f = ST.activeFilters;
+      var f = ST.filters;
       $('flt-group').value = f.group || '';
       $('flt-cat').value = f.category || '';
       $('flt-min').value = f.minPrice || '';
@@ -1936,20 +2209,22 @@
 
     function applyActiveFilters(ev) {
       if (ev) ev.preventDefault();
-      ST.activeFilters.group = $('flt-group').value;
-      ST.activeFilters.category = $('flt-cat').value;
-      ST.activeFilters.minPrice = $('flt-min').value;
-      ST.activeFilters.maxPrice = $('flt-max').value;
-      ST.activeFilters.location = $('flt-loc').value.trim();
-      ST.activeFilters.availability = $('flt-avail').value.trim();
-      ST.activeFilters.sort = $('flt-sort').value;
+      ST.filters.group = $('flt-group').value;
+      ST.filters.category = $('flt-cat').value;
+      ST.filters.minPrice = $('flt-min').value;
+      ST.filters.maxPrice = $('flt-max').value;
+      ST.filters.location = $('flt-loc').value.trim();
+      ST.filters.availability = $('flt-avail').value.trim();
+      ST.filters.sort = $('flt-sort').value;
       closeSheet('sheet-filter');
+      updateFilterState();
       page = 1;
-      loadActiveListings(true);
+      if (ST.tab === 'listings') loadBrowseListings(true);
+      else loadActiveListings(true);
     }
 
     function resetActiveFilters() {
-      ST.activeFilters = { group: '', category: '', minPrice: '', maxPrice: '', location: '', availability: '', sort: 'newest' };
+      ST.filters = { group: '', category: '', minPrice: '', maxPrice: '', location: '', availability: '', sort: 'newest' };
       $('flt-group').value = '';
       $('flt-cat').value = '';
       $('flt-min').value = '';
@@ -1958,8 +2233,10 @@
       $('flt-avail').value = '';
       $('flt-sort').value = 'newest';
       closeSheet('sheet-filter');
+      updateFilterState();
       page = 1;
-      loadActiveListings(true);
+      if (ST.tab === 'listings') loadBrowseListings(true);
+      else loadActiveListings(true);
     }
 
     /* ───────── Confirm dialog ───────── */
@@ -1972,12 +2249,14 @@
 
     /* ───────── Tabs / subviews ───────── */
     function switchTab(tab) {
-      tab = tab || 'active';
+      tab = tab || 'listings';
       var section = tab;
       var pane = tab;
-      
+
       // Map tabs to their content panes
-      if (section === 'active') {
+      if (section === 'listings') {
+        pane = 'listings';
+      } else if (section === 'active') {
         pane = 'active';
       } else if (section === 'pending') {
         pane = 'pending';
@@ -1996,11 +2275,16 @@
       ST.tab = section;
 
       // Hide all tab panes, then show the selected pane
-      ['active', 'pending', 'sold', 'sales', 'enquiries', 'insights'].forEach(function (t) {
+      ['listings', 'active', 'pending', 'sold', 'sales', 'enquiries', 'insights'].forEach(function (t) {
         var el = $('tab-' + t);
         if (el) el.style.display = t === pane ? '' : 'none';
       });
-      
+
+      // Shared Filter bar is only relevant on the browse + active views
+      var filterRow = $('mp-filterrow');
+      if (filterRow) filterRow.style.display = (pane === 'listings' || pane === 'active') ? '' : 'none';
+      updateFilterState();
+
       // Update tab active states
       document.querySelectorAll('.mp-tab').forEach(function (t) {
         t.classList.toggle('active', t.dataset.tab === section);
@@ -2008,7 +2292,8 @@
       });
 
       // Load content for the selected pane
-      if (pane === 'active') loadActiveListings(true);
+      if (pane === 'listings') loadBrowseListings(true);
+      else if (pane === 'active') loadActiveListings(true);
       else if (pane === 'pending') loadPendingSales(false);
       else if (pane === 'sold') loadSold(false);
       else if (pane === 'sales') {
@@ -2052,6 +2337,10 @@
       if (activeSearch) {
         activeSearch.addEventListener('keydown', function (e) { if (e.key === 'Enter') loadActiveListings(true); });
       }
+      var listingsSearch = $('listings-search');
+      if (listingsSearch) {
+        listingsSearch.addEventListener('keydown', function (e) { if (e.key === 'Enter') loadBrowseListings(true); });
+      }
 
       // Settings form
       var settingsForm = $('settings-form');
@@ -2090,6 +2379,21 @@
         var btn = e.target.closest('[data-act]');
         if (btn) onActiveAction(btn.dataset.id, btn.dataset.act);
       });
+
+      // Marketplace browse (Listings) actions
+      var listingsGrid = $('listings-grid');
+      if (listingsGrid) {
+        listingsGrid.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-browse]');
+          if (!btn) return;
+          var id = btn.dataset.id;
+          if (btn.dataset.browse === 'view') openBrowseDetail(id);
+          else if (btn.dataset.browse === 'enquire') {
+            var l = ST.browseListings.filter(function (x) { return x.id === id; })[0];
+            if (l) openEnquire(l);
+          }
+        });
+      }
 
       // Enquiry detail actions
       var enqDetailBody = $('enq-detail-body');
@@ -2140,6 +2444,10 @@
       if (activeMore) {
         activeMore.addEventListener('click', function () { page += 1; loadActiveListings(false); });
       }
+      var listingsMore = $('listings-more');
+      if (listingsMore) {
+        listingsMore.addEventListener('click', function () { ST.browsePage += 1; loadBrowseListings(false); });
+      }
       $('s-more').addEventListener('click', function () { loadSales(true); });
       $('e-more').addEventListener('click', function () { loadEnquiries(true); });
 
@@ -2157,6 +2465,8 @@
       $('listing-form').addEventListener('submit', submitListingForm);
       $('sale-form').addEventListener('submit', submitSaleForm);
       $('reply-form').addEventListener('submit', submitReplyForm);
+      var enqNewForm = $('enq-new-form');
+      if (enqNewForm) enqNewForm.addEventListener('submit', submitEnquiryForm);
       $('confirm-ok').addEventListener('click', function () {
         var fn = ST.confirmAction;
         ST.confirmAction = null;
@@ -2164,10 +2474,11 @@
         if (fn) fn();
       });
 
-      // Sheet closing
+      // Sheet closing (delegated so dynamically rendered close buttons work too)
       $('sheet-bg').addEventListener('click', closeAllSheets);
-      document.querySelectorAll('[data-close-sheet]').forEach(function (b) {
-        b.addEventListener('click', function () { closeSheet(b.dataset.closeSheet); });
+      document.addEventListener('click', function (e) {
+        var closeBtn = e.target.closest('[data-close-sheet]');
+        if (closeBtn) closeSheet(closeBtn.dataset.closeSheet);
       });
     }
 
