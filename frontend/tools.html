@@ -3077,7 +3077,7 @@
 
     body.innerHTML = '<div class="te-skeleton" style="height:70px;margin-bottom:8px;"></div>'.repeat(3);
 
-    API.Equipment.getActivity({ limit: 50 }).then(function (res) {
+    API.Equipment.getActivity(50).then(function (res) {
       var act = (res && res.data && res.data.items) || (res && res.items) || [];
       if (!act.length) {
         body.innerHTML = '<div class="te-empty-state"><i class="fas fa-clock-rotate-left"></i><h3>No activity yet</h3><p>Views, bookings, and orders will appear here.</p></div>';
@@ -3085,22 +3085,16 @@
       }
 
       body.innerHTML = act.map(function (a) {
-        var icon = a.kind === 'booking' ? 'fa-calendar-check' : a.kind === 'order' ? 'fa-box' : 'fa-eye';
-        var title = '';
-        if (a.kind === 'booking') {
-          title = (a.booking && (a.booking.equipment || {}).name) ? 'Booked ' + esc(a.booking.equipment.name) : 'Rental booking';
-        } else if (a.kind === 'order') {
-          title = a.order && a.order.order_id ? 'Order ' + esc(a.order.order_id) + ' (' + (a.action || 'placed') + ')' : 'Order update';
-        } else {
-          title = 'Viewed ' + (a.product ? esc(a.product.name) : 'equipment details');
-        }
-        var sub = a.detail || '';
+        var kind = a.type || 'viewed';
+        var icon = kind === 'booking' ? 'fa-calendar-check' : kind === 'order' ? 'fa-box' : kind === 'saved' ? 'fa-heart' : 'fa-eye';
+        var title = a.title || 'Farm activity';
+        var sub = a.subtitle || '';
         return '<div class="te-activity-item">' +
           '<div class="te-activity-icon"><i class="fas ' + icon + '"></i></div>' +
           '<div>' +
-            '<div class="te-activity-title">' + title + '</div>' +
+            '<div class="te-activity-title">' + esc(title) + '</div>' +
             (sub ? '<div class="te-activity-sub">' + esc(sub) + '</div>' : '') +
-            '<div class="te-activity-time">' + fmtDate(a.created_ts) + '</div>' +
+            '<div class="te-activity-time">' + fmtDate(a.timestamp) + '</div>' +
           '</div>' +
         '</div>';
       }).join('');
