@@ -36,6 +36,7 @@ from app.models.marketplace import (
     MarketplaceOrder,
     OrderItem,
     MarketplaceWishlist,
+    EquipmentReport,
 )
 from app.equipment_taxonomy import (
     CATEGORY_SLUGS,
@@ -2200,3 +2201,84 @@ def get_rental_detail(
     if not equip:
         raise HTTPException(status_code=404, detail="Rental equipment not found")
     return {"status": "success", "data": _rental_payload(db, equip)}
+
+
+class ReportCreate(BaseModel):
+    target_type: str
+    target_id: str
+    reason: str
+    message: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# 11. REPORT LISTING (equipment moderation reports - authenticated farmer only)
+# ---------------------------------------------------------------------------
+@router.post("/report", status_code=201)
+def create_listing_report(
+    payload: ReportCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    target_type = (payload.target_type or "").strip().lower()
+    if target_type not in ("buy", "rent"):
+        raise HTTPException(status_code=400, detail="Invalid report target type")
+
+    reason = (payload.reason or "").strip()
+    if not reason:
+        raise HTTPException(status_code=400, detail="Please select a report reason")
+    if len(reason) > 100:
+        raise HTTPException(status_code=400, detail="Report reason is too long")
+
+    target = None
+    if target_type == "buy":
+        target = (
+            db.query(Product)
+            .filter(or_(Product.id == payload.target_id, Product.product_id == payload.target_id))
+            .first()
+        )
+        if not target:
+            raise HTTPException(status_code=404, detail="Equipment listing not found")
+    else:
+        target = (
+            db.query(Equipment)
+            .filter(or_(Equipment.id == payload.target_id, Equipment.equipment_id == payload.target_id))
+            .first()
+        )
+        if not target:
+            raise HTTPException(status_code=404, detail="Rental listing not found")
+
+    # Idempotency guard: same farmer reporting the same listing within 60s
+    cutoff = datetime.utcnow() - timedelta(seconds=60)
+    recent = (
+        db.query(EquipmentReport)
+        .filter(
+            EquipmentReport.reporter_id == current_user.id,
+            EquipmentReport.target_type == target_type,
+            EquipmentReport.target_id == str(target.id),
+            EquipmentReport.created_at >= cutoff,
+        )
+        .first()
+    )
+    if recent:
+        raise HTTPException(
+            status_code=429,
+            detail="You already reported this listing. Our team is reviewing it.",
+        )
+
+    report = EquipmentReport(
+        target_type=target_type,
+        target_id=str(target.id),
+        product_id=str(target.id) if target_type == "buy" else None,
+        equipment_id=str(target.id) if target_type == "rent" else None,
+        reporter_id=current_user.id,
+        reason=reason,
+        message=(payload.message or "").strip()[:600] or None,
+    )
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+    return {
+        "status": "success",
+        "message": "Thank you. Your report has been submitted for review.",
+        "data": {"report_id": report.id, "target_id": str(target.id)},
+    }

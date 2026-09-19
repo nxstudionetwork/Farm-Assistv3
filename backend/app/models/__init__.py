@@ -16,7 +16,7 @@ from app.models.marketplace import (
     Payment, DeliveryTracking, EquipmentMetadata, FarmerRecentlyViewed,
     MarketplaceCategory, MarketplaceListing, MarketplaceListingImage,
     MarketplaceEnquiry, MarketplaceSale, MarketplaceBuyerRecommendation,
-    MarketplaceSellerSettings,
+    MarketplaceSellerSettings, EquipmentReport,
 )
 from app.models.government import (
     GovernmentScheme, SchemeApplication, SchemeDocument,
@@ -86,6 +86,7 @@ __all__ = [
     "Payment", "DeliveryTracking", "EquipmentMetadata", "FarmerRecentlyViewed",
     "MarketplaceCategory", "MarketplaceListing", "MarketplaceListingImage",
     "MarketplaceEnquiry", "MarketplaceSale", "MarketplaceBuyerRecommendation",
+    "MarketplaceSellerSettings", "EquipmentReport",
     "GovernmentScheme", "SchemeApplication", "SchemeDocument",
     "InsurancePolicy", "InsuranceClaim", "SchemeSyncLog",
     "InsuranceProduct", "SavedInsurance", "InsuranceApplication",

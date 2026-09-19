@@ -1419,6 +1419,20 @@
 
     .te-related-price { font-size: 12px; font-weight: 800; color: var(--te-primary-green); }
     .te-share-btn { border: 1px solid var(--te-border-green); color: #41604d; }
+  .te-report-link {
+    background: none;
+    border: none;
+    padding: 6px 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #9a6a1f;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.15s ease;
+  }
+  .te-report-link:hover { color: #c65d0e; text-decoration: underline; }
 
     /* Activity timeline */
     .te-activity-item {
@@ -2112,6 +2126,21 @@
           <label for="lsfDescription">Description</label>
           <textarea id="lsfDescription" rows="3" maxlength="600" placeholder="Short description of your item"></textarea>
         </div>
+        <div class="full">
+          <label>Photo</label>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <input type="hidden" id="lsfImageUrl">
+            <button type="button" class="te-btn-view" id="btnPickListingPhoto" style="padding:8px 14px;font-size:13px;">
+              <i class="fas fa-camera"></i> Upload Photo
+            </button>
+            <input type="file" id="lsfPhotoInput" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none;">
+            <div id="lsfPhotoPreview" style="display:none;position:relative;">
+              <img id="lsfPhotoPreviewImg" alt="Listing preview" style="width:64px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--te-border-green);">
+              <button type="button" id="btnRemoveListingPhoto" title="Remove photo" style="position:absolute;top:-6px;right:-6px;background:#ad303c;color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:10px;cursor:pointer;line-height:1;">&times;</button>
+            </div>
+            <span style="font-size:11px;color:var(--te-muted);">PNG, JPG or WebP · up to 10 MB</span>
+          </div>
+        </div>
         <div class="full" style="display:flex;gap:18px;flex-wrap:wrap;padding-top:2px;">
           <label class="te-checkbox-label" style="display:inline-flex;">
             <input type="checkbox" id="lsfDeliveryAvailable"> Delivery Available
@@ -2216,6 +2245,40 @@
       </div>
       <button type="submit" class="te-btn-cart" style="width:100%;padding:12px;font-size:14px;" id="btnConfirmRental">
         <i class="fas fa-calendar-check"></i> Confirm Rental Booking
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- REPORT LISTING MODAL -->
+<div class="te-modal" id="reportModal">
+  <div class="te-dialog" style="max-width:480px;">
+    <button class="te-dialog-close" id="btnCloseReportModal"><i class="fas fa-times"></i></button>
+    <h2 style="font-size:20px;font-weight:800;color:var(--te-dark-green);margin:0 0 6px 0;">
+      <i class="fas fa-flag" style="color:#c65d0e;margin-right:8px;"></i> Report Listing
+    </h2>
+    <p style="font-size:12px;color:var(--te-muted);margin:0 0 14px 0;" id="reportModalSubtitle">Help us keep the marketplace safe and accurate.</p>
+    <form id="reportForm">
+      <input type="hidden" id="rpTargetType">
+      <input type="hidden" id="rpTargetId">
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">Reason *</label>
+        <select class="te-filter-select" id="rpReason" required style="width:100%;">
+          <option value="">Select a reason</option>
+          <option value="wrong_price">Wrong price</option>
+          <option value="not_available">Item no longer available</option>
+          <option value="misleading">Misleading description / photos</option>
+          <option value="damaged">Arrived damaged / poor condition</option>
+          <option value="fake">Fraud / duplicate listing</option>
+          <option value="other">Other issue</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">Details (optional)</label>
+        <textarea class="te-filter-input" id="rpMessage" rows="3" maxlength="600" placeholder="Briefly describe the issue..."></textarea>
+      </div>
+      <button type="submit" class="te-btn-cart" style="width:100%;padding:12px;font-size:14px;" id="btnSubmitReport">
+        <i class="fas fa-paper-plane"></i> Submit Report
       </button>
     </form>
   </div>
@@ -2350,6 +2413,50 @@
   function toggleModal(id, show) {
     var el = document.getElementById(id);
     if (el) el.classList.toggle('open', !!show);
+  }
+
+  // --- REPORT LISTING MODAL ---
+  function openReportModal(kind, id) {
+    if (!isLoggedIn()) { requireLogin(); return; }
+    document.getElementById('rpTargetType').value = kind;
+    document.getElementById('rpTargetId').value = id;
+    document.getElementById('rpReason').value = '';
+    document.getElementById('rpMessage').value = '';
+    toggleModal('reportModal', true);
+    setTimeout(function () {
+      var sel = document.getElementById('rpReason');
+      if (sel) sel.focus();
+    }, 100);
+  }
+
+  function submitReport(e) {
+    e.preventDefault();
+    var payload = {
+      target_type: document.getElementById('rpTargetType').value,
+      target_id: document.getElementById('rpTargetId').value,
+      reason: document.getElementById('rpReason').value,
+      message: document.getElementById('rpMessage').value.trim()
+    };
+    if (!payload.target_id || !payload.target_type) {
+      toast('Report target missing. Please try again.');
+      return;
+    }
+
+    var btn = document.getElementById('btnSubmitReport');
+    var original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+    API.Equipment.reportListing(payload).then(function (res) {
+      btn.disabled = false;
+      btn.innerHTML = original;
+      toggleModal('reportModal', false);
+      toast((res && res.message) || 'Thank you. Your report has been submitted for review.');
+    }).catch(function (err) {
+      btn.disabled = false;
+      btn.innerHTML = original;
+      toast((err && err.message) || 'Could not submit your report. Please try again.');
+    });
   }
 
   function renderStars(rating) {
@@ -2798,6 +2905,11 @@
               '<i class="fas fa-share-nodes"></i>' +
             '</button>' +
           '</div>' +
+          '<div style="margin-top:10px;">' +
+            '<button class="te-report-link" data-report="' + esc(p.id) + '" data-report-type="buy" title="Report listing">' +
+              '<i class="fas fa-flag"></i> Report this listing' +
+            '</button>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div id="relatedEquipmentBox" style="display:none;margin-top:20px;"></div>';
@@ -2994,6 +3106,11 @@
             '</button>' +
             '<button class="te-wish-btn te-share-btn" onclick="window.shareThis(\'' + esc(r.name) + '\')" style="position:static;width:44px;height:44px;border-radius:10px;" aria-label="Share equipment" title="Share">' +
               '<i class="fas fa-share-nodes"></i>' +
+            '</button>' +
+          '</div>' +
+          '<div style="margin-top:10px;">' +
+            '<button class="te-report-link" data-report="' + esc(r.id) + '" data-report-type="rent" title="Report listing">' +
+              '<i class="fas fa-flag"></i> Report this listing' +
             '</button>' +
           '</div>' +
         '</div>' +
@@ -3249,6 +3366,7 @@
     document.getElementById('lsfDeliveryAvailable').checked = f.delivery;
     document.getElementById('lsfPickupAvailable').checked = f.pickup;
     document.getElementById('lsfIsAvailable').checked = f.available;
+    setListingPhotoPreview((item && item.image_url) || '');
     if (f.category && document.getElementById('lsfCategory').value !== f.category) {
       document.getElementById('lsfCategory').value = f.category;
     }
@@ -3279,6 +3397,7 @@
       location: document.getElementById('lsfLocation').value.trim(),
       suitable_use: document.getElementById('lsfUse').value,
       description: document.getElementById('lsfDescription').value.trim(),
+      image_url: document.getElementById('lsfImageUrl').value || null,
       delivery_available: document.getElementById('lsfDeliveryAvailable').checked,
       pickup_available: document.getElementById('lsfPickupAvailable').checked,
       is_available: document.getElementById('lsfIsAvailable').checked
@@ -3291,6 +3410,65 @@
       payload.price = parseFloat(document.getElementById('lsfPrice').value) || 0;
     }
     return payload;
+  }
+
+  // --- LISTING PHOTO UPLOAD (persisted via platform /storage service) ---
+  function setListingPhotoPreview(url) {
+    var input = document.getElementById('lsfImageUrl');
+    var wrap = document.getElementById('lsfPhotoPreview');
+    var img = document.getElementById('lsfPhotoPreviewImg');
+    if (!input || !wrap || !img) return;
+    input.value = url || '';
+    if (url) {
+      img.src = url;
+      wrap.style.display = 'block';
+    } else {
+      img.removeAttribute('src');
+      wrap.style.display = 'none';
+    }
+  }
+
+  function handleListingPhotoSelect() {
+    var fileInput = document.getElementById('lsfPhotoInput');
+    var file = fileInput && fileInput.files && fileInput.files[0];
+    if (!file) return;
+    var allowed = /^image\/(png|jpe?g|webp|gif)$/i;
+    if (!allowed.test(file.type)) {
+      toast('Please choose a PNG, JPG, WebP or GIF image.');
+      fileInput.value = '';
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast('Photo is too large. Please choose an image under 10 MB.');
+      fileInput.value = '';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var dataUrl = e.target.result;
+      var urlIn = document.getElementById('lsfImageUrl');
+      var prevUrl = urlIn ? urlIn.value : '';
+      if (window.StorageService && window.StorageService.uploadBase64) {
+        window.StorageService.uploadBase64(dataUrl, 'listings').then(function (res) {
+          var u = (res && res.data && res.data.url) || (res && res.url);
+          if (u) {
+            setListingPhotoPreview(u);
+            toast('Photo uploaded successfully.');
+          } else {
+            toast('Photo uploaded but no URL returned.');
+          }
+          fileInput.value = '';
+        }).catch(function (err) {
+          fileInput.value = '';
+          if (urlIn) urlIn.value = prevUrl;
+          toast((err && err.message) || 'Photo upload failed. Please try again.');
+        });
+      } else {
+        toast('Photo upload is not available right now.');
+        fileInput.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
   }
 
   function submitListing(e) {
@@ -3663,7 +3841,7 @@
   // --- EVENT LISTENERS ---
   document.addEventListener('click', function (e) {
     var target = e.target;
-    var btn = target.closest('button, a, [data-cat], [data-detail], [data-add], [data-wish], [data-rent], [data-rentdetail], [data-cartqty], [data-cartremove], [data-cancelorder], [data-uncompare], [data-cancelbooking], [data-listingedit], [data-listingdel], [data-listingtoggle], [data-action]');
+    var btn = target.closest('button, a, [data-cat], [data-detail], [data-add], [data-wish], [data-rent], [data-rentdetail], [data-cartqty], [data-cartremove], [data-cancelorder], [data-uncompare], [data-cancelbooking], [data-listingedit], [data-listingdel], [data-listingtoggle], [data-action], [data-report]');
     if (!btn) return;
 
     // Empty-state / error-state actions
@@ -3673,6 +3851,12 @@
     }
     if (btn.dataset.action === 'retry') {
       fetchProducts(true);
+      return;
+    }
+
+    // Report listing
+    if (btn.dataset.report) {
+      openReportModal(btn.dataset.reportType || 'buy', btn.dataset.report);
       return;
     }
 
@@ -4078,9 +4262,22 @@
   document.getElementById('btnCloseRentalModal').addEventListener('click', function () { toggleModal('rentalBookingModal', false); });
   document.getElementById('btnCloseRentDetailModal').addEventListener('click', function () { toggleModal('rentDetailModal', false); });
   document.getElementById('btnCloseListingModal').addEventListener('click', function () { toggleModal('listingModal', false); });
+  document.getElementById('btnCloseReportModal').addEventListener('click', function () { toggleModal('reportModal', false); });
+  document.getElementById('reportForm').addEventListener('submit', submitReport);
+
+  // Listing photo upload bindings
+  document.getElementById('btnPickListingPhoto').addEventListener('click', function () {
+    if (!isLoggedIn()) { requireLogin(); return; }
+    document.getElementById('lsfPhotoInput').click();
+  });
+  document.getElementById('lsfPhotoInput').addEventListener('change', handleListingPhotoSelect);
+  document.getElementById('btnRemoveListingPhoto').addEventListener('click', function () {
+    setListingPhotoPreview('');
+    document.getElementById('lsfPhotoInput').value = '';
+  });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-      ['detailModal', 'compareModal', 'checkoutModal', 'rentalBookingModal', 'rentDetailModal', 'listingModal'].forEach(function (id) {
+      ['detailModal', 'compareModal', 'checkoutModal', 'rentalBookingModal', 'rentDetailModal', 'listingModal', 'reportModal'].forEach(function (id) {
         toggleModal(id, false);
       });
     }

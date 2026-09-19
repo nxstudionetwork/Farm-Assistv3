@@ -812,6 +812,9 @@ Backend: FastAPI served from the same origin (port 8000).
     deleteBuyListing: function (id) {
       return http('DELETE', '/tools-equipment/mylistings/buy/' + encodeURIComponent(id)).then(unwrap);
     },
+    reportListing: function (data) {
+      return http('POST', '/tools-equipment/report', data).then(unwrap);
+    },
 
     // Legacy compatibility for worker equipment rental
     list: function (params) {

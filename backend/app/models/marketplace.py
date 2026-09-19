@@ -456,3 +456,26 @@ class MarketplaceSellerSettings(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+class EquipmentReport(Base):
+    """Farmer report against a Tools & Equipment listing (rent or buy).
+
+    target_type is 'buy' (Product) or 'rent' (Equipment). The target columns are
+    populated so moderation queries can join to the exact listing while target_id
+    stays a plain indexed id. Only the authenticated reporter is stored - the
+    frontend never supplies the farmer identity.
+    """
+
+    __tablename__ = "equipment_reports"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    target_type = Column(String(20), nullable=False, index=True)  # buy | rent
+    target_id = Column(String(36), nullable=False, index=True)
+    product_id = Column(String(36), ForeignKey("products.id"), nullable=True)
+    equipment_id = Column(String(36), ForeignKey("equipment.id"), nullable=True)
+    reporter_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    reason = Column(String(100), nullable=False)
+    message = Column(Text, nullable=True)
+    status = Column(String(20), default="open", nullable=False)  # open | reviewed | dismissed
+    created_at = Column(DateTime, default=datetime.utcnow)
+
