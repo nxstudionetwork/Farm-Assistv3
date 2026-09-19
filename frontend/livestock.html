@@ -718,6 +718,7 @@
     <div class="ls-tab" data-tab="growth">Growth</div>
     <div class="ls-tab" data-tab="production" id="dp-tabbtn-production">Production</div>
     <div class="ls-tab" data-tab="expenses">Expenses</div>
+    <div class="ls-tab" data-tab="photos">Photos</div>
   </div>
 
   <!-- tab bodies -->
@@ -730,6 +731,7 @@
   <div class="ls-tab-body" id="dp-tab-growth" style="display:none;"></div>
   <div class="ls-tab-body" id="dp-tab-production" style="display:none;"></div>
   <div class="ls-tab-body" id="dp-tab-expenses" style="display:none;"></div>
+  <div class="ls-tab-body" id="dp-tab-photos" style="display:none;"></div>
 </div><!-- /ls-detail-panel -->
 
 
@@ -1846,7 +1848,7 @@ function applyTabVisibility() {
     document.querySelectorAll('.ls-tab').forEach(function (t) {
       t.classList.toggle('active', t.dataset.tab === tab);
     });
-    ['info', 'health', 'vaccinations', 'treatments', 'feeding', 'breeding', 'growth', 'production', 'expenses'].forEach(function (t) {
+    ['info', 'health', 'vaccinations', 'treatments', 'feeding', 'breeding', 'growth', 'production', 'expenses', 'photos'].forEach(function (t) {
       var el = $id('dp-tab-' + t);
       if (el) el.style.display = (t === tab) ? 'block' : 'none';
     });
@@ -1859,6 +1861,95 @@ function applyTabVisibility() {
     if (tab === 'growth')       loadTabGrowth();
     if (tab === 'production')   loadTabProduction();
     if (tab === 'expenses')     loadTabExpenses();
+    if (tab === 'photos')       loadTabPhotos();
+  }
+
+  function loadTabPhotos() {
+    var a = _currentAnimal;
+    if (!a || !a.animal_id) { var el0 = $id('dp-tab-photos'); if (el0) el0.innerHTML = ''; return; }
+    var el = $id('dp-tab-photos');
+    if (!el) return;
+    el.innerHTML = '<div class="sk h14 w80" style="margin:6px 4px;"></div>';
+    lsReq(API.Livestock.photos(a.animal_id)).then(function (r) {
+      if (!r || !r.ok) { el.innerHTML = errorCard('retry-tab-photos', 'Photos could not be loaded.'); return; }
+      var list = (r.data || []) || [];
+      var html = '';
+      html += '<div class="ls-add-form ls-photo-add"><h4><i class="fas fa-camera" style="color:var(--ls-accent);"></i> Add Animal Photo</h4>' +
+        '<div class="ls-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px;">' +
+        '<div><label class="ls-form-label">Photo</label><input type="file" id="vp-file" accept="image/*" class="ls-form-input" style="padding:6px 11px;"></div>' +
+        '<div><label class="ls-form-label">Caption</label><input type="text" id="vp-caption" class="ls-form-input" placeholder="Optional caption text" maxlength="120"></div>' +
+        '<div style="display:flex;align-items:flex-end;"><button class="ls-form-btn" id="vp-add" type="button"><i class="fas fa-plus"></i> Add Photo</button></div>' +
+        '</div>' +
+        '<div id="vp-err" style="color:var(--ls-red);font-size:12px;display:none;margin:6px 0 0 0;"></div>' +
+        '</div>';
+      if (list.length) {
+        html += '<div class="ls-photos-grid">';
+        list.forEach(function (p) {
+          var pid = p.id;
+          var primary = !!p.is_primary;
+          var cap = esc(p.caption || '');
+          html += '<div class="ls-photo-card' + (primary ? ' primary' : '') + '">' +
+            '<div class="ls-photo-imgwrap">' +
+            (p.photo_url ? '<img src="' + esc(p.photo_url) + '" alt="' + (cap || 'Animal photo') + '" loading="lazy" onerror="this.parentNode.classList.add(\'ls-photo-broken\');">' : '<i class="fas fa-image"></i>') +
+            (primary ? '<span class="ls-photo-badge">Primary</span>' : '') +
+            '</div>' +
+            '<div class="ls-photo-meta">' +
+            '<span class="ls-photo-col">' + (cap || 'Animal photo') + '</span>' +
+            '<span class="ls-photo-actions">' +
+            (primary ? '' : '<button type="button" class="ls-photo-act" onclick="setPrimaryPhoto(\'' + esc(a.animal_id) + '\',\'' + esc(String(pid)) + '\')" title="Set as primary"><i class="fas fa-star"></i></button>') +
+            '<button type="button" class="ls-photo-act danger" onclick="delVaultPhoto(\'' + esc(a.animal_id) + '\',\'' + esc(String(pid)) + '\')" title="Delete photo"><i class="fas fa-trash"></i></button>' +
+            '</span></div></div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="ls-photo-empty"><i class="fas fa-camera"></i><p>No photos yet — add the first one above.</p></div>';
+      }
+      el.innerHTML = html;
+      var addBtn = $id('vp-add');
+      if (addBtn) addBtn.addEventListener('click', function () { submitVaultPhoto(a); });
+    });
+  }
+
+  function submitVaultPhoto(a) {
+    var file = $id('vp-file') && $id('vp-file').files && $id('vp-file').files[0];
+    var cap = ($id('vp-caption') && $id('vp-caption').value.trim()) || null;
+    var err = $id('vp-err');
+    var addBtn = $id('vp-add');
+    if (!file) {
+      if (err) { err.textContent = 'Choose a photo file (or paste a caption only) first.'; err.style.display = 'block'; }
+      return;
+    }
+    if (err) err.style.display = 'none';
+    if (addBtn) addBtn.disabled = true;
+    API.Storage.upload(file, 'images').then(function (up) {
+      var url = up && (up.url || (up.data && up.data.url));
+      if (!url) throw new Error('upload-failed');
+      return lsReq(API.Livestock.addPhoto(a.animal_id, { photo_url: url, caption: cap })).then(function (r) {
+        if (!r || !r.ok) throw new Error('save-failed');
+        lsToast('Photo added', 'success');
+        loadTabPhotos();
+      });
+    }).catch(function () {
+      if (addBtn) addBtn.disabled = false;
+      if (err) { err.textContent = 'Upload failed — please try again.'; err.style.display = 'block'; }
+    });
+  }
+
+  function setPrimaryPhoto(animalId, photoId) {
+    lsReq(API.Livestock.updatePhoto(animalId, photoId, { is_primary: true })).then(function (r) {
+      if (!r || !r.ok) { lsToast('Could not update photo.', 'error'); return; }
+      lsToast('Primary photo set', 'success');
+      loadTabPhotos();
+    });
+  }
+
+  function delVaultPhoto(animalId, photoId) {
+    if (!window.confirm('Delete this photo?')) return;
+    lsReq(API.Livestock.deletePhoto(animalId, photoId)).then(function (r) {
+      if (!r || !r.ok) { lsToast('Could not delete photo.', 'error'); return; }
+      lsToast('Photo deleted', 'success');
+      loadTabPhotos();
+    });
   }
 
   function renderTabInfo() {
