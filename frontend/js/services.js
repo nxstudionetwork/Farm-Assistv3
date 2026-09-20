@@ -193,6 +193,8 @@ Backend: FastAPI served from the same origin (port 8000).
         total_area: payload.total_area,
         area_unit: payload.area_unit,
         soil_type: payload.soil_type,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
       }).then(unwrap);
     },
     login: function (payload) {
@@ -1316,7 +1318,7 @@ Backend: FastAPI served from the same origin (port 8000).
       return http('GET', '/maps/geocode?address=' + encodeURIComponent(address)).then(unwrap);
     },
     reverseGeocode: function (lat, lon) {
-      return http('GET', '/maps/reverse-geocode?lat=' + lat + '&lon=' + lon).then(unwrap);
+      return http('GET', '/maps/reverse-geocode?latitude=' + lat + '&longitude=' + lon).then(unwrap);
     }
   };
 

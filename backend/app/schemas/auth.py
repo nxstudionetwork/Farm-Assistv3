@@ -28,6 +28,8 @@ class RegisterRequest(BaseModel):
     total_area: Optional[float] = None
     area_unit: Optional[str] = None
     soil_type: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     @field_validator("full_name")
     @classmethod
@@ -96,6 +98,20 @@ class RegisterRequest(BaseModel):
     def validate_total_area(cls, v: Optional[float]) -> Optional[float]:
         if v is not None and v <= 0:
             raise ValueError("Farm area must be greater than 0")
+        return v
+
+    @field_validator("latitude")
+    @classmethod
+    def validate_latitude(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and (v < -90 or v > 90):
+            raise ValueError("Latitude must be between -90 and 90")
+        return v
+
+    @field_validator("longitude")
+    @classmethod
+    def validate_longitude(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and (v < -180 or v > 180):
+            raise ValueError("Longitude must be between -180 and 180")
         return v
 
     @field_validator("date_of_birth")

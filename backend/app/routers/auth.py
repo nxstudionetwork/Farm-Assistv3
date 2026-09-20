@@ -743,6 +743,8 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         total_area=payload.total_area,
         area_unit=payload.area_unit or "Acres",
         soil_type=payload.soil_type,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
     )
     db.add(farm)
     db.flush()

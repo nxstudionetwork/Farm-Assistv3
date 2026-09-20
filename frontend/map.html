@@ -22,8 +22,23 @@
     .map-type button+button{border-left:1px solid var(--border-light,var(--line,#dbe6df))}
     .map-type button.active,.map-tool:hover{background:var(--premium-green,#176b45);color:#fff}
     .map-tool{width:36px;padding:0;border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:10px;display:inline-flex;align-items:center;justify-content:center}
-    .farm-select-wrap{margin:0}
+    .farm-select-wrap{margin:0;display:flex;align-items:center;gap:8px}
+    .toolbar-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#7a8a82;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+    .toolbar-label i{color:var(--premium-green,#176b45)}
     .farm-select{min-height:36px;border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:10px;padding:0 10px;font-weight:600;font-size:12.5px;color:var(--primary-dark-green,#103d2b);background:#fff;cursor:pointer;max-width:210px}
+    .map-toolbar{display:flex;align-items:stretch;gap:12px;padding:10px 14px;background:#fff;border-bottom:1px solid var(--border-light,var(--line,#dbe6df));z-index:680;flex-wrap:wrap}
+    .map-loc-card{flex:1;min-width:220px;display:flex;flex-wrap:wrap;gap:4px 18px;border:1px solid var(--border-light,var(--line,#dbe6df));background:#fbfdfb;border-radius:12px;padding:9px 13px;align-items:baseline}
+    .map-loc-card .mlc-title{font:800 13px Outfit,sans-serif;color:var(--primary-dark-green,#103d2b);display:flex;align-items:center;gap:7px;width:100%}
+    .map-loc-card .mlc-title i{color:var(--premium-green,#176b45)}
+    .map-loc-card .mlc-row{display:inline-flex;align-items:baseline;gap:6px;font-size:12px;color:#7a8a82}
+    .map-loc-card .mlc-row span{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+    .map-loc-card .mlc-row b{color:#263a30;font-weight:700}
+    .map-loc-card a.mlc-add{font-size:11.5px;font-weight:800;color:var(--premium-green,#176b45);text-decoration:none;border:1px solid var(--premium-green,#176b45);border-radius:8px;padding:5px 10px;margin-left:auto}
+    .map-loc-card a.mlc-add:hover{background:var(--premium-green,#176b45);color:#fff}
+    @media (max-width:560px){
+      .map-loc-card{min-width:100%}
+      .map-loc-card .mlc-row{width:auto}
+    }
     .filter-panel{background:#fff;border-bottom:1px solid var(--border-light,var(--line,#dbe6df));padding:10px 14px;display:flex;flex-wrap:wrap;gap:12px 18px;z-index:650}
     @media (max-width:720px){.filter-panel{max-height:44vh;overflow-y:auto;overflow-x:hidden}}
     .filter-group{display:flex;flex-direction:column;gap:5px;min-width:0}
@@ -159,12 +174,9 @@
     <header class="map-header">
       <div class="map-title">
         <h1><i class="fa-solid fa-map-location-dot"></i> Farm Map</h1>
-        <p>View your farms, fields, crops and farm activities on an interactive map.</p>
+        <p>View your farm location and surrounding area on the map.</p>
       </div>
       <div class="map-actions" aria-label="Map controls">
-        <div class="farm-select-wrap" id="farm-select-wrap" hidden>
-          <select id="farm-select" class="farm-select" aria-label="Select farm"></select>
-        </div>
         <div class="map-type" role="group" aria-label="Map type">
           <button id="map-view" class="active" type="button">Map</button>
           <button id="sat-view" type="button">Satellite</button>
@@ -175,6 +187,14 @@
         <button class="map-tool" id="fullscreen-btn" type="button" title="Fullscreen" aria-label="Toggle fullscreen"><i class="fa-solid fa-expand"></i></button>
       </div>
     </header>
+
+    <div class="map-toolbar" id="map-toolbar">
+      <div class="farm-select-wrap" id="farm-select-wrap" hidden>
+        <label class="toolbar-label" for="farm-select"><i class="fa-solid fa-tractor"></i> Farm</label>
+        <select id="farm-select" class="farm-select" aria-label="Select farm"></select>
+      </div>
+      <div class="map-loc-card" id="map-loc-card" hidden></div>
+    </div>
 
     <div class="filter-panel" id="filter-panel" hidden></div>
 
@@ -366,6 +386,49 @@
       return pts.filter(function (p) { return validPoint(p.lat, p.lng); });
     }
 
+    function findFarm(id) {
+      if (!id) return null;
+      for (var i = 0; i < data.farms.length; i++) if (String(data.farms[i].id) === String(id)) return data.farms[i];
+      return null;
+    }
+
+    function focusBounds() {
+      var f = activeFarmId ? findFarm(activeFarmId) : null;
+      if (!f) return null;
+      var lat = Number(f.latitude);
+      var lng = Number(f.longitude);
+      if (!validPoint(lat, lng)) return null;
+      var km = 3;
+      var dLat = km / 111;
+      var dLng = km / (111 * Math.max(0.3, Math.cos(lat * Math.PI / 180)));
+      return L.latLngBounds(L.latLng(lat - dLat, lng - dLng), L.latLng(lat + dLat, lng + dLng));
+    }
+
+    function renderLocationCard() {
+      var card = $('map-loc-card');
+      if (!card) return;
+      var f = activeFarmId ? findFarm(activeFarmId) : null;
+      if (!f && data.farms.length === 1) f = data.farms[0];
+      if (!f) {
+        var located = data.farms.filter(function (x) { return x.has_location; }).length;
+        card.hidden = data.farms.length === 0;
+        if (card.hidden) return;
+        card.innerHTML = '<div class="mlc-title"><i class="fa-solid fa-landmark"></i> All Farms</div>' +
+          '<div class="mlc-row"><span>Farms</span><b>' + data.farms.length + '</b></div>' +
+          '<div class="mlc-row"><span>With location</span><b>' + located + '</b></div>' +
+          (located < data.farms.length ? '<a class="mlc-add" href="farm.html"><i class="fa-solid fa-plus"></i> Add Farm Location</a>' : '');
+        return;
+      }
+      var gps = validPoint(f.latitude, f.longitude);
+      card.hidden = false;
+      card.innerHTML = '<div class="mlc-title"><i class="fa-solid fa-map-pin"></i> ' + esc(f.name) + '</div>' +
+        '<div class="mlc-row"><span>Location</span><b>' + esc(farmLocation(f)) + '</b></div>' +
+        (gps ? '<div class="mlc-row"><span>GPS</span><b style="font-family:Consolas,monospace">' + num(f.latitude, 5) + ', ' + num(f.longitude, 5) + '</b></div>' : '') +
+        '<div class="mlc-row"><span>Fields</span><b>' + ((f.plots || []).length) + '</b></div>' +
+        '<div class="mlc-row"><span>Updated</span><b>' + timeAgo(f.updated_at) + '</b></div>' +
+        (gps ? '' : '<a class="mlc-add" href="farm.html"><i class="fa-solid fa-plus"></i> Add Farm Location</a>');
+    }
+
     function colorFor(str) {
       var h = 0;
       if (!str) return '#94A89C';
@@ -545,7 +608,7 @@
           data.plots.some(function (p) { return p.has_location; });
         renderAll();
         if (!anyLocation) {
-          showMessage('<i class="fa-solid fa-triangle-exclamation msg-icon" style="color:#E9B640"></i><h2>Farm location has not been configured yet.</h2><p>Add farm coordinates in My Farm to place your farm on the map.</p><a href="farm.html"><i class="fa-solid fa-tractor"></i> Go to My Farm</a>');
+          showMessage('<i class="fa-solid fa-triangle-exclamation msg-icon" style="color:#E9B640"></i><h2>Farm location has not been added yet.</h2><p>Add your farm location in My Farm so your farm appears on the map.</p><a href="farm.html"><i class="fa-solid fa-tractor"></i> Add Farm Location</a>');
         }
         fetchHealth();
         invalidate();
@@ -561,10 +624,14 @@
       if (data.farms.length > 1) {
         wrap.hidden = false;
         sel.innerHTML = '';
+        var all = document.createElement('option');
+        all.value = '';
+        all.textContent = 'All Farms';
+        sel.appendChild(all);
         data.farms.forEach(function (f) {
           var o = document.createElement('option');
           o.value = f.id;
-          o.textContent = f.name + ((f.total_area != null) ? ' (' + f.total_area.toFixed(1) + ' ' + (f.area_unit || 'Acres') + ')' : '');
+          o.textContent = f.name;
           sel.appendChild(o);
         });
         sel.onchange = function () {
@@ -573,6 +640,10 @@
           renderAll();
           recenter();
         };
+        sel.value = activeFarmId ? String(activeFarmId) : '';
+      } else if (data.farms.length === 1) {
+        wrap.hidden = true;
+        activeFarmId = data.farms[0].id;
       } else {
         wrap.hidden = true;
         activeFarmId = null;
@@ -582,7 +653,7 @@
     /* ------------------------- visibility + render ------------------------- */
 
     function farmVisible(f) {
-      if (activeFarmId && f.id !== activeFarmId) return false;
+      if (activeFarmId && String(f.id) !== String(activeFarmId)) return false;
       if (filters.farms.size && !filters.farms.has(f.id)) return false;
       return true;
     }
@@ -671,6 +742,7 @@
       layerState.fieldGroup.clearLayers();
       layerState.sensorGroup.clearLayers();
       layerState.markerGroup.clearLayers();
+      if (focusBounds()) hideMessage();
 
       var plots = visiblePlots();
       var farms = visibleFarms();
@@ -755,12 +827,15 @@
       if (farms.length && placed) {
         setStatus(plots.length + ' field' + (plots.length === 1 ? '' : 's') + ' on map');
         if (fitDirty) {
-          map.fitBounds(bounds.pad(0.2));
+          var fb = focusBounds();
+          if (fb) map.fitBounds(fb.pad(0.15));
+          else map.fitBounds(bounds.pad(0.2));
           fitDirty = false;
         }
       } else {
         setStatus('');
       }
+      renderLocationCard();
       showBoundaryBanner(plots);
       refreshLegend();
     }
@@ -849,8 +924,6 @@
 
     function buildFilters() {
       var html = '';
-      var farmOpts = data.farms.length > 1 ? data.farms.map(function (f) { return { id: f.id, label: f.name }; }) : [];
-      html += chipGroup('farms', 'Farm', farmOpts);
       var plotOpts = data.plots.length > 1 ? data.plots.map(function (p) { return { id: p.id, label: p.name }; }) : [];
       html += chipGroup('plots', 'Field / Plot', plotOpts);
       var cropMap = {};
@@ -1245,6 +1318,11 @@
 
     function recenter() {
       if (!map) return;
+      var fb = focusBounds();
+      if (fb) {
+        map.fitBounds(fb.pad(0.15));
+        return;
+      }
       var bounds = L.latLngBounds([]);
       var any = false;
       visibleFarms().forEach(function (f) {

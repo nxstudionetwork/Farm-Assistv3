@@ -90,6 +90,25 @@
     .loc-label{font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
     .loc-value{font-size:18px;font-weight:800;color:#fff;letter-spacing:1px}
     @media(max-width:480px){.review-row{flex-direction:column;gap:3px}.review-row .rv-value{text-align:left}}
+    .loc-block{border:1.5px solid #dce9dc;border-radius:14px;padding:12px;background:#f8fbf8;margin-bottom:14px}
+    .loc-btn{width:100%;padding:12px;background:linear-gradient(135deg,#1a3c2a,#2d5a3e);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .25s ease}
+    .loc-btn:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(26,60,42,.25)}
+    .loc-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .loc-btn.spin .fa-spinner{display:inline-block}
+    .loc-btn .fa-spinner{display:none}
+    .loc-pick{display:none;margin-top:10px;border:1.5px solid #4caf50;background:#eef7ee;border-radius:12px;padding:12px}
+    .loc-pick.show{display:block;animation:fadeUp .3s ease}
+    .loc-pick .lp-title{font-size:11px;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px;margin-bottom:5px}
+    .loc-pick .lp-title i{color:#4caf50}
+    .loc-pick .lp-addr{font-size:13.5px;font-weight:600;color:#1a2e1a;line-height:1.45;word-break:break-word}
+    .loc-pick .lp-coords{font-size:12px;color:#5a7a5a;margin-top:3px}
+    .loc-pick .lp-clear{display:inline-flex;align-items:center;gap:5px;margin-top:8px;background:#fff;border:1px solid #4caf50;color:#2e7d32;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;cursor:pointer;font-family:inherit}
+    .loc-pick .lp-clear:hover{background:#4caf50;color:#fff}
+    .loc-note{display:none;margin-top:8px;font-size:12px;color:#8a6d00;background:#fdf6dc;border:1px solid #ecd98a;border-radius:10px;padding:9px 11px;align-items:flex-start;gap:7px;line-height:1.4}
+    .loc-note.show{display:flex}
+    .loc-note i{color:#c79a2e;margin-top:1px}
+    .latlng-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+    @media(max-width:480px){.latlng-row{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -205,6 +224,27 @@
       <div class="step" id="step-3">
         <div class="step-title">Farm Location</div>
         <div class="step-desc">Select your farm location</div>
+        <div class="loc-block">
+          <button class="loc-btn" id="reg-locate-btn" type="button" onclick="useCurrentLocation()"><i class="fas fa-location-dot"></i><span>Use Current Location</span><i class="fas fa-spinner fa-spin"></i></button>
+          <div class="loc-pick" id="reg-loc-pick">
+            <div class="lp-title"><i class="fas fa-map-marker-alt"></i> Farm Location Selected</div>
+            <div class="lp-addr" id="reg-loc-label"></div>
+            <div class="lp-coords" id="reg-loc-coords"></div>
+            <button type="button" class="lp-clear" id="reg-loc-clear" onclick="clearLiveLocation()"><i class="fas fa-rotate-left"></i> Enter location manually below</button>
+          </div>
+          <div class="loc-note" id="reg-loc-note"><i class="fas fa-circle-exclamation"></i><span>Your farm location has not been provided yet. Use <b>Current Location</b> or enter the address / coordinates below so your farm appears correctly on the Farm Map.</span></div>
+          <label style="display:block;font-size:13px;font-weight:600;color:#2d3e2d;margin:12px 0 4px;">Coordinates (optional, used for Farm Map)</label>
+          <div class="latlng-row">
+            <div class="input-wrap">
+              <i class="fas fa-arrows-up-down"></i>
+              <input type="text" id="reg-lat" placeholder="Latitude" inputmode="decimal" oninput="manualCoordsChanged()">
+            </div>
+            <div class="input-wrap">
+              <i class="fas fa-left-right"></i>
+              <input type="text" id="reg-lng" placeholder="Longitude" inputmode="decimal" oninput="manualCoordsChanged()">
+            </div>
+          </div>
+        </div>
         <div class="form-group">
           <label>State *</label>
           <div class="input-wrap">
@@ -655,6 +695,170 @@
       }
     }
 
+    /* ---- Farm location capture (Use Current Location / manual) ---- */
+    var _regLocation = null;
+
+    function _pickOption(sel, value) {
+      if (!sel || value == null) return false;
+      var target = String(value).trim().toLowerCase();
+      if (!target) return false;
+      for (var i = 0; i < sel.options.length; i++) {
+        if (String(sel.options[i].value || '').trim().toLowerCase() === target ||
+            String(sel.options[i].textContent || '').trim().toLowerCase() === target) {
+          sel.selectedIndex = i;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function _shortLabel(addr) {
+      if (!addr) return '';
+      var parts = [addr.village, addr.mandal, addr.district, addr.state];
+      return parts.filter(function (x) { return x && String(x).trim(); }).join(', ');
+    }
+
+    function renderLocationPick() {
+      var pick = document.getElementById('reg-loc-pick');
+      var note = document.getElementById('reg-loc-note');
+      if (!_regLocation || !_regLocation.latitude) {
+        pick.classList.remove('show');
+        note.classList.add('show');
+        return;
+      }
+      pick.classList.add('show');
+      note.classList.remove('show');
+      document.getElementById('reg-loc-label').textContent = _regLocation.label || 'Selected location';
+      document.getElementById('reg-loc-coords').textContent = Number(_regLocation.latitude).toFixed(5) + ', ' + Number(_regLocation.longitude).toFixed(5) + (_regLocation.source === 'manual' ? ' (manual entry)' : '');
+      document.getElementById('reg-lat').value = Number(_regLocation.latitude).toFixed(6);
+      document.getElementById('reg-lng').value = Number(_regLocation.longitude).toFixed(6);
+    }
+
+    function setLocationFromCoords(lat, lng, label, source, address) {
+      lat = Number(lat);
+      lng = Number(lng);
+      if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        showToast('The coordinates are not valid. Check latitude and longitude.', 'danger');
+        return false;
+      }
+      _regLocation = {
+        latitude: lat,
+        longitude: lng,
+        label: label || 'Selected location',
+        source: source || 'auto',
+        address: address || null
+      };
+      renderLocationPick();
+      return true;
+    }
+
+    function useCurrentLocation() {
+      var btn = document.getElementById('reg-locate-btn');
+      if (!('geolocation' in navigator)) {
+        showToast('Your browser does not support location access. Enter the location manually below.', 'danger');
+        var note = document.getElementById('reg-loc-note');
+        note.querySelector('span').innerHTML = 'Your browser does not support location access. Please enter your farm location manually below.';
+        note.classList.add('show');
+        return;
+      }
+      btn.disabled = true;
+      btn.classList.add('spin');
+      var span = btn.querySelector('span');
+      if (span) span.textContent = 'Getting your location...';
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+        API.Maps.reverseGeocode(lat, lng).then(function (res) {
+          var addr = (res && res.address) || null;
+          var label = (res && res.display_name) || _shortLabel(addr) || 'Current location';
+          setLocationFromCoords(lat, lng, label, 'gps', addr);
+          fillAdminFromAddress(addr);
+          showToast('Location captured! Your farm location is set.', 'success');
+        }).catch(function () {
+          setLocationFromCoords(lat, lng, 'Current location', 'gps', null);
+          showToast('Location captured! Address details could not be looked up.', 'info');
+        });
+        btn.disabled = false;
+        btn.classList.remove('spin');
+        if (span) span.textContent = 'Use Current Location';
+      }, function (err) {
+        btn.disabled = false;
+        btn.classList.remove('spin');
+        if (span) span.textContent = 'Use Current Location';
+        var note = document.getElementById('reg-loc-note');
+        var msg = 'We could not access your location. ';
+        if (err && err.code === 1) {
+          msg = 'Location permission was denied. You can still enter your farm location manually below.';
+        } else if (err && err.code === 2) {
+          msg = 'Your current location is unavailable right now. You can enter your farm location manually below.';
+        } else if (err && err.code === 3) {
+          msg = 'Location request timed out. You can enter your farm location manually below.';
+        }
+        note.querySelector('span').innerHTML = msg.replace(/\. /g, '. ') + (msg.indexOf('manually') === -1 ? ' Please enter it manually below.' : '');
+        note.classList.add('show');
+        showToast(msg, 'danger');
+      }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+    }
+
+    function fillAdminFromAddress(addr) {
+      if (!addr) return;
+      var stateName = addr.state || '';
+      var distName = addr.district || '';
+      var mandalName = addr.mandal || '';
+      var villName = addr.village || '';
+      LocationService.getStates().then(function (states) {
+        var stateSel = document.getElementById('reg-state');
+        var matched = false;
+        (states || []).forEach(function (s) {
+          if (!matched && String(s.name).trim().toLowerCase() === String(stateName).trim().toLowerCase()) {
+            stateSel.value = s.name;
+            matched = true;
+          }
+        });
+        if (!stateSel.value) _pickOption(stateSel, stateName);
+        if (!stateSel.value) return;
+        onStateChange();
+        var extSel = document.getElementById('reg-district');
+        if (!distName) return;
+        LocationService.getDistricts(stateSel.value).then(function (districts) {
+          if (!_pickOption(extSel, distName)) return;
+          onDistrictChange();
+          var manSel = document.getElementById('reg-mandal');
+          if (!mandalName) return;
+          LocationService.getMandals(stateSel.value, extSel.value).then(function (mandals) {
+            if (!_pickOption(manSel, mandalName)) return;
+            onMandalChange();
+            var villSel = document.getElementById('reg-village');
+            if (!villName) return;
+            LocationService.getVillages(stateSel.value, extSel.value, manSel.value).then(function (villages) {
+              _pickOption(villSel, villName);
+              if (villSel.value) onVillageChange();
+            }).catch(function () {});
+          }).catch(function () {});
+        }).catch(function () {});
+      }).catch(function () {});
+    }
+
+    function clearLiveLocation() {
+      _regLocation = null;
+      document.getElementById('reg-lat').value = '';
+      document.getElementById('reg-lng').value = '';
+      renderLocationPick();
+    }
+
+    function manualCoordsChanged() {
+      var lat = parseFloat(document.getElementById('reg-lat').value);
+      var lng = parseFloat(document.getElementById('reg-lng').value);
+      clearFieldError('reg-lat');
+      clearFieldError('reg-lng');
+      if (isFinite(lat) && isFinite(lng)) {
+        setLocationFromCoords(lat, lng, 'Manual coordinates', 'manual', null);
+      } else if (_regLocation && _regLocation.source === 'manual') {
+        _regLocation = null;
+        renderLocationPick();
+      }
+    }
+
     /* Review & Confirmation */
     function validateStep1() {
       var phone = (document.getElementById('reg-phone').value || '').replace(/[^0-9]/g, '');
@@ -841,6 +1045,10 @@
         _rv('Street Address', esc(v('reg-address').trim())),
         _rv('PIN Code', esc(v('reg-pincode')))
       ]);
+      var farmLoc = _section('location-dot', 'Farm Location (Map)', 3, [
+        _rv('Coordinates', _regLocation ? esc(Number(_regLocation.latitude).toFixed(5) + ', ' + Number(_regLocation.longitude).toFixed(5)) : 'Not set'),
+        _rv('Location', _regLocation ? esc(_regLocation.label || 'Custom coordinates entered') : 'Not set')
+      ]);
       var farm = _section('tractor', 'Farm Details', 4, [
         _rv('Farm Name', esc(v('reg-farmname').trim())),
         _rv('Farm Type', esc(v('reg-farmtype'))),
@@ -856,7 +1064,7 @@
       var security = _section('lock', 'Security PIN', 4, [
         _rv('4-digit PIN', pin ? '&bull;&bull;&bull;&bull;' : '')
       ]);
-      document.getElementById('review-container').innerHTML = personal + identity + contact + address + farm + land + security;
+      document.getElementById('review-container').innerHTML = personal + identity + contact + address + farmLoc + farm + land + security;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -905,6 +1113,8 @@
         total_area: parseFloat(document.getElementById('reg-area').value) || null,
         area_unit: document.getElementById('reg-areaunit').value || 'Acres',
         soil_type: document.getElementById('reg-soil').value || null,
+        latitude: _regLocation ? _regLocation.latitude : null,
+        longitude: _regLocation ? _regLocation.longitude : null,
       }).then(function(data) {
         btn.disabled = false;
         btn.innerHTML = 'Create Account <i class="fas fa-user-plus"></i>';
@@ -919,6 +1129,7 @@
           var state = document.getElementById('reg-state').value;
           var district = document.getElementById('reg-district').value;
           if (district) details.push('Location: ' + district + (state ? ', ' + state : ''));
+          if (_regLocation) details.push('Map: ' + Number(_regLocation.latitude).toFixed(5) + ', ' + Number(_regLocation.longitude).toFixed(5));
           var farmName = document.getElementById('reg-farmname').value.trim();
           if (farmName) details.push('Farm: ' + farmName);
           document.getElementById('card-details').innerHTML = details.join('<br>');

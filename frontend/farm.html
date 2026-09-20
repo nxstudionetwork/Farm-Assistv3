@@ -210,6 +210,41 @@
     .fa-modal-box h3 { font-size: 16px; margin: 0 0 14px; color: var(--text-primary, #15271d); }
     .fa-modal-actions { display: flex; gap: 10px; margin-top: 16px; }
     .fa-modal-actions button { flex: 1; }
+    .fa-loc {
+      margin-top: 12px;
+      border: 1.5px dashed #c5d6c5;
+      border-radius: 12px;
+      padding: 12px;
+      background: #f7faf7;
+    }
+    .fa-loc-label { font-size: 13px; font-weight: 700; color: var(--text-primary, #15271d); margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
+    .fa-loc-btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1a3c2a, #2d5a3e);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all .25s ease;
+    }
+    .fa-loc-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(26,60,42,.25); }
+    .fa-loc-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+    .fa-loc-pick { display: none; margin-top: 10px; border: 1.5px solid #4caf50; background: #eef7ee; border-radius: 10px; padding: 10px; }
+    .fa-loc-pick.show { display: block; }
+    .fa-loc-pick .flp-title { font-size: 11px; font-weight: 700; color: #2e7d32; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+    .fa-loc-pick .flp-addr { font-size: 13px; font-weight: 600; color: #1a2e1a; line-height: 1.4; word-break: break-word; }
+    .fa-loc-pick .flp-coords { font-size: 12px; color: #5a7a5a; margin-top: 3px; }
+    .fa-loc-clear { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; background: #fff; border: 1px solid #4caf50; color: #2e7d32; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+    .fa-loc-clear:hover { background: #4caf50; color: #fff; }
+    .fa-loc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 
     @media (max-width: 900px) {
       .fa-stats { grid-template-columns: repeat(2, 1fr); }
@@ -323,7 +358,7 @@
     </div>
 
     <div class="fa-actions">
-      <button class="btn-primary btn-sm" type="button" onclick="FarmApp.openModal('fa-modal-add-farm')"><i class="fas fa-plus"></i> Add Farm</button>
+      <button class="btn-primary btn-sm" type="button" onclick="FarmApp.openAddFarm()"><i class="fas fa-plus"></i> Add Farm</button>
       <button class="btn-primary btn-sm" type="button" onclick="FarmApp.openAddField()"><i class="fas fa-plus"></i> Add Field</button>
       <button class="btn-primary btn-sm" type="button" onclick="FarmApp.openAddCrop()"><i class="fas fa-plus"></i> Add Crop</button>
     </div>
@@ -346,6 +381,20 @@
         <select class="form-input" id="farm-state" onchange="FarmApp.onStateChange(this.value, 'farm-district')"><option value="">Select State</option></select>
         <label class="form-label" for="farm-district">District</label>
         <select class="form-input" id="farm-district" disabled><option value="">Select District</option></select>
+        <div class="fa-loc">
+          <div class="fa-loc-label"><i class="fas fa-location-dot" style="color:var(--fa-green, #2d5a3e);"></i> Farm Location (for Farm Map)</div>
+          <button type="button" class="fa-loc-btn" id="farm-locate-btn" onclick="FarmApp.locateFarm()"><i class="fas fa-location-crosshairs"></i> Use Current Location</button>
+          <div class="fa-loc-pick" id="farm-loc-pick">
+            <div class="flp-title"><i class="fas fa-map-marker-alt"></i> Location Selected</div>
+            <div class="flp-addr" id="farm-loc-addr"></div>
+            <div class="flp-coords" id="farm-loc-coords"></div>
+            <button type="button" class="fa-loc-clear" id="farm-loc-clear" onclick="FarmApp.clearFarmLoc()"><i class="fas fa-rotate-left"></i> Clear / enter manually</button>
+          </div>
+          <div class="fa-loc-row">
+            <input type="text" class="form-input" id="farm-lat" placeholder="Latitude" inputmode="decimal" oninput="FarmApp.farmManualCoordsChanged()">
+            <input type="text" class="form-input" id="farm-lng" placeholder="Longitude" inputmode="decimal" oninput="FarmApp.farmManualCoordsChanged()">
+          </div>
+        </div>
         <div class="fa-modal-actions">
           <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('fa-modal-add-farm')">Cancel</button>
           <button type="submit" class="btn-primary" id="btn-create-farm"><i class="fas fa-check"></i> Create Farm</button>
@@ -885,6 +934,111 @@
       });
     }
 
+    var _farmLoc = null;
+
+    function renderFarmLocPick() {
+      var pick = $id('farm-loc-pick');
+      if (_farmLoc && _farmLoc.latitude) {
+        pick.classList.add('show');
+        $id('farm-loc-addr').textContent = _farmLoc.label || 'Selected location';
+        $id('farm-loc-coords').textContent = Number(_farmLoc.latitude).toFixed(5) + ', ' + Number(_farmLoc.longitude).toFixed(5) + (_farmLoc.source === 'manual' ? ' (manual)' : '');
+        $id('farm-lat').value = Number(_farmLoc.latitude).toFixed(6);
+        $id('farm-lng').value = Number(_farmLoc.longitude).toFixed(6);
+      } else {
+        pick.classList.remove('show');
+      }
+    }
+
+    function setFarmLoc(lat, lng, label, source) {
+      lat = Number(lat);
+      lng = Number(lng);
+      if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        toast('The coordinates are not valid.', 'danger');
+        return;
+      }
+      _farmLoc = { latitude: lat, longitude: lng, label: label || 'Selected location', source: source || 'manual' };
+      renderFarmLocPick();
+    }
+
+    function locateFarm() {
+      var btn = $id('farm-locate-btn');
+      if (!('geolocation' in navigator)) {
+        toast('Location is not supported in this browser. Enter coordinates manually.', 'danger');
+        return;
+      }
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+        var shortLabel = '';
+        API.Maps.reverseGeocode(lat, lng).then(function (res) {
+          var addr = (res && res.address) || null;
+          var parts = [];
+          ['village', 'mandal', 'district', 'state'].forEach(function (k) {
+            if (addr && addr[k]) parts.push(addr[k]);
+          });
+          shortLabel = (res && res.display_name) || parts.join(', ') || 'Current location';
+          if (addr && shortLabel === 'Current location') {
+            var st = $id('farm-state'), dt = $id('farm-district');
+            if (addr.state) setSelectByText(st, addr.state);
+            if (addr.district) setSelectByText(dt, addr.district);
+          }
+          setFarmLoc(lat, lng, shortLabel, 'gps');
+          toast('Location captured for this farm.', 'success');
+        }, function () {
+          setFarmLoc(lat, lng, 'Current location', 'gps');
+          toast('Location captured.', 'info');
+        });
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-location-crosshairs"></i> Use Current Location';
+      }, function (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-location-crosshairs"></i> Use Current Location';
+        if (err && err.code === 1) toast('Location permission denied. Enter coordinates manually.', 'danger');
+        else if (err && err.code === 2) toast('Location unavailable right now. Enter coordinates manually.', 'danger');
+        else toast('Could not get your location. Enter coordinates manually.', 'danger');
+      }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+    }
+
+    function clearFarmLoc() {
+      _farmLoc = null;
+      $id('farm-lat').value = '';
+      $id('farm-lng').value = '';
+      renderFarmLocPick();
+    }
+
+    function farmManualCoordsChanged() {
+      var lat = parseFloat($id('farm-lat').value);
+      var lng = parseFloat($id('farm-lng').value);
+      if (isFinite(lat) && isFinite(lng)) {
+        setFarmLoc(lat, lng, null, 'manual');
+      } else if (_farmLoc && _farmLoc.source === 'manual') {
+        _farmLoc = null;
+        renderFarmLocPick();
+      }
+    }
+
+    function setSelectByText(sel, val) {
+      if (!sel) return;
+      var target = String(val || '').trim().toLowerCase();
+      for (var i = 0; i < sel.options.length; i++) {
+        if (String(sel.options[i].textContent || '').trim().toLowerCase() === target) {
+          sel.value = sel.options[i].value;
+          return;
+        }
+      }
+    }
+
+    function openAddFarm() {
+      _farmLoc = null;
+      $id('farm-lat').value = '';
+      $id('farm-lng').value = '';
+      var p = $id('farm-loc-pick');
+      if (p) p.classList.remove('show');
+      openModal('fa-modal-add-farm');
+    }
+
     function createFarm(e) {
       e.preventDefault();
       var name = $id('farm-name').value.trim();
@@ -896,7 +1050,9 @@
         area_unit: 'Acres',
         soil_type: $id('farm-soil').value || null,
         state: $id('farm-state').value || null,
-        district: $id('farm-district').disabled ? null : ($id('farm-district').value || null)
+        district: $id('farm-district').disabled ? null : ($id('farm-district').value || null),
+        latitude: _farmLoc ? _farmLoc.latitude : null,
+        longitude: _farmLoc ? _farmLoc.longitude : null
       };
       setBusy('btn-create-farm', true);
       API.Farm.create(payload).then(function () {
@@ -983,6 +1139,10 @@
     window.FarmApp = {
       openModal: openModal,
       closeModal: closeModal,
+      openAddFarm: openAddFarm,
+      locateFarm: locateFarm,
+      clearFarmLoc: clearFarmLoc,
+      farmManualCoordsChanged: farmManualCoordsChanged,
       openAddField: openAddField,
       openAddCrop: openAddCrop,
       onCropFarmChange: onCropFarmChange,
