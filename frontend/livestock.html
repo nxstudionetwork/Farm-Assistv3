@@ -259,8 +259,8 @@
     }
 
     /* card stat chips */
-    .ls-card-chips { display: flex; gap: 6px; flex-wrap: wrap; max-width: 100%; }
-    .ls-chip { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: var(--soft-green); color: var(--primary-green); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; overflow-wrap: break-word; white-space: nowrap; }
+    .ls-card-chips { display: flex; gap: 6px; flex-wrap: wrap; max-width: 100%; min-width: 0; }
+    .ls-chip { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: var(--soft-green); color: var(--primary-green); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ls-chip.breed { background: #F3E5F5; color: var(--ls-purple); }
     .ls-chip.wt    { background: #E0F2F1; color: var(--ls-teal); }
 
@@ -672,8 +672,11 @@
 
   <!-- my livestock -->
   <div class="ls-sec-hdr">
-    <div class="ls-sec-title"><i class="fas fa-paw"></i> My Livestock</div>
-    <span class="ls-sec-link" id="ls-clear-filters" style="display:none;">Clear Filters</span>
+    <div class="ls-sec-title"><i class="fas fa-paw"></i> <span id="ls-grid-title">My Livestock</span></div>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <span class="ls-sec-link" id="ls-clear-filters" style="display:none;">Clear Filters</span>
+      <span class="ls-sec-link" id="ls-back-to-all" style="display:none;"><i class="fas fa-arrow-left"></i> Back to All</span>
+    </div>
   </div>
   <div class="ls-grid" id="ls-grid">
     <!-- skeleton cards -->
@@ -1363,6 +1366,8 @@ function priorityInfo(status) {
   /* ============ state ============ */
   var _overview = null;
   var _allAnimals = null;
+  var _originalAnimals = null;
+  var _actionMode = false;
   var _animalsError = null;
   var _attention = null;
   var _attnSet = {};
@@ -1566,6 +1571,17 @@ function visibleAnimals() {
 
   function renderGrid() {
     var grid = $id('ls-grid');
+    var backBtn = $id('ls-back-to-all');
+    var titleEl = $id('ls-grid-title');
+    
+    if (_actionMode) {
+      if (backBtn) backBtn.style.display = '';
+      if (titleEl) titleEl.textContent = 'Select Animal for ' + (_pickAction || 'Action');
+    } else {
+      if (backBtn) backBtn.style.display = 'none';
+      if (titleEl) titleEl.textContent = 'My Livestock';
+    }
+    
     if (_animalsError) { grid.innerHTML = errorCard('retry-animals', 'Your livestock could not be loaded.'); return; }
     if (_allAnimals === null) { return; }
     var list = visibleAnimals();
@@ -1606,8 +1622,8 @@ function buildCard(a) {
       '</div></div>' +
       '<div class="ls-card-status">' +
       healthBadge(a.health_status) +
-      (chips ? '<div class="ls-card-chips">' + chips + '</div>' : '') +
       '</div>' +
+      (chips ? '<div class="ls-card-chips">' + chips + '</div>' : '') +
       '<div class="ls-card-actions">' +
       '<button class="ls-card-btn" data-edit="' + esc(a.animal_id) + '"><i class="fas fa-pen"></i> Edit</button>' +
       '<button class="ls-card-btn primary" data-open="' + esc(a.animal_id) + '"><i class="fas fa-eye"></i> View Details</button>' +
@@ -1797,6 +1813,9 @@ function buildCard(a) {
 
   /* ============ detail panel ============ */
 function openDetail(animalId, focusTab) {
+    if (_actionMode) {
+      exitActionMode();
+    }
     var panel = $id('ls-detail-panel');
     _savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
     document.body.classList.add('ls-detail-open');
@@ -2823,8 +2842,25 @@ lsReq(API.Livestock.expenses(a.animal_id)).then(function (r) {
     if (list.length === 1) {
       openDetail(list[0].animal_id, tab);
     } else {
-      openPickModal(tab);
+      showAnimalListForAction(tab, list);
     }
+  }
+
+  function showAnimalListForAction(tab, list) {
+    _pickAction = tab;
+    _originalAnimals = _allAnimals;
+    _allAnimals = list;
+    _actionMode = true;
+    renderGrid();
+    scrollToSection('ls-grid');
+  }
+
+  function exitActionMode() {
+    _actionMode = false;
+    _pickAction = null;
+    _allAnimals = _originalAnimals;
+    _originalAnimals = null;
+    renderGrid();
   }
 
   function openPickModal(tab) {
@@ -2993,7 +3029,13 @@ lsReq(API.Livestock.expenses(a.animal_id)).then(function (r) {
     var editBtn = e.target.closest('[data-edit]');
     if (editBtn) { e.stopPropagation(); openEditModal(editBtn.dataset.edit); return; }
     var card = e.target.closest('.ls-card');
-    if (card) openDetail(card.dataset.aid);
+    if (card) {
+      if (_actionMode && _pickAction) {
+        openDetail(card.dataset.aid, _pickAction);
+      } else {
+        openDetail(card.dataset.aid);
+      }
+    }
   });
 
   /* attention / events / activity item clicks */
@@ -3015,6 +3057,9 @@ lsReq(API.Livestock.expenses(a.animal_id)).then(function (r) {
     var item = e.target.closest('[data-aid]');
     if (item) handlePickClick(item.dataset.aid);
   });
+
+  /* back to all animals button */
+  $id('ls-back-to-all').addEventListener('click', exitActionMode);
 
   /* modals: close buttons + overlay */
   document.querySelectorAll('[data-close]').forEach(function (btn) {
