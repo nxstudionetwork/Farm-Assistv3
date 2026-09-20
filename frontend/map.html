@@ -6,41 +6,1369 @@
   <title>Farm Map | Farm Assist</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
-    :root{--green:#176b45;--dark:#103d2b;--line:#dbe6df;--panel:#fff}*{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}body{padding-bottom:0;background:#f4f7f5}.map-page{height:100dvh;display:flex;flex-direction:column;padding-top:var(--topbar-height,64px);padding-bottom:var(--bottomnav-height,72px)}.map-page.fullscreen{position:fixed;inset:0;padding:0;z-index:3000}.map-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);z-index:10}.map-title h1{font:700 18px Outfit,Arial,sans-serif;color:var(--dark);margin:0;text-transform:uppercase;letter-spacing:.04em}.map-title p{margin:3px 0 0;color:#6b7b72;font-size:12px}.map-tools{display:flex;align-items:center;gap:8px}.map-type{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}.map-type button,.map-tool{min-height:36px;border:0;background:#fff;color:#587066;font-weight:700;font-size:12px;padding:0 12px;cursor:pointer}.map-type button+button{border-left:1px solid var(--line)}.map-type button.active,.map-tool:hover{background:var(--green);color:#fff}.map-tool{width:36px;padding:0;border:1px solid var(--line);border-radius:10px}.map-shell{position:relative;flex:1;min-height:0;background:#e7eee9}.google-map{position:absolute;inset:0}.map-message{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;pointer-events:none}.map-message .message-card{max-width:360px;background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 8px 30px rgba(16,61,43,.12);pointer-events:auto}.map-message h2{font:700 18px Outfit,Arial,sans-serif;color:var(--dark);margin:0 0 8px}.map-message p{margin:0;color:#60736a;font-size:13px;line-height:1.5}.map-message button,.farm-card a{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin-top:14px;padding:10px 14px;border-radius:10px;border:0;background:var(--green);color:#fff;text-decoration:none;font-weight:700;font-size:12px;cursor:pointer}.status-pill{position:absolute;top:14px;left:14px;z-index:3;display:flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;background:rgba(255,255,255,.94);color:#587066;font-size:11px;font-weight:700;box-shadow:0 2px 12px rgba(16,61,43,.12)}.status-pill i{color:var(--green)}.farm-card{min-width:210px;padding:4px;color:#1c3027}.farm-card h3{font:700 15px Outfit,Arial,sans-serif;color:var(--dark);margin:0 0 8px}.farm-card p{font-size:12px;margin:4px 0;color:#5e7167}.farm-card a{margin-top:10px}.current-marker{width:18px;height:18px;border-radius:50%;background:#4285f4;border:3px solid #fff;box-shadow:0 1px 8px #315aa7}.no-map{display:none}@media(max-width:600px){.map-page{padding-top:56px;padding-bottom:62px}.map-header{padding:10px 12px;gap:8px}.map-title h1{font-size:15px}.map-title p{font-size:10px}.map-tools{gap:5px}.map-type button{padding:0 8px;font-size:10px}.map-tool{width:34px}.status-pill{top:10px;left:10px}.map-message .message-card{padding:16px}.map-message h2{font-size:16px}}
+    [hidden]{display:none !important}
+    .map-page{position:relative;display:flex;flex-direction:column;height:calc(100vh - var(--topbar-height,64px) - var(--bottomnav-height,72px) - 24px);min-height:320px;background:var(--bg-app,#f4f7f5);overflow:hidden}
+    .map-page.fullscreen{position:fixed;inset:0;z-index:2200;height:100vh;background:var(--bg-app,#f4f7f5)}
+    .map-header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:12px 16px;background:#fff;border-bottom:1px solid var(--border-light,var(--line,#dbe6df));z-index:700}
+    .map-title h1{font:700 18px Outfit,'Inter',sans-serif;color:var(--primary-dark-green,#103d2b);margin:0;display:flex;align-items:center;gap:8px}
+    .map-title h1 i{color:var(--premium-green,#176b45)}
+    .map-title p{margin:3px 0 0;color:var(--text-muted,#6b7b72);font-size:12px;max-width:520px}
+    .map-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .map-type{display:flex;border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:10px;overflow:hidden;background:#fff}
+    .map-type button,.map-tool{min-height:36px;border:0;background:#fff;color:#587066;font-weight:600;font-size:12.5px;padding:0 12px;cursor:pointer}
+    .map-type button{font-weight:700}
+    .map-type button+button{border-left:1px solid var(--border-light,var(--line,#dbe6df))}
+    .map-type button.active,.map-tool:hover{background:var(--premium-green,#176b45);color:#fff}
+    .map-tool{width:36px;padding:0;border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:10px;display:inline-flex;align-items:center;justify-content:center}
+    .farm-select-wrap{margin:0}
+    .farm-select{min-height:36px;border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:10px;padding:0 10px;font-weight:600;font-size:12.5px;color:var(--primary-dark-green,#103d2b);background:#fff;cursor:pointer;max-width:210px}
+    .filter-panel{background:#fff;border-bottom:1px solid var(--border-light,var(--line,#dbe6df));padding:10px 14px;display:flex;flex-wrap:wrap;gap:12px 18px;z-index:650}
+    @media (max-width:720px){.filter-panel{max-height:44vh;overflow-y:auto;overflow-x:hidden}}
+    .filter-group{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .filter-group-label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#7a8a82}
+    .filter-chips{display:flex;flex-wrap:wrap;gap:6px}
+    .filter-chip{border:1px solid var(--border-light,var(--line,#dbe6df));background:#fff;color:#43564d;font-size:12px;font-weight:600;border-radius:999px;padding:5px 11px;cursor:pointer;white-space:nowrap;transition:all .15s}
+    .filter-chip:hover{border-color:var(--premium-green,#176b45);color:var(--premium-green,#176b45)}
+    .filter-chip.on{background:var(--premium-green,#176b45);border-color:var(--premium-green,#176b45);color:#fff}
+    .filter-empty{font-size:12.5px;color:#7a8a82;padding:6px 2px}
+    .map-shell{position:relative;flex:1;min-height:0;background:#e7eee9}
+    #map{position:absolute;inset:0;z-index:1}
+    .map-loading{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(244,247,245,.92)}
+    .loading-card{max-width:340px;text-align:center;padding:22px 26px;background:#fff;border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:16px;box-shadow:0 8px 30px rgba(16,61,43,.10)}
+    .loading-card .spinner{font-size:26px;color:var(--premium-green,#176b45);margin-bottom:10px;display:block}
+    .loading-card h3{margin:0 0 6px;font:700 17px Outfit,sans-serif;color:var(--primary-dark-green,#103d2b)}
+    .loading-card p{margin:0;font-size:12.5px;color:#60736a}
+    .map-message{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;pointer-events:none}
+    .message-card{max-width:380px;background:rgba(255,255,255,.97);border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:16px;padding:22px;box-shadow:0 8px 30px rgba(16,61,43,.12);pointer-events:auto}
+    .message-card .msg-icon{font-size:26px;color:var(--premium-green,#176b45);display:block;margin-bottom:10px}
+    .message-card h2{font:700 18px Outfit,sans-serif;color:var(--primary-dark-green,#103d2b);margin:0 0 8px}
+    .message-card p{margin:0 0 4px;color:#60736a;font-size:13px;line-height:1.55}
+    .message-card a,.message-card button.msg-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin-top:14px;padding:10px 14px;background:var(--premium-green,#176b45);color:#fff;border:0;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none}
+    .message-card .msg-btn.secondary{background:#fff;color:var(--premium-green,#176b45);border:1px solid var(--border-light,var(--line,#dbe6df));margin-left:8px}
+    .map-banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:40;max-width:92%;background:rgba(255,248,220,.96);border:1px solid #ecd98a;color:#6b5700;border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(16,61,43,.08)}
+    .map-banner a{color:#6b5700;font-weight:800;text-decoration:underline}
+    .map-banner button{border:0;background:transparent;color:#6b5700;cursor:pointer;font-size:14px;margin-left:auto}
+    .map-legend{position:absolute;left:12px;bottom:12px;z-index:500;background:rgba(255,255,255,.96);border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:12px;padding:8px 11px;box-shadow:0 4px 16px rgba(16,61,43,.10);font-size:11.5px;color:#3c4f47;display:flex;flex-direction:column;gap:4px;max-width:190px}
+    .map-legend .lg-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#7a8a82;margin-bottom:1px}
+    .map-legend .lg-item{display:flex;align-items:center;gap:7px}
+    .map-legend .lg-swatch{width:12px;height:12px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.12)}
+    .map-legend .lg-swatch.round{border-radius:50%}
+    .map-legend .lg-swatch.boundary{height:4px;border-radius:2px;background:transparent;border:2px solid var(--premium-green,#176b45)}
+    .map-legend .lg-swatch.sensor{background:#FF7043}
+    .map-legend .lg-swatch.loc{background:#4285F4}
+    .map-status{position:absolute;bottom:12px;right:12px;z-index:500;background:rgba(255,255,255,.94);border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:10px;padding:6px 11px;font-size:11.5px;font-weight:600;color:#43564d;box-shadow:0 2px 10px rgba(16,61,43,.08)}
+    .farm-pop{font-family:'Inter',sans-serif;font-size:12.5px;color:#263a30;min-width:190px}
+    .farm-pop h4{margin:0 0 6px;font:700 15px Outfit,sans-serif;color:var(--primary-dark-green,#103d2b)}
+    .farm-pop .fp-row{display:flex;justify-content:space-between;gap:14px;padding:2px 0;color:#4f6359}
+    .farm-pop .fp-row b{color:#263a30;font-weight:600}
+    .farm-pop a{display:inline-block;margin-top:8px;font-weight:700;color:var(--premium-green,#176b45);text-decoration:none}
+    .sensor-pop{font-family:'Inter',sans-serif;font-size:12.5px;color:#263a30;min-width:200px}
+    .sensor-pop h4{margin:0 0 4px;font:700 14px Outfit,sans-serif;color:var(--primary-dark-green,#103d2b)}
+    .sensor-pop .sp-row{display:flex;justify-content:space-between;gap:12px;padding:2px 0;color:#4f6359}
+    .sensor-pop .sp-row b{color:#263a30;font-weight:600}
+    .sensor-pop a{display:inline-block;margin-top:8px;font-weight:700;color:var(--premium-green,#176b45);text-decoration:none}
+    .field-panel{position:fixed;top:0;bottom:0;right:0;width:min(400px,100vw);z-index:2300;display:flex;flex-direction:column;background:#fff;box-shadow:0 12px 48px rgba(16,61,43,.18);transform:translateX(100%);transition:transform .28s cubic-bezier(.16,1,.3,1);visibility:hidden}
+    .field-panel.open{transform:translateX(0);visibility:visible}
+    .panel-backdrop{position:fixed;inset:0;z-index:2250;background:rgba(16,35,25,.32);align-items:flex-end}
+    @media (max-width:720px){
+      .field-panel{top:auto;left:0;right:0;bottom:calc(var(--bottomnav-height,72px) + 6px);width:100vw;max-height:80vh;border-radius:18px 18px 0 0;transform:translateY(120%)}
+      .field-panel.open{transform:translateY(0)}
+    }
+    @media (min-width:820px){.panel-backdrop{align-items:flex-end;justify-content:flex-end}}
+    .panel-backdrop.visible{display:flex}
+    .fp-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 12px;border-bottom:1px solid var(--border-light,var(--line,#dbe6df))}
+    .fp-title{min-width:0}
+    .fp-title h2{margin:0;font:700 17px Outfit,sans-serif;color:var(--primary-dark-green,#103d2b);word-break:break-word}
+    .fp-sub{margin:2px 0 0;font-size:12px;color:var(--text-muted,#6b7b72);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .fp-close{border:0;background:var(--light-gray,#eef3ec);color:#3c4f47;width:32px;height:32px;border-radius:10px;font-size:16px;cursor:pointer;flex:none}
+    .fp-close:hover{background:#e2ece4}
+    .fp-body{flex:1;overflow-y:auto;padding:14px 16px 18px;-webkit-overflow-scrolling:touch}
+    .fp-section{margin-bottom:18px}
+    .fp-section>h3{font:800 12px Outfit,sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#7a8a82;margin:0 0 8px;display:flex;align-items:center;gap:7px}
+    .fp-section>h3 i{color:var(--premium-green,#176b45)}
+    .fp-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
+    .fp-grid .kv{min-width:0}
+    .fp-grid .kv .k{font-size:11px;color:#7a8a82;text-transform:uppercase;letter-spacing:.03em;font-weight:700}
+    .fp-grid .kv .v{font-size:13px;color:#263a30;font-weight:600;word-break:break-word}
+    .fp-status{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:11.5px;border-radius:999px;padding:3px 10px}
+    .fp-status.active{background:#e6f2ea;color:#1b5e3f}
+    .fp-status.fallow{background:#f0e6d3;color:#7a5a2e}
+    .fp-status.completed,.fp-status.harvested{background:#e7edf4;color:#2c5577}
+    .fp-status.needs_attention{background:#fdf3d7;color:#8a6d00}
+    .fp-status.critical{background:#fbe4e4;color:#b32727}
+    .fp-status.offline{background:#fbe4e4;color:#b32727}
+    .fp-status.online,.fp-status.connected,.fp-status.ready,.fp-status.active.ok{background:#e6f2ea;color:#1b5e3f}
+    .fp-sensor{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:11px;margin-bottom:7px;background:#fcfdfc}
+    .fp-sensor .s-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none;font-size:14px}
+    .fp-sensor .s-meta{min-width:0;flex:1}
+    .fp-sensor .s-name{font-weight:700;font-size:12.5px;color:#263a30}
+    .fp-sensor .s-sub{font-size:11px;color:#7a8a82}
+    .fp-sensor .s-read{font-weight:800;font-size:13px;color:#263a30;white-space:nowrap}
+    .fp-task{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border-light,var(--line,#dbe6df));border-left:3px solid var(--premium-green,#176b45);border-radius:10px;margin-bottom:7px;background:#fcfdfc}
+    .fp-task .t-title{font-weight:700;font-size:12.5px;color:#263a30;min-width:0}
+    .fp-task .t-sub{font-size:11px;color:#7a8a82;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .fp-task .t-status{font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;margin-left:auto;background:#e7edf4;color:#2c5577}
+    .fp-task .t-status.completed{background:#e6f2ea;color:#1b5e3f}
+    .fp-task .t-status.pending{background:#fdf3d7;color:#8a6d00}
+    .fp-task .t-status.in_progress{background:#e0f2fe;color:#165d85}
+    .fp-empty{font-size:12.5px;color:#7a8a82;font-style:italic;padding:4px 0}
+    .fp-activity{display:flex;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border-light,var(--line,#dbe6df))}
+    .fp-activity:last-child{border-bottom:0}
+    .fp-activity i{margin-top:2px;color:var(--premium-green,#176b45)}
+    .fp-activity .a-text{font-size:12.5px;color:#3c4f47}
+    .fp-activity .a-time{font-size:11px;color:#7a8a82}
+    .fp-weather{display:flex;align-items:center;gap:12px;padding:10px 12px;background:linear-gradient(135deg,#eef5ee,#f7fbf7);border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:12px}
+    .fp-weather .w-cond{font-size:22px;color:#1b5e3f}
+    .fp-weather .w-temp{font-size:24px;font-weight:800;color:var(--primary-dark-green,#103d2b)}
+    .fp-weather .w-meta{font-size:11.5px;color:#60736a;display:flex;flex-wrap:wrap;gap:4px 10px}
+    .fp-weather .w-loading,.fp-weather .w-error{font-size:12px;color:#7a8a82}
+    .health-score{display:flex;align-items:center;gap:12px;padding:9px 11px;border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:11px;background:#fcfdfc}
+    .health-score .hs-ring{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;flex:none}
+    .health-score .hs-label{font-weight:700;font-size:13px;color:#263a30}
+    .health-score .hs-sub{font-size:11px;color:#7a8a82}
+    .health-na{font-size:12.5px;color:#7a8a82}
+    .fp-actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid var(--border-light,var(--line,#dbe6df))}
+    .fp-actions button,.fp-actions a{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer;text-decoration:none;border:1px solid var(--border-light,var(--line,#dbe6df));background:#fff;color:var(--premium-green,#176b45);font-family:'Inter',sans-serif}
+    .fp-actions button.primary,.fp-actions a.primary{background:var(--premium-green,#176b45);border-color:var(--premium-green,#176b45);color:#fff}
+    .fp-actions button:disabled{opacity:.5;cursor:not-allowed}
+    .task-backdrop{position:fixed;inset:0;z-index:2450;background:rgba(16,35,25,.4);display:flex;align-items:center;justify-content:center;padding:16px}
+    .task-backdrop[hidden]{display:none}
+    .task-modal{background:#fff;border-radius:16px;max-width:420px;width:100%;box-shadow:0 16px 60px rgba(16,61,43,.2);overflow:hidden}
+    .task-modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border-light,var(--line,#dbe6df))}
+    .task-modal header h3{margin:0;font:700 17px Outfit,sans-serif;color:var(--primary-dark-green,#103d2b)}
+    .task-modal header button{border:0;background:var(--light-gray,#eef3ec);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:15px;color:#3c4f47}
+    .task-context{margin:0;padding:12px 16px 0;font-size:12.5px;color:#60736a}
+    .task-form{padding:12px 16px 16px;display:flex;flex-direction:column;gap:10px}
+    .task-form label{font-size:11.5px;font-weight:700;color:#52655b;text-transform:uppercase;letter-spacing:.03em}
+    .task-form input,.task-form select{width:100%;border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:10px;padding:9px 11px;font-size:13.5px;color:#263a30;background:#fff}
+    .task-form .tf-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .task-form .tf-field{display:flex;flex-direction:column;gap:4px}
+    .task-form .submit-btn{margin-top:6px;padding:11px;border:0;border-radius:11px;background:var(--premium-green,#176b45);color:#fff;font-weight:800;font-size:14px;cursor:pointer}
+    .task-form .submit-btn:disabled{opacity:.55;cursor:not-allowed}
+    .task-msg{padding:0 16px 14px;font-size:12.5px;font-weight:600}
+    .task-msg.ok{color:#1b5e3f}
+    .task-msg.err{color:#b32727}
+    .leaflet-container{font-family:'Inter',sans-serif}
+    @media (max-width:560px){.map-header{padding:10px 12px}.map-title h1{font-size:16px}.map-title p{font-size:11px}.farm-select{max-width:160px}}
   </style>
 </head>
 <body>
   <main class="map-page" id="map-page">
     <header class="map-header">
-      <div class="map-title"><h1>Farm Map</h1><p>View your farms and plots on the map.</p></div>
-      <div class="map-tools" aria-label="Map controls">
-        <div class="map-type" role="group" aria-label="Map type"><button id="map-view" class="active" type="button">Map</button><button id="sat-view" type="button">Satellite</button></div>
-        <button class="map-tool" id="locate" type="button" aria-label="Use my current location" title="My location"><i class="fa-solid fa-location-crosshairs"></i></button>
-        <button class="map-tool" id="fullscreen" type="button" aria-label="Toggle fullscreen" title="Fullscreen"><i class="fa-solid fa-expand"></i></button>
+      <div class="map-title">
+        <h1><i class="fa-solid fa-map-location-dot"></i> Farm Map</h1>
+        <p>View your farms, fields, crops and farm activities on an interactive map.</p>
+      </div>
+      <div class="map-actions" aria-label="Map controls">
+        <div class="farm-select-wrap" id="farm-select-wrap" hidden>
+          <select id="farm-select" class="farm-select" aria-label="Select farm"></select>
+        </div>
+        <div class="map-type" role="group" aria-label="Map type">
+          <button id="map-view" class="active" type="button">Map</button>
+          <button id="sat-view" type="button">Satellite</button>
+        </div>
+        <button class="map-tool" id="filter-btn" type="button" title="Filters" aria-label="Filters"><i class="fa-solid fa-filter"></i></button>
+        <button class="map-tool" id="recenter-btn" type="button" title="Recenter farm" aria-label="Recenter farm"><i class="fa-solid fa-crosshairs"></i></button>
+        <button class="map-tool" id="locate-btn" type="button" title="My current location" aria-label="My current location"><i class="fa-solid fa-location-crosshairs"></i></button>
+        <button class="map-tool" id="fullscreen-btn" type="button" title="Fullscreen" aria-label="Toggle fullscreen"><i class="fa-solid fa-expand"></i></button>
       </div>
     </header>
+
+    <div class="filter-panel" id="filter-panel" hidden></div>
+
     <section class="map-shell" aria-label="Farm locations map">
-      <div id="google-map" class="google-map"></div>
-      <div id="status" class="status-pill"><i class="fa-solid fa-spinner fa-spin"></i><span>Loading farm locations...</span></div>
-      <div id="message" class="map-message" hidden></div>
+      <div id="map"></div>
+      <div class="map-loading" id="map-loading">
+        <div class="loading-card">
+          <i class="fa-solid fa-spinner fa-spin spinner"></i>
+          <h3>Loading your farm map</h3>
+          <p>Fetching your farms, fields, crops and monitoring data...</p>
+        </div>
+      </div>
+      <div class="map-message" id="map-message" hidden></div>
+      <div class="map-banner" id="boundary-banner" hidden></div>
+      <div class="map-legend" id="map-legend"></div>
+      <div class="map-status" id="map-status" hidden></div>
     </section>
   </main>
-  <script src="js/services.js"></script><script src="js/userStore.js"></script><script src="assets/js/navigation.js"></script><script src="assets/js/app.js"></script><script src="js/script.js"></script>
+
+  <div class="panel-backdrop" id="panel-backdrop" hidden></div>
+  <aside class="field-panel" id="field-panel" aria-hidden="true">
+    <header class="fp-header">
+      <div class="fp-title">
+        <h2 id="fp-name"></h2>
+        <div class="fp-sub" id="fp-sub"></div>
+      </div>
+      <button class="fp-close" id="fp-close" type="button" aria-label="Close field panel">&times;</button>
+    </header>
+    <div class="fp-body" id="fp-body"></div>
+    <footer class="fp-actions" id="fp-actions"></footer>
+  </aside>
+
+  <div class="task-backdrop" id="task-modal" hidden>
+    <div class="task-modal">
+      <header>
+        <h3><i class="fa-solid fa-list-check" style="color:var(--premium-green,#176b45)"></i> Add Task</h3>
+        <button id="task-close" type="button" aria-label="Close">&times;</button>
+      </header>
+      <p class="task-context" id="task-context"></p>
+      <form class="task-form" id="task-form">
+        <div class="tf-field">
+          <label for="task-title">Task title</label>
+          <input type="text" id="task-title" placeholder="e.g. Irrigate North Field" required>
+        </div>
+        <div class="tf-row">
+          <div class="tf-field">
+            <label for="task-category">Category</label>
+            <select id="task-category">
+              <option value="Irrigation">Irrigation</option>
+              <option value="Fertilizer">Fertilizer application</option>
+              <option value="Spraying">Spraying</option>
+              <option value="Inspection">Inspection</option>
+              <option value="Harvesting">Harvest</option>
+              <option value="Farm Management">Maintenance</option>
+              <option value="Crop Care">Crop care</option>
+              <option value="Pest &amp; Disease">Pest &amp; disease</option>
+            </select>
+          </div>
+          <div class="tf-field">
+            <label for="task-priority">Priority</label>
+            <select id="task-priority">
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+        <div class="tf-row">
+          <div class="tf-field">
+            <label for="task-date">Due date</label>
+            <input type="date" id="task-date">
+          </div>
+          <div class="tf-field">
+            <label for="task-time">Due time</label>
+            <input type="time" id="task-time">
+          </div>
+        </div>
+        <button type="submit" class="submit-btn" id="task-submit"><i class="fa-solid fa-floppy-disk"></i> Save Task</button>
+      </form>
+      <div class="task-msg" id="task-msg" hidden></div>
+    </div>
+  </div>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="js/script.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-  (function(){'use strict';var map,farms=[],markers=[],polygons=[],currentMarker;var status=document.getElementById('status'),message=document.getElementById('message');
-    function api(path){return fetch((window.APP_CONFIG&&APP_CONFIG.API_BASE_URL||'http://localhost:8000/api/v1')+path,{headers:{Authorization:'Bearer '+(localStorage.getItem('fa-auth-token')||'')},credentials:'same-origin'}).then(function(r){if(r.status===401||r.status===403){location.href='login.html?redirect='+encodeURIComponent(location.pathname+location.search);throw new Error('auth')}if(!r.ok)throw new Error('request');return r.json()})}
-    function setStatus(text,loading){status.querySelector('span').textContent=text;status.querySelector('i').className=loading?'fa-solid fa-spinner fa-spin':'fa-solid fa-location-dot';status.hidden=!text}
-    function showMessage(title,text,link){message.hidden=false;message.innerHTML='<div class="message-card"><h2>'+title+'</h2><p>'+text+'</p>'+(link?'<a href="'+link.url+'">'+link.label+'</a>':'')+'</div>'}
-    function validPoint(lat,lng){return Number.isFinite(Number(lat))&&Number.isFinite(Number(lng))&&Number(lat)>=-90&&Number(lat)<=90&&Number(lng)>=-180&&Number(lng)<=180}
-    function clearOverlays(){markers.forEach(function(m){m.setMap(null)});polygons.forEach(function(p){p.setMap(null)});markers=[];polygons=[]}
-    function farmInfo(f){var address=[f.address,f.village,f.district,f.state].filter(Boolean).join(', ')||'Location saved';return '<div class="farm-card"><h3>'+escapeHtml(f.farm_name||'Farm')+'</h3><p><strong>Area:</strong> '+(f.total_area??'—')+' '+(f.area_unit||'Acres')+'</p><p><strong>Plots:</strong> '+((f.plots||[]).length)+'</p><p>'+escapeHtml(address)+'</p><a href="farm.html?farm_id='+encodeURIComponent(f.farm_id||'')+'">View Farm</a></div>'}
-    function escapeHtml(v){return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-    function draw(){clearOverlays();var bounds=new google.maps.LatLngBounds(),count=0;farms.forEach(function(f){if(!validPoint(f.latitude,f.longitude))return;var pos={lat:Number(f.latitude),lng:Number(f.longitude)};var marker=new google.maps.Marker({map:map,position:pos,title:f.farm_name||'Farm',icon:{path:google.maps.SymbolPath.CIRCLE,scale:9,fillColor:'#176b45',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});var info=new google.maps.InfoWindow({content:farmInfo(f)});marker.addListener('click',function(){info.open({map:map,anchor:marker})});markers.push(marker);bounds.extend(pos);count++;(f.plots||[]).forEach(function(p){if(validPoint(p.latitude,p.longitude)){var pm=new google.maps.Marker({map:map,position:{lat:Number(p.latitude),lng:Number(p.longitude)},title:p.plot_name||'Plot',label:{text:'•',color:'#176b45',fontSize:'24px'}});markers.push(pm);bounds.extend(pm.getPosition())}var coords=normaliseBoundary(p.boundary_coordinates);if(coords.length>=3){var poly=new google.maps.Polygon({map:map,paths:coords,strokeColor:'#176b45',strokeOpacity:.9,strokeWeight:2,fillColor:'#5bbf88',fillOpacity:.22});polygons.push(poly);coords.forEach(function(c){bounds.extend(c)});}})});if(count){map.fitBounds(bounds);if(count===1)map.setZoom(Math.max(map.getZoom(),15));setStatus(count+' farm'+(count===1?'':'s')+' shown',false)}else{setStatus('',false);showMessage('Farm location has not been added yet.','Add coordinates in Farm Management to see your farm here.',{url:'farm.html',label:'Add Farm Location'})}}
-    function normaliseBoundary(b){var raw=Array.isArray(b)?b:(b&&Array.isArray(b.coordinates)?b.coordinates:null);if(!raw)return [];if(raw[0]&&Array.isArray(raw[0]))raw=raw[0];return raw.map(function(p){if(Array.isArray(p)&&p.length>=2)return {lat:Number(p[0]),lng:Number(p[1])};if(p&&validPoint(p.lat??p.latitude,p.lng??p.longitude))return {lat:Number(p.lat??p.latitude),lng:Number(p.lng??p.longitude)};return null}).filter(Boolean).filter(function(p){return validPoint(p.lat,p.lng)})}
-    function loadMap(){api('/maps/key').then(function(res){var key=res.data&&res.data.google_maps_api_key;if(!key)throw new Error('key');var s=document.createElement('script');s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&callback=FarmMapGoogleReady';s.async=true;s.defer=true;s.onerror=function(){throw new Error('maps')};document.head.appendChild(s)}).catch(function(){setStatus('',false);showMessage('Map unavailable','The map service could not be loaded. Please try again later.')})}
-    window.FarmMapGoogleReady=function(){map=new google.maps.Map(document.getElementById('google-map'),{center:{lat:20.5937,lng:78.9629},zoom:5,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'greedy'});api('/farms').then(function(res){farms=res.data||[];draw()}).catch(function(){setStatus('',false);showMessage('Unable to load farms','We could not retrieve your farm locations. Please check your connection and try again.')})};
-    document.getElementById('map-view').onclick=function(){if(map)map.setMapTypeId('roadmap');this.classList.add('active');document.getElementById('sat-view').classList.remove('active')};document.getElementById('sat-view').onclick=function(){if(map)map.setMapTypeId('satellite');this.classList.add('active');document.getElementById('map-view').classList.remove('active')};document.getElementById('locate').onclick=function(){if(!navigator.geolocation){if(typeof showToast==='function')showToast('Location access is unavailable.','error');return}navigator.geolocation.getCurrentPosition(function(p){var pos={lat:p.coords.latitude,lng:p.coords.longitude};if(map){map.panTo(pos);map.setZoom(16);if(currentMarker)currentMarker.setMap(null);currentMarker=new google.maps.Marker({map:map,position:pos,title:'Your current location',icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="8" fill="#4285f4" stroke="white" stroke-width="3"/></svg>')}})}},function(){if(typeof showToast==='function')showToast('Location access is unavailable.','error')},{enableHighAccuracy:true,timeout:10000})};document.getElementById('fullscreen').onclick=function(){var page=document.getElementById('map-page');page.classList.toggle('fullscreen');this.innerHTML=page.classList.contains('fullscreen')?'<i class="fa-solid fa-compress"></i>':'<i class="fa-solid fa-expand"></i>';if(map)google.maps.event.trigger(map,'resize')};loadMap();
+  (function () {
+    'use strict';
+
+    var $ = function (id) { return document.getElementById(id); };
+
+    var map = null;
+    var data = { farms: [], plots: [] };
+    var plotById = {};
+    var selectedPlotId = null;
+    var activeFarmId = null;
+    var fitDirty = true;
+
+    var filters = {
+      farms: new Set(), plots: new Set(), crops: new Set(),
+      statuses: new Set(), irrigation: new Set(), soil: new Set(), health: new Set(),
+      sensors: true, tasks: true
+    };
+
+    var healthByPlot = {};
+    var healthLoading = {};
+    var weatherByFarm = {};
+
+    var layerState = { fieldGroup: null, sensorGroup: null, markerGroup: null, currentLoc: null };
+
+    var osm = null;
+    var satellite = null;
+    var satActive = false;
+
+    var CROP_PALETTE = ['#2E7D32', '#00695C', '#7B1FA2', '#1565C0', '#C62828', '#283593', '#8D6E63', '#4527A0', '#00796B', '#33691E'];
+
+    function token() { try { return localStorage.getItem('fa-auth-token') || ''; } catch (e) { return ''; } }
+
+    function apiBase() {
+      return (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL) || 'http://localhost:8000/api/v1';
+    }
+
+    function apiGet(path) {
+      return fetch(apiBase() + path, {
+        headers: { 'Authorization': 'Bearer ' + token() },
+        credentials: 'same-origin'
+      }).then(function (r) {
+        if (r.status === 401 || r.status === 403) {
+          window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+          throw new Error('auth');
+        }
+        if (!r.ok) throw new Error('request failed');
+        return r.json();
+      });
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function num(v, d) {
+      var n = Number(v);
+      if (!isFinite(n)) return '&mdash;';
+      return String(n.toFixed(d == null ? 1 : d));
+    }
+
+    function fmtDate(s) {
+      if (!s) return '&mdash;';
+      var t = /^\d{4}-\d{2}-\d{2}/.test(s) ? new Date(s + 'T00:00:00') : new Date(s);
+      if (isNaN(t)) return esc(String(s));
+      var mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return t.getDate() + ' ' + mon[t.getMonth()] + ' ' + t.getFullYear();
+    }
+
+    function timeAgo(s) {
+      if (!s) return '&mdash;';
+      var t = new Date(s);
+      if (isNaN(t)) return esc(String(s));
+      var diff = (Date.now() - t.getTime()) / 1000;
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      if (diff < 86400 * 30) return Math.floor(diff / 86400) + 'd ago';
+      return fmtDate(s);
+    }
+
+    function validPoint(lat, lng) {
+      return Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Math.abs(Number(lat)) <= 90 && Math.abs(Number(lng)) <= 180;
+    }
+
+    function boundaryPoints(b) {
+      var raw = Array.isArray(b) ? b : (b && Array.isArray(b.coordinates) ? b.coordinates : null);
+      if (!raw) return [];
+      if (raw[0] && Array.isArray(raw[0])) raw = raw[0];
+      var pts = [];
+      raw.forEach(function (p) {
+        if (Array.isArray(p) && p.length >= 2) {
+          pts.push({ lat: Number(p[0]), lng: Number(p[1]) });
+        } else if (p && p.lat != null && p.lng != null) {
+          pts.push({ lat: Number(p.lat), lng: Number(p.lng) });
+        }
+      });
+      return pts.filter(function (p) { return validPoint(p.lat, p.lng); });
+    }
+
+    function colorFor(str) {
+      var h = 0;
+      if (!str) return '#94A89C';
+      for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+      return CROP_PALETTE[h % CROP_PALETTE.length];
+    }
+
+    function healthBand(code) {
+      if (code === 'excellent' || code === 'healthy' || code === 'good') return 'healthy';
+      if (code === 'needs_attention') return 'needs_attention';
+      if (code === 'critical') return 'critical';
+      return null;
+    }
+
+    function healthColor(code) {
+      var b = healthBand(code);
+      if (b === 'healthy') return '#1B5E3F';
+      if (b === 'needs_attention') return '#E9B640';
+      if (b === 'critical') return '#D63031';
+      return null;
+    }
+
+    function healthLabel(code) {
+      var m = { excellent: 'Excellent', healthy: 'Healthy', good: 'Good', needs_attention: 'Needs Attention', critical: 'Critical', insufficient: 'Insufficient data' };
+      return m[code] || 'Unknown';
+    }
+
+    function findFarm(id) {
+      for (var i = 0; i < data.farms.length; i++) if (data.farms[i].id === id) return data.farms[i];
+      return null;
+    }
+
+    function findPlot(id) {
+      return plotById[id] || null;
+    }
+
+    function plotCrop(p) { return (p.crop && p.crop.crop) || null; }
+
+    function plotStatus(p) {
+      if (!p.crop) return 'fallow';
+      return String(p.crop.cycle_status || 'active').toLowerCase();
+    }
+
+    function plotColor(p) {
+      var crop = plotCrop(p);
+      return (crop && crop.name) ? colorFor(crop.name) : '#8B6F47';
+    }
+
+    function plotSoil(p) {
+      var v = (p.soil_latest && p.soil_latest.soil_type) || p.soil_type;
+      if (v) return v;
+      var f = findFarm(p.farm_id);
+      return (f && f.soil_type) || null;
+    }
+
+    function plotIrrigation(p) {
+      if (p.irrigation_latest && p.irrigation_latest.method) return p.irrigation_latest.method;
+      var f = findFarm(p.farm_id);
+      return (f && f.irrigation_method) || null;
+    }
+
+    function farmLocation(f) {
+      return [f.village, f.mandal, f.district, f.state, f.address].filter(function (x) { return x; }).join(', ') || 'Location saved';
+    }
+
+    function sensorStatusLabel(s) {
+      var st = String(s.status || 'never_connected');
+      if (st === 'connected' || st === 'ready' || st === 'online') return 'Online';
+      if (st === 'offline' || st === 'error') return 'Offline';
+      return st.replace(/_/g, ' ');
+    }
+
+    function weatherIcon(code, desc) {
+      var d = String(desc || '').toLowerCase();
+      if (d.indexOf('rain') !== -1 || d.indexOf('drizzle') !== -1) return '<i class="fa-solid fa-cloud-rain"></i>';
+      if (d.indexOf('thunder') !== -1 || d.indexOf('storm') !== -1) return '<i class="fa-solid fa-cloud-bolt"></i>';
+      if (d.indexOf('snow') !== -1) return '<i class="fa-solid fa-snowflake"></i>';
+      if (d.indexOf('clear') !== -1 || d.indexOf('sunny') !== -1) return '<i class="fa-solid fa-sun"></i>';
+      if (d.indexOf('cloud') !== -1) return '<i class="fa-solid fa-cloud"></i>';
+      if (d.indexOf('fog') !== -1 || d.indexOf('mist') !== -1) return '<i class="fa-solid fa-smog"></i>';
+      return '<i class="fa-solid fa-cloud-sun"></i>';
+    }
+
+    /* ------------------------- map setup ------------------------- */
+
+    function initMap() {
+      if (!window.L) {
+        showMessage('<i class="fa-solid fa-triangle-exclamation msg-icon" style="color:#D63031"></i><h2>Map unavailable</h2><p>The map service could not be loaded. Please check your connection and try again.</p><button class="msg-btn" id="retry-btn">Retry</button>');
+        return;
+      }
+      map = L.map('map', { zoomControl: true, attributionControl: true });
+      map.setView([20.5937, 78.9629], 5);
+
+      osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
+      });
+
+      layerState.fieldGroup = L.layerGroup().addTo(map);
+      layerState.sensorGroup = L.layerGroup().addTo(map);
+      layerState.markerGroup = L.layerGroup().addTo(map);
+
+      map.on('click', function (e) {
+        var t = e && e.originalEvent && e.originalEvent.target;
+        if (t && t.classList && t.classList.contains('leaflet-interactive')) return;
+        closePanel();
+      });
+    }
+
+    function setTerrain(mode) {
+      if (!map) return;
+      if (mode === 'satellite') {
+        if (map.hasLayer(osm)) map.removeLayer(osm);
+        if (!map.hasLayer(satellite)) satellite.addTo(map);
+        satActive = true;
+      } else {
+        if (map.hasLayer(satellite)) map.removeLayer(satellite);
+        if (!map.hasLayer(osm)) osm.addTo(map);
+        satActive = false;
+      }
+      invalidate();
+    }
+
+    function invalidate() {
+      if (!map) return;
+      setTimeout(function () { map.invalidateSize(); }, 220);
+    }
+
+    /* ------------------------- data load ------------------------- */
+
+    function showLoading(on) { $('map-loading').hidden = !on; }
+
+    function hideMessage() { $('map-message').hidden = true; }
+
+    function showMessage(html) {
+      var m = $('map-message');
+      m.hidden = false;
+      m.innerHTML = '<div class="message-card">' + html + '</div>';
+      var retry = document.getElementById('retry-btn');
+      if (retry) retry.onclick = function () { m.hidden = true; showLoading(true); loadData(); };
+    }
+
+    function showErrorState() {
+      showLoading(false);
+      showMessage('<i class="fa-solid fa-triangle-exclamation msg-icon" style="color:#D63031"></i><h2>Unable to load the map</h2><p>We could not retrieve your farm locations. Please check your connection and try again.</p><button class="msg-btn" id="retry-btn"><i class="fa-solid fa-rotate-right"></i> Retry</button>');
+    }
+
+    function setStatus(text) {
+      var el = $('map-status');
+      el.hidden = !text;
+      el.innerHTML = text ? esc(text) : '';
+    }
+
+    function loadData() {
+      showLoading(true);
+      hideMessage();
+      apiGet('/maps/farm-map').then(function (res) {
+        data = (res && res.data) || { farms: [], plots: [] };
+        data.farms = data.farms || [];
+        data.plots = data.plots || [];
+        plotById = {};
+        data.plots.forEach(function (p) { plotById[p.id] = p; });
+        populateFarmSelect();
+        buildFilters();
+        showLoading(false);
+        if (!data.farms.length) {
+          showMessage('<i class="fa-solid fa-map-location-dot msg-icon"></i><h2>Your farm map is not set up yet.</h2><p>Add your farm and fields in My Farm to see them here.</p><a href="farm.html"><i class="fa-solid fa-tractor"></i> Go to My Farm</a>');
+          refreshLegend();
+          return;
+        }
+        var anyLocation = data.farms.some(function (f) { return f.has_location; }) ||
+          data.plots.some(function (p) { return p.has_location; });
+        renderAll();
+        if (!anyLocation) {
+          showMessage('<i class="fa-solid fa-triangle-exclamation msg-icon" style="color:#E9B640"></i><h2>Farm location has not been configured yet.</h2><p>Add farm coordinates in My Farm to place your farm on the map.</p><a href="farm.html"><i class="fa-solid fa-tractor"></i> Go to My Farm</a>');
+        }
+        fetchHealth();
+        invalidate();
+      }).catch(function (err) {
+        if (err && err.message === 'auth') return;
+        showErrorState();
+      });
+    }
+
+    function populateFarmSelect() {
+      var sel = $('farm-select');
+      var wrap = $('farm-select-wrap');
+      if (data.farms.length > 1) {
+        wrap.hidden = false;
+        sel.innerHTML = '';
+        data.farms.forEach(function (f) {
+          var o = document.createElement('option');
+          o.value = f.id;
+          o.textContent = f.name + ((f.total_area != null) ? ' (' + f.total_area.toFixed(1) + ' ' + (f.area_unit || 'Acres') + ')' : '');
+          sel.appendChild(o);
+        });
+        sel.onchange = function () {
+          activeFarmId = sel.value || null;
+          fitDirty = true;
+          renderAll();
+          recenter();
+        };
+      } else {
+        wrap.hidden = true;
+        activeFarmId = null;
+      }
+    }
+
+    /* ------------------------- visibility + render ------------------------- */
+
+    function farmVisible(f) {
+      if (activeFarmId && f.id !== activeFarmId) return false;
+      if (filters.farms.size && !filters.farms.has(f.id)) return false;
+      return true;
+    }
+
+    function visibleFarms() {
+      return data.farms.filter(farmVisible);
+    }
+
+    function visiblePlots() {
+      var vf = {};
+      visibleFarms().forEach(function (f) { vf[f.id] = true; });
+      return data.plots.filter(function (p) {
+        if (!vf[p.farm_id]) return false;
+        if (filters.plots.size && !filters.plots.has(p.id)) return false;
+        var crop = plotCrop(p);
+        var cropName = crop && crop.name ? crop.name : null;
+        if (filters.crops.size) {
+          if (cropName) {
+            if (!filters.crops.has(cropName)) return false;
+          } else if (!filters.crops.has('__fallow__')) {
+            return false;
+          }
+        }
+        var st = plotStatus(p);
+        if (filters.statuses.size && !filters.statuses.has(st)) return false;
+        if (filters.soil.size && !filters.soil.has(plotSoil(p) || '')) return false;
+        if (filters.irrigation.size && !filters.irrigation.has(plotIrrigation(p) || '')) return false;
+        if (filters.health.size) {
+          var b = healthBand((healthByPlot[p.id] || {}).status_code);
+          if (!b || !filters.health.has(b)) return false;
+        }
+        if (!filters.sensors && (p.sensors || []).length) return false;
+        if (!filters.tasks && (p.tasks || []).length) return false;
+        return true;
+      });
+    }
+
+    function buildFarmIcon() {
+      return L.divIcon({
+        className: '',
+        html: '<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;background:#176b45;border:3px solid #fff;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3)"><i class="fa-solid fa-tractor" style="color:#fff;font-size:14px;transform:rotate(45deg)"></i></div>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 34]
+      });
+    }
+
+    function buildFarmPopup(f) {
+      return '<div class="farm-pop"><h4>' + esc(f.name) + '</h4>' +
+        '<div class="fp-row"><span>Area</span><b>' + (f.total_area != null ? num(f.total_area, 1) + ' ' + esc(f.area_unit || 'Acres') : '&mdash;') + '</b></div>' +
+        '<div class="fp-row"><span>Fields</span><b>' + ((f.plots || []).length) + '</b></div>' +
+        '<div class="fp-row"><span>Location</span><b>' + esc(farmLocation(f)) + '</b></div>' +
+        (validPoint(f.latitude, f.longitude) ? '<div class="fp-row"><span>GPS</span><b>' + num(f.latitude, 4) + ', ' + num(f.longitude, 4) + '</b></div>' : '') +
+        '<div class="fp-row"><span>Updated</span><b>' + timeAgo(f.updated_at) + '</b></div>' +
+        '<a href="farm.html">View Farm <i class="fa-solid fa-arrow-right"></i></a></div>';
+    }
+
+    function buildSensorPopup(s, plot, farm) {
+      var loc = plot ? plot.name : (farm ? farm.name : 'Farm');
+      var reading = s.last_reading;
+      var readHtml = (reading && reading.value != null)
+        ? esc(String(reading.value)) + (reading.unit ? ' ' + esc(String(reading.unit)) : '')
+        : '<b><i class="fa-solid fa-hourglass-half"></i> No readings received yet.</b>';
+      return '<div class="sensor-pop"><h4>' + esc(s.name || s.sensor_id) + '</h4>' +
+        '<div class="sp-row"><span>ID</span><b>' + esc(s.sensor_id) + '</b></div>' +
+        '<div class="sp-row"><span>Type</span><b>' + esc(s.type_label || s.type) + '</b></div>' +
+        '<div class="sp-row"><span>Status</span><b>' + esc(sensorStatusLabel(s)) + '</b></div>' +
+        '<div class="sp-row"><span>Last seen</span><b>' + timeAgo(s.last_seen) + '</b></div>' +
+        '<div class="sp-row"><span>Reading</span><b>' + readHtml + '</b></div>' +
+        '<div class="sp-row"><span>Field</span><b>' + esc(loc) + '</b></div>' +
+        '<a href="sensors.html">View Sensor <i class="fa-solid fa-arrow-right"></i></a></div>';
+    }
+
+    function plotFocusPoint(p) {
+      var coords = boundaryPoints(p.boundary_coordinates);
+      if (coords.length) {
+        var s = 0, clat = 0, clng = 0;
+        coords.forEach(function (c) { clat += c.lat; clng += c.lng; s++; });
+        return [clat / s, clng / s];
+      }
+      if (p.has_location) return [Number(p.latitude), Number(p.longitude)];
+      return null;
+    }
+
+    function renderAll() {
+      if (!map) return;
+      layerState.fieldGroup.clearLayers();
+      layerState.sensorGroup.clearLayers();
+      layerState.markerGroup.clearLayers();
+
+      var plots = visiblePlots();
+      var farms = visibleFarms();
+      var bounds = L.latLngBounds([]);
+      var placed = false;
+
+      farms.forEach(function (f) {
+        if (validPoint(f.latitude, f.longitude)) {
+          var mk = L.marker([f.latitude, f.longitude], { icon: buildFarmIcon() });
+          mk.bindPopup(buildFarmPopup(f));
+          mk.addTo(layerState.markerGroup);
+          bounds.extend([f.latitude, f.longitude]);
+          placed = true;
+        }
+      });
+
+      plots.forEach(function (p) {
+        var color = plotColor(p);
+        var coords = boundaryPoints(p.boundary_coordinates);
+        var hb = healthColor((healthByPlot[p.id] || {}).status_code);
+        if (coords.length >= 3) {
+          var poly = L.polygon(coords, {
+            color: hb || color,
+            weight: 2,
+            fillColor: color,
+            fillOpacity: 0.22
+          });
+          poly.bindTooltip(p.name, { sticky: true });
+          poly.on('click', function (e) {
+            if (e && e.originalEvent && e.originalEvent.stopPropagation) e.originalEvent.stopPropagation();
+            selectPlot(p.id);
+          });
+          poly.addTo(layerState.fieldGroup);
+          coords.forEach(function (c) { bounds.extend(c); });
+          placed = true;
+        } else if (p.has_location) {
+          var cm = L.circleMarker([p.latitude, p.longitude], {
+            radius: 9,
+            color: '#fff',
+            weight: 2,
+            fillColor: hb || color,
+            fillOpacity: 0.95
+          });
+          cm.bindTooltip(p.name, { sticky: true });
+          cm.on('click', function (e) {
+            if (e && e.originalEvent && e.originalEvent.stopPropagation) e.originalEvent.stopPropagation();
+            selectPlot(p.id);
+          });
+          cm.addTo(layerState.fieldGroup);
+          bounds.extend([p.latitude, p.longitude]);
+          placed = true;
+        }
+        if (filters.sensors) {
+          (p.sensors || []).forEach(function (s) {
+            if (!s.has_location) return;
+            var sm = L.circleMarker([s.latitude, s.longitude], {
+              radius: 7, color: '#fff', weight: 2,
+              fillColor: s.type_color || '#FF7043', fillOpacity: 0.95
+            });
+            sm.bindPopup(buildSensorPopup(s, p, null));
+            sm.addTo(layerState.sensorGroup);
+            bounds.extend([s.latitude, s.longitude]);
+          });
+        }
+      });
+
+      if (filters.sensors) {
+        farms.forEach(function (f) {
+          (f.sensors || []).forEach(function (s) {
+            if (!s.has_location) return;
+            var sm = L.circleMarker([s.latitude, s.longitude], {
+              radius: 7, color: '#fff', weight: 2,
+              fillColor: s.type_color || '#FF7043', fillOpacity: 0.95
+            });
+            sm.bindPopup(buildSensorPopup(s, null, f));
+            sm.addTo(layerState.sensorGroup);
+            bounds.extend([s.latitude, s.longitude]);
+          });
+        });
+      }
+
+      if (farms.length && placed) {
+        setStatus(plots.length + ' field' + (plots.length === 1 ? '' : 's') + ' on map');
+        if (fitDirty) {
+          map.fitBounds(bounds.pad(0.2));
+          fitDirty = false;
+        }
+      } else {
+        setStatus('');
+      }
+      showBoundaryBanner(plots);
+      refreshLegend();
+    }
+
+    function showBoundaryBanner(plots) {
+      var banner = $('boundary-banner');
+      var anyFarmLoc = visibleFarms().some(function (f) { return f.has_location; });
+      var anyBoundary = plots.some(function (p) { return p.has_boundary; });
+      if (anyFarmLoc && !anyBoundary && plots.length) {
+        banner.hidden = false;
+        banner.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>' +
+          '<span>No farm boundary has been added yet. <a href="farm.html">Add it in My Farm</a></span>' +
+          '<button type="button" aria-label="Dismiss">&times;</button>';
+        var bbtn = banner.querySelector('button');
+        if (bbtn) bbtn.onclick = function () { banner.hidden = true; };
+      } else {
+        banner.hidden = true;
+      }
+    }
+
+    function refreshLegend() {
+      var items = [];
+      var farms = visibleFarms();
+      var plots = visiblePlots();
+      if (farms.some(function (f) { return f.has_location; })) {
+        items.push({ cls: 'round', style: 'background:#176b45', label: 'Farm' });
+      }
+      if (plots.some(function (p) { return p.has_boundary; })) {
+        items.push({ cls: 'boundary', label: 'Farm boundary' });
+      }
+      if (plots.length) {
+        items.push({ cls: 'round', style: 'background:' + plotColor(plots[0]), label: 'Field / plot' });
+      }
+      var anySensor = false;
+      plots.forEach(function (p) {
+        if ((p.sensors || []).some(function (s) { return s.has_location; })) anySensor = true;
+      });
+      farms.forEach(function (f) {
+        if ((f.sensors || []).some(function (s) { return s.has_location; })) anySensor = true;
+      });
+      if (anySensor) items.push({ cls: 'sensor', label: 'Sensor' });
+      if (layerState.currentLoc) items.push({ cls: 'round', style: 'background:#4285F4', label: 'Current location' });
+
+      var html = '<div class="lg-title">Legend</div>';
+      if (!items.length) {
+        html += '<div class="lg-item"><span style="color:#7a8a82">No map elements yet</span></div>';
+      } else {
+        items.forEach(function (it) {
+          var sw = '<span class="lg-swatch ' + it.cls + '"' + (it.style ? ' style="' + it.style + '"' : '') + '></span>';
+          html += '<div class="lg-item">' + sw + '<span>' + esc(it.label) + '</span></div>';
+        });
+      }
+      $('map-legend').innerHTML = html;
+    }
+
+    /* ------------------------- filters ------------------------- */
+
+    function chipGroup(key, label, options) {
+      if (!options.length) return '';
+      var html = '<div class="filter-group" data-key="' + key + '"><div class="filter-group-label">' + esc(label) + '</div><div class="filter-chips">';
+      var set = filters[key];
+      options.forEach(function (o) {
+        var on = set.has(o.id);
+        html += '<button type="button" class="filter-chip' + (on ? ' on' : '') + '" data-key="' + key + '" data-val="' + esc(o.id) + '">' + esc(o.label) + '</button>';
+      });
+      html += '</div></div>';
+      return html;
+    }
+
+    function toggleChip(key, label) {
+      var on = !!filters[key];
+      return '<button type="button" class="filter-chip' + (on ? ' on' : '') + '" data-key="' + key + '" data-toggle="1">' + esc(label) + '</button>';
+    }
+
+    function healthFilterGroup() {
+      var m = {};
+      Object.keys(healthByPlot).forEach(function (id) {
+        var b = healthBand((healthByPlot[id] || {}).status_code);
+        if (b) m[b] = 1;
+      });
+      if (!Object.keys(m).length) return '';
+      var labels = { healthy: 'Healthy', needs_attention: 'Needs Attention', critical: 'Critical' };
+      var opts = Object.keys(m).map(function (b) { return { id: b, label: labels[b] || b }; });
+      return chipGroup('health', 'Crop health', opts);
+    }
+
+    function buildFilters() {
+      var html = '';
+      var farmOpts = data.farms.length > 1 ? data.farms.map(function (f) { return { id: f.id, label: f.name }; }) : [];
+      html += chipGroup('farms', 'Farm', farmOpts);
+      var plotOpts = data.plots.length > 1 ? data.plots.map(function (p) { return { id: p.id, label: p.name }; }) : [];
+      html += chipGroup('plots', 'Field / Plot', plotOpts);
+      var cropMap = {};
+      data.plots.forEach(function (p) { var k = plotCrop(p) && plotCrop(p).name ? plotCrop(p).name : '__fallow__'; cropMap[k] = 1; });
+      var cropOpts = Object.keys(cropMap).map(function (n) { return { id: n, label: n === '__fallow__' ? 'Fallow' : n }; });
+      html += chipGroup('crops', 'Crop', cropOpts);
+      var stMap = {};
+      data.plots.forEach(function (p) { stMap[plotStatus(p)] = 1; });
+      var stLabels = { active: 'Active', completed: 'Completed', harvested: 'Harvested', fallow: 'Fallow' };
+      var stOpts = Object.keys(stMap).map(function (k) { return { id: k, label: stLabels[k] || k }; });
+      html += chipGroup('statuses', 'Crop status', stOpts);
+      var soilMap = {};
+      data.plots.forEach(function (p) { var s = plotSoil(p); if (s) soilMap[s] = 1; });
+      html += chipGroup('soil', 'Soil', Object.keys(soilMap).map(function (s) { return { id: s, label: s }; }));
+      var irrMap = {};
+      data.plots.forEach(function (p) { var i = plotIrrigation(p); if (i) irrMap[i] = 1; });
+      html += chipGroup('irrigation', 'Irrigation', Object.keys(irrMap).map(function (i) { return { id: i, label: i }; }));
+      html += healthFilterGroup();
+      var anySensor = data.plots.some(function (p) { return (p.sensors || []).length; }) ||
+        data.farms.some(function (f) { return (f.sensors || []).length; });
+      if (anySensor) html += '<div class="filter-group"><div class="filter-group-label">Sensors</div><div class="filter-chips">' + toggleChip('sensors', 'Has sensors') + '</div></div>';
+      var anyTask = data.plots.some(function (p) { return (p.tasks || []).length; });
+      if (anyTask) html += '<div class="filter-group"><div class="filter-group-label">Tasks</div><div class="filter-chips">' + toggleChip('tasks', 'Has tasks') + '</div></div>';
+      $('filter-panel').innerHTML = html || '<div class="filter-empty">No filterable farm data yet.</div>';
+    }
+
+    function rebuildFilters() {
+      var p = $('filter-panel');
+      if (p.hidden) return;
+      buildFilters();
+    }
+
+    /* ------------------------- field panel ------------------------- */
+
+    function kv(k, v) {
+      return '<div class="kv"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+    }
+
+    function renderStatus(st) {
+      var labels = { active: 'Active', fallow: 'Fallow', completed: 'Completed', harvested: 'Harvested', planned: 'Planned', cancelled: 'Cancelled' };
+      var cls = st === 'active' ? 'active' : st === 'completed' ? 'completed' : st === 'harvested' ? 'harvested' : 'fallow';
+      return '<span class="fp-status ' + cls + '">' + esc(labels[st] || st) + '</span>';
+    }
+
+    function soilHtml(p) {
+      var s = p.soil_latest;
+      if (!s) return '<p class="fp-empty"><i class="fa-solid fa-mound"></i> No soil test recorded for this field yet.</p>';
+      return '<div class="fp-grid">' +
+        kv('pH level', s.ph_level != null ? num(s.ph_level, 2) : '&mdash;') +
+        kv('Moisture', s.moisture != null ? num(s.moisture, 1) + '%' : '&mdash;') +
+        kv('Nitrogen', s.nitrogen != null ? num(s.nitrogen, 1) + ' kg/ha' : '&mdash;') +
+        kv('Phosphorus', s.phosphorus != null ? num(s.phosphorus, 1) + ' kg/ha' : '&mdash;') +
+        kv('Potassium', s.potassium != null ? num(s.potassium, 1) + ' kg/ha' : '&mdash;') +
+        kv('Organic matter', s.organic_matter != null ? num(s.organic_matter, 1) + ' %' : '&mdash;') +
+        kv('Test date', s.test_date ? fmtDate(s.test_date) : '&mdash;') +
+        '</div>';
+    }
+
+    function irrigationHtml(p) {
+      var r = p.irrigation_latest;
+      if (!r) return '<p class="fp-empty"><i class="fa-solid fa-droplet"></i> No irrigation recorded for this field yet.</p>';
+      return '<div class="fp-grid">' +
+        kv('Method', r.method ? esc(r.method) : '&mdash;') +
+        kv('Duration', r.duration_minutes != null ? num(r.duration_minutes, 0) + ' min' : '&mdash;') +
+        kv('Water used', r.water_quantity != null ? num(r.water_quantity, 1) + ' ' + esc(r.water_unit || 'L') : '&mdash;') +
+        kv('Date', r.irrigation_date ? fmtDate(r.irrigation_date) : '&mdash;') +
+        '</div>';
+    }
+
+    function sensorsHtml(list) {
+      if (!list.length) return '<p class="fp-empty"><i class="fa-solid fa-microchip"></i> No sensors installed in this field.</p>';
+      var html = '';
+      list.forEach(function (s) {
+        var st = String(s.status || 'never_connected');
+        var cls = (st === 'connected' || st === 'ready' || st === 'online') ? 'online' : (st === 'offline' || st === 'error') ? 'offline' : 'needs_attention';
+        var read = (s.last_reading && s.last_reading.value != null)
+          ? esc(String(s.last_reading.value)) + (s.last_reading.unit ? ' ' + esc(String(s.last_reading.unit)) : '')
+          : 'No data';
+        html += '<div class="fp-sensor">' +
+          '<div class="s-icon" style="background:' + esc(s.type_color || '#176b45') + '"><i class="' + esc(s.type_icon || 'fa-solid fa-microchip') + '"></i></div>' +
+          '<div class="s-meta"><div class="s-name">' + esc(s.name || s.sensor_id) + '</div>' +
+          '<div class="s-sub">' + esc(s.type_label || 'Sensor') + ' &middot; <span class="fp-status ' + cls + '">' + esc(sensorStatusLabel(s)) + '</span></div></div>' +
+          '<div class="s-read">' + read + '</div></div>';
+      });
+      return html;
+    }
+
+    function tasksHtml(list) {
+      if (!list.length) return '<p class="fp-empty"><i class="fa-solid fa-list-check"></i> No tasks scheduled for this field yet.</p>';
+      var html = '';
+      list.forEach(function (t) {
+        var st = String(t.status || 'pending').toLowerCase();
+        var cls = st === 'completed' ? 'completed' : st === 'in_progress' ? 'in_progress' : 'pending';
+        var due = '';
+        if (t.due_date) due = fmtDate(t.due_date) + (t.due_time ? ' &middot; ' + esc(t.due_time) : '');
+        html += '<div class="fp-task">' +
+          '<div style="min-width:0"><div class="t-title">' + esc(t.title || t.task_id) + '</div>' +
+          '<div class="t-sub"><span>' + esc(t.category || 'General') + '</span>' +
+          (due ? '<span><i class="fa-regular fa-calendar"></i> ' + due + '</span>' : '') +
+          '</div></div>' +
+          '<span class="t-status ' + cls + '">' + esc(st.replace(/_/g, ' ')) + '</span></div>';
+      });
+      return html;
+    }
+
+    function activityHtml(list) {
+      if (!list.length) return '<p class="fp-empty"><i class="fa-solid fa-clock-rotate-left"></i> No field activity logged yet.</p>';
+      var icons = {
+        irrigation: 'fa-droplet', fertilizer: 'fa-flask', sowing: 'fa-seedling', harvest: 'fa-wheat-awn',
+        spraying: 'fa-spray-can', pest: 'fa-bug', soil: 'fa-mound', planting: 'fa-tree', weeding: 'fa-leaf'
+      };
+      var html = '';
+      list.forEach(function (a) {
+        var key = String(a.activity || '').toLowerCase();
+        var icon = 'fa-solid ' + (icons[key] || 'fa-note-sticky');
+        html += '<div class="fp-activity"><i class="' + icon + '"></i><div style="min-width:0"><div class="a-text">' +
+          esc(a.activity || 'Field activity') + (a.notes ? ': ' + esc(a.notes) : '') +
+          '</div><div class="a-time">' + timeAgo(a.entry_date) + '</div></div></div>';
+      });
+      return html;
+    }
+
+    function renderPanelBody(p, farm) {
+      var crop = p.crop || null;
+      var c = plotCrop(p);
+      var loc = (p.has_location && validPoint(p.latitude, p.longitude))
+        ? num(p.latitude, 4) + ', ' + num(p.longitude, 4) : null;
+      var html = '';
+
+      html += '<div class="fp-section"><h3><i class="fa-solid fa-seedling"></i> Field overview</h3><div class="fp-grid">' +
+        kv('Crop', c ? esc(c.name) : '&mdash;') +
+        kv('Variety', (c && c.variety) ? esc(c.variety) : '&mdash;') +
+        kv('Status', renderStatus(plotStatus(p))) +
+        kv('Stage', crop && crop.current_stage ? esc(crop.current_stage) : '&mdash;') +
+        kv('Sown', crop && crop.sowing_date ? fmtDate(crop.sowing_date) : '&mdash;') +
+        kv('Harvest', crop && crop.expected_harvest_date ? fmtDate(crop.expected_harvest_date) : '&mdash;') +
+        kv('Area', p.area != null ? num(p.area, 1) + ' ' + esc(p.area_unit || 'Acres') : '&mdash;') +
+        kv('Soil type', plotSoil(p) ? esc(plotSoil(p)) : '&mdash;') +
+        kv('Irrigation', plotIrrigation(p) ? esc(plotIrrigation(p)) : '&mdash;') +
+        (loc ? kv('GPS location', loc) : '') +
+        '</div></div>';
+
+      html += '<div class="fp-section"><h3><i class="fa-solid fa-cloud-sun"></i> Weather</h3><div id="fp-weather"></div></div>';
+      html += '<div class="fp-section"><h3><i class="fa-solid fa-heart-pulse"></i> Crop health</h3><div id="fp-health"></div></div>';
+      html += '<div class="fp-section"><h3><i class="fa-solid fa-mound"></i> Soil</h3>' + soilHtml(p) + '</div>';
+      html += '<div class="fp-section"><h3><i class="fa-solid fa-droplet"></i> Irrigation</h3>' + irrigationHtml(p) + '</div>';
+
+      html += '<div class="fp-section"><h3><i class="fa-solid fa-microchip"></i> Sensors <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#60736a">(' + (p.sensors || []).length + ')</span></h3>' + sensorsHtml(p.sensors || []) + '</div>';
+      html += '<div class="fp-section"><h3><i class="fa-solid fa-list-check"></i> Field tasks <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#60736a">(' + (p.tasks || []).length + ')</span></h3>' + tasksHtml(p.tasks || []) + '</div>';
+      html += '<div class="fp-section"><h3><i class="fa-solid fa-clock-rotate-left"></i> Recent activity</h3>' + activityHtml(p.activity || []) + '</div>';
+
+      return html;
+    }
+
+    function renderPanelActions(p) {
+      var hasCycle = !!(p.crop && p.crop.id);
+      var html = '<a class="primary" href="farm.html"><i class="fa-solid fa-tractor"></i> View Farm</a>';
+      html += '<button type="button" id="action-add-task"' + (hasCycle ? '' : ' disabled title="Add a crop cycle first in My Farm"') + '><i class="fa-solid fa-plus"></i> Add Task</button>';
+      html += '<a href="tasks.html"><i class="fa-solid fa-list-check"></i> Tasks</a>';
+      html += '<a href="sensors.html"><i class="fa-solid fa-microchip"></i> Sensors</a>';
+      html += '<a href="crop-health.html"><i class="fa-solid fa-heart-pulse"></i> Crop Health</a>';
+      html += '<a href="weather.html"><i class="fa-solid fa-cloud-sun"></i> Weather</a>';
+      html += '<a href="analytics.html"><i class="fa-solid fa-chart-line"></i> Analytics</a>';
+      return html;
+    }
+
+    function openPanel(plotId) {
+      var p = findPlot(plotId);
+      if (!p) return;
+      selectedPlotId = plotId;
+      var farm = findFarm(p.farm_id);
+      var sub = [];
+      if (farm) sub.push(farm.name);
+      if (p.area != null) sub.push(num(p.area, 1) + ' ' + esc(p.area_unit || 'Acres'));
+      $('fp-name').innerHTML = esc(p.name);
+      $('fp-sub').innerHTML = sub.map(function (s) { return '<span>' + s + '</span>'; }).join(' &middot; ');
+      $('fp-body').innerHTML = renderPanelBody(p, farm);
+      $('fp-actions').innerHTML = renderPanelActions(p);
+      var addBtn = document.getElementById('action-add-task');
+      if (addBtn) addBtn.onclick = function () { openTaskModal(p); };
+      $('field-panel').classList.add('open');
+      $('field-panel').setAttribute('aria-hidden', 'false');
+      var bd = $('panel-backdrop');
+      bd.hidden = false;
+      bd.classList.add('visible');
+      loadWeatherFor(farm, p);
+      if (p.crop && p.crop.id) fetchPlotHealth(p);
+      else fillHealth(p);
+      invalidate();
+    }
+
+    function closePanel() {
+      if (!selectedPlotId) return;
+      selectedPlotId = null;
+      $('field-panel').classList.remove('open');
+      $('field-panel').setAttribute('aria-hidden', 'true');
+      var bd = $('panel-backdrop');
+      bd.hidden = true;
+      bd.classList.remove('visible');
+    }
+
+    function selectPlot(id) { openPanel(id); }
+
+    /* ------------------------- weather ------------------------- */
+
+    function loadWeatherFor(farm, p) {
+      var wEl = $('fp-weather');
+      if (!wEl) return;
+      var farmId = farm ? farm.id : null;
+      if (farmId && weatherByFarm[farmId]) {
+        fillWeather(farm);
+        return;
+      }
+      wEl.innerHTML = '<div class="fp-weather"><div class="w-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading weather...</div></div>';
+      var lat = farm && farm.has_location && validPoint(farm.latitude, farm.longitude) ? Number(farm.latitude) : null;
+      var lon = farm && farm.has_location && validPoint(farm.latitude, farm.longitude) ? Number(farm.longitude) : null;
+      var req = (lat != null && lon != null) ? API.Weather.getCurrent(lat, lon) : API.Weather.getCurrent();
+      req.then(function (w) {
+        if (farmId) weatherByFarm[farmId] = w;
+        if (selectedPlotId !== p.id) return;
+        fillWeather(farm);
+      }).catch(function () {
+        if (farmId) weatherByFarm[farmId] = false;
+        if (selectedPlotId !== p.id) return;
+        fillWeather(farm);
+      });
+    }
+
+    function fillWeather(farm) {
+      var wEl = $('fp-weather');
+      if (!wEl) return;
+      var w = farm ? weatherByFarm[farm.id] : null;
+      if (!w || w === false) {
+        wEl.innerHTML = '<div class="fp-weather"><div class="w-error"><i class="fa-solid fa-triangle-exclamation" style="margin-right:6px"></i>Weather unavailable right now. <a href="weather.html" style="font-weight:700;color:var(--premium-green,#176b45);text-decoration:none">Open Weather</a></div></div>';
+        return;
+      }
+      var cond = w.weather_condition || w.description || (w.weather_code != null ? String(w.weather_code) : null) || 'Current conditions';
+      var icon = weatherIcon(w.weather_code, w.description);
+      var meta = [];
+      if (w.humidity != null) meta.push('<span><i class="fa-solid fa-droplet"></i> Humidity ' + num(w.humidity, 0) + '%</span>');
+      if (w.rain != null) meta.push('<span><i class="fa-solid fa-umbrella"></i> Rain ' + num(w.rain, 1) + ' mm</span>');
+      if (w.wind_speed != null) meta.push('<span><i class="fa-solid fa-wind"></i> ' + num(w.wind_speed, 0) + ' km/h ' + esc(w.wind_direction || '') + '</span>');
+      if (w.feels_like != null) meta.push('<span><i class="fa-solid fa-temperature-half"></i> Feels ' + num(w.feels_like, 0) + '&deg;C</span>');
+      var html = '<div class="fp-weather">' +
+        '<span class="w-cond">' + icon + '</span>' +
+        '<div style="flex:1;min-width:0">' +
+        '<div class="w-temp">' + (w.temperature != null ? num(w.temperature, 1) + '&deg;C' : '&mdash;') + '</div>' +
+        '<div class="w-meta">' + (meta.length ? meta.join('') : '<span>' + esc(cond) + '</span>') + '</div>' +
+        '</div></div>';
+      if (w.location_label || w.time) {
+        html += '<p class="a-time" style="margin:6px 2px 0"><i class="fa-solid fa-location-dot"></i> ' +
+          esc(w.location_label || '') + (w.time ? ' &middot; ' + esc(String(w.time)) : '') + '</p>';
+      }
+      wEl.innerHTML = html;
+    }
+
+    /* ------------------------- crop health ------------------------- */
+
+    function fetchHealth() {
+      data.plots.forEach(function (p) {
+        if (p.crop && p.crop.id && !healthByPlot[p.id] && !healthLoading[p.id]) fetchPlotHealth(p);
+      });
+    }
+
+    function fetchPlotHealth(p) {
+      healthLoading[p.id] = true;
+      var farm = findFarm(p.farm_id);
+      API.CropHealth.overview(farm ? farm.id : null, p.id, p.crop.id).then(function (res) {
+        var h = (res && res.health) || { available: false };
+        healthByPlot[p.id] = h;
+        healthLoading[p.id] = false;
+        if (selectedPlotId === p.id) fillHealth(p);
+        refreshHealthVisuals();
+      }).catch(function () {
+        healthLoading[p.id] = false;
+        healthByPlot[p.id] = { available: false };
+        if (selectedPlotId === p.id) fillHealth(p);
+        refreshHealthVisuals();
+      });
+    }
+
+    function refreshHealthVisuals() {
+      var fp = $('filter-panel');
+      if (fp && fp.hidden) return;
+      buildFilters();
+      renderAll();
+    }
+
+    function fillHealth(p) {
+      var el = $('fp-health');
+      if (!el) return;
+      var h = healthByPlot[p.id];
+      if (!(p.crop && p.crop.id)) {
+        el.innerHTML = '<p class="health-na"><i class="fa-solid fa-seedling"></i> Add a crop cycle for this field in My Farm to track its health.</p>';
+        return;
+      }
+      if (healthLoading[p.id]) {
+        el.innerHTML = '<p class="fp-empty"><i class="fa-solid fa-spinner fa-spin"></i> Checking crop health...</p>';
+        return;
+      }
+      if (!h || !h.available) {
+        el.innerHTML = '<p class="health-na"><i class="fa-solid fa-circle-info"></i> Crop health needs an active crop plus at least one recent soil test or water reading.</p>';
+        return;
+      }
+      var color = healthColor(h.status_code) || '#94A89C';
+      var score = h.score != null ? Math.max(0, Math.min(100, Math.round(h.score))) : null;
+      var label = h.status_label || healthLabel(h.status_code);
+      el.innerHTML = '<div class="health-score">' +
+        '<div class="hs-ring" style="background:' + color + '">' + (score != null ? score : '&mdash;') + '</div>' +
+        '<div style="min-width:0"><div class="hs-label" style="color:' + color + '">' + esc(label) + '</div>' +
+        '<div class="hs-sub">Health score out of 100</div></div></div>' +
+        (h.explanation ? '<p style="font-size:12.5px;color:#60736a;line-height:1.5;margin:8px 2px 0">' + esc(h.explanation) + '</p>' : '') +
+        '<div style="margin-top:9px"><a href="crop-health.html" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--premium-green,#176b45);text-decoration:none"><i class="fa-solid fa-heart-pulse"></i> Full crop health report</a></div>';
+    }
+
+    /* ------------------------- add task modal ------------------------- */
+
+    var taskPlot = null;
+
+    function openTaskModal(p) {
+      taskPlot = p;
+      var farm = findFarm(p.farm_id);
+      var user = (window.UserStore && window.UserStore.getCurrentUser) ? window.UserStore.getCurrentUser() : null;
+      var parts = [];
+      if (user && user.full_name) parts.push(user.full_name);
+      if (farm) parts.push(farm.name);
+      parts.push(p.name);
+      $('task-context').textContent = parts.join('  |  ');
+      $('task-title').value = '';
+      $('task-category').value = 'Irrigation';
+      $('task-priority').value = 'medium';
+      var t = new Date();
+      $('task-date').value = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+      $('task-time').value = '';
+      var msg = $('task-msg');
+      msg.hidden = true;
+      msg.className = 'task-msg';
+      $('task-modal').hidden = false;
+      setTimeout(function () { $('task-title').focus(); }, 60);
+    }
+
+    function closeTaskModal() {
+      $('task-modal').hidden = true;
+      taskPlot = null;
+    }
+
+    function submitTask(ev) {
+      ev.preventDefault();
+      if (!taskPlot || !taskPlot.crop || !taskPlot.crop.id) return;
+      var title = $('task-title').value.trim();
+      if (!title) return;
+      var btn = $('task-submit');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+      var payload = {
+        crop_cycle_id: taskPlot.crop.id,
+        title: title,
+        category: $('task-category').value,
+        priority: $('task-priority').value,
+        due_date: $('task-date').value || null,
+        due_time: $('task-time').value || null
+      };
+      API.Crop.createTask(payload).then(function () {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Task';
+        closeTaskModal();
+        reloadTasks();
+      }).catch(function (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Task';
+        var m = $('task-msg');
+        m.hidden = false;
+        m.className = 'task-msg err';
+        m.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> ' + esc((err && err.message) || 'Could not create the task. Try again.');
+      });
+    }
+
+    function reloadTasks() {
+      apiGet('/maps/farm-map').then(function (res) {
+        var nd = (res && res.data) || { farms: [], plots: [] };
+        data.farms = nd.farms || [];
+        data.plots = nd.plots || [];
+        plotById = {};
+        data.plots.forEach(function (p) { plotById[p.id] = p; });
+        buildFilters();
+        renderAll();
+        if (selectedPlotId) openPanel(selectedPlotId);
+      }).catch(function () {});
+    }
+
+    /* ------------------------- map tools ------------------------- */
+
+    function recenter() {
+      if (!map) return;
+      var bounds = L.latLngBounds([]);
+      var any = false;
+      visibleFarms().forEach(function (f) {
+        if (validPoint(f.latitude, f.longitude)) { bounds.extend([f.latitude, f.longitude]); any = true; }
+      });
+      visiblePlots().forEach(function (p) {
+        var c = boundaryPoints(p.boundary_coordinates);
+        if (c.length) { c.forEach(function (pt) { bounds.extend(pt); }); any = true; }
+        else if (p.has_location) { bounds.extend([p.latitude, p.longitude]); any = true; }
+      });
+      if (any) map.fitBounds(bounds.pad(0.2));
+      else map.setView([20.5937, 78.9629], 5);
+    }
+
+    function locate() {
+      if (!navigator.geolocation) {
+        setStatus('Location is not supported by this browser');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+        if (!layerState.locGroup) layerState.locGroup = L.layerGroup().addTo(map);
+        if (layerState.currentLoc) layerState.locGroup.removeLayer(layerState.currentLoc);
+        layerState.currentLoc = L.circleMarker([lat, lng], {
+          radius: 10, color: '#4285F4', weight: 3, fillColor: '#4285F4', fillOpacity: 0.25
+        }).addTo(layerState.locGroup);
+        layerState.currentLoc.bindPopup('<div style="font-family:Inter,sans-serif;font-size:12.5px;color:#263a30"><b><i class="fa-solid fa-location-crosshairs" style="color:#4285F4"></i> Your location</b><br>' +
+          num(lat, 4) + ', ' + num(lng, 4) + '</div>');
+        map.setView([lat, lng], Math.max(map.getZoom(), 14));
+        setStatus('You are here (approx.)');
+        refreshLegend();
+      }, function () {
+        setStatus('Location access denied');
+      }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+
+    function toggleFullscreen() {
+      var page = $('map-page');
+      var fs = page.classList.toggle('fullscreen');
+      var btn = $('fullscreen-btn');
+      btn.innerHTML = '<i class="fa-solid fa-' + (fs ? 'compress' : 'expand') + '"></i>';
+      btn.title = fs ? 'Exit fullscreen' : 'Fullscreen';
+      invalidate();
+    }
+
+    /* ------------------------- controls / boot ------------------------- */
+
+    var initDone = false;
+
+    function bindControls() {
+      $('map-view').onclick = function () {
+        setTerrain('map');
+        $('map-view').classList.add('active');
+        $('sat-view').classList.remove('active');
+      };
+      $('sat-view').onclick = function () {
+        setTerrain('satellite');
+        $('sat-view').classList.add('active');
+        $('map-view').classList.remove('active');
+      };
+      $('filter-btn').onclick = function () {
+        var p = $('filter-panel');
+        p.hidden = !p.hidden;
+        invalidate();
+      };
+      $('recenter-btn').onclick = function () { recenter(); };
+      $('locate-btn').onclick = function () { locate(); };
+      $('fullscreen-btn').onclick = function () { toggleFullscreen(); };
+      $('fp-close').onclick = closePanel;
+      $('panel-backdrop').onclick = function (e) {
+        if (e.target === $('panel-backdrop')) closePanel();
+      };
+      $('task-close').onclick = closeTaskModal;
+      $('task-modal').addEventListener('click', function (e) {
+        if (e.target === $('task-modal')) closeTaskModal();
+      });
+      $('task-form').addEventListener('submit', submitTask);
+      $('filter-panel').addEventListener('click', function (e) {
+        var chip = e.target && e.target.closest ? e.target.closest('.filter-chip') : null;
+        if (!chip) return;
+        var key = chip.getAttribute('data-key');
+        if (!key) return;
+        if (chip.getAttribute('data-toggle')) {
+          filters[key] = !filters[key];
+        } else {
+          var val = chip.getAttribute('data-val');
+          var set = filters[key] || (filters[key] = new Set());
+          if (set.has(val)) set.delete(val);
+          else set.add(val);
+        }
+        buildFilters();
+        renderAll();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (!$('task-modal').hidden) closeTaskModal();
+        else closePanel();
+      });
+      window.addEventListener('resize', invalidate);
+      if (window.MutationObserver) {
+        new MutationObserver(function (muts) {
+          var changed = muts.some(function (m) {
+            return m.type === 'attributes' && m.attributeName === 'class';
+          });
+          if (changed) invalidate();
+        }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      }
+    }
+
+    function init() {
+      if (initDone) return;
+      initDone = true;
+      bindControls();
+      initMap();
+      loadData();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   })();
   </script>
-</body></html>
+</body>
+</html>
