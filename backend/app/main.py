@@ -173,6 +173,17 @@ async def startup():
             market_seeded = 0
             eq_summary = None
             if not has_market_data:
+                # Fresh DB: seed both the historical MSP/FRP baseline and the
+                # AGMARKNET regional mandi (mandal/taluk) dataset so Region
+                # filters work on first boot too.
+                try:
+                    from seed_market_prices import import_msp_prices
+                except ImportError:
+                    _backend_dir = Path(__file__).resolve().parent.parent
+                    if str(_backend_dir) not in sys.path:
+                        sys.path.insert(0, str(_backend_dir))
+                    from seed_market_prices import import_msp_prices
+                market_seeded = import_msp_prices(db)
                 try:
                     from seed_market_regions import import_region_prices
                 except ImportError:
@@ -180,7 +191,7 @@ async def startup():
                     if str(_backend_dir) not in sys.path:
                         sys.path.insert(0, str(_backend_dir))
                     from seed_market_regions import import_region_prices
-                market_seeded = import_region_prices(db)
+                market_seeded |= import_region_prices(db)
             else:
                 # MSP/regional datasets already exist; top up any missing
                 # AGMARKNET regional rows so Region filters work on older DBs.
