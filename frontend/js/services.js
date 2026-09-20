@@ -1743,6 +1743,21 @@ Backend: FastAPI served from the same origin (port 8000).
     insights: function (params) {
       return http('GET', '/analytics/insights' + this._qs(params)).then(unwrap);
     },
+    insurance: function (params) {
+      return http('GET', '/analytics/insurance' + this._qs(params)).then(unwrap);
+    },
+    livestock: function (params) {
+      return http('GET', '/analytics/livestock' + this._qs(params)).then(unwrap);
+    },
+    marketplace: function (params) {
+      return http('GET', '/analytics/marketplace' + this._qs(params)).then(unwrap);
+    },
+    sensors: function (params) {
+      return http('GET', '/analytics/sensors' + this._qs(params)).then(unwrap);
+    },
+    summary: function (params) {
+      return http('GET', '/analytics/summary' + this._qs(params)).then(unwrap);
+    },
     ai: function (params) {
       return http('GET', '/analytics/ai' + this._qs(params)).then(unwrap);
     },

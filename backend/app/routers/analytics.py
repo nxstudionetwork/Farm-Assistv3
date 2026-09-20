@@ -6,12 +6,15 @@ wallet money is mixed into farm finances. All ownership checks run server-side.
 """
 
 import asyncio
+import csv
+import io
 import random
 import string
 from datetime import datetime, timedelta
+from html import escape as _esc
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
@@ -164,6 +167,68 @@ def _cycles_in_scope(db: Session, farm_ids: List[str], plot_ids: List[str],
         q = q.filter(CropCycle.plot_id.in_(plot_ids))
     cycles = q.all()
     return cycles
+
+
+def _in_window(value: Optional[str], start: Optional[datetime],
+               end: Optional[datetime]) -> bool:
+    """True when an ISO date string falls inside [start, end]. Missing/unparseable
+    values are kept so scope-level records are never silently dropped."""
+    if not value:
+        return True
+    d = _to_date(value)
+    if d is None:
+        return True
+    if start and d < start:
+        return False
+    if end and d > end:
+        return False
+    return True
+
+
+def _cycle_in_window(c: CropCycle, start: Optional[datetime],
+                     end: Optional[datetime]) -> bool:
+    """True when a crop cycle's recorded activity (sowing..harvest) overlaps
+    [start, end]. Cycles with no known timing are kept for the scope."""
+    s = _to_date(c.sowing_date)
+    h = _to_date(c.actual_harvest_date or c.expected_harvest_date)
+    if s is None and h is None:
+        return True
+    if s is not None and h is not None:
+        if s <= end and h >= start:
+            return True
+        # fall back to any known date falling inside the window
+        if start and s >= start and s <= end:
+            return True
+        if start and h >= start and h <= end:
+            return True
+        return False
+    d = s or h
+    if d is None:
+        return True
+    if start and d < start:
+        return False
+    if end and d > end:
+        return False
+    return True
+
+
+def _cycles_in_window(cycles: List[CropCycle], date_from: Optional[str] = None,
+                      date_to: Optional[str] = None) -> List[CropCycle]:
+    """Keep cycles whose activity overlaps the requested date window. When no
+    window is given, the full scope set is returned unchanged."""
+    if not date_from and not date_to:
+        return cycles
+    start, end = _date_range(date_from, date_to)
+    return [c for c in cycles if _cycle_in_window(c, start, end)]
+
+
+def _date_col_condition(col, start: Optional[datetime], end: Optional[datetime]):
+    conds = []
+    if start:
+        conds.append(col >= start)
+    if end:
+        conds.append(col <= end)
+    return and_(*conds) if conds else True
 
 
 # --------------------------------------------------------------------------- #
@@ -319,12 +384,15 @@ def analytics_context(
 def analytics_overview(
     farm_id: Optional[str] = None,
     plot_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     farms, plots, farm_ids, plot_ids = _resolve_scope(db, current_user, farm_id, plot_id)
-    cycles = _cycles_in_scope(db, farm_ids, plot_ids)
+    cycles = _cycles_in_window(_cycles_in_scope(db, farm_ids, plot_ids), date_from, date_to)
     cycle_ids = [c.id for c in cycles]
+    start, end = _date_range(date_from, date_to)
 
     total_area = sum(_acres(f.total_area, f.area_unit) for f in farms)
     sensors = _sensors_in_scope(db, current_user.id, farm_ids, plot_ids)
@@ -340,27 +408,34 @@ def analytics_overview(
         and t.due_date and t.due_date < datetime.utcnow().strftime("%Y-%m-%d")
     )
 
+    income_date_cond = _date_col_condition(Income.income_date, start, end)
+    expense_date_cond = _date_col_condition(Expense.expense_date, start, end)
+    txn_date_cond = _date_col_condition(Transaction.transaction_date, start, end)
     income = _num(
         db.query(func.coalesce(func.sum(Income.amount), 0.0))
         .filter(Income.user_id == current_user.id)
+        .filter(income_date_cond)
         .filter(Income.farm_id.in_(farm_ids) if farm_ids else True)
         .scalar()
     )
     txn_income = _num(
         db.query(func.coalesce(func.sum(Transaction.amount), 0.0))
         .filter(Transaction.user_id == current_user.id, Transaction.type == "income")
+        .filter(txn_date_cond)
         .filter(Transaction.farm_id.in_(farm_ids) if farm_ids else True)
         .scalar()
     )
     expenses = _num(
         db.query(func.coalesce(func.sum(Expense.amount), 0.0))
         .filter(Expense.user_id == current_user.id)
+        .filter(expense_date_cond)
         .filter(Expense.farm_id.in_(farm_ids) if farm_ids else True)
         .scalar()
     )
     txn_expenses = _num(
         db.query(func.coalesce(func.sum(Transaction.amount), 0.0))
         .filter(Transaction.user_id == current_user.id, Transaction.type == "expense")
+        .filter(txn_date_cond)
         .filter(Transaction.farm_id.in_(farm_ids) if farm_ids else True)
         .scalar()
     )
@@ -391,6 +466,7 @@ def analytics_overview(
         "expenses": total_expenses,
         "net_profit": net,
         "has_data": bool(farms or cycles),
+        "period": {"from": date_from or None, "to": date_to or None},
     }
     return {"status": "success", "data": data}
 
@@ -526,11 +602,13 @@ def analytics_performance(
 def analytics_crops(
     farm_id: Optional[str] = None,
     plot_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     farms, plots, farm_ids, plot_ids = _resolve_scope(db, current_user, farm_id, plot_id)
-    cycles = _cycles_in_scope(db, farm_ids, plot_ids)
+    cycles = _cycles_in_window(_cycles_in_scope(db, farm_ids, plot_ids), date_from, date_to)
     farm_map = {f.id: f for f in farms}
     plot_map = {p.id: p for p in plots}
 
@@ -591,11 +669,13 @@ def analytics_crops(
 def analytics_yield(
     farm_id: Optional[str] = None,
     plot_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     farms, plots, farm_ids, plot_ids = _resolve_scope(db, current_user, farm_id, plot_id)
-    cycles = _cycles_in_scope(db, farm_ids, plot_ids)
+    cycles = _cycles_in_window(_cycles_in_scope(db, farm_ids, plot_ids), date_from, date_to)
     farm_map = {f.id: f for f in farms}
     plot_map = {p.id: p for p in plots}
 
@@ -673,7 +753,7 @@ def analytics_production(
     db: Session = Depends(get_db),
 ):
     farms, plots, farm_ids, plot_ids = _resolve_scope(db, current_user, farm_id, plot_id)
-    cycles = _cycles_in_scope(db, farm_ids, plot_ids)
+    cycles = _cycles_in_window(_cycles_in_scope(db, farm_ids, plot_ids), date_from, date_to)
 
     monthly: Dict[str, Dict[str, Any]] = {}
     by_crop: Dict[str, Dict[str, Any]] = {}
@@ -818,11 +898,13 @@ def analytics_financial(
 def analytics_tasks(
     farm_id: Optional[str] = None,
     plot_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     farms, plots, farm_ids, plot_ids = _resolve_scope(db, current_user, farm_id, plot_id)
-    cycles = _cycles_in_scope(db, farm_ids, plot_ids)
+    cycles = _cycles_in_window(_cycles_in_scope(db, farm_ids, plot_ids), date_from, date_to)
     cycle_ids = [c.id for c in cycles]
     tasks = db.query(CropTask).filter(
         CropTask.crop_cycle_id.in_(cycle_ids)
@@ -867,12 +949,19 @@ def analytics_tasks(
 @router.get("/analytics/calendar", response_model=dict)
 def analytics_calendar(
     farm_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     q = db.query(CalendarEvent).filter(CalendarEvent.farmer_id == current_user.id)
     if farm_id:
         q = q.filter(or_(CalendarEvent.farm_id.is_(None), CalendarEvent.farm_id == farm_id))
+    start, end = _date_range(date_from, date_to)
+    if start:
+        q = q.filter(or_(CalendarEvent.start_datetime.is_(None), CalendarEvent.start_datetime >= start))
+    if end:
+        q = q.filter(or_(CalendarEvent.start_datetime.is_(None), CalendarEvent.start_datetime <= end))
     events = q.order_by(CalendarEvent.start_datetime.desc()).all()
 
     status_counts: Dict[str, int] = {}
@@ -976,6 +1065,38 @@ def analytics_market(
         if key not in best or (row.price_date or "") > (best[key].price_date or ""):
             best[key] = row
 
+    # chronological price history per commodity (for trend sparklines)
+    trends: Dict[str, List[Dict[str, str]]] = {}
+    history = sorted(rows, key=lambda r: (r.commodity.lower(), r.price_date or ""))
+    for row in history:
+        key = (row.commodity or "").lower()
+        if not key:
+            continue
+        trends.setdefault(key, []).append({
+            "date": row.price_date,
+            "price": _r2(_num(row.modal_price)),
+            "market": row.market,
+        })
+    for key in trends:
+        if len(trends[key]) > 10:
+            trends[key] = trends[key][-10:]
+
+    def _commodity_stats(key: str) -> Dict[str, Any]:
+        series = [r for r in history if (r.commodity or "").lower() == key]
+        prices = [_num(r.modal_price) for r in series if _num(r.modal_price) is not None]
+        highest = max(prices) if prices else None
+        slim = [p for p in prices if p is not None]
+        change_pct = None
+        if len(slim) >= 2:
+            latest = slim[-1]
+            previous = slim[-2] or 0
+            if previous:
+                change_pct = round(((latest - previous) / previous) * 100.0, 1)
+        return {
+            "highest_price": _r2(highest),
+            "price_change_pct": change_pct,
+        }
+
     latest_date = max((r.price_date for r in rows if r.price_date), default=None)
     yield_by_crop: Dict[str, float] = {}
     unit_by_crop: Dict[str, str] = {}
@@ -990,7 +1111,8 @@ def analytics_market(
     crops = []
     matched = 0
     for name in crop_names:
-        row = best.get(name.lower())
+        key = name.lower()
+        row = best.get(key)
         if not row:
             crops.append({
                 "crop_name": name,
@@ -999,6 +1121,9 @@ def analytics_market(
                 "unit": "Rs/Quintal",
                 "market": None,
                 "price_date": None,
+                "trend": trends.get(key, []),
+                "highest_price": None,
+                "price_change_pct": None,
             })
             continue
         matched += 1
@@ -1011,6 +1136,7 @@ def analytics_market(
                 estimated = _r2(yield_qty * modal)
             else:
                 estimated = _r2((yield_qty / 100.0) * modal)
+        stats = _commodity_stats(key)
         crops.append({
             "crop_name": name,
             "available": True,
@@ -1022,6 +1148,9 @@ def analytics_market(
             "district": row.district,
             "state": row.state,
             "price_date": row.price_date,
+            "trend": trends.get(key, []),
+            "highest_price": stats["highest_price"],
+            "price_change_pct": stats["price_change_pct"],
             "estimated_potential_revenue": estimated,
             "estimated_label": "Estimated potential revenue at today's market price",
         })
@@ -1294,12 +1423,36 @@ def analytics_completeness(
          "help": "Record Income"},
         {"key": "expenses", "label": "Expense records", "present": bool(db.query(Expense).filter(Expense.user_id == current_user.id, Expense.farm_id.in_(farm_ids) if farm_ids else True).first()),
          "help": "Record Expense"},
+        {"key": "yield", "label": "Harvest yield records", "present": bool(any(c.yield_quantity is not None for c in cycles)),
+         "help": "Record Harvest"},
     ]
     soil_present = False
     if plot_ids:
         soil_present = bool(db.query(SoilRecord).filter(SoilRecord.plot_id.in_(plot_ids)).first())
     sections.append({"key": "soil", "label": "Soil tests", "present": soil_present, "help": "Add Soil Test"})
     sections.append({"key": "sensors", "label": "Connected sensors", "present": bool(_sensors_in_scope(db, current_user.id, farm_ids, plot_ids)), "help": "Add Sensor"})
+
+    insurance_present = bool(
+        db.query(InsurancePolicy)
+        .filter(InsurancePolicy.user_id == current_user.id)
+        .filter(InsurancePolicy.farm_id.in_(farm_ids) if farm_ids else True)
+        .first()
+    )
+    sections.append({"key": "insurance", "label": "Insurance coverage", "present": insurance_present, "help": "Explore Insurance"})
+
+    weather_present = any(
+        (f.latitude is not None and f.longitude is not None) for f in farms
+    ) or any(
+        (p.latitude is not None and p.longitude is not None) for p in plots
+    )
+    sections.append({"key": "weather", "label": "Weather location", "present": weather_present, "help": "Set Farm Location"})
+
+    crop_names = sorted({c.crop.name for c in cycles if c.crop and c.crop.name})
+    market_present = False
+    if crop_names:
+        market_conds = [func.lower(MarketPrice.commodity) == name.lower() for name in crop_names]
+        market_present = bool(db.query(MarketPrice).filter(or_(*market_conds)).first())
+    sections.append({"key": "market", "label": "Market price data", "present": market_present, "help": "Market"})
 
     present = sum(1 for s in sections if s["present"])
     total = len(sections)
@@ -1320,11 +1473,13 @@ def analytics_completeness(
 def analytics_insights(
     farm_id: Optional[str] = None,
     plot_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     farms, plots, farm_ids, plot_ids = _resolve_scope(db, current_user, farm_id, plot_id)
-    cycles = _cycles_in_scope(db, farm_ids, plot_ids)
+    cycles = _cycles_in_window(_cycles_in_scope(db, farm_ids, plot_ids), date_from, date_to)
     insights: List[Dict[str, Any]] = []
 
     if not farms and not cycles:
@@ -1358,8 +1513,10 @@ def analytics_insights(
         })
 
     # Financial insight
-    income = _num(db.query(func.coalesce(func.sum(Income.amount), 0.0)).filter(Income.user_id == current_user.id, Income.farm_id.in_(farm_ids) if farm_ids else True).scalar()) or 0
-    expenses = _num(db.query(func.coalesce(func.sum(Expense.amount), 0.0)).filter(Expense.user_id == current_user.id, Expense.farm_id.in_(farm_ids) if farm_ids else True).scalar()) or 0
+    start, end = _date_range(date_from, date_to)
+    _fin = lambda m: _num(db.query(func.coalesce(func.sum(m.amount), 0.0)).filter(m.user_id == current_user.id, m.farm_id.in_(farm_ids) if farm_ids else True).filter(_date_col_condition(m.expense_date if m is Expense else m.income_date, start, end)).scalar()) or 0
+    income = _fin(Income)
+    expenses = _fin(Expense)
     if income or expenses:
         net = income - expenses
         if net >= 0:
@@ -1375,6 +1532,91 @@ def analytics_insights(
                 "icon": "fas fa-wallet",
                 "title": "Farm finances need review",
                 "detail": f"Recorded expenses (₹{expenses:,.0f}) are higher than income (₹{income:,.0f}). Review spending for this period.",
+            })
+
+    # Expense change vs previous period of equal length
+    if expenses and start and end and (end > start):
+        span_days = (end - start).days
+        prev_end = start - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=max(span_days, 0))
+        prev_exp = _num(db.query(func.coalesce(func.sum(Expense.amount), 0.0)).filter(Expense.user_id == current_user.id, Expense.farm_id.in_(farm_ids) if farm_ids else True).filter(_date_col_condition(Expense.expense_date, prev_start, prev_end)).scalar()) or 0
+        if prev_exp:
+            change = round(((expenses - prev_exp) / prev_exp) * 100.0)
+            if change > 5:
+                insights.append({
+                    "type": "finance",
+                    "icon": "fas fa-arrow-up",
+                    "title": "Spending increased",
+                    "detail": f"Farm expenses rose {change}% compared with the previous period (₹{prev_exp:,.0f} → ₹{expenses:,.0f}). Review the largest cost items.",
+                })
+            elif change < -5:
+                insights.append({
+                    "type": "finance",
+                    "icon": "fas fa-arrow-down",
+                    "title": "Spending reduced",
+                    "detail": f"Farm expenses fell {abs(change)}% compared with the previous period (₹{prev_exp:,.0f} → ₹{expenses:,.0f}). Keep up the good cost control.",
+                })
+
+    # Top expense category
+    if expenses:
+        cat_totals: Dict[str, float] = {}
+        for cat in EXPENSE_CATEGORY_ORDER:
+            cat_totals[cat] = 0.0
+        exp_rows = db.query(Expense).filter(Expense.user_id == current_user.id, Expense.farm_id.in_(farm_ids) if farm_ids else True).filter(_date_col_condition(Expense.expense_date, start, end)).all()
+        for e in exp_rows:
+            key = e.category or "Other"
+            cat_totals[key] = cat_totals.get(key, 0.0) + (_num(e.amount) or 0)
+        top_cat = max(cat_totals.items(), key=lambda kv: kv[1])
+        if top_cat[1] > 0:
+            insights.append({
+                "type": "expense",
+                "icon": "fas fa-receipt",
+                "title": "Top spending category",
+                "detail": f"{top_cat[0] or 'Other'} is your highest expense category at ₹{top_cat[1]:,.0f} ({_pct(top_cat[1], expenses)}% of recorded spending).",
+            })
+
+    # Insurance renewals / expiries coming up
+    now = datetime.utcnow()
+    soon = now + timedelta(days=60)
+    expiring = []
+    for pol in db.query(InsurancePolicy).filter(InsurancePolicy.user_id == current_user.id, InsurancePolicy.farm_id.in_(farm_ids) if farm_ids else True).all():
+        ed = _to_date(pol.end_date)
+        if ed and now <= ed <= soon:
+            expiring.append(pol)
+    if expiring:
+        names = ", ".join(sorted({(p.policy_type or "insurance") for p in expiring}))
+        dates = ", ".join(sorted({p.end_date for p in expiring if p.end_date}))
+        insights.append({
+            "type": "insurance",
+            "icon": "fas fa-shield-halved",
+            "title": "Insurance renewals",
+            "detail": f"{len(expiring)} insurance policy/policies are expiring soon ({names or 'n/a'}). Review renewal before {dates or 'the due date'}.",
+        })
+
+    # Market price movement
+    crop_names = sorted({c.crop.name for c in cycles if c.crop and c.crop.name})
+    if crop_names:
+        market_conds = [func.lower(MarketPrice.commodity) == name.lower() for name in crop_names]
+        mrows = db.query(MarketPrice).filter(or_(*market_conds)).order_by(MarketPrice.price_date.asc()).all()
+        mseries: Dict[str, List[float]] = {}
+        for r in mrows:
+            key = (r.commodity or "").lower()
+            p = _num(r.modal_price)
+            if key and p is not None:
+                mseries.setdefault(key, []).append(p)
+        rises = []
+        for key, series in mseries.items():
+            if len(series) >= 2 and series[-2] and series[-1] > series[-2]:
+                pct = round(((series[-1] - series[-2]) / series[-2]) * 100.0, 1)
+                rises.append((key, series[-2], series[-1], pct))
+        if rises:
+            top, prev_p, latest_p, pct = max(rises, key=lambda r: r[3])
+            crop_label = next((n for n in crop_names if n.lower() == top), top.title())
+            insights.append({
+                "type": "market",
+                "icon": "fas fa-trend-up",
+                "title": "Market prices rising",
+                "detail": f"The quoted market price for {crop_label} rose {pct}% recently (₹{prev_p:,.0f} → ₹{latest_p:,.0f}). Consider timing your sale for better returns.",
             })
 
     # Production insight
@@ -1411,6 +1653,430 @@ def analytics_insights(
         })
 
     return {"status": "success", "data": {"insights": insights}}
+
+
+# --------------------------------------------------------------------------- #
+# Livestock analysis (real records only, user-scoped - livestock has no farm id)
+# --------------------------------------------------------------------------- #
+@router.get("/analytics/livestock", response_model=dict)
+def analytics_livestock(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.models.livestock import (
+        Livestock, LivestockProductionRecord, LivestockExpenseRecord,
+        LivestockVaccination, LivestockTreatment,
+    )
+
+    animals = (
+        db.query(Livestock)
+        .filter(Livestock.user_id == current_user.id)
+        .order_by(Livestock.created_at.asc())
+        .all()
+    )
+    total = len(animals)
+    if total == 0:
+        return {"status": "success", "data": {"present": False, "total": 0}}
+
+    start, end = _date_range(date_from, date_to)
+    by_type: Dict[str, int] = {}
+    by_health: Dict[str, int] = {}
+    for a in animals:
+        by_type[a.animal_type or "other"] = by_type.get(a.animal_type or "other", 0) + 1
+        by_health[a.health_status or "unknown"] = by_health.get(a.health_status or "unknown", 0) + 1
+
+    animal_ids = [a.id for a in animals]
+
+    prod_rows = [
+        p for p in db.query(LivestockProductionRecord)
+        .filter(LivestockProductionRecord.user_id == current_user.id)
+        .all()
+        if _in_window(p.record_date, start, end)
+    ]
+    prod_by_type: Dict[str, Dict[str, Any]] = {}
+    prod_monthly: Dict[str, Dict[str, Any]] = {}
+    for p in prod_rows:
+        pt = p.product_type or "other"
+        ent = prod_by_type.setdefault(pt, {"quantity": 0.0, "unit": p.unit or "units", "records": 0})
+        ent["quantity"] += _num(p.quantity) or 0
+        ent["records"] += 1
+        mk = (p.record_date or "")[:7]
+        ment = prod_monthly.setdefault(mk, {"key": mk, "total": 0.0})
+        ment["total"] += _num(p.quantity) or 0
+
+    exp_rows = [
+        e for e in db.query(LivestockExpenseRecord)
+        .filter(LivestockExpenseRecord.user_id == current_user.id)
+        .all()
+        if _in_window(e.expense_date, start, end)
+    ]
+    exp_total = sum(_num(e.amount) or 0 for e in exp_rows)
+    exp_by_cat: Dict[str, float] = {}
+    for e in exp_rows:
+        c = e.category or "Other"
+        exp_by_cat[c] = exp_by_cat.get(c, 0) + (_num(e.amount) or 0)
+
+    vac_by_status: Dict[str, int] = {}
+    for v in db.query(LivestockVaccination).filter(LivestockVaccination.user_id == current_user.id).all():
+        s = v.status or "completed"
+        vac_by_status[s] = vac_by_status.get(s, 0) + 1
+    vac_total = sum(vac_by_status.values())
+    vac_due = vac_by_status.get("due_soon", 0) + vac_by_status.get("overdue", 0)
+
+    treatment_total = (
+        db.query(LivestockTreatment)
+        .filter(LivestockTreatment.user_id == current_user.id)
+        .count()
+    )
+
+    return {
+        "status": "success",
+        "data": {
+            "present": True,
+            "total": total,
+            "active": sum(1 for a in animals if a.is_active),
+            "by_type": [{"key": k, "count": v} for k, v in sorted(by_type.items(), key=lambda x: -x[1])],
+            "by_health": [{"key": k, "count": v} for k, v in sorted(by_health.items(), key=lambda x: -x[1])],
+            "production": {
+                "by_type": [
+                    {"key": k, "quantity": _r2(v["quantity"]), "unit": v["unit"], "records": v["records"]}
+                    for k, v in sorted(prod_by_type.items(), key=lambda x: -x[1]["quantity"])
+                ],
+                "monthly": sorted(prod_monthly.values(), key=lambda x: x["key"]),
+                "total_quantity": _r2(sum(v["quantity"] for v in prod_by_type.values())),
+                "records": len(prod_rows),
+            },
+            "expenses": {
+                "total": _r2(exp_total),
+                "records": len(exp_rows),
+                "by_category": [
+                    {"key": k, "amount": _r2(v)} for k, v in sorted(exp_by_cat.items(), key=lambda x: -x[1])
+                ],
+            },
+            "vaccinations": {
+                "total": vac_total,
+                "by_status": [{"key": k, "count": v} for k, v in vac_by_status.items()],
+                "due_total": vac_due,
+            },
+            "treatments": treatment_total,
+            "animals": [
+                {
+                    "name": a.name,
+                    "animal_type": a.animal_type,
+                    "breed": a.breed,
+                    "gender": a.gender,
+                    "health_status": a.health_status,
+                    "weight_kg": _r2(a.weight_kg),
+                    "location": a.location,
+                }
+                for a in animals[:20]
+            ],
+        },
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Marketplace analysis (farmer's sell-side only)
+# --------------------------------------------------------------------------- #
+@router.get("/analytics/marketplace", response_model=dict)
+def analytics_marketplace(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.models.marketplace import (
+        MarketplaceListing, MarketplaceSale, MarketplaceEnquiry,
+    )
+
+    listings = (
+        db.query(MarketplaceListing)
+        .filter(
+            MarketplaceListing.user_id == current_user.id,
+            MarketplaceListing.is_deleted == False,
+        )
+        .all()
+    )
+    total = len(listings)
+    if total == 0:
+        return {"status": "success", "data": {"present": False, "total": 0}}
+
+    start, end = _date_range(date_from, date_to)
+    status_map: Dict[str, int] = {}
+    for l in listings:
+        s = l.status or "active"
+        status_map[s] = status_map.get(s, 0) + 1
+    total_views = sum(l.total_views or 0 for l in listings)
+    interested = sum(l.interested_count or 0 for l in listings)
+    enquiry_total = (
+        db.query(func.count(MarketplaceEnquiry.id))
+        .join(MarketplaceListing, MarketplaceListing.id == MarketplaceEnquiry.listing_id)
+        .filter(MarketplaceListing.user_id == current_user.id)
+        .scalar()
+    ) or 0
+
+    sales = (
+        db.query(MarketplaceSale)
+        .join(MarketplaceListing, MarketplaceListing.id == MarketplaceSale.listing_id)
+        .filter(MarketplaceListing.user_id == current_user.id)
+        .all()
+    )
+    sales_in = [s for s in sales if _in_window(
+        (s.sold_at or s.created_at).strftime("%Y-%m-%d") if (s.sold_at or s.created_at) else None,
+        start, end,
+    )]
+    sale_rows = [s for s in sales_in if (s.status or "").lower() != "cancelled"]
+    revenue = sum(_num(s.total_amount) or 0 for s in sale_rows)
+    cat_sales: Dict[str, float] = {}
+    monthly_sales: Dict[str, Dict[str, Any]] = {}
+    for s in sale_rows:
+        key = "Unknown"
+        if s.listing and s.listing.category:
+            key = s.listing.category.name or key
+        cat_sales[key] = cat_sales.get(key, 0) + (_num(s.total_amount) or 0)
+        when = s.sold_at or s.created_at
+        if when:
+            mk = when.strftime("%Y-%m")
+            ent = monthly_sales.setdefault(mk, {"key": mk, "total": 0.0, "count": 0})
+            ent["total"] += _num(s.total_amount) or 0
+            ent["count"] += 1
+
+    return {
+        "status": "success",
+        "data": {
+            "present": True,
+            "total": total,
+            "active": status_map.get("active", 0),
+            "status": [{"key": k, "count": v} for k, v in sorted(status_map.items(), key=lambda x: -x[1])],
+            "total_views": total_views,
+            "interested": interested,
+            "enquiries": enquiry_total,
+            "sales": {
+                "count": len(sale_rows),
+                "revenue": _r2(revenue),
+                "by_category": [{"key": k, "amount": _r2(v)} for k, v in sorted(cat_sales.items(), key=lambda x: -x[1])],
+                "monthly": sorted(monthly_sales.values(), key=lambda x: x["key"]),
+            },
+        },
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Sensors & monitoring analysis
+# --------------------------------------------------------------------------- #
+@router.get("/analytics/sensors", response_model=dict)
+def analytics_sensors(
+    farm_id: Optional[str] = None,
+    plot_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.routers.sensors import Sensor, SensorReading
+    from app.models.monitoring import MonitoringAlert
+
+    farms, plots, farm_ids, plot_ids = _resolve_scope(db, current_user, farm_id, plot_id)
+    sensors = _sensors_in_scope(db, current_user.id, farm_ids, plot_ids)
+    total = len(sensors)
+    if total == 0:
+        return {"status": "success", "data": {"present": False, "total": 0}}
+
+    start, end = _date_range(date_from, date_to)
+    by_type: Dict[str, int] = {}
+    by_status: Dict[str, int] = {}
+    active = 0
+    for s in sensors:
+        by_type[s.sensor_type or "sensor"] = by_type.get(s.sensor_type or "sensor", 0) + 1
+        st = s.status or "unknown"
+        by_status[st] = by_status.get(st, 0) + 1
+        if st in ("connected", "connecting"):
+            active += 1
+
+    sensor_ids = [s.id for s in sensors]
+    reading_q = (
+        db.query(SensorReading)
+        .filter(SensorReading.sensor_id.in_(sensor_ids))
+    )
+    reading_q = reading_q.filter(_date_col_condition(SensorReading.recorded_at, start, end))
+    rows = reading_q.order_by(SensorReading.recorded_at.asc()).all()
+
+    per_metric: Dict[str, Dict[str, Any]] = {}
+    for r in rows:
+        m = per_metric.setdefault(r.reading_type, {"series": [], "unit": r.unit, "count": 0})
+        m["series"].append({
+            "recorded_at": r.recorded_at.strftime("%Y-%m-%dT%H:%M"),
+            "value": _r2(r.value),
+        })
+        m["count"] += 1
+    metrics = []
+    for rtype, m in per_metric.items():
+        series = m["series"]
+        if len(series) > 40:
+            step = max(1, len(series) // 40)
+            series = series[::step]
+            if series[-1] != m["series"][-1]:
+                series.append(m["series"][-1])
+        last = series[-1] if series else None
+        metrics.append({
+            "metric": rtype,
+            "unit": m["unit"],
+            "count": m["count"],
+            "last_value": last["value"] if last else None,
+            "last_recorded_at": last["recorded_at"] if last else None,
+            "series": series,
+        })
+
+    alert_q = (
+        db.query(MonitoringAlert)
+        .filter(MonitoringAlert.user_id == current_user.id, MonitoringAlert.status == "active")
+    )
+    if farm_ids:
+        alert_q = alert_q.filter(MonitoringAlert.farm_id.in_(farm_ids))
+    alerts = alert_q.all()
+    alert_critical = sum(1 for a in alerts if (a.severity or "") == "critical")
+
+    return {
+        "status": "success",
+        "data": {
+            "present": True,
+            "total": total,
+            "active": active,
+            "offline": sum(1 for s in sensors if s.status in ("offline", "error", "disconnected", "never_connected")),
+            "by_type": [{"key": k, "count": v} for k, v in sorted(by_type.items(), key=lambda x: -x[1])],
+            "by_status": [{"key": k, "count": v} for k, v in sorted(by_status.items(), key=lambda x: -x[1])],
+            "readings": {"count": len(rows), "metrics": metrics},
+            "alerts": {"total": len(alerts), "critical": alert_critical},
+        },
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Farm Analysis Summary - one-at-a-glance review across every domain
+# --------------------------------------------------------------------------- #
+@router.get("/analytics/summary", response_model=dict)
+def analytics_summary(
+    farm_id: Optional[str] = None,
+    plot_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.models.livestock import Livestock
+    from app.models.marketplace import (
+        MarketplaceListing, MarketplaceSale,
+    )
+    from app.routers.sensors import Sensor, SensorReading
+    from app.models.monitoring import MonitoringAlert
+
+    farms, plots, farm_ids, plot_ids = _resolve_scope(db, current_user, farm_id, plot_id)
+    start, end = _date_range(date_from, date_to)
+
+    cards = []
+
+    if farms:
+        total_area = sum(_acres(f.total_area, f.area_unit) for f in farms)
+        cards.append({
+            "icon": "fas fa-warehouse", "label": "Farms & Land",
+            "value": f"{len(farms)}", "sub": f"{len(plots)} plot(s), {_r2(total_area)} acres",
+            "present": True,
+        })
+    else:
+        cards.append({"icon": "fas fa-warehouse", "label": "Farms & Land", "value": "0", "sub": "Register a farm to begin", "present": False})
+
+    cycles = _cycles_in_scope(db, farm_ids, plot_ids)
+    active = [c for c in cycles if (c.status or "").lower() == "active"]
+    harvested = [c for c in cycles if c.actual_harvest_date]
+    cards.append({
+        "icon": "fas fa-seedling", "label": "Crops",
+        "value": f"{len(active)}", "sub": f"{len(cycles)} cycles total, {len(harvested)} harvested",
+        "present": bool(cycles),
+    })
+
+    cycles_w = _cycles_in_window(cycles, date_from, date_to)
+    yield_total = sum(_num(c.yield_quantity) or 0 for c in cycles_w if c.yield_quantity)
+    unit = next((c.yield_unit for c in cycles_w if c.yield_unit), "kg")
+    yield_count = sum(1 for c in cycles_w if c.yield_quantity is not None)
+    cards.append({
+        "icon": "fas fa-weight-hanging", "label": "Harvest",
+        "value": f"{_r2(yield_total):,g}" if yield_total else "0",
+        "sub": f"{yield_count} cycle(s) with yield in {unit}",
+        "present": bool(cycles_w),
+    })
+
+    income = _num(db.query(func.coalesce(func.sum(Income.amount), 0.0)).filter(
+        Income.user_id == current_user.id, Income.farm_id.in_(farm_ids) if farm_ids else True).scalar()) or 0
+    expenses = _num(db.query(func.coalesce(func.sum(Expense.amount), 0.0)).filter(
+        Expense.user_id == current_user.id, Expense.farm_id.in_(farm_ids) if farm_ids else True).scalar()) or 0
+    fin_present = bool(income or expenses)
+    fin_net = _r2(income - expenses)
+    cards.append({
+        "icon": "fas fa-sack-dollar", "label": "Finances",
+        "value": f"₹{fin_net:,.0f}" if fin_present else "--",
+        "sub": f"Income ₹{_r2(income):,.0f} · Expenses ₹{_r2(expenses):,.0f}",
+        "present": fin_present,
+    })
+
+    livestock_total = db.query(Livestock).filter(Livestock.user_id == current_user.id).count()
+    cards.append({
+        "icon": "fas fa-cow", "label": "Livestock",
+        "value": f"{livestock_total}",
+        "sub": "Animals in your herd",
+        "present": livestock_total > 0,
+    })
+
+    listings = db.query(MarketplaceListing).filter(
+        MarketplaceListing.user_id == current_user.id, MarketplaceListing.is_deleted == False).count()
+    sauce = db.query(MarketplaceSale).join(
+        MarketplaceListing, MarketplaceListing.id == MarketplaceSale.listing_id,
+    ).filter(
+        MarketplaceListing.user_id == current_user.id,
+        MarketplaceSale.status != "cancelled",
+    ).all()
+    mkt_rev = sum(_num(s.total_amount) or 0 for s in sauce)
+    cards.append({
+        "icon": "fas fa-store", "label": "Marketplace",
+        "value": f"{listings}", "sub": f"{len(sauce)} sale(s), ₹{_r2(mkt_rev):,.0f} earned",
+        "present": bool(listings),
+    })
+
+    sensors = _sensors_in_scope(db, current_user.id, farm_ids, plot_ids)
+    sensor_ids = [s.id for s in sensors]
+    reading_count = 0
+    if sensor_ids:
+        rq = db.query(func.count(SensorReading.id)).filter(SensorReading.sensor_id.in_(sensor_ids))
+        rq = rq.filter(_date_col_condition(SensorReading.recorded_at, start, end))
+        reading_count = rq.scalar() or 0
+    cards.append({
+        "icon": "fas fa-microchip", "label": "Sensors & Monitoring",
+        "value": f"{len(sensors)}", "sub": f"{reading_count} reading(s) in period",
+        "present": bool(sensors),
+    })
+
+    alert_q = db.query(MonitoringAlert).filter(MonitoringAlert.user_id == current_user.id, MonitoringAlert.status == "active")
+    if farm_ids:
+        alert_q = alert_q.filter(MonitoringAlert.farm_id.in_(farm_ids))
+    alerts = alert_q.count()
+    cards.append({
+        "icon": "fas fa-triangle-exclamation", "label": "Open Alerts",
+        "value": f"{alerts}", "sub": "Active monitoring alerts",
+        "present": alerts > 0,
+    })
+
+    tasks_q = db.query(CropTask).filter(CropTask.crop_cycle_id.in_([c.id for c in cycles])) if cycles else []
+    tasks_all = tasks_q.all() if cycles else []
+    tasks_w = [t for t in tasks_all if _in_window(t.due_date, start, end)] if tasks_all else []
+    done = sum(1 for t in tasks_all if (t.status or "").lower() == "completed")
+    cards.append({
+        "icon": "fas fa-list-check", "label": "Farm Activities",
+        "value": f"{done}/{len(tasks_all)}", "sub": "Tasks completed",
+        "present": bool(tasks_all),
+    })
+
+    return {"status": "success", "data": {"cards": cards, "has_data": any(c["present"] for c in cards)}}
 
 
 # --------------------------------------------------------------------------- #
@@ -1631,3 +2297,244 @@ def delete_report(
     db.delete(report)
     db.commit()
     return {"status": "success", "data": {"deleted": True}}
+
+
+# --------------------------------------------------------------------------- #
+# Report export (server-side HTML / CSV)
+# --------------------------------------------------------------------------- #
+_REPORT_SECTION_LABELS = {
+    "overview": "Farm Overview",
+    "performance": "Performance Score",
+    "crops": "Crop Analysis",
+    "yield": "Yield Analysis",
+    "production": "Production Trend",
+    "financial": "Financial Analysis",
+    "tasks": "Farm Activities",
+    "calendar": "Calendar Events",
+    "weather": "Weather Conditions",
+    "market": "Market Prices",
+    "sustainability": "Sustainability",
+    "risks": "Risk Analysis",
+    "insurance": "Insurance Review",
+    "livestock": "Livestock Analysis",
+    "marketplace": "Marketplace Analysis",
+    "sensors": "Sensors & Monitoring",
+    "summary": "Farm Analysis Summary",
+    "insights": "Smart Insights",
+    "completeness": "Data Completeness",
+}
+
+_REPORT_SECTION_ORDER = [
+    "overview", "performance", "crops", "yield", "production", "financial",
+    "tasks", "calendar", "weather", "market", "sustainability", "risks",
+    "insurance", "livestock", "marketplace", "sensors", "summary",
+    "insights", "completeness",
+]
+
+
+def _find_user_report(db: Session, current_user: User, report_id: str) -> FarmReport:
+    report = db.query(FarmReport).filter(
+        or_(FarmReport.report_id == report_id, FarmReport.id == report_id),
+        FarmReport.user_id == current_user.id,
+    ).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return report
+
+
+def _esc_v(value: Any) -> str:
+    if value is None:
+        return '<span class="dim">—</span>'
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    return _esc(str(value))
+
+
+def _scalar_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    return str(value)
+
+
+def _kv_table_html(obj: Dict[str, Any]) -> str:
+    rows = []
+    for k, v in obj.items():
+        if isinstance(v, (dict, list)):
+            continue
+        label = _esc(str(k).replace("_", " ").title())
+        rows.append(f"<tr><th>{label}</th><td>{_esc_v(v)}</td></tr>")
+    return '<table class="kv">' + "".join(rows) + "</table>" if rows else ""
+
+
+def _list_table_html(lst: List[Any]) -> str:
+    headers: List[str] = []
+    for item in lst:
+        if isinstance(item, dict):
+            for k in item:
+                if k not in headers and not isinstance(item[k], (dict, list)):
+                    headers.append(k)
+    if not headers:
+        cells = "".join(f"<li>{_esc_v(i)}</li>" for i in lst)
+        return f"<ul>{cells}</ul>" if cells else ""
+    head = "".join(
+        f"<th>{_esc(str(h).replace('_', ' ').title())}</th>" for h in headers
+    )
+    body = ""
+    for item in lst:
+        tds = "".join(f"<td>{_esc_v(item.get(h))}</td>" for h in headers)
+        body += f"<tr>{tds}</tr>"
+    return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+
+
+def _render_report_html(report: FarmReport) -> str:
+    data = report.data_json or {}
+    period = f"{report.date_from or '—'} to {report.date_to or 'today'}"
+    scope_parts = []
+    if report.farm_name:
+        scope_parts.append(_esc(report.farm_name))
+    if report.plot_name:
+        scope_parts.append(_esc(report.plot_name))
+    scope = " / ".join(scope_parts) if scope_parts else "All farms"
+
+    sections_html = []
+    included = []
+    for key in _REPORT_SECTION_ORDER:
+        if key not in data or data[key] is None:
+            continue
+        included.append(key)
+        value = data[key]
+        if isinstance(value, dict):
+            body = _kv_table_html(value)
+        elif isinstance(value, list):
+            body = _list_table_html(value)
+        else:
+            body = f"<p>{_esc_v(value)}</p>"
+        if not body.strip():
+            continue
+        sections_html.append(
+            f'<section class="card"><h2>{_esc(_REPORT_SECTION_LABELS.get(key, key))}</h2>{body}</section>'
+        )
+
+    missing = [k for k in _REPORT_SECTION_ORDER if k not in included]
+    missing_note = ""
+    if missing:
+        labels = ", ".join(_REPORT_SECTION_LABELS.get(k, k) for k in missing)
+        missing_note = (
+            '<p class="note">Some report sections could not be included because the '
+            f'underlying data is not recorded yet: {_esc(labels)}.</p>'
+        )
+
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>{_esc(report.title or 'Farm Report')}</title>
+<style>
+  body{{font-family:Arial,Helvetica,sans-serif;color:#1f2937;margin:0;padding:0;background:#f3f4f6}}
+  .wrap{{max-width:900px;margin:0 auto;padding:24px}}
+  header{{background:#166534;color:#fff;padding:20px 24px;border-radius:10px}}
+  header h1{{margin:0 0 6px;font-size:22px}}
+  header .sub{{opacity:.9;font-size:13px}}
+  .card{{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin:14px 0}}
+  .card h2{{margin:0 0 12px;font-size:16px;color:#166534;border-bottom:1px solid #eef2f0;padding-bottom:8px}}
+  table{{border-collapse:collapse;width:100%;font-size:13px}}
+  table.kv th{{text-align:left;width:220px;color:#374151;font-weight:600;padding:5px 8px;vertical-align:top}}
+  table.kv td{{padding:5px 8px}}
+  table:not(.kv) th{{background:#f9fafb;text-align:left;padding:7px 8px;border-bottom:1px solid #e5e7eb;color:#374151}}
+  table:not(.kv) td{{padding:6px 8px;border-bottom:1px solid #f3f4f6}}
+  tr:nth-child(even) td{{background:#fafcfa}}
+  .dim{{color:#9ca3af}} .note{{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;color:#92400e;font-size:13px}}
+  .meta{{font-size:12px;color:#6b7280;margin-top:8px}}
+</style></head><body><div class="wrap">
+<header>
+  <h1>{_esc(report.title or 'Farm Assist Intelligence Report')}</h1>
+  <div class="sub">Farm Assist &middot; Intelligence Report &middot; {_esc(report.report_type)}</div>
+  <div class="sub">Farm: {scope} &middot; Period: {_esc(period)}</div>
+  <div class="sub">Report ID: {_esc(report.report_id or '')} &middot; Generated: {_esc(str(report.created_at) or datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC'))}</div>
+</header>
+{''.join(sections_html)}
+{missing_note}
+<p class="meta">Prepared by Farm Assist Farm Intelligence Center from records belonging to this farmer account. Figures shown reflect only the data recorded in the app.</p>
+</div></body></html>"""
+
+
+def _flatten_csv(key: str, val: Any, out: List[tuple]):
+    if isinstance(val, dict):
+        for k, v in val.items():
+            sub = f"{key} :: {str(k).replace('_', ' ').title()}"
+            if isinstance(v, (dict, list)):
+                _flatten_csv(sub, v, out)
+            else:
+                out.append((sub, _scalar_text(v)))
+    elif isinstance(val, list):
+        for i, item in enumerate(val):
+            if isinstance(item, dict):
+                for k, v in item.items():
+                    sub = f"{key} [{i + 1}] :: {str(k).replace('_', ' ').title()}"
+                    if isinstance(v, (dict, list)):
+                        _flatten_csv(sub, v, out)
+                    else:
+                        out.append((sub, _scalar_text(v)))
+            else:
+                out.append((f"{key} [{i + 1}]", _scalar_text(item)))
+    else:
+        out.append((key, _scalar_text(val)))
+
+
+def _render_report_csv(report: FarmReport) -> str:
+    data = report.data_json or {}
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Field", "Value"])
+    w.writerow(["Report Title", report.title or report.report_type])
+    if report.report_id:
+        w.writerow(["Report ID", report.report_id])
+    if report.farm_name:
+        w.writerow(["Farm", report.farm_name])
+    if report.plot_name:
+        w.writerow(["Plot", report.plot_name])
+    w.writerow(["Report Type", report.report_type])
+    w.writerow(["Period", f"{report.date_from or '—'} to {report.date_to or 'today'}"])
+    w.writerow(["Generated", datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")])
+    if report.summary:
+        w.writerow(["Summary", report.summary])
+    for key in _REPORT_SECTION_ORDER:
+        if key not in data or data[key] is None:
+            continue
+        w.writerow([])
+        w.writerow([_REPORT_SECTION_LABELS.get(key, key) + " —"])
+        rows: List[tuple] = []
+        _flatten_csv(key, data[key], rows)
+        for k, v in rows:
+            w.writerow([k, v])
+    return buf.getvalue()
+
+
+@router.get("/analytics/reports/{report_id}/html", include_in_schema=False)
+def export_report_html(
+    report_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    report = _find_user_report(db, current_user, report_id)
+    fname = f"{report.report_id or 'report'}.html"
+    return Response(
+        content=_render_report_html(report),
+        media_type="text/html; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+@router.get("/analytics/reports/{report_id}/csv", include_in_schema=False)
+def export_report_csv(
+    report_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    report = _find_user_report(db, current_user, report_id)
+    fname = f"{report.report_id or 'report'}.csv"
+    return Response(
+        content=_render_report_csv(report),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
