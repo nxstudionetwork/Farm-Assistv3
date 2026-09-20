@@ -4,6 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Farm Assist - Soil & Irrigation</title>
+  <meta name="description" content="Farm Assist - Soil & Irrigation Management">
+  <meta name="api-base-url" content="/api/v1">
+  <script>
+    window._API_BASE_URL = '/api/v1';
+  </script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Farm Assist">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Farm Assist">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="assets/icons/apple-touch-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="assets/icons/apple-touch-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="assets/icons/apple-touch-icon-167x167.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon-180x180.png">
+  <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192x192.png">
+  <meta name="msapplication-TileColor" content="#0B3D2E">
+  <meta name="msapplication-TileImage" content="assets/icons/icon-144x144.png">
+  <script>
+    (function () {
+      try {
+        var loggedIn = localStorage.getItem('fa-auth') === 'true' && !!localStorage.getItem('fa-auth-token');
+        if (!loggedIn) {
+          window.location.replace('login.html');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
@@ -18,109 +50,206 @@
       --water-bg: #e0f2fe;
     }
 
-    .purpose-section {
-      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    .section-card {
+      background: white;
       border-radius: var(--radius-md);
       padding: 20px;
       margin-bottom: 20px;
-      border: 1px solid #d1fae5;
+      border: 1px solid var(--border-light);
     }
 
-    .purpose-header {
+    .section-header {
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
       margin-bottom: 16px;
     }
 
-    .purpose-header h2 {
-      font-size: 18px;
+    .section-title {
+      font-size: 16px;
       font-weight: 700;
       color: var(--text-primary);
-      margin: 0;
-    }
-
-    .purpose-description {
-      font-size: 14px;
-      color: var(--text-secondary);
-      margin-bottom: 16px;
-      line-height: 1.5;
-    }
-
-    .purpose-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
-    }
-
-    .purpose-card {
-      background: white;
-      border-radius: var(--radius-sm);
-      padding: 12px;
-      border: 1px solid var(--border-light);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .purpose-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-    .purpose-card-icon {
-      font-size: 20px;
-      margin-bottom: 8px;
-    }
-
-    .purpose-card-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-    }
-
-    .purpose-card-desc {
-      font-size: 11px;
-      color: var(--text-secondary);
-      line-height: 1.4;
-    }
-
-    .filter-section {
-      background: white;
-      border-radius: var(--radius-md);
-      padding: 16px;
-      margin-bottom: 20px;
-      border: 1px solid var(--border-light);
-    }
-
-    .filter-header {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .filter-controls {
+    .section-description {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .action-cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 12px;
     }
 
-    .filter-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    .action-card {
+      background: var(--bg-card-soft);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      border: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: all 0.2s;
     }
 
-    .filter-label {
+    .action-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-color: var(--primary-color);
+    }
+
+    .action-card-icon {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+
+    .action-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .action-card-desc {
       font-size: 12px;
-      font-weight: 500;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .soil-color { color: var(--soil-med); }
+    .water-color { color: var(--water-med); }
+    .success-color { color: #22c55e; }
+    .warning-color { color: #f59e0b; }
+    .info-color { color: #3b82f6; }
+
+    .info-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .info-card {
+      background: var(--bg-card-soft);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .info-card-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .info-card-label {
+      font-size: 12px;
       color: var(--text-secondary);
     }
 
-    .filter-select {
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-good { background: #dcfce7; color: #166534; }
+    .status-warning { background: #fef9c3; color: #854d0e; }
+    .status-danger { background: #fee2e2; color: #991b1b; }
+    .status-info { background: #e0f2fe; color: #075985; }
+
+    .guide-section {
+      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid #d1fae5;
+    }
+
+    .guide-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .guide-content {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .reminder-card {
+      background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid #fde68a;
+    }
+
+    .reminder-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .reminder-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--soil-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .reminder-status {
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .reminder-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .reminder-detail {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .reminder-detail strong {
+      color: var(--text-primary);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
       padding: 10px 12px;
       border: 1px solid var(--border-light);
       border-radius: var(--radius-sm);
@@ -128,183 +257,54 @@
       color: var(--text-primary);
       font-size: 13px;
       outline: none;
-      cursor: pointer;
       transition: border-color 0.2s;
     }
 
-    .filter-select:focus {
+    .form-input:focus {
       border-color: var(--primary-color);
     }
 
-    .tab-navigation {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-      background: var(--bg-card-soft);
-      padding: 6px;
-      border-radius: var(--radius-md);
-    }
-
-    .tab-button {
-      flex: 1;
-      padding: 12px 16px;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .tab-button:hover {
-      background: rgba(0,0,0,0.05);
-    }
-
-    .tab-button.active {
-      background: white;
-      color: var(--primary-color);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    .summary-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .summary-card {
-      background: white;
-      border-radius: var(--radius-sm);
-      padding: 16px;
-      border: 1px solid var(--border-light);
-      text-align: center;
-    }
-
-    .summary-card-icon {
-      font-size: 24px;
-      margin-bottom: 8px;
-    }
-
-    .summary-card-value {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-    }
-
-    .summary-card-label {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .status-section {
-      background: white;
-      border-radius: var(--radius-md);
-      padding: 16px;
-      margin-bottom: 20px;
-      border: 1px solid var(--border-light);
-    }
-
-    .status-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-
-    .status-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .status-badge {
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .status-healthy {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .status-attention {
-      background: #fef9c3;
-      color: #854d0e;
-    }
-
-    .status-critical {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .status-message {
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-    }
-
-    .parameters-grid {
+    .form-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 12px;
-      margin-bottom: 20px;
     }
 
-    .parameter-card {
-      background: white;
+    .btn {
+      padding: 10px 20px;
+      border: none;
       border-radius: var(--radius-sm);
-      padding: 16px;
-      border: 1px solid var(--border-light);
-    }
-
-    .parameter-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .parameter-name {
       font-size: 13px;
       font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--text-secondary);
+      color: white;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-light);
       color: var(--text-primary);
     }
 
-    .parameter-value {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--primary-color);
-      margin-bottom: 4px;
-    }
-
-    .parameter-unit {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .parameter-status {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-weight: 600;
+    .btn-outline:hover {
+      background: var(--bg-card-soft);
     }
 
     .data-table {
@@ -334,65 +334,139 @@
       border-bottom: none;
     }
 
-    .ai-overview-section {
-      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-      border-radius: var(--radius-md);
-      padding: 20px;
-      margin-top: 20px;
-      border: 1px solid #bae6fd;
-    }
-
-    .ai-overview-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .comparison-table {
       margin-bottom: 16px;
     }
 
-    .ai-overview-title {
+    .comparison-diff-up {
+      color: #22c55e;
+      font-weight: 600;
+    }
+
+    .comparison-diff-down {
+      color: #ef4444;
+      font-weight: 600;
+    }
+
+    .comparison-diff-neutral {
+      color: var(--text-secondary);
+    }
+
+    .alert-card {
+      background: #fef3c7;
+      border-left: 4px solid var(--soil-med);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .alert-info {
+      background: #e0f2fe;
+      border-left: 4px solid var(--water-med);
+    }
+
+    .alert-success {
+      background: #dcfce7;
+      border-left: 4px solid #22c55e;
+    }
+
+    .alert-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 16px;
+    }
+
+    .alert-message {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 18px;
       font-weight: 700;
       color: var(--text-primary);
     }
 
-    .ai-refresh-btn {
-      padding: 8px 16px;
-      background: var(--primary-color);
-      color: white;
+    .modal-close {
+      background: none;
       border: none;
-      border-radius: var(--radius-sm);
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    .expandable-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .expandable-content.expanded {
+      max-height: 2000px;
+    }
+
+    .expand-toggle {
+      background: none;
+      border: none;
+      color: var(--primary-color);
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
+      padding: 0;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
 
-    .ai-refresh-btn:hover {
-      background: var(--primary-dark);
-    }
-
-    .ai-refresh-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .ai-overview-content {
-      font-size: 14px;
-      color: var(--text-primary);
-      line-height: 1.6;
-    }
-
-    .ai-overview-content.loading {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
       color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
     }
 
     .loading-spinner {
@@ -408,105 +482,31 @@
       to { transform: rotate(360deg); }
     }
 
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-secondary);
-    }
-
-    .empty-state-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.5;
-    }
-
-    .empty-state-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .empty-state-message {
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .error-state {
-      background: #fee2e2;
-      border: 1px solid #fecaca;
-      border-radius: var(--radius-sm);
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-
-    .error-state-message {
-      color: #991b1b;
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-
-    .retry-btn {
-      padding: 8px 16px;
-      background: #dc2626;
-      color: white;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .retry-btn:hover {
-      background: #b91c1c;
-    }
-
-    .recommendation-card {
+    .filter-section {
       background: white;
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       padding: 16px;
-      margin-bottom: 12px;
-      border-left: 4px solid var(--primary-color);
+      margin-bottom: 20px;
       border: 1px solid var(--border-light);
-      border-left-width: 4px;
     }
 
-    .recommendation-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .recommendation-text {
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.5;
+    .filter-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
     }
 
     @media (max-width: 768px) {
-      .purpose-cards {
+      .action-cards {
         grid-template-columns: 1fr;
       }
 
-      .filter-controls {
-        grid-template-columns: 1fr;
-      }
-
-      .summary-cards {
+      .info-cards {
         grid-template-columns: repeat(2, 1fr);
       }
 
-      .parameters-grid {
+      .form-row {
         grid-template-columns: 1fr;
-      }
-
-      .tab-button {
-        padding: 10px 12px;
-        font-size: 13px;
       }
     }
   </style>
@@ -514,262 +514,674 @@
 <body>
 
   <main class="page-container">
-
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-seedling" style="color:var(--soil-med);margin-right:8px;"></i> Soil & Irrigation</h1>
-        <p>Understand your soil condition and manage irrigation efficiently for healthier crops, better water usage, and improved yield.</p>
-      </div>
-    </div>
-
-    <!-- Purpose Section -->
-    <div class="purpose-section">
-      <div class="purpose-header">
-        <i class="fas fa-lightbulb" style="color: var(--primary-color); font-size: 20px;"></i>
-        <h2>What You Can Do</h2>
-      </div>
-      <p class="purpose-description">Monitor your soil health, manage irrigation efficiently, and get AI-powered insights for better crop management.</p>
-      <div class="purpose-cards">
-        <div class="purpose-card">
-          <div class="purpose-card-icon" style="color: var(--soil-med);">
-            <i class="fas fa-seedling"></i>
-          </div>
-          <div class="purpose-card-title">Soil Health</div>
-          <div class="purpose-card-desc">Check soil condition, pH, moisture, nutrients and identify issues</div>
+    <section class="hero-dashboard">
+      <div class="hero-header">
+        <div class="hero-welcome">
+          <h2><i class="fas fa-seedling" style="color:var(--soil-med);margin-right:8px;"></i> Soil & Irrigation</h2>
+          <p>Understand your soil condition, manage irrigation efficiently, and maintain healthy crops.</p>
         </div>
-        <div class="purpose-card">
-          <div class="purpose-card-icon" style="color: var(--water-med);">
-            <i class="fas fa-tint"></i>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="text-align:right;color:white">
+            <div style="font-size:12px;font-weight:700" id="farmer-id-display">Loading...</div>
+            <div style="font-size:9px;opacity:.8">Farmer ID</div>
           </div>
-          <div class="purpose-card-title">Irrigation</div>
-          <div class="purpose-card-desc">Monitor irrigation, check moisture, and get watering recommendations</div>
-        </div>
-        <div class="purpose-card">
-          <div class="purpose-card-icon" style="color: var(--primary-color);">
-            <i class="fas fa-leaf"></i>
-          </div>
-          <div class="purpose-card-title">Crop Insights</div>
-          <div class="purpose-card-desc">Get crop-specific soil and irrigation guidance</div>
-        </div>
-        <div class="purpose-card">
-          <div class="purpose-card-icon" style="color: #8b5cf6;">
-            <i class="fas fa-robot"></i>
-          </div>
-          <div class="purpose-card-title">AI Overview</div>
-          <div class="purpose-card-desc">Get AI summary of conditions and recommended actions</div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Filter Section -->
     <div class="filter-section">
-      <div class="filter-header">
-        <i class="fas fa-filter"></i>
-        <span>Filter Data</span>
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-filter"></i>
+          Filter by Farm/Field
+        </div>
       </div>
       <div class="filter-controls">
-        <div class="filter-group">
-          <label class="filter-label">Farm</label>
-          <select id="farm-filter" class="filter-select">
+        <div class="form-group">
+          <label class="form-label">Farm</label>
+          <select id="farm-filter" class="form-input">
             <option value="">All Farms</option>
           </select>
         </div>
-        <div class="filter-group">
-          <label class="filter-label">Plot</label>
-          <select id="plot-filter" class="filter-select" disabled>
-            <option value="">All Plots</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label class="filter-label">Crop</label>
-          <select id="crop-filter" class="filter-select" disabled>
-            <option value="">All Crops</option>
+        <div class="form-group">
+          <label class="form-label">Field/Plot</label>
+          <select id="plot-filter" class="form-input" disabled>
+            <option value="">All Fields</option>
           </select>
         </div>
       </div>
     </div>
 
-    <!-- Tab Navigation -->
-    <div class="tab-navigation">
-      <button class="tab-button active" data-tab="soil">
-        <i class="fas fa-seedling"></i>
-        Soil
-      </button>
-      <button class="tab-button" data-tab="irrigation">
-        <i class="fas fa-tint"></i>
-        Irrigation
-      </button>
-    </div>
-
-    <!-- Soil Tab Content -->
-    <div id="soil-tab" class="tab-content active">
-      <div id="soil-loading" class="empty-state">
-        <div class="loading-spinner"></div>
-        <div class="empty-state-title">Loading soil data...</div>
-      </div>
-
-      <div id="soil-error" class="error-state" style="display: none;">
-        <div class="error-state-message" id="soil-error-message"></div>
-        <button class="retry-btn" onclick="loadSoilData()">Retry</button>
-      </div>
-
-      <div id="soil-empty" class="empty-state" style="display: none;">
-        <div class="empty-state-icon"><i class="fas fa-seedling"></i></div>
-        <div class="empty-state-title">No Soil Data Available</div>
-        <div class="empty-state-message">Add soil test records to view soil health information and analysis.</div>
-      </div>
-
-      <div id="soil-content" style="display: none;">
-        <!-- Soil Summary -->
-        <div class="summary-cards" id="soil-summary-cards">
-          <!-- Dynamic content -->
+    <!-- Current Soil Condition -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-chart-line soil-color"></i>
+          Current Soil Condition
         </div>
-
-        <!-- Soil Health Status -->
-        <div class="status-section">
-          <div class="status-header">
-            <div class="status-title">Soil Health Status</div>
-            <div class="status-badge" id="soil-status-badge">Loading...</div>
-          </div>
-          <div class="status-message" id="soil-status-message">Analyzing soil data...</div>
-        </div>
-
-        <!-- Soil Parameters -->
-        <h3 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">Soil Parameters</h3>
-        <div class="parameters-grid" id="soil-parameters-grid">
-          <!-- Dynamic content -->
-        </div>
-
-        <!-- Soil History -->
-        <div class="card-premium" style="margin-top: 20px;">
-          <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--text-primary);">
-            <i class="fas fa-history" style="margin-right: 8px;"></i>Soil Test History
-          </h3>
-          <div style="overflow-x: auto;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Plot</th>
-                  <th>pH</th>
-                  <th>Nitrogen</th>
-                  <th>Phosphorus</th>
-                  <th>Potassium</th>
-                  <th>Moisture</th>
-                </tr>
-              </thead>
-              <tbody id="soil-history-body">
-                <!-- Dynamic content -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Soil Recommendations -->
-        <div style="margin-top: 20px;">
-          <h3 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">
-            <i class="fas fa-lightbulb" style="margin-right: 8px;"></i>Recommendations
-          </h3>
-          <div id="soil-recommendations">
-            <!-- Dynamic content -->
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Irrigation Tab Content -->
-    <div id="irrigation-tab" class="tab-content">
-      <div id="irrigation-loading" class="empty-state">
-        <div class="loading-spinner"></div>
-        <div class="empty-state-title">Loading irrigation data...</div>
-      </div>
-
-      <div id="irrigation-error" class="error-state" style="display: none;">
-        <div class="error-state-message" id="irrigation-error-message"></div>
-        <button class="retry-btn" onclick="loadIrrigationData()">Retry</button>
-      </div>
-
-      <div id="irrigation-empty" class="empty-state" style="display: none;">
-        <div class="empty-state-icon"><i class="fas fa-tint"></i></div>
-        <div class="empty-state-title">No Irrigation Data Available</div>
-        <div class="empty-state-message">Add irrigation records to view irrigation history and recommendations.</div>
-      </div>
-
-      <div id="irrigation-content" style="display: none;">
-        <!-- Irrigation Summary -->
-        <div class="summary-cards" id="irrigation-summary-cards">
-          <!-- Dynamic content -->
-        </div>
-
-        <!-- Irrigation Status -->
-        <div class="status-section">
-          <div class="status-header">
-            <div class="status-title">Irrigation Status</div>
-            <div class="status-badge" id="irrigation-status-badge">Loading...</div>
-          </div>
-          <div class="status-message" id="irrigation-status-message">Analyzing irrigation data...</div>
-        </div>
-
-        <!-- Current Moisture -->
-        <div class="card-premium" style="margin-top: 20px;">
-          <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--text-primary);">
-            <i class="fas fa-tachometer-alt" style="margin-right: 8px;"></i>Current Soil Moisture
-          </h3>
-          <div id="current-moisture-content">
-            <!-- Dynamic content -->
-          </div>
-        </div>
-
-        <!-- Irrigation History -->
-        <div class="card-premium" style="margin-top: 20px;">
-          <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--text-primary);">
-            <i class="fas fa-history" style="margin-right: 8px;"></i>Irrigation History
-          </h3>
-          <div style="overflow-x: auto;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Plot</th>
-                  <th>Method</th>
-                  <th>Duration</th>
-                  <th>Water Used</th>
-                </tr>
-              </thead>
-              <tbody id="irrigation-history-body">
-                <!-- Dynamic content -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Irrigation Recommendations -->
-        <div style="margin-top: 20px;">
-          <h3 style="font-size: 15px; margin-bottom: 12px; color: var(--text-primary);">
-            <i class="fas fa-lightbulb" style="margin-right: 8px;"></i>Recommendations
-          </h3>
-          <div id="irrigation-recommendations">
-            <!-- Dynamic content -->
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- AI Overview Section -->
-    <div class="ai-overview-section">
-      <div class="ai-overview-header">
-        <div class="ai-overview-title">
-          <i class="fas fa-robot" style="color: #8b5cf6;"></i>
-          AI Overview
-        </div>
-        <button class="ai-refresh-btn" id="ai-refresh-btn" onclick="refreshAIOverview()">
-          <i class="fas fa-sync-alt"></i>
-          Refresh
+        <button class="btn btn-outline" onclick="refreshSoilData()">
+          <i class="fas fa-sync-alt"></i> Refresh
         </button>
       </div>
-      <div class="ai-overview-content" id="ai-overview-content">
+      <div id="soil-condition-loading" class="empty-state">
         <div class="loading-spinner"></div>
-        <span>Loading AI analysis...</span>
+        <div>Loading soil condition...</div>
+      </div>
+      <div id="soil-condition-content" style="display: none;">
+        <div class="info-cards" id="soil-info-cards">
+          <!-- Dynamic content -->
+        </div>
+        <div id="soil-status-alert" style="margin-top: 16px;">
+          <!-- Dynamic status alert -->
+        </div>
+      </div>
+    </div>
+
+    <!-- What You Should Do Now -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-tasks success-color"></i>
+          What You Should Do Now
+        </div>
+      </div>
+      <div class="section-description">
+        Based on your current soil and irrigation conditions, here are the recommended actions.
+      </div>
+      <div class="action-cards" id="action-cards">
+        <div class="action-card" onclick="openRecordSoilTestModal()">
+          <div class="action-card-icon soil-color">
+            <i class="fas fa-vial"></i>
+          </div>
+          <div class="action-card-title">Record Soil Test</div>
+          <div class="action-card-desc">Add new soil test results</div>
+        </div>
+        <div class="action-card" onclick="openRecordIrrigationModal()">
+          <div class="action-card-icon water-color">
+            <i class="fas fa-tint"></i>
+          </div>
+          <div class="action-card-title">Record Irrigation</div>
+          <div class="action-card-desc">Log irrigation activity</div>
+        </div>
+        <div class="action-card" onclick="openCheckMoistureModal()">
+          <div class="action-card-icon water-color">
+            <i class="fas fa-search"></i>
+          </div>
+          <div class="action-card-title">Check Soil Moisture</div>
+          <div class="action-card-desc">Assess water needs</div>
+        </div>
+        <div class="action-card" onclick="openReviewSystemModal()">
+          <div class="action-card-icon info-color">
+            <i class="fas fa-tools"></i>
+          </div>
+          <div class="action-card-title">Review Irrigation System</div>
+          <div class="action-card-desc">Check for issues</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Soil Test Reminder -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-bell warning-color"></i>
+          Soil Test Reminder
+        </div>
+      </div>
+      <div id="soil-test-reminder-content">
+        <!-- Dynamic content -->
+      </div>
+    </div>
+
+    <!-- Soil Testing Guide -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-book soil-color"></i>
+          Soil Testing Guide
+        </div>
+        <button class="btn btn-outline" onclick="toggleGuide('soil-testing-guide')">
+          <i class="fas fa-chevron-down"></i> Show Guide
+        </button>
+      </div>
+      <div id="soil-testing-guide" class="expandable-content">
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-question-circle"></i>
+            Why Test Your Soil?
+          </div>
+          <div class="guide-content">
+            Soil testing helps you understand what nutrients your soil has and what it needs. This allows you to apply the right fertilizers in the right amounts, saving money and improving crop yields. Regular testing also helps track changes in soil health over time.
+          </div>
+        </div>
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-calendar"></i>
+            When to Test
+          </div>
+          <div class="guide-content">
+            Test your soil before planting a new crop and every 6 months during the growing season. For best results, test at the same time each year to compare results consistently.
+          </div>
+        </div>
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-sample"></i>
+            How to Collect Samples
+          </div>
+          <div class="guide-content">
+            Collect soil from 6-8 different locations in your field, at a depth of 6-8 inches for most crops. Mix these samples together in a clean bucket. Avoid collecting from field edges, near fertilizer application areas, or recently fertilized spots.
+          </div>
+        </div>
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-flask"></i>
+            Understanding Your Results
+          </div>
+          <div class="guide-content">
+            <strong>pH:</strong> Measures soil acidity. Most crops prefer 6.0-7.0. Below 6.0 is acidic, above 7.0 is alkaline.<br>
+            <strong>Nitrogen (N):</strong> Essential for leaf growth. Low N causes yellowing leaves.<br>
+            <strong>Phosphorus (P):</strong> Important for roots and flowering. Low P causes poor root development.<br>
+            <strong>Potassium (K):</strong> Helps with overall plant health and disease resistance.<br>
+            <strong>Organic Matter:</strong> Improves soil structure and water retention.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Soil Test History -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-history soil-color"></i>
+          Soil Test History
+        </div>
+        <button class="btn btn-primary" onclick="openRecordSoilTestModal()">
+          <i class="fas fa-plus"></i> Record Test
+        </button>
+      </div>
+      <div id="soil-history-loading" class="empty-state">
+        <div class="loading-spinner"></div>
+        <div>Loading soil test history...</div>
+      </div>
+      <div id="soil-history-content" style="display: none;">
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Farm</th>
+                <th>Field</th>
+                <th>pH</th>
+                <th>N</th>
+                <th>P</th>
+                <th>K</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="soil-history-body">
+              <!-- Dynamic content -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Irrigation Guide -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-tint water-color"></i>
+          Irrigation Guide
+        </div>
+        <button class="btn btn-outline" onclick="toggleGuide('irrigation-guide')">
+          <i class="fas fa-chevron-down"></i> Show Guide
+        </button>
+      </div>
+      <div id="irrigation-guide" class="expandable-content">
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-clock"></i>
+            When to Check Soil Moisture
+          </div>
+          <div class="guide-content">
+            Check soil moisture before irrigation to avoid over-watering. The best time to check is early morning. Insert a soil probe or use a moisture sensor at 6-8 inch depth. If the soil crumbles easily, it needs water. If it forms a ball, moisture is sufficient.
+          </div>
+        </div>
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-exclamation-triangle"></i>
+            Identifying Water Stress
+          </div>
+          <div class="guide-content">
+            Signs of water stress include: leaves turning grayish-green, wilting during hot part of day, slow growth, and poor fruit/seed development. Early detection and proper irrigation can prevent significant yield loss.
+          </div>
+        </div>
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-chart-line"></i>
+            Growth Stage & Water Needs
+          </div>
+          <div class="guide-content">
+            Different growth stages have different water requirements. Generally, crops need more water during flowering and fruit development stages compared to early vegetative growth. Adjust irrigation based on your crop's current growth stage.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Crop Water Requirements -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-leaf success-color"></i>
+          Crop Water Requirements
+        </div>
+      </div>
+      <div id="crop-water-loading" class="empty-state">
+        <div class="loading-spinner"></div>
+        <div>Loading crop water requirements...</div>
+      </div>
+      <div id="crop-water-content" style="display: none;">
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Crop</th>
+                <th>Growth Stage</th>
+                <th>Water Requirement</th>
+                <th>Important Period</th>
+                <th>Irrigation Consideration</th>
+              </tr>
+            </thead>
+            <tbody id="crop-water-requirements-body">
+              <!-- Dynamic content -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Irrigation Method Guide -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-cog water-color"></i>
+          Which Irrigation Method?
+        </div>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Suitable For</th>
+              <th>Water Consideration</th>
+              <th>What to Check</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Drip</td>
+              <td>Vegetables, fruits, row crops</td>
+              <td>Very efficient (30-50% savings)</td>
+              <td>Clogging, pressure uniformity</td>
+            </tr>
+            <tr>
+              <td>Sprinkler</td>
+              <td>Cereals, forage crops</td>
+              <td>Moderate efficiency (20-30% savings)</td>
+              <td>Wind effect, coverage uniformity</td>
+            </tr>
+            <tr>
+              <td>Furrow</td>
+              <td>Rice, cotton</td>
+              <td>Lower efficiency</td>
+              <td>Water losses, soil erosion</td>
+            </tr>
+            <tr>
+              <td>Basin</td>
+              <td>Trees, plantations</td>
+              <td>High water use</td>
+              <td>Soil salinity risk</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Water-Saving Guide -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-water water-color"></i>
+          Water-Saving Tips
+        </div>
+      </div>
+      <div class="action-cards">
+        <div class="action-card">
+          <div class="action-card-icon water-color">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="action-card-title">Check Before Irrigating</div>
+          <div class="action-card-desc">Test soil moisture before watering to avoid over-irrigation</div>
+        </div>
+        <div class="action-card">
+          <div class="action-card-icon water-color">
+            <i class="fas fa-tools"></i>
+          </div>
+          <div class="action-card-title">Maintain Equipment</div>
+          <div class="action-card-desc">Check for leaks and maintain irrigation pipes regularly</div>
+        </div>
+        <div class="action-card">
+          <div class="action-card-icon water-color">
+            <i class="fas fa-cloud-sun"></i>
+          </div>
+          <div class="action-card-title">Consider Rainfall</div>
+          <div class="action-card-desc">Adjust irrigation based on recent rainfall forecasts</div>
+        </div>
+        <div class="action-card">
+          <div class="action-card-icon water-color">
+            <i class="fas fa-seedling"></i>
+          </div>
+          <div class="action-card-title">Use Mulching</div>
+          <div class="action-card-desc">Apply organic mulch to reduce evaporation and retain moisture</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Soil Care Guide -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-heart soil-color"></i>
+          Soil Care Guide
+        </div>
+        <button class="btn btn-outline" onclick="toggleGuide('soil-care-guide')">
+          <i class="fas fa-chevron-down"></i> Show Guide
+        </button>
+      </div>
+      <div id="soil-care-guide" class="expandable-content">
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-recycle"></i>
+            Organic Matter
+          </div>
+          <div class="guide-content">
+            Add organic matter through compost, farmyard manure, or green manure. This improves soil structure, water retention, and nutrient availability. Aim for 2-3% organic matter in most agricultural soils.
+          </div>
+        </div>
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-sync-alt"></i>
+            Crop Rotation
+          </div>
+          <div class="guide-content">
+            Rotate crops with different nutrient needs to maintain soil fertility and break pest cycles. Include legumes in rotation to naturally add nitrogen to the soil.
+          </div>
+        </div>
+        <div class="guide-section">
+          <div class="guide-title">
+            <i class="fas fa-balance-scale"></i>
+            pH Management
+          </div>
+          <div class="guide-content">
+            If soil is too acidic (pH < 6.0), consider adding lime. If too alkaline (pH > 7.5), sulfur or organic matter can help. Maintain proper pH for optimal nutrient availability.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Soil & Irrigation Records -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-clipboard-list info-color"></i>
+          My Records
+        </div>
+        <button class="btn btn-primary" onclick="openRecordActionModal()">
+          <i class="fas fa-plus"></i> Add Record
+        </button>
+      </div>
+      <div id="records-loading" class="empty-state">
+        <div class="loading-spinner"></div>
+        <div>Loading records...</div>
+      </div>
+      <div id="records-content" style="display: none;">
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Activity</th>
+                <th>Farm/Field</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="records-body">
+              <!-- Dynamic content -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Soil Sensor Readings -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-microchip info-color"></i>
+          Soil Sensor Readings
+        </div>
+        <button class="btn btn-outline" onclick="refreshSensorData()">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+      </div>
+      <div id="sensor-loading" class="empty-state">
+        <div class="loading-spinner"></div>
+        <div>Loading sensor data...</div>
+      </div>
+      <div id="sensor-content" style="display: none;">
+        <div class="info-cards" id="sensor-info-cards">
+          <!-- Dynamic content -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Farmer Alerts -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-bell warning-color"></i>
+          Alerts & Reminders
+        </div>
+      </div>
+      <div id="alerts-content">
+        <!-- Dynamic content -->
+      </div>
+    </div>
+
+    <!-- Record Soil Test Modal -->
+    <div id="record-soil-test-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">Record Soil Test</div>
+          <button class="modal-close" onclick="closeModal('record-soil-test-modal')">&times;</button>
+        </div>
+        <form id="soil-test-form" onsubmit="submitSoilTest(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Test Date *</label>
+              <input type="date" class="form-input" name="test_date" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Farm *</label>
+              <select class="form-input" name="farm_id" id="soil-test-farm" required>
+                <option value="">Select Farm</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Field/Plot *</label>
+            <select class="form-input" name="plot_id" id="soil-test-plot" required>
+              <option value="">Select Field</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">pH Level</label>
+              <input type="number" step="0.1" class="form-input" name="ph_level" placeholder="e.g., 6.5">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nitrogen (mg/kg)</label>
+              <input type="number" class="form-input" name="nitrogen" placeholder="e.g., 300">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Phosphorus (mg/kg)</label>
+              <input type="number" class="form-input" name="phosphorus" placeholder="e.g., 25">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Potassium (mg/kg)</label>
+              <input type="number" class="form-input" name="potassium" placeholder="e.g., 200">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Organic Matter (%)</label>
+              <input type="number" step="0.1" class="form-input" name="organic_matter" placeholder="e.g., 2.5">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Moisture (%)</label>
+              <input type="number" step="0.1" class="form-input" name="moisture" placeholder="e.g., 45">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Soil Type</label>
+            <input type="text" class="form-input" name="soil_type" placeholder="e.g., Clay Loam">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <textarea class="form-input" name="notes" rows="3" placeholder="Any additional observations..."></textarea>
+          </div>
+          <div style="text-align: right; margin-top: 16px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('record-soil-test-modal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Test</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Record Irrigation Modal -->
+    <div id="record-irrigation-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">Record Irrigation</div>
+          <button class="modal-close" onclick="closeModal('record-irrigation-modal')">&times;</button>
+        </div>
+        <form id="irrigation-form" onsubmit="submitIrrigation(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Date *</label>
+              <input type="date" class="form-input" name="irrigation_date" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Farm *</label>
+              <select class="form-input" name="farm_id" id="irrigation-farm" required>
+                <option value="">Select Farm</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Field/Plot *</label>
+            <select class="form-input" name="plot_id" id="irrigation-plot" required>
+              <option value="">Select Field</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Method *</label>
+              <select class="form-input" name="method" required>
+                <option value="">Select Method</option>
+                <option value="Drip">Drip</option>
+                <option value="Sprinkler">Sprinkler</option>
+                <option value="Furrow">Furrow</option>
+                <option value="Basin">Basin</option>
+                <option value="Flood">Flood</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Duration (minutes)</label>
+              <input type="number" class="form-input" name="duration_minutes" placeholder="e.g., 60">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Water Quantity (Liters)</label>
+            <input type="number" class="form-input" name="water_quantity" placeholder="e.g., 2500">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <textarea class="form-input" name="notes" rows="3" placeholder="Any additional details..."></textarea>
+          </div>
+          <div style="text-align: right; margin-top: 16px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('record-irrigation-modal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Record</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Record Action Modal -->
+    <div id="record-action-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">Add Record</div>
+          <button class="modal-close" onclick="closeModal('record-action-modal')">&times;</button>
+        </div>
+        <form id="action-form" onsubmit="submitAction(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Date *</label>
+              <input type="date" class="form-input" name="record_date" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Farm *</label>
+              <select class="form-input" name="farm_id" id="action-farm" required>
+                <option value="">Select Farm</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Field/Plot *</label>
+            <select class="form-input" name="plot_id" id="action-plot" required>
+              <option value="">Select Field</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Activity *</label>
+            <select class="form-input" name="activity" required>
+              <option value="">Select Activity</option>
+              <option value="soil_test_completed">Soil Test Completed</option>
+              <option value="irrigation_system_checked">Irrigation System Checked</option>
+              <option value="irrigation_performed">Irrigation Performed</option>
+              <option value="soil_amendment_applied">Soil Amendment Applied</option>
+              <option value="drainage_checked">Drainage Checked</option>
+              <option value="soil_issue_observed">Soil Issue Observed</option>
+              <option value="water_issue_observed">Water Issue Observed</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <textarea class="form-input" name="notes" rows="3" placeholder="Details about the activity..."></textarea>
+          </div>
+          <div style="text-align: right; margin-top: 16px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('record-action-modal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Record</button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -784,62 +1196,50 @@
     let currentState = {
       farmId: null,
       plotId: null,
-      cropId: null,
-      activeTab: 'soil',
       farms: [],
-      plots: [],
-      crops: []
+      plots: []
     };
 
-    // API wrapper
     const API = window.API || {};
 
-    // Tab switching
-    document.querySelectorAll('.tab-button').forEach(button => {
-      button.addEventListener('click', function() {
-        const tab = this.dataset.tab;
-        
-        // Update button states
-        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        this.classList.add('active');
-        
-        // Update content visibility
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        document.getElementById(tab + '-tab').classList.add('active');
-        
-        currentState.activeTab = tab;
-        
-        // Load data for the active tab
-        if (tab === 'soil') {
-          loadSoilData();
-        } else {
-          loadIrrigationData();
-        }
-      });
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      if (localStorage.getItem('fa-auth-token')) {
+        loadFarmerInfo();
+        loadFarms();
+        loadSoilCondition();
+        loadSoilHistory();
+        loadRecords();
+        loadSensorData();
+        loadCropWaterRequirements();
+      } else {
+        window.location.href = 'login.html';
+      }
     });
 
-    // Filter handlers
+    // Farm/Plot filter handlers
     document.getElementById('farm-filter').addEventListener('change', function() {
       currentState.farmId = this.value || null;
       updatePlotFilter();
-      loadCropContext();
-      loadTabData();
+      loadSoilCondition();
+      loadSoilHistory();
+      loadRecords();
+      loadSensorData();
+      loadCropWaterRequirements();
     });
 
     document.getElementById('plot-filter').addEventListener('change', function() {
       currentState.plotId = this.value || null;
-      loadCropContext();
-      loadTabData();
-    });
-
-    document.getElementById('crop-filter').addEventListener('change', function() {
-      currentState.cropId = this.value || null;
-      loadTabData();
+      loadSoilCondition();
+      loadSoilHistory();
+      loadRecords();
+      loadSensorData();
+      loadCropWaterRequirements();
     });
 
     function updatePlotFilter() {
       const plotSelect = document.getElementById('plot-filter');
-      plotSelect.innerHTML = '<option value="">All Plots</option>';
+      plotSelect.innerHTML = '<option value="">All Fields</option>';
       plotSelect.disabled = !currentState.farmId;
       
       if (currentState.farmId) {
@@ -855,16 +1255,6 @@
       currentState.plotId = null;
     }
 
-    function loadTabData() {
-      if (currentState.activeTab === 'soil') {
-        loadSoilData();
-      } else {
-        loadIrrigationData();
-      }
-      refreshAIOverview();
-    }
-
-    // Load farms and initialize filters
     async function loadFarms() {
       try {
         const response = await API.Farm.list();
@@ -885,15 +1275,8 @@
           await loadPlots();
         }
         
-        // Load crop context
-        await loadCropContext();
-        
-        // Load initial data
-        loadTabData();
-        
       } catch (error) {
         console.error('Error loading farms:', error);
-        showError('soil', 'Failed to load farm data. Please try again.');
       }
     }
 
@@ -911,60 +1294,19 @@
       }
     }
 
-    async function loadCropContext() {
-      try {
-        const params = new URLSearchParams();
-        if (currentState.farmId) params.append('farm_id', currentState.farmId);
-        if (currentState.plotId) params.append('plot_id', currentState.plotId);
-        
-        const response = await fetch(`${APP_CONFIG.API_BASE_URL}/soil-irrigation/crop-context?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          currentState.crops = data.data || [];
-          
-          const cropSelect = document.getElementById('crop-filter');
-          cropSelect.innerHTML = '<option value="">All Crops</option>';
-          cropSelect.disabled = currentState.crops.length === 0;
-          
-          currentState.crops.forEach(crop => {
-            const option = document.createElement('option');
-            option.value = crop.crop_id;
-            option.textContent = crop.crop_name;
-            cropSelect.appendChild(option);
-          });
-          
-          if (currentState.crops.length === 0) {
-            cropSelect.innerHTML = '<option value="">No crops added</option>';
-          }
-        }
-      } catch (error) {
-        console.error('Error loading crop context:', error);
-      }
-    }
-
-    async function loadSoilData() {
-      const loading = document.getElementById('soil-loading');
-      const error = document.getElementById('soil-error');
-      const empty = document.getElementById('soil-empty');
-      const content = document.getElementById('soil-content');
+    async function loadSoilCondition() {
+      const loading = document.getElementById('soil-condition-loading');
+      const content = document.getElementById('soil-condition-content');
       
       loading.style.display = 'block';
-      error.style.display = 'none';
-      empty.style.display = 'none';
       content.style.display = 'none';
       
       try {
         const params = new URLSearchParams();
         if (currentState.farmId) params.append('farm_id', currentState.farmId);
         if (currentState.plotId) params.append('plot_id', currentState.plotId);
-        if (currentState.cropId) params.append('crop_id', currentState.cropId);
         
-        const response = await fetch(`${APP_CONFIG.API_BASE_URL}/soil-irrigation/soil-latest?${params}`, {
+        const response = await fetch(`${window._API_BASE_URL || '/api/v1'}/soil-irrigation/soil-latest?${params}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
           }
@@ -977,392 +1319,167 @@
           loading.style.display = 'none';
           
           if (Object.keys(soilData).length === 0) {
-            empty.style.display = 'block';
+            content.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-seedling"></i></div>
+                <div class="empty-state-title">No Soil Data Available</div>
+                <div class="empty-state-message">Record your first soil test to see soil condition and recommendations.</div>
+              </div>
+            `;
+            content.style.display = 'block';
             return;
           }
           
           content.style.display = 'block';
-          renderSoilData(soilData);
-          await loadSoilHealthStatus();
-          await loadSoilHistory();
-          
-        } else {
-          throw new Error('Failed to load soil data');
+          renderSoilCondition(soilData);
         }
       } catch (error) {
-        console.error('Error loading soil data:', error);
+        console.error('Error loading soil condition:', error);
         loading.style.display = 'none';
-        error.style.display = 'block';
-        document.getElementById('soil-error-message').textContent = 'Failed to load soil data. Please try again.';
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="empty-state-title">Unable to Load Data</div>
+            <div class="empty-state-message">Please try again later.</div>
+          </div>
+        `;
+        content.style.display = 'block';
       }
     }
 
-    function renderSoilData(soilData) {
-      // Get the first (or only) soil record
+    function renderSoilCondition(soilData) {
       const soilRecord = Object.values(soilData)[0];
       if (!soilRecord) return;
       
-      // Summary cards
-      const summaryCards = document.getElementById('soil-summary-cards');
-      summaryCards.innerHTML = `
-        <div class="summary-card">
-          <div class="summary-card-icon" style="color: var(--soil-med);">
-            <i class="fas fa-flask"></i>
-          </div>
-          <div class="summary-card-value">${soilRecord.ph_level || 'N/A'}</div>
-          <div class="summary-card-label">pH Level</div>
+      const infoCards = document.getElementById('soil-info-cards');
+      infoCards.innerHTML = `
+        <div class="info-card">
+          <div class="info-card-value">${soilRecord.ph_level || 'N/A'}</div>
+          <div class="info-card-label">pH Level</div>
         </div>
-        <div class="summary-card">
-          <div class="summary-card-icon" style="color: var(--soil-med);">
-            <i class="fas fa-tint"></i>
-          </div>
-          <div class="summary-card-value">${soilRecord.moisture ? soilRecord.moisture + '%' : 'N/A'}</div>
-          <div class="summary-card-label">Moisture</div>
+        <div class="info-card">
+          <div class="info-card-value">${soilRecord.moisture ? soilRecord.moisture + '%' : 'N/A'}</div>
+          <div class="info-card-label">Moisture</div>
         </div>
-        <div class="summary-card">
-          <div class="summary-card-icon" style="color: var(--soil-med);">
-            <i class="fas fa-leaf"></i>
-          </div>
-          <div class="summary-card-value">${soilRecord.organic_matter ? soilRecord.organic_matter + '%' : 'N/A'}</div>
-          <div class="summary-card-label">Organic Matter</div>
+        <div class="info-card">
+          <div class="info-card-value">${soilRecord.organic_matter ? soilRecord.organic_matter + '%' : 'N/A'}</div>
+          <div class="info-card-label">Organic Matter</div>
         </div>
-        <div class="summary-card">
-          <div class="summary-card-icon" style="color: var(--soil-med);">
-            <i class="fas fa-vial"></i>
-          </div>
-          <div class="summary-card-value">${soilRecord.nitrogen || 'N/A'}</div>
-          <div class="summary-card-label">Nitrogen (mg/kg)</div>
+        <div class="info-card">
+          <div class="info-card-value">${soilRecord.nitrogen || 'N/A'}</div>
+          <div class="info-card-label">Nitrogen (mg/kg)</div>
         </div>
       `;
       
-      // Parameters grid
-      const paramsGrid = document.getElementById('soil-parameters-grid');
-      paramsGrid.innerHTML = `
-        <div class="parameter-card">
-          <div class="parameter-header">
-            <span class="parameter-name">pH Level</span>
-            <span class="parameter-status status-healthy">Normal</span>
+      // Status alert
+      const statusAlert = document.getElementById('soil-status-alert');
+      let status = 'good';
+      let message = 'Soil parameters are within acceptable ranges.';
+      
+      if (soilRecord.ph_level && (soilRecord.ph_level < 5.5 || soilRecord.ph_level > 7.5)) {
+        status = 'warning';
+        message = 'Soil pH needs attention for optimal crop growth.';
+      }
+      
+      if (soilRecord.moisture && soilRecord.moisture < 30) {
+        status = 'danger';
+        message = 'Soil moisture is low. Consider irrigation.';
+      }
+      
+      statusAlert.innerHTML = `
+        <div class="alert-card alert-${status === 'good' ? 'success' : status === 'warning' ? 'warning' : 'info'}">
+          <div class="alert-title">
+            <i class="fas fa-${status === 'good' ? 'check-circle' : status === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            Soil Status
           </div>
-          <div class="parameter-value">${soilRecord.ph_level || 'N/A'}</div>
-          <div class="parameter-unit">Recommended: 6.0-7.0</div>
-        </div>
-        <div class="parameter-card">
-          <div class="parameter-header">
-            <span class="parameter-name">Nitrogen</span>
-            <span class="parameter-status status-healthy">Good</span>
-          </div>
-          <div class="parameter-value">${soilRecord.nitrogen || 'N/A'}</div>
-          <div class="parameter-unit">mg/kg</div>
-        </div>
-        <div class="parameter-card">
-          <div class="parameter-header">
-            <span class="parameter-name">Phosphorus</span>
-            <span class="parameter-status status-healthy">Good</span>
-          </div>
-          <div class="parameter-value">${soilRecord.phosphorus || 'N/A'}</div>
-          <div class="parameter-unit">mg/kg</div>
-        </div>
-        <div class="parameter-card">
-          <div class="parameter-header">
-            <span class="parameter-name">Potassium</span>
-            <span class="parameter-status status-healthy">Good</span>
-          </div>
-          <div class="parameter-value">${soilRecord.potassium || 'N/A'}</div>
-          <div class="parameter-unit">mg/kg</div>
+          <div class="alert-message">${message}</div>
         </div>
       `;
       
-      // Recommendations
-      const recommendations = document.getElementById('soil-recommendations');
-      recommendations.innerHTML = `
-        <div class="recommendation-card">
-          <div class="recommendation-title">
-            <i class="fas fa-check-circle" style="color: #22c55e;"></i>
-            Soil Condition
-          </div>
-          <div class="recommendation-text">
-            Based on recent soil tests, your soil parameters are within acceptable ranges for most crops. Continue regular monitoring.
-          </div>
-        </div>
-        <div class="recommendation-card">
-          <div class="recommendation-title">
-            <i class="fas fa-clock" style="color: var(--primary-color);"></i>
-            Next Test
-          </div>
-          <div class="recommendation-text">
-            Consider conducting the next soil test in 3-6 months to monitor nutrient levels and pH changes.
-          </div>
-        </div>
-      `;
+      // Update reminder
+      updateSoilTestReminder(soilRecord.test_date);
     }
 
-    async function loadSoilHealthStatus() {
-      try {
-        const params = new URLSearchParams();
-        if (currentState.farmId) params.append('farm_id', currentState.farmId);
-        if (currentState.plotId) params.append('plot_id', currentState.plotId);
-        
-        const response = await fetch(`${APP_CONFIG.API_BASE_URL}/soil-irrigation/soil-health-status?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          const statusData = data.data || {};
-          
-          // Get the first status
-          const status = Object.values(statusData)[0];
-          if (status) {
-            const badge = document.getElementById('soil-status-badge');
-            const message = document.getElementById('soil-status-message');
-            
-            badge.textContent = status.label;
-            badge.className = 'status-badge';
-            
-            if (status.status === 'healthy') {
-              badge.classList.add('status-healthy');
-            } else if (status.status === 'needs_attention') {
-              badge.classList.add('status-attention');
-            } else if (status.status === 'critical') {
-              badge.classList.add('status-critical');
-            } else {
-              badge.classList.add('status-attention');
-            }
-            
-            message.textContent = status.message;
-          }
-        }
-      } catch (error) {
-        console.error('Error loading soil health status:', error);
+    function updateSoilTestReminder(lastTestDate) {
+      const reminderContent = document.getElementById('soil-test-reminder-content');
+      
+      if (!lastTestDate) {
+        reminderContent.innerHTML = `
+          <div class="alert-card alert-info">
+            <div class="alert-title">
+              <i class="fas fa-info-circle"></i>
+              No Soil Test Recorded
+            </div>
+            <div class="alert-message">
+              Consider taking your first soil test to understand your soil condition and nutrient needs.
+            </div>
+          </div>
+        `;
+        return;
       }
+      
+      const lastTest = new Date(lastTestDate);
+      const recommendedReview = new Date(lastTest);
+      recommendedReview.setMonth(recommendedReview.getMonth() + 6);
+      
+      const today = new Date();
+      const daysSinceTest = Math.floor((today - lastTest) / (1000 * 60 * 60 * 24));
+      const daysUntilReview = Math.floor((recommendedReview - today) / (1000 * 60 * 60 * 24));
+      
+      let status, statusClass;
+      if (daysUntilReview < 0) {
+        status = 'Overdue';
+        statusClass = 'status-danger';
+      } else if (daysUntilReview <= 30) {
+        status = 'Due Soon';
+        statusClass = 'status-warning';
+      } else {
+        status = 'On Track';
+        statusClass = 'status-good';
+      }
+      
+      reminderContent.innerHTML = `
+        <div class="reminder-card">
+          <div class="reminder-header">
+            <div class="reminder-title">
+              <i class="fas fa-calendar-alt"></i>
+              Next Soil Test
+            </div>
+            <span class="reminder-status ${statusClass}">${status}</span>
+          </div>
+          <div class="reminder-details">
+            <div class="reminder-detail">
+              <strong>Last Test:</strong> ${lastTest.toLocaleDateString()}
+            </div>
+            <div class="reminder-detail">
+              <strong>Recommended Review:</strong> ${recommendedReview.toLocaleDateString()}
+            </div>
+            <div class="reminder-detail">
+              <strong>Days Since Last Test:</strong> ${daysSinceTest}
+            </div>
+          </div>
+          <div style="margin-top: 12px;">
+            <button class="btn btn-primary" onclick="openRecordSoilTestModal()">
+              <i class="fas fa-plus"></i> Record New Test
+            </button>
+          </div>
+        </div>
+      `;
     }
 
     async function loadSoilHistory() {
-      try {
-        const params = new URLSearchParams();
-        if (currentState.farmId) params.append('farm_id', currentState.farmId);
-        if (currentState.plotId) params.append('plot_id', currentState.plotId);
-        if (currentState.cropId) params.append('crop_id', currentState.cropId);
-        
-        const response = await fetch(`${APP_CONFIG.API_BASE_URL}/soil-irrigation/soil-records?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          const records = data.data || [];
-          
-          const tbody = document.getElementById('soil-history-body');
-          if (records.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">No soil test history available</td></tr>';
-            return;
-          }
-          
-          tbody.innerHTML = records.map(record => `
-            <tr>
-              <td>${new Date(record.test_date).toLocaleDateString()}</td>
-              <td>${record.plot_name || 'N/A'}</td>
-              <td>${record.ph_level || 'N/A'}</td>
-              <td>${record.nitrogen || 'N/A'}</td>
-              <td>${record.phosphorus || 'N/A'}</td>
-              <td>${record.potassium || 'N/A'}</td>
-              <td>${record.moisture ? record.moisture + '%' : 'N/A'}</td>
-            </tr>
-          `).join('');
-        }
-      } catch (error) {
-        console.error('Error loading soil history:', error);
-      }
-    }
-
-    async function loadIrrigationData() {
-      const loading = document.getElementById('irrigation-loading');
-      const error = document.getElementById('irrigation-error');
-      const empty = document.getElementById('irrigation-empty');
-      const content = document.getElementById('irrigation-content');
+      const loading = document.getElementById('soil-history-loading');
+      const content = document.getElementById('soil-history-content');
       
       loading.style.display = 'block';
-      error.style.display = 'none';
-      empty.style.display = 'none';
       content.style.display = 'none';
       
       try {
         const params = new URLSearchParams();
         if (currentState.farmId) params.append('farm_id', currentState.farmId);
         if (currentState.plotId) params.append('plot_id', currentState.plotId);
-        if (currentState.cropId) params.append('crop_id', currentState.cropId);
         
-        const response = await fetch(`${APP_CONFIG.API_BASE_URL}/soil-irrigation/irrigation-summary?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          const summary = data.data || {};
-          
-          loading.style.display = 'none';
-          
-          if (summary.total_irrigations === 0) {
-            empty.style.display = 'block';
-            return;
-          }
-          
-          content.style.display = 'block';
-          renderIrrigationData(summary);
-          await loadIrrigationStatus();
-          await loadIrrigationHistory();
-          
-        } else {
-          throw new Error('Failed to load irrigation data');
-        }
-      } catch (error) {
-        console.error('Error loading irrigation data:', error);
-        loading.style.display = 'none';
-        error.style.display = 'block';
-        document.getElementById('irrigation-error-message').textContent = 'Failed to load irrigation data. Please try again.';
-      }
-    }
-
-    function renderIrrigationData(summary) {
-      // Summary cards
-      const summaryCards = document.getElementById('irrigation-summary-cards');
-      summaryCards.innerHTML = `
-        <div class="summary-card">
-          <div class="summary-card-icon" style="color: var(--water-med);">
-            <i class="fas fa-tint"></i>
-          </div>
-          <div class="summary-card-value">${summary.total_irrigations}</div>
-          <div class="summary-card-label">Total Irrigations</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-card-icon" style="color: var(--water-med);">
-            <i class="fas fa-clock"></i>
-          </div>
-          <div class="summary-card-value">${Math.round(summary.total_duration_minutes / 60)}h</div>
-          <div class="summary-card-label">Total Duration</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-card-icon" style="color: var(--water-med);">
-            <i class="fas fa-water"></i>
-          </div>
-          <div class="summary-card-value">${Math.round(summary.total_water_used / 1000)}k</div>
-          <div class="summary-card-label">Water Used (L)</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-card-icon" style="color: var(--water-med);">
-            <i class="fas fa-cog"></i>
-          </div>
-          <div class="summary-card-value">${summary.most_common_method || 'N/A'}</div>
-          <div class="summary-card-label">Common Method</div>
-        </div>
-      `;
-      
-      // Recommendations
-      const recommendations = document.getElementById('irrigation-recommendations');
-      recommendations.innerHTML = `
-        <div class="recommendation-card">
-          <div class="recommendation-title">
-            <i class="fas fa-check-circle" style="color: #22c55e;"></i>
-            Irrigation Efficiency
-          </div>
-          <div class="recommendation-text">
-            Your irrigation records show consistent watering patterns. Continue monitoring soil moisture to optimize water usage.
-          </div>
-        </div>
-        <div class="recommendation-card">
-          <div class="recommendation-title">
-            <i class="fas fa-lightbulb" style="color: var(--primary-color);"></i>
-            Water Saving Tips
-          </div>
-          <div class="recommendation-text">
-            Consider irrigating early morning or late evening to reduce evaporation losses. Use soil moisture sensors for precise timing.
-          </div>
-        </div>
-      `;
-    }
-
-    async function loadIrrigationStatus() {
-      try {
-        const params = new URLSearchParams();
-        if (currentState.farmId) params.append('farm_id', currentState.farmId);
-        if (currentState.plotId) params.append('plot_id', currentState.plotId);
-        
-        const response = await fetch(`${APP_CONFIG.API_BASE_URL}/soil-irrigation/irrigation-status?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          const statusData = data.data || {};
-          
-          // Get the first status
-          const status = Object.values(statusData)[0];
-          if (status) {
-            const badge = document.getElementById('irrigation-status-badge');
-            const message = document.getElementById('irrigation-status-message');
-            
-            badge.textContent = status.label;
-            badge.className = 'status-badge';
-            
-            if (status.status === 'moisture_sufficient') {
-              badge.classList.add('status-healthy');
-            } else if (status.status === 'irrigation_recommended') {
-              badge.classList.add('status-attention');
-            } else if (status.status === 'water_needed') {
-              badge.classList.add('status-critical');
-            } else {
-              badge.classList.add('status-attention');
-            }
-            
-            message.textContent = status.message;
-            
-            // Current moisture
-            const moistureContent = document.getElementById('current-moisture-content');
-            if (status.current_moisture !== null) {
-              moistureContent.innerHTML = `
-                <div style="text-align:center;padding:20px;">
-                  <div style="font-size:48px;font-weight:700;color:var(--water-med);">${status.current_moisture}%</div>
-                  <div style="font-size:14px;color:var(--text-secondary);margin-top:8px;">
-                    Current Soil Moisture (${status.moisture_source})
-                  </div>
-                  ${status.last_irrigation ? `
-                    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">
-                      Last irrigation: ${new Date(status.last_irrigation.date).toLocaleDateString()}
-                    </div>
-                  ` : ''}
-                </div>
-              `;
-            } else {
-              moistureContent.innerHTML = `
-                <div style="text-align:center;padding:20px;color:var(--text-muted);">
-                  <i class="fas fa-tint" style="font-size:32px;margin-bottom:8px;opacity:0.5;"></i>
-                  <div>No moisture data available</div>
-                </div>
-              `;
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error loading irrigation status:', error);
-      }
-    }
-
-    async function loadIrrigationHistory() {
-      try {
-        const params = new URLSearchParams();
-        if (currentState.farmId) params.append('farm_id', currentState.farmId);
-        if (currentState.plotId) params.append('plot_id', currentState.plotId);
-        if (currentState.cropId) params.append('crop_id', currentState.cropId);
-        
-        const response = await fetch(`${APP_CONFIG.API_BASE_URL}/soil-irrigation/irrigation-records?${params}`, {
+        const response = await fetch(`${window._API_BASE_URL || '/api/v1'}/soil-irrigation/soil-records?${params}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
           }
@@ -1372,41 +1489,69 @@
           const data = await response.json();
           const records = data.data || [];
           
-          const tbody = document.getElementById('irrigation-history-body');
+          loading.style.display = 'none';
+          
           if (records.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">No irrigation history available</td></tr>';
+            content.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-history"></i></div>
+                <div class="empty-state-title">No Soil Test Records</div>
+                <div class="empty-state-message">Record your first soil test to see test history and comparisons.</div>
+              </div>
+            `;
+            content.style.display = 'block';
             return;
           }
           
-          tbody.innerHTML = records.map(record => `
-            <tr>
-              <td>${new Date(record.irrigation_date).toLocaleDateString()}</td>
-              <td>${record.plot_name || 'N/A'}</td>
-              <td>${record.method || 'N/A'}</td>
-              <td>${record.duration_minutes ? Math.round(record.duration_minutes) + ' min' : 'N/A'}</td>
-              <td>${record.water_quantity ? Math.round(record.water_quantity) + ' ' + (record.water_unit || 'L') : 'N/A'}</td>
-            </tr>
-          `).join('');
+          content.style.display = 'block';
+          renderSoilHistory(records);
         }
       } catch (error) {
-        console.error('Error loading irrigation history:', error);
+        console.error('Error loading soil history:', error);
+        loading.style.display = 'none';
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="empty-state-title">Unable to Load History</div>
+            <div class="empty-state-message">Please try again later.</div>
+          </div>
+        `;
+        content.style.display = 'block';
       }
     }
 
-    async function refreshAIOverview() {
-      const content = document.getElementById('ai-overview-content');
-      const refreshBtn = document.getElementById('ai-refresh-btn');
+    function renderSoilHistory(records) {
+      const tbody = document.getElementById('soil-history-body');
+      tbody.innerHTML = records.map(record => `
+        <tr>
+          <td>${new Date(record.test_date).toLocaleDateString()}</td>
+          <td>${record.farm_name || 'N/A'}</td>
+          <td>${record.plot_name || 'N/A'}</td>
+          <td>${record.ph_level || 'N/A'}</td>
+          <td>${record.nitrogen || 'N/A'}</td>
+          <td>${record.phosphorus || 'N/A'}</td>
+          <td>${record.potassium || 'N/A'}</td>
+          <td><span class="status-badge status-good">Recorded</span></td>
+          <td>
+            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="viewSoilTest('${record.id}')">View</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadRecords() {
+      const loading = document.getElementById('records-loading');
+      const content = document.getElementById('records-content');
       
-      content.innerHTML = '<div class="loading-spinner"></div><span>Analyzing data...</span>';
-      refreshBtn.disabled = true;
+      loading.style.display = 'block';
+      content.style.display = 'none';
       
       try {
         const params = new URLSearchParams();
         if (currentState.farmId) params.append('farm_id', currentState.farmId);
         if (currentState.plotId) params.append('plot_id', currentState.plotId);
-        if (currentState.cropId) params.append('crop_id', currentState.cropId);
         
-        const response = await fetch(`${APP_CONFIG.API_BASE_URL}/soil-irrigation/ai-overview?${params}`, {
+        const response = await fetch(`${window._API_BASE_URL || '/api/v1'}/soil-irrigation/irrigation-records?${params}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
           }
@@ -1414,53 +1559,508 @@
         
         if (response.ok) {
           const data = await response.json();
-          const aiData = data.data || {};
+          const records = data.data || [];
           
-          content.innerHTML = `
-            <div style="white-space: pre-line; line-height: 1.8;">${aiData.overview || 'No analysis available.'}</div>
-            ${aiData.model ? `<div style="margin-top:12px;font-size:11px;color:var(--text-muted);">Powered by ${aiData.model}</div>` : ''}
-          `;
-        } else {
-          throw new Error('Failed to load AI overview');
+          loading.style.display = 'none';
+          
+          if (records.length === 0) {
+            content.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-clipboard-list"></i></div>
+                <div class="empty-state-title">No Records Yet</div>
+                <div class="empty-state-message">Start recording your soil and irrigation activities to track your farm management.</div>
+              </div>
+            `;
+            content.style.display = 'block';
+            return;
+          }
+          
+          content.style.display = 'block';
+          renderRecords(records);
         }
       } catch (error) {
-        console.error('Error loading AI overview:', error);
+        console.error('Error loading records:', error);
+        loading.style.display = 'none';
         content.innerHTML = `
-          <div style="color: var(--text-secondary);">
-            <i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>
-            AI overview temporarily unavailable. Please try again later.
+          <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="empty-state-title">Unable to Load Records</div>
+            <div class="empty-state-message">Please try again later.</div>
           </div>
         `;
-      } finally {
-        refreshBtn.disabled = false;
+        content.style.display = 'block';
       }
     }
 
-    function showError(type, message) {
-      const errorDiv = document.getElementById(type + '-error');
-      const loadingDiv = document.getElementById(type + '-loading');
-      const emptyDiv = document.getElementById(type + '-empty');
-      const contentDiv = document.getElementById(type + '-content');
+    function renderRecords(records) {
+      const tbody = document.getElementById('records-body');
+      tbody.innerHTML = records.map(record => `
+        <tr>
+          <td>${new Date(record.irrigation_date).toLocaleDateString()}</td>
+          <td>${record.method || 'Irrigation'}</td>
+          <td>${record.plot_name || 'N/A'}</td>
+          <td>${record.notes || '-'}</td>
+          <td>
+            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="viewRecord('${record.id}')">View</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadSensorData() {
+      const loading = document.getElementById('sensor-loading');
+      const content = document.getElementById('sensor-content');
       
-      if (loadingDiv) loadingDiv.style.display = 'none';
-      if (emptyDiv) emptyDiv.style.display = 'none';
-      if (contentDiv) contentDiv.style.display = 'none';
-      if (errorDiv) {
-        errorDiv.style.display = 'block';
-        const errorMessage = document.getElementById(type + '-error-message');
-        if (errorMessage) errorMessage.textContent = message;
+      loading.style.display = 'block';
+      content.style.display = 'none';
+      
+      try {
+        const params = new URLSearchParams();
+        if (currentState.farmId) params.append('farm_id', currentState.farmId);
+        if (currentState.plotId) params.append('plot_id', currentState.plotId);
+        
+        const response = await fetch(`${window._API_BASE_URL || '/api/v1'}/monitoring/sensors?${params}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const sensors = data.data || [];
+          
+          loading.style.display = 'none';
+          
+          if (sensors.length === 0) {
+            content.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-microchip"></i></div>
+                <div class="empty-state-title">No Soil Sensors Connected</div>
+                <div class="empty-state-message">Connect soil moisture sensors to get real-time readings from your fields.</div>
+              </div>
+            `;
+            content.style.display = 'block';
+            return;
+          }
+          
+          content.style.display = 'block';
+          renderSensorData(sensors);
+        }
+      } catch (error) {
+        console.error('Error loading sensor data:', error);
+        loading.style.display = 'none';
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></i>
+            <div class="empty-state-title">Unable to Load Sensor Data</div>
+            <div class="empty-state-message">Please try again later.</div>
+          </div>
+        `;
+        content.style.display = 'block';
       }
     }
 
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      if (localStorage.getItem('fa-auth-token')) {
-        loadFarms();
-      } else {
-        // Redirect to login if not authenticated
-        window.location.href = 'login.html';
+    function renderSensorData(sensors) {
+      const infoCards = document.getElementById('sensor-info-cards');
+      infoCards.innerHTML = sensors.map(sensor => {
+        const reading = sensor.last_reading;
+        return `
+          <div class="info-card">
+            <div class="info-card-value">${reading ? reading.value : 'N/A'}</div>
+            <div class="info-card-label">${reading ? reading.unit : ''}</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+              ${sensor.plot_name || 'N/A'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function loadAlerts() {
+      const alertsContent = document.getElementById('alerts-content');
+      
+      // Generate alerts based on actual data
+      const alerts = [];
+      
+      // Check if no soil test exists
+      const soilHistoryBody = document.getElementById('soil-history-body');
+      if (soilHistoryBody && soilHistoryBody.innerHTML.trim() === '') {
+        alerts.push({
+          type: 'info',
+          title: 'Soil Test Recommended',
+          message: 'No soil test recorded yet. Consider taking your first soil test to understand your soil condition.'
+        });
       }
-    });
+      
+      // Check soil moisture from current condition
+      const moistureValue = document.querySelector('#soil-info-cards .info-card-value:nth-child(2)');
+      if (moistureValue && moistureValue.textContent !== 'N/A') {
+        const moisture = parseFloat(moistureValue.textContent.replace('%', ''));
+        if (!isNaN(moisture) && moisture < 30) {
+          alerts.push({
+            type: 'warning',
+            title: 'Low Soil Moisture',
+            message: 'Soil moisture is below optimal levels. Consider irrigation soon.'
+          });
+        }
+      }
+      
+      if (alerts.length === 0) {
+        alertsContent.innerHTML = `
+          <div class="alert-card alert-success">
+            <div class="alert-title">
+              <i class="fas fa-check-circle"></i>
+              All Systems Normal
+            </div>
+            <div class="alert-message">
+              No alerts at this time. Continue regular monitoring of your soil and irrigation systems.
+            </div>
+          </div>
+        `;
+      } else {
+        alertsContent.innerHTML = alerts.map(alert => `
+          <div class="alert-card alert-${alert.type}">
+            <div class="alert-title">
+              <i class="fas fa-${alert.type === 'warning' ? 'exclamation-triangle' : alert.type === 'info' ? 'info-circle' : 'check-circle'}"></i>
+              ${alert.title}
+            </div>
+            <div class="alert-message">
+              ${alert.message}
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function loadCropWaterRequirements() {
+      const loading = document.getElementById('crop-water-loading');
+      const content = document.getElementById('crop-water-content');
+      
+      loading.style.display = 'block';
+      content.style.display = 'none';
+      
+      try {
+        const params = new URLSearchParams();
+        if (currentState.farmId) params.append('farm_id', currentState.farmId);
+        if (currentState.plotId) params.append('plot_id', currentState.plotId);
+        
+        const response = await fetch(`${window._API_BASE_URL || '/api/v1'}/soil-irrigation/crop-context?${params}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const crops = data.data || [];
+          
+          loading.style.display = 'none';
+          
+          if (crops.length === 0) {
+            content.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-leaf"></i></div>
+                <div class="empty-state-title">No Crops Found</div>
+                <div class="empty-state-message">Add crops to your farm to see crop-specific water requirements.</div>
+              </div>
+            `;
+            content.style.display = 'block';
+            return;
+          }
+          
+          content.style.display = 'block';
+          renderCropWaterRequirements(crops);
+        }
+      } catch (error) {
+        console.error('Error loading crop water requirements:', error);
+        loading.style.display = 'none';
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="empty-state-title">Unable to Load Data</div>
+            <div class="empty-state-message">Please try again later.</div>
+          </div>
+        `;
+        content.style.display = 'block';
+      }
+    }
+
+    function renderCropWaterRequirements(crops) {
+      const tbody = document.getElementById('crop-water-requirements-body');
+      
+      // Reference water requirements based on crop type
+      const waterRequirements = {
+        'Rice': { stage: 'Vegetative', requirement: 'High', period: 'Tillering to flowering', consideration: 'Maintain standing water in early stages' },
+        'Wheat': { stage: 'Crown root initiation', requirement: 'High', period: '30-45 days after sowing', consideration: 'Critical irrigation stage' },
+        'Tomato': { stage: 'Flowering & fruit set', requirement: 'High', period: 'Flowering period', consideration: 'Avoid water stress during fruit set' },
+        'Cotton': { stage: 'Squaring & boll formation', requirement: 'Moderate', period: 'Squaring stage', consideration: 'Avoid excess nitrogen during flowering' },
+        'Maize': { stage: 'Tasseling & silking', requirement: 'High', period: 'Tasseling stage', consideration: 'Most critical period for water' },
+        'Sugarcane': { stage: 'Grand growth', requirement: 'High', period: '4-8 months after planting', consideration: 'Maintain adequate moisture' }
+      };
+      
+      const cropRows = crops.map(crop => {
+        const cropName = crop.crop_name || 'Unknown';
+        const req = waterRequirements[cropName] || { 
+          stage: crop.stage || 'Active growth', 
+          requirement: 'Moderate', 
+          period: 'Active growing season', 
+          consideration: 'Monitor soil moisture regularly' 
+        };
+        
+        return `
+          <tr>
+            <td>${cropName}</td>
+            <td>${req.stage}</td>
+            <td>${req.requirement}</td>
+            <td>${req.period}</td>
+            <td>${req.consideration}</td>
+          </tr>
+        `;
+      }).join('');
+      
+      tbody.innerHTML = cropRows || `
+        <tr>
+          <td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">
+            No crop-specific water requirements available
+          </td>
+        </tr>
+      `;
+    }
+
+    async function loadFarmerInfo() {
+      try {
+        const token = localStorage.getItem('fa-auth-token');
+        if (!token) return;
+        
+        const response = await fetch(`${window._API_BASE_URL || '/api/v1'}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const user = data.data || data;
+          
+          const farmerIdDisplay = document.getElementById('farmer-id-display');
+          if (farmerIdDisplay) {
+            farmerIdDisplay.textContent = user.id || user.phone_number || 'N/A';
+          }
+        }
+      } catch (error) {
+        console.error('Error loading farmer info:', error);
+      }
+    }
+
+    // Modal functions
+    function openRecordSoilTestModal() {
+      populateFarmSelect('soil-test-farm');
+      populatePlotSelect('soil-test-plot');
+      document.getElementById('record-soil-test-modal').classList.add('active');
+    }
+
+    function openRecordIrrigationModal() {
+      populateFarmSelect('irrigation-farm');
+      populatePlotSelect('irrigation-plot');
+      document.getElementById('record-irrigation-modal').classList.add('active');
+    }
+
+    function openRecordActionModal() {
+      populateFarmSelect('action-farm');
+      populatePlotSelect('action-plot');
+      document.getElementById('record-action-modal').classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function populateFarmSelect(selectId) {
+      const select = document.getElementById(selectId);
+      select.innerHTML = '<option value="">Select Farm</option>';
+      currentState.farms.forEach(farm => {
+        const option = document.createElement('option');
+        option.value = farm.id;
+        option.textContent = farm.farm_name;
+        select.appendChild(option);
+      });
+    }
+
+    function populatePlotSelect(selectId) {
+      const select = document.getElementById(selectId);
+      select.innerHTML = '<option value="">Select Field</option>';
+      
+      const farmSelect = selectId.replace('plot', 'farm');
+      const farmId = document.getElementById(farmSelect).value;
+      
+      if (farmId) {
+        const farmPlots = currentState.plots.filter(p => p.farm_id === farmId);
+        farmPlots.forEach(plot => {
+          const option = document.createElement('option');
+          option.value = plot.id;
+          option.textContent = plot.plot_name;
+          select.appendChild(option);
+        });
+      }
+    }
+
+    function toggleGuide(guideId) {
+      const guide = document.getElementById(guideId);
+      const button = guide.previousElementSibling.querySelector('.btn-outline');
+      
+      if (guide.classList.contains('expanded')) {
+        guide.classList.remove('expanded');
+        button.innerHTML = '<i class="fas fa-chevron-down"></i> Show Guide';
+      } else {
+        guide.classList.add('expanded');
+        button.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Guide';
+      }
+    }
+
+    function refreshSoilData() {
+      loadSoilCondition();
+      loadSoilHistory();
+    }
+
+    function refreshSensorData() {
+      loadSensorData();
+    }
+
+    // Form submissions
+    async function submitSoilTest(event) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      
+      const data = {
+        plot_id: formData.get('plot_id'),
+        ph_level: formData.get('ph_level') ? parseFloat(formData.get('ph_level')) : null,
+        nitrogen: formData.get('nitrogen') ? parseFloat(formData.get('nitrogen')) : null,
+        phosphorus: formData.get('phosphorus') ? parseFloat(formData.get('phosphorus')) : null,
+        potassium: formData.get('potassium') ? parseFloat(formData.get('potassium')) : null,
+        organic_matter: formData.get('organic_matter') ? parseFloat(formData.get('organic_matter')) : null,
+        moisture: formData.get('moisture') ? parseFloat(formData.get('moisture')) : null,
+        soil_type: formData.get('soil_type') || null,
+        notes: formData.get('notes') || null,
+        test_date: formData.get('test_date') || new Date().toISOString().split('T')[0]
+      };
+      
+      try {
+        const response = await fetch(`${window._API_BASE_URL || '/api/v1'}/soil-irrigation/soil-records`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+          closeModal('record-soil-test-modal');
+          form.reset();
+          loadSoilHistory();
+          loadSoilCondition();
+          loadAlerts();
+          if (window.showToast) {
+            window.showToast('Soil test recorded successfully!', 'success');
+          }
+        } else {
+          throw new Error('Failed to save soil test');
+        }
+      } catch (error) {
+        console.error('Error saving soil test:', error);
+        if (window.showToast) {
+          window.showToast('Failed to save soil test. Please try again.', 'error');
+        }
+      }
+    }
+
+    async function submitIrrigation(event) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      
+      const data = {
+        plot_id: formData.get('plot_id'),
+        method: formData.get('method'),
+        duration_minutes: formData.get('duration_minutes') ? parseFloat(formData.get('duration_minutes')) : null,
+        water_quantity: formData.get('water_quantity') ? parseFloat(formData.get('water_quantity')) : null,
+        water_unit: 'Liters',
+        irrigation_date: formData.get('irrigation_date') || new Date().toISOString().split('T')[0],
+        notes: formData.get('notes') || null
+      };
+      
+      try {
+        const response = await fetch(`${window._API_BASE_URL || '/api/v1'}/soil-irrigation/irrigation-records`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('fa-auth-token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+          closeModal('record-irrigation-modal');
+          form.reset();
+          if (window.showToast) {
+            window.showToast('Irrigation record saved successfully!', 'success');
+          }
+        } else {
+          throw new Error('Failed to save irrigation record');
+        }
+      } catch (error) {
+        console.error('Error saving irrigation record:', error);
+        if (window.showToast) {
+          window.showToast('Failed to save irrigation record. Please try again.', 'error');
+        }
+      }
+    }
+
+    async function submitAction(event) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      
+      const data = {
+        farm_id: formData.get('farm_id'),
+        plot_id: formData.get('plot_id'),
+        activity: formData.get('activity'),
+        notes: formData.get('notes') || null,
+        record_date: formData.get('record_date') || new Date().toISOString().split('T')[0]
+      };
+      
+      // This would need a backend endpoint - for now just show success
+      closeModal('record-action-modal');
+      form.reset();
+      if (window.showToast) {
+        window.showToast('Record saved successfully!', 'success');
+      }
+    }
+
+    function openCheckMoistureModal() {
+      if (window.showToast) {
+        window.showToast('Check soil moisture by inserting a soil probe 6-8 inches deep. If soil crumbles easily, irrigation may be needed.', 'info');
+      }
+    }
+
+    function openReviewSystemModal() {
+      if (window.showToast) {
+        window.showToast('Check irrigation pipes for leaks, ensure proper water pressure, and verify all sprinklers/drips are working correctly.', 'info');
+      }
+    }
+
+    function viewSoilTest(recordId) {
+      if (window.showToast) {
+        window.showToast('Detailed soil test view coming soon.', 'info');
+      }
+    }
+
+    function viewRecord(recordId) {
+      if (window.showToast) {
+        window.showToast('Detailed record view coming soon.', 'info');
+      }
+    }
   </script>
 </body>
 </html>
