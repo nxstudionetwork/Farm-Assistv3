@@ -2085,11 +2085,11 @@ Backend: FastAPI served from the same origin (port 8000).
     overview: function () {
       return http('GET', '/livestock/overview').then(unwrap);
     },
-    eventsUpcoming: function () {
-      return http('GET', '/livestock/events/upcoming').then(unwrap);
+    eventsUpcoming: function (days) {
+      return http('GET', '/livestock/events/upcoming' + (days ? '?days=' + days : '')).then(unwrap);
     },
-    list: function () {
-      return http('GET', '/livestock').then(unwrap);
+    list: function (params) {
+      return http('GET', '/livestock' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
     },
     create: function (data) {
       return http('POST', '/livestock', data).then(unwrap);
@@ -2106,11 +2106,11 @@ Backend: FastAPI served from the same origin (port 8000).
     full: function (animalId) {
       return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/full').then(unwrap);
     },
-    attentionSummary: function () {
-      return http('GET', '/livestock/attention/summary').then(unwrap);
+    attentionSummary: function (days) {
+      return http('GET', '/livestock/attention/summary' + (days ? '?days=' + days : '')).then(unwrap);
     },
-    recentActivity: function () {
-      return http('GET', '/livestock/activity/recent').then(unwrap);
+    recentActivity: function (limit) {
+      return http('GET', '/livestock/activity/recent' + (limit ? '?limit=' + limit : '')).then(unwrap);
     },
     health: function (animalId) {
       return http('GET', '/livestock/' + encodeURIComponent(animalId) + '/health').then(unwrap);
