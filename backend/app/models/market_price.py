@@ -27,6 +27,7 @@ class MarketPrice(Base):
     market = Column(String(200), nullable=False, index=True)
     district = Column(String(120), nullable=True, index=True)
     state = Column(String(120), nullable=True, index=True)
+    region = Column(String(120), nullable=True, index=True)  # mandal / taluk / mandi region
 
     min_price = Column(Float, nullable=True)
     max_price = Column(Float, nullable=True)
@@ -48,7 +49,7 @@ class MarketPrice(Base):
             name="uq_market_price_natural",
         ),
         Index("ix_market_prices_lookup", "commodity", "market", "price_date"),
-        Index("ix_market_prices_geo", "state", "district", "market"),
+        Index("ix_market_prices_geo", "state", "district", "region", "market"),
     )
 
 

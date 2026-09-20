@@ -148,6 +148,7 @@ def transform_record(rec: Dict[str, Any], source: str) -> Optional[Dict[str, Any
         "market": market,
         "district": _clean_str(rec.get("District") or rec.get("district")),
         "state": _clean_str(rec.get("State") or rec.get("state")),
+        "region": _clean_str(rec.get("Region") or rec.get("region") or rec.get("Mandal") or rec.get("Taluk")),
         "min_price": min_p,
         "max_price": max_p,
         "modal_price": modal if modal is not None else min_p,
@@ -183,8 +184,8 @@ def upsert_prices(db: Session, rows: List[Dict[str, Any]]) -> int:
         if existing:
             changed = False
             for field in ("min_price", "max_price", "modal_price", "district",
-                          "state", "source_url", "source_timestamp", "category",
-                          "unit", "arrival_date"):
+                          "state", "region", "source_url", "source_timestamp",
+                          "category", "unit", "arrival_date"):
                 if getattr(existing, field) != row.get(field):
                     setattr(existing, field, row.get(field))
                     changed = True
@@ -199,7 +200,7 @@ def upsert_prices(db: Session, rows: List[Dict[str, Any]]) -> int:
             fetched_at=datetime.utcnow(),
             **{k: row.get(k) for k in (
                 "commodity", "variety", "grade", "category", "market", "district",
-                "state", "min_price", "max_price", "modal_price", "unit",
+                "state", "region", "min_price", "max_price", "modal_price", "unit",
                 "price_date", "arrival_date", "source", "source_url",
                 "source_timestamp",
             )},
@@ -510,6 +511,7 @@ def price_to_dict(row: MarketPrice, change: Optional[Dict[str, Any]] = None) -> 
         "market": row.market,
         "district": row.district,
         "state": row.state,
+        "region": row.region,
         "min_price": row.min_price,
         "max_price": row.max_price,
         "modal_price": row.modal_price,

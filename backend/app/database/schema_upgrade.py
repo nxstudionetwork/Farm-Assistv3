@@ -209,6 +209,9 @@ ADDITIVE_COLUMNS = {
     "delivery_tracking": [
         ("notes", "TEXT"),
     ],
+    "market_prices": [
+        ("region", "VARCHAR(120)"),
+    ],
 }
 
 

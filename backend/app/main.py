@@ -174,13 +174,24 @@ async def startup():
             eq_summary = None
             if not has_market_data:
                 try:
-                    from seed_market_prices import import_msp_prices
+                    from seed_market_regions import import_region_prices
                 except ImportError:
                     _backend_dir = Path(__file__).resolve().parent.parent
                     if str(_backend_dir) not in sys.path:
                         sys.path.insert(0, str(_backend_dir))
-                    from seed_market_prices import import_msp_prices
-                market_seeded = import_msp_prices(db)
+                    from seed_market_regions import import_region_prices
+                market_seeded = import_region_prices(db)
+            else:
+                # MSP/regional datasets already exist; top up any missing
+                # AGMARKNET regional rows so Region filters work on older DBs.
+                try:
+                    from seed_market_regions import import_region_prices
+                except ImportError:
+                    _backend_dir = Path(__file__).resolve().parent.parent
+                    if str(_backend_dir) not in sys.path:
+                        sys.path.insert(0, str(_backend_dir))
+                    from seed_market_regions import import_region_prices
+                market_seeded |= import_region_prices(db)
 
             from app.models.marketplace import EquipmentMetadata
             has_equipment = db.query(func.count(EquipmentMetadata.id)).scalar() or 0

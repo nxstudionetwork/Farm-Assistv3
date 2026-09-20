@@ -307,3 +307,65 @@ def test_location_cascade_filters_districts_and_markets(headers_a, db):
     resp = client.get("/api/v1/market-prices/markets", params={"state": "Telangana", "district": "Nalgonda"}, headers=headers_a)
     data = resp.json()["data"]
     assert data["markets"] == ["Nalgonda Market"]
+
+
+def test_location_cascade_returns_regions(headers_a, db):
+    from app.models.market_price import MarketPrice
+    db.add_all([
+        MarketPrice(commodity="Paddy", variety="Common", market="Kodad Market", district="Nalgonda", state="Telangana", region="Kodad", modal_price=2600.0, unit="Rs/Quintal", price_date="2026-05-20", source="AGMARKNET demo"),
+        MarketPrice(commodity="Paddy", variety="Common", market="Suryapeta Market", district="Nalgonda", state="Telangana", region="Suryapeta", modal_price=2750.0, unit="Rs/Quintal", price_date="2026-05-20", source="AGMARKNET demo"),
+        MarketPrice(commodity="Paddy", variety="Common", market="Nalgonda Market", district="Nalgonda", state="Telangana", region="Nalgonda", modal_price=2650.0, unit="Rs/Quintal", price_date="2026-05-20", source="AGMARKNET demo"),
+        MarketPrice(commodity="Paddy", variety="Common", market="Pune APMC", district="Pune", state="Maharashtra", region="Haveli", modal_price=6000.0, unit="Rs/Quintal", price_date="2026-05-20", source="AGMARKNET demo"),
+    ])
+    db.commit()
+
+    resp = client.get("/api/v1/market-prices/markets", params={"state": "Telangana"}, headers=headers_a)
+    data = resp.json()["data"]
+    assert "Kodad" in data["regions"]
+    assert "Haveli" not in data["regions"]
+
+    resp = client.get("/api/v1/market-prices/markets", params={"state": "Telangana", "district": "Nalgonda"}, headers=headers_a)
+    data = resp.json()["data"]
+    assert set(data["regions"]) == {"Kodad", "Nalgonda", "Suryapeta"}
+    assert data["markets"] == ["Kodad Market", "Nalgonda Market", "Suryapeta Market"]
+
+    resp = client.get("/api/v1/market-prices/markets", params={"state": "Maharashtra", "district": "Pune", "region": "Haveli"}, headers=headers_a)
+    data = resp.json()["data"]
+    assert data["markets"] == ["Pune APMC"]
+
+    resp = client.get("/api/v1/market-prices/search", params={"q": "havel"}, headers=headers_a)
+    assert "Haveli" in resp.json()["data"]["regions"]
+
+
+def test_list_filters_by_region(headers_a, db):
+    from app.models.market_price import MarketPrice
+    db.add_all([
+        MarketPrice(commodity="Paddy", variety="Common", market="Kodad Market", district="Nalgonda", state="Telangana", region="Kodad", modal_price=2600.0, unit="Rs/Quintal", price_date="2026-05-21", source="AGMARKNET demo"),
+        MarketPrice(commodity="Paddy", variety="Common", market="Choutuppal Market", district="Nalgonda", state="Telangana", region="Choutuppal", modal_price=2750.0, unit="Rs/Quintal", price_date="2026-05-21", source="AGMARKNET demo"),
+        MarketPrice(commodity="Onion", variety="Onion", market="Siddipet", district="Siddipet", state="Telangana", region="Siddipet", modal_price=4500.0, unit="Rs/Quintal", price_date="2026-05-21", source="AGMARKNET demo"),
+    ])
+    db.commit()
+
+    resp = client.get("/api/v1/market-prices", params={"state": "Telangana", "region": "Kodad"}, headers=headers_a)
+    data = resp.json()["data"]
+    assert data["total"] == 1
+    assert data["items"][0]["market"] == "Kodad Market"
+    assert data["items"][0]["region"] == "Kodad"
+
+
+def test_compare_markets_scoped_to_region(headers_a, db):
+    from app.models.market_price import MarketPrice
+    db.add_all([
+        MarketPrice(commodity="Paddy", variety="Common", market="Kodad Market", district="Nalgonda", state="Telangana", region="Kodad", modal_price=2600.0, unit="Rs/Quintal", price_date="2026-05-21", source="AGMARKNET demo"),
+        MarketPrice(commodity="Paddy", variety="Common", market="Choutuppal Market", district="Nalgonda", state="Telangana", region="Choutuppal", modal_price=2750.0, unit="Rs/Quintal", price_date="2026-05-21", source="AGMARKNET demo"),
+    ])
+    db.commit()
+
+    resp = client.get(
+        "/api/v1/market-prices/compare",
+        params={"commodity": "Paddy", "state": "Telangana", "region": "Kodad"},
+        headers=headers_a,
+    )
+    data = resp.json()["data"]
+    assert data["market_count"] == 1
+    assert data["markets"][0]["region"] == "Kodad"

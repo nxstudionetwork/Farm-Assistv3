@@ -292,6 +292,7 @@
         <div class="mp-frow">
           <select id="mp-state"><option value="">All States</option></select>
           <select id="mp-district" disabled><option value="">All Districts</option></select>
+          <select id="mp-region" disabled><option value="">All Regions</option></select>
           <select id="mp-market" disabled><option value="">All Mandals</option></select>
           <select id="mp-sort">
             <option value="recent">Recently updated</option>
@@ -331,7 +332,7 @@
     var S = {
       view: 'main', page: 1, limit: 24, total: 0, hasMore: false, loading: false, refreshing: false,
       listSeq: 0, detailSeq: 0, detailsBusy: false,
-      q: '', category: 'all', state: '', district: '', market: '', commodity: '', sort: 'recent',
+      q: '', category: 'all', state: '', district: '', region: '', market: '', commodity: '', sort: 'recent',
       savedIds: {}, detailId: null, historyDays: 90
     };
 
@@ -341,7 +342,7 @@
     var aiEl = $('mp-ai'), _aiKey = '', _aiPending = '', _aiCache = {};
     var recEl = $('mp-recommended'), freshEl = $('mp-freshness');
     var searchInput = $('mp-search-input'), searchClear = $('mp-search-clear'), suggestEl = $('mp-suggest');
-    var stateSel = $('mp-state'), distSel = $('mp-district'), marketSel = $('mp-market'), sortSel = $('mp-sort');
+    var stateSel = $('mp-state'), distSel = $('mp-district'), regionSel = $('mp-region'), marketSel = $('mp-market'), sortSel = $('mp-sort');
     var filterOverlay = $('mp-filter-overlay'), filterClose = $('mp-filter-close'), filterBtn = $('btn-filter'), filterBadge = $('mp-filter-badge');
     var loadMoreWrap = $('mp-load-more');
     var searchTimer = null;
@@ -485,6 +486,7 @@
         category: (S.category && S.category !== 'all') ? S.category : undefined,
         state: S.state || undefined,
         district: S.district || undefined,
+        region: S.region || undefined,
         market: S.market || undefined,
         commodity: S.commodity || undefined
       };
@@ -562,26 +564,40 @@
     }
     function clearDistricts(){
       distSel.disabled = true; distSel.innerHTML = '<option value="">All Districts</option>';
+      regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
       marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
     }
     function loadDistricts(keepApplied){
       var state = stateSel.value;
       distSel.disabled = !state;
+      regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
       marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
       if(!state){ distSel.innerHTML = '<option value="">All Districts</option>'; return Promise.resolve(null); }
       distSel.innerHTML = '<option value="">Loading districts...</option>';
       return window.MarketPriceService.markets({ state: state }).then(function(d){
         distSel.innerHTML = '<option value="">All Districts</option>' + (d.districts || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
-        if(keepApplied && S.district){ distSel.value = S.district; return loadMarkets(true); }
-        return null;
+        if(keepApplied && S.district){ distSel.value = S.district; }
+        return loadRegions(keepApplied);
       }).catch(function(){ distSel.innerHTML = '<option value="">All Districts</option>'; return null; });
     }
-    function loadMarkets(keepApplied){
+    function loadRegions(keepApplied){
       var state = stateSel.value, dist = distSel.value;
+      regionSel.disabled = !state;
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
+      if(!state){ regionSel.innerHTML = '<option value="">All Regions</option>'; return Promise.resolve(null); }
+      regionSel.innerHTML = '<option value="">Loading regions...</option>';
+      return window.MarketPriceService.markets({ state: state, district: dist }).then(function(d){
+        regionSel.innerHTML = '<option value="">All Regions</option>' + (d.regions || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+        if(keepApplied && S.region){ regionSel.value = S.region; return loadMarkets(true); }
+        return null;
+      }).catch(function(){ regionSel.innerHTML = '<option value="">All Regions</option>'; return null; });
+    }
+    function loadMarkets(keepApplied){
+      var state = stateSel.value, dist = distSel.value, region = regionSel.value;
       marketSel.disabled = !state;
       if(!state){ marketSel.innerHTML = '<option value="">All Mandals</option>'; return Promise.resolve(null); }
       marketSel.innerHTML = '<option value="">Loading mandals...</option>';
-      return window.MarketPriceService.markets({ state: state, district: dist }).then(function(d){
+      return window.MarketPriceService.markets({ state: state, district: dist, region: region }).then(function(d){
         marketSel.innerHTML = '<option value="">All Mandals</option>' + (d.markets || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
         if(keepApplied && S.market){ marketSel.value = S.market; }
         return null;
@@ -590,6 +606,7 @@
     function applyFilters(){
       S.state = stateSel.value;
       S.district = distSel.value;
+      S.region = regionSel.value;
       S.market = marketSel.value;
       S.sort = sortSel.value;
       S.page = 1;
@@ -609,13 +626,18 @@
             if(addr.district){
               distSel.disabled = false;
               distSel.value = addr.district;
-              return loadMarkets();
+              return loadRegions();
             }
             return null;
           }).then(function(){
+            var reg = addr.region || addr.mandal || null;
+            if(reg){
+              regionSel.disabled = false;
+              regionSel.value = reg;
+            }
             if(addr.market){ marketSel.value = addr.market; }
             applyFilters();
-            showToast('Showing prices for ' + (addr.district || addr.state), 'success');
+            showToast('Showing prices for ' + (reg || addr.district || addr.state), 'success');
           }).catch(function(){ applyFilters(); showToast('Showing prices for ' + addr.state, 'success'); });
         })
         .catch(function(){ showToast('Could not load your saved location.', 'error'); });
@@ -625,8 +647,10 @@
     function syncFilterForm(){
       stateSel.value = S.state || '';
       distSel.innerHTML = '<option value="">All Districts</option>';
+      regionSel.innerHTML = '<option value="">All Regions</option>';
       marketSel.innerHTML = '<option value="">All Mandals</option>';
       distSel.disabled = !S.state;
+      regionSel.disabled = true;
       marketSel.disabled = true;
       sortSel.value = S.sort || 'recent';
       if(S.state){ return loadDistricts(true); }
@@ -650,8 +674,9 @@
       return items.map(function(it){
         var meta = '';
         var loc = [];
-        if(it.state) loc.push(esc(it.state));
+        if(it.region) loc.push(esc(it.region));
         if(it.district) loc.push(esc(it.district));
+        if(it.state) loc.push(esc(it.state));
         var saved = S.savedIds[it.commodity + '|' + (it.market || '')] ? ' saved' : '';
         return '<div class="mp-card" data-id="' + esc(it.id) + '">' +
           '<div class="mp-card-top"><span class="mp-cat">' + esc(it.category || 'Other') + '</span>' +
@@ -688,6 +713,7 @@
       if(S.category && S.category !== 'all') params.category = S.category;
       if(S.state) params.state = S.state;
       if(S.district) params.district = S.district;
+      if(S.region) params.region = S.region;
       if(S.market) params.market = S.market;
       if(S.sort) params.sort = S.sort;
       var cacheKey = listCacheKey(params);
@@ -722,7 +748,7 @@
     }
     function applyListResult(d, append){
       var html = cardsHtml(d.items || []);
-      var anyFilter = !!(S.q || S.commodity || (S.category && S.category !== 'all') || S.state || S.district || S.market || S.sort !== 'recent');
+      var anyFilter = !!(S.q || S.commodity || (S.category && S.category !== 'all') || S.state || S.district || S.region || S.market || S.sort !== 'recent');
       var empty;
       if(S.q){ empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-search"></i><h3>No market prices found for your search</h3><p>Try a different crop, market, district or state.</p><button id="mp-empty-clear">Clear Search</button></div>'; }
       else if(anyFilter){ empty = '<div class="mp-empty" style="grid-column:1/-1"><i class="fas fa-filter"></i><h3>No market data matches your filters</h3><p>Clear the filters or choose different options.</p><button id="mp-empty-clear">Clear Filters</button></div>'; }
@@ -971,6 +997,7 @@
       if(_detailItem.market) params.market = _detailItem.market;
       if(_detailItem.variety) params.variety = _detailItem.variety;
       if(_detailItem.state) params.state = _detailItem.state;
+      if(_detailItem.region) params.region = _detailItem.region;
       window.MarketPriceService.history(params).then(function(d){
         var pts = d.points || [];
         if(!pts.length){
@@ -1036,6 +1063,9 @@
       cEl.innerHTML = '<div class="mp-skeleton" style="padding:10px"><div class="mp-skel-line"></div></div>';
       var params = { commodity: commodity };
       if(_detailItem && _detailItem.market) params.market = _detailItem.market;
+      if(_detailItem && _detailItem.state) params.state = _detailItem.state;
+      if(_detailItem && _detailItem.district) params.district = _detailItem.district;
+      if(_detailItem && _detailItem.region) params.region = _detailItem.region;
       window.MarketPriceService.compare(params).then(function(d){
         var entries = d.markets || [];
         if(!d.market_count || !entries.length){
@@ -1109,12 +1139,12 @@
       searchTimer = setTimeout(function(){
         window.MarketPriceService.search(v).then(function(d){
           var n = 0;
-          ['commodities','markets','districts','states','varieties'].forEach(function(k){
+          ['commodities','markets','regions','districts','states','varieties'].forEach(function(k){
             n += (d[k] || []).length;
           });
           if(!n){ suggestEl.style.display = 'none'; if(S.q !== v){ S.q = v; S.page = 1; updateFilterBadge(); loadList(false); loadAIOverview(); } return; }
           var h = '';
-          ['commodities','markets','districts','states','varieties'].forEach(function(k){
+          ['commodities','markets','regions','districts','states','varieties'].forEach(function(k){
             var arr = d[k] || [];
             if(!arr.length) return;
             h += '<div class="mp-sg-label">' + k + '</div>';
@@ -1139,14 +1169,22 @@
                   stateSel.value = v;
                   distSel.disabled = false;
                   distSel.innerHTML = '<option value="">All Districts</option>';
+                  regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
                   marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
                   loadDistricts();
                 }
                 else if(k === 'districts'){
                   distSel.disabled = false;
                   distSel.value = v;
+                  regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
                   marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
-                  loadMarkets();
+                  loadRegions();
+                }
+                else if(k === 'regions'){
+                  regionSel.disabled = false;
+                  regionSel.value = v;
+                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
+                  loadMarkets(true);
                 }
                 else if(k === 'markets'){ marketSel.value = v; }
                 S.q = ''; S.commodity = '';
@@ -1166,10 +1204,11 @@
       loadAIOverview();
     }
     function resetFilters(){
-      S.q = ''; S.category = 'all'; S.state=''; S.district=''; S.market=''; S.commodity=''; S.sort='recent'; S.page = 1;
+      S.q = ''; S.category = 'all'; S.state=''; S.district=''; S.region=''; S.market=''; S.commodity=''; S.sort='recent'; S.page = 1;
       searchInput.value = ''; searchClear.style.display = 'none'; suggestEl.style.display = 'none';
       catsEl.querySelectorAll('.mp-cat').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-cat') === 'all'); });
       stateSel.value=''; distSel.disabled = true; distSel.innerHTML = '<option value="">All Districts</option>';
+      regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
       marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
       sortSel.value = 'recent';
       updateFilterBadge();
@@ -1177,7 +1216,7 @@
       loadAIOverview();
     }
     function updateFilterBadge(){
-      var active = !!(S.q || S.state || S.district || S.market || S.category !== 'all' || S.sort !== 'recent' || S.commodity);
+      var active = !!(S.q || S.state || S.district || S.region || S.market || S.category !== 'all' || S.sort !== 'recent' || S.commodity);
       filterBadge.style.display = active ? 'block' : 'none';
     }
 
@@ -1266,7 +1305,8 @@
       searchInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ commitSearch(); } });
       searchClear.addEventListener('click', function(){ searchInput.value=''; searchClear.style.display='none'; suggestEl.style.display='none'; S.q=''; S.commodity=''; S.page=1; updateFilterBadge(); loadList(false); loadAIOverview(); });
       stateSel.addEventListener('change', function(){ loadDistricts(); });
-      distSel.addEventListener('change', function(){ loadMarkets(); });
+      distSel.addEventListener('change', function(){ loadRegions(); });
+      regionSel.addEventListener('change', function(){ loadMarkets(); });
       marketSel.addEventListener('change', function(){});
       sortSel.addEventListener('change', function(){});
       $('btn-apply-filters').addEventListener('click', applyFilters);

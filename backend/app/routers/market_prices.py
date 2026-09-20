@@ -64,7 +64,8 @@ def _latest_only_query(db: Session):
 
 def _apply_filters(q, *, search: Optional[str] = None, category: Optional[str] = None,
                    state: Optional[str] = None, district: Optional[str] = None,
-                   market: Optional[str] = None, commodity: Optional[str] = None):
+                   region: Optional[str] = None, market: Optional[str] = None,
+                   commodity: Optional[str] = None):
     if search:
         like = f"%{search.strip().lower()}%"
         q = q.filter(or_(
@@ -72,6 +73,7 @@ def _apply_filters(q, *, search: Optional[str] = None, category: Optional[str] =
             func.lower(MarketPrice.market).like(like),
             func.lower(func.coalesce(MarketPrice.district, "")).like(like),
             func.lower(func.coalesce(MarketPrice.state, "")).like(like),
+            func.lower(func.coalesce(MarketPrice.region, "")).like(like),
             func.lower(func.coalesce(MarketPrice.variety, "")).like(like),
         ))
     if category and category.lower() != "all":
@@ -80,6 +82,8 @@ def _apply_filters(q, *, search: Optional[str] = None, category: Optional[str] =
         q = q.filter(func.lower(MarketPrice.state) == state.strip().lower())
     if district:
         q = q.filter(func.lower(MarketPrice.district) == district.strip().lower())
+    if region:
+        q = q.filter(func.lower(MarketPrice.region) == region.strip().lower())
     if market:
         q = q.filter(func.lower(MarketPrice.market) == market.strip().lower())
     if commodity:
@@ -101,6 +105,7 @@ def market_summary(
         "tracked_commodities": 0,
         "markets_covered": 0,
         "states_covered": 0,
+        "regions_covered": 0,
         "highest_increase": None,
         "highest_decrease": None,
         "latest_price_date": freshness.get("latest_price_date"),
@@ -112,6 +117,11 @@ def market_summary(
     data["tracked_commodities"] = db.query(func.count(func.distinct(MarketPrice.commodity))).scalar() or 0
     data["markets_covered"] = db.query(func.count(func.distinct(MarketPrice.market))).scalar() or 0
     data["states_covered"] = db.query(func.count(func.distinct(MarketPrice.state))).scalar() or 0
+    data["regions_covered"] = (
+        db.query(func.count(func.distinct(MarketPrice.region)))
+        .filter(MarketPrice.region.isnot(None))
+        .scalar() or 0
+    )
 
     latest_date = freshness.get("latest_price_date")
     if latest_date:
@@ -163,6 +173,7 @@ def market_categories(
 def market_locations(
     state: Optional[str] = Query(None),
     district: Optional[str] = Query(None),
+    region: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -174,16 +185,26 @@ def market_locations(
         districts_q = districts_q.filter(func.lower(MarketPrice.state) == state.strip().lower())
     districts = sorted(d for (d,) in districts_q.all() if d)
 
+    regions_q = db.query(func.distinct(MarketPrice.region)).filter(MarketPrice.region.isnot(None))
+    if state:
+        regions_q = regions_q.filter(func.lower(MarketPrice.state) == state.strip().lower())
+    if district:
+        regions_q = regions_q.filter(func.lower(MarketPrice.district) == district.strip().lower())
+    regions = sorted(r for (r,) in regions_q.all() if r)
+
     markets_q = db.query(func.distinct(MarketPrice.market))
     if state:
         markets_q = markets_q.filter(func.lower(MarketPrice.state) == state.strip().lower())
     if district:
         markets_q = markets_q.filter(func.lower(MarketPrice.district) == district.strip().lower())
+    if region:
+        markets_q = markets_q.filter(func.lower(MarketPrice.region) == region.strip().lower())
     markets = sorted(m for (m,) in markets_q.all() if m)
 
     return {"status": "success", "data": {
         "states": states,
         "districts": districts,
+        "regions": regions,
         "markets": markets[:500],
     }}
 
@@ -207,6 +228,7 @@ def market_search(
         "markets": distinct_values(MarketPrice.market),
         "districts": distinct_values(MarketPrice.district),
         "states": distinct_values(MarketPrice.state),
+        "regions": distinct_values(MarketPrice.region),
         "varieties": distinct_values(MarketPrice.variety),
     }}
 
@@ -217,6 +239,7 @@ def price_history(
     market: Optional[str] = Query(None, max_length=200),
     variety: Optional[str] = Query(None, max_length=120),
     state: Optional[str] = Query(None, max_length=120),
+    region: Optional[str] = Query(None, max_length=120),
     days: int = Query(30, ge=1, le=730),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -232,6 +255,8 @@ def price_history(
         q = q.filter(func.lower(MarketPrice.variety) == variety.strip().lower())
     if state:
         q = q.filter(func.lower(MarketPrice.state) == state.strip().lower())
+    if region:
+        q = q.filter(func.lower(MarketPrice.region) == region.strip().lower())
     rows = q.order_by(MarketPrice.price_date.asc()).all()
 
     series_map: dict = {}
@@ -275,12 +300,13 @@ def compare_markets(
     commodity: str = Query(..., min_length=1, max_length=120),
     state: Optional[str] = Query(None, max_length=120),
     district: Optional[str] = Query(None, max_length=120),
+    region: Optional[str] = Query(None, max_length=120),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     q = _apply_filters(
         _latest_only_query(db),
-        commodity=commodity, state=state, district=district,
+        commodity=commodity, state=state, district=district, region=region,
     )
     rows = q.order_by(MarketPrice.modal_price.desc()).all()
     entries = [svc.price_to_dict(r) for r in rows if r.modal_price is not None]
@@ -427,7 +453,7 @@ async def _post_json(url: str, payload: dict, headers: dict) -> Dict[str, Any]:
 
 
 def _overview_scope_label(*, search=None, category=None, state=None, district=None,
-                          market=None, commodity=None) -> str:
+                          region=None, market=None, commodity=None) -> str:
     parts: List[str] = []
     if search:
         parts.append(f"search \"{search}\"")
@@ -437,6 +463,8 @@ def _overview_scope_label(*, search=None, category=None, state=None, district=No
         parts.append(state)
     if district:
         parts.append(district)
+    if region:
+        parts.append(f"region {region}")
     if market:
         parts.append(market)
     if commodity:
@@ -535,6 +563,7 @@ async def market_ai_overview(
     category: Optional[str] = Query(None, max_length=60),
     state: Optional[str] = Query(None, max_length=120),
     district: Optional[str] = Query(None, max_length=120),
+    region: Optional[str] = Query(None, max_length=120),
     market: Optional[str] = Query(None, max_length=200),
     commodity: Optional[str] = Query(None, max_length=120),
     db: Session = Depends(get_db),
@@ -548,7 +577,7 @@ async def market_ai_overview(
     """
     scope = _overview_scope_label(
         search=q, category=category, state=state, district=district,
-        market=market, commodity=commodity,
+        region=region, market=market, commodity=commodity,
     )
     cache_key = scope
     cached = _AI_OVERVIEW_CACHE.get(cache_key)
@@ -561,7 +590,7 @@ async def market_ai_overview(
     query = _apply_filters(
         _latest_only_query(db),
         search=q, category=category, state=state, district=district,
-        market=market, commodity=commodity,
+        region=region, market=market, commodity=commodity,
     )
     overview = svc.build_market_overview(db, query, scope)
     if not overview:
@@ -599,6 +628,7 @@ def refresh_market_data(
     force: bool = Query(False),
     state: Optional[str] = Query(None),
     district: Optional[str] = Query(None),
+    region: Optional[str] = Query(None),
     commodity: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -608,6 +638,8 @@ def refresh_market_data(
         filters["State"] = state
     if district:
         filters["District"] = district
+    if region:
+        filters["Region"] = region
     if commodity:
         filters["Commodity"] = commodity
     result = svc.sync_from_source(db, trigger="api", force=force, filters=filters or None)
@@ -796,6 +828,7 @@ def list_market_prices(
     category: Optional[str] = Query(None, max_length=60),
     state: Optional[str] = Query(None, max_length=120),
     district: Optional[str] = Query(None, max_length=120),
+    region: Optional[str] = Query(None, max_length=120),
     market: Optional[str] = Query(None, max_length=200),
     commodity: Optional[str] = Query(None, max_length=120),
     sort: Optional[str] = Query("recent", pattern="^(recent|highest|lowest)$"),
@@ -807,7 +840,7 @@ def list_market_prices(
     query = _apply_filters(
         _latest_only_query(db),
         search=q, category=category, state=state, district=district,
-        market=market, commodity=commodity,
+        region=region, market=market, commodity=commodity,
     )
     total = query.count()
     if sort == "highest":
