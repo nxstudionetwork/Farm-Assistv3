@@ -8,7 +8,13 @@
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
     :root{--is-accent:#B8860B;--is-green:#2D8659;--is-radius:12px;--is-radius-sm:8px;--is-radius-lg:16px;}
-    .store-toolbar{position:sticky;top:var(--topbar-height,64px);z-index:30;background:var(--bg-card);border-bottom:1px solid var(--border-light);padding:12px 0;display:flex;align-items:center;gap:10px}
+    .search-switch{display:inline-flex;align-items:center;gap:2px;background:var(--bg-card-soft,var(--bg-subtle,#eef3ee));border:1px solid var(--border-light);padding:3px;border-radius:999px;flex-shrink:0}
+    .search-switch .sw-opt{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:999px;background:transparent;color:var(--text-secondary);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+    .search-switch .sw-opt i{font-size:11px;opacity:.85}
+    .search-switch .sw-opt.active{background:var(--is-green,var(--is-accent,var(--is-green)));color:#fff;box-shadow:0 1px 4px rgba(22,163,74,.35)}
+    .search-switch .sw-opt:not(.active):hover{color:var(--text-primary)}
+
+.store-toolbar{position:sticky;top:var(--topbar-height,64px);z-index:30;background:var(--bg-card);border-bottom:1px solid var(--border-light);padding:12px 0;display:flex;align-items:center;gap:10px}
     .store-search{flex:1;position:relative}
     .store-search input{width:100%;padding:11px 14px 11px 40px;border-radius:var(--is-radius-sm);border:1px solid var(--border-light);background:var(--bg-card-soft);font-size:14px;color:var(--text-primary);outline:none;transition:border-color .2s}
     .store-search input:focus{border-color:var(--is-accent)}
@@ -267,6 +273,11 @@
     </div>
   </div>
 
+  <div class="search-switch" id="search-switch">
+    <button type="button" class="sw-opt active" data-sw="new" onclick="switchMode('new')"><i class="fas fa-box-open"></i> New</button>
+    <button type="button" class="sw-opt" data-sw="stock" onclick="switchMode('stock')"><i class="fas fa-store"></i> Stock</button>
+  </div>
+
   <div class="store-toolbar" id="store-toolbar">
     <div class="store-search" id="store-search-wrap">
       <i class="fas fa-search"></i>
@@ -286,11 +297,7 @@
     <div class="reco-row" id="reco-row"></div>
   </section>
 
-  <section class="store-reco" id="recent-section" style="display:none">
-    <div class="store-reco-title"><i class="fas fa-clock-rotate-left" style="color:var(--is-green)"></i> Recently Viewed</div>
-    <div class="reco-row" id="recent-row"></div>
-  </section>
-
+  
   <div class="applied-filters" id="applied-filters"></div>
 
   <section class="store-listing">
@@ -315,6 +322,8 @@
       </aside>
       <div>
         <div class="is-grid" id="store-grid"></div>
+      <div class="s-grid" id="stock-grid" style="display:none"></div>
+      <div class="stock-note" id="stock-note" style="display:none;margin:0 0 0 0"><i class="fas fa-store"></i> Live stock from verified farmers &amp; dealers. Prices &amp; stock update directly from sellers.</div>
         <div class="is-pager" id="store-pager"></div>
       </div>
     </div>
@@ -638,28 +647,77 @@ function shortDate(v){
   if(isNaN(d))return v;
   return d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
 }
-function recordView(id){
-  if(!isAuthed()||!id)return;
-  isReq('POST','/products/'+encodeURIComponent(id)+'/view').then(function(){
-    loadRecentlyViewed();
-  }).catch(function(){});
+/* ─── MODE SWITCH (NEW | STOCK) ─── */
+var ARM_MODE='new'; /* 'new' = input-store products, 'stock' = real farmer marketplace listings */
+function switchMode(name){
+  if(name!=='new'&&name!=='stock')name='new';
+  ARM_MODE=name;
+  var btns=document.querySelectorAll('.search-switch .sw-opt');
+  [].forEach.call(btns,function(b){b.classList.toggle('active',b.getAttribute('data-sw')===name)});
+  var newG=document.getElementById('store-grid');
+  var stockG=document.getElementById('stock-grid');
+  var note=document.getElementById('stock-note');
+  if(newG)newG.style.display=(name==='new')?'':'none';
+  if(stockG)stockG.style.display=(name==='stock')?'':'none';
+  if(note)note.style.display=(name==='stock')?'flex':'none';
+  document.getElementById('store-search').placeholder = name==='stock'
+    ? 'Search farmers, products, locations...' : 'Search products, brands, categories...';
+  /* route search+paging to the right loader */
+  if(window._stockPagerEl){window._stockPagerEl.style.display = name==='stock'?'':'none';}
+  if(name==='stock')loadStockListings(); else loadProducts();
+  if(window.renderExtraTotal)window.renderExtraTotal();
 }
-function loadRecentlyViewed(){
-  if(!isAuthed())return;
-  isReq('GET','/products/recently-viewed?limit=10').then(function(res){
+/* STOCK: real farmer marketplace listings — REAL endpoint /api/v1/marketplace/browse/listings */
+function stockMatch(txt,row){if(!txt)return!0;txt=txt.toLowerCase();
+  return ['title','name','category_name','region','location','farm_name','seller_name','notes','description'].some(function(k){return (row&&(row[k]+''||'')).toLowerCase().indexOf(txt)>-1});}
+function renderStockCard(l){
+  var sc=(l&&l.stock_status)||(l&&l.availability)||'in';
+  var stockTxt={in:'In Stock',low:'Low Stock',out:'Sold Out'}[sc]||sc||'In Stock';
+  var loc=(l&&(l.location||l.region))?'<div class="s-loc"><i class="fas fa-location-dot"></i> '+(l.location||l.region)+'</div>':'';
+  var farm=(l&&(l.farm_name||l.shop_name||l.seller_farm))?'<div class="s-farm"><i class="fas fa-tractor"></i> '+(l.farm_name||l.shop_name||l.seller_farm)+'</div>':'';
+  var seller=(l&&(l.seller_name||l.name))?'<div class="s-seller"><i class="fas fa-store"></i> '+(l.seller_name||l.name)+(l.is_verified?'<span class="verified" title="Verified farmer"><i class="fas fa-circle-check"></i></span>':'')+'</div>':'';
+  var price=l&&l.price!=null?fmtPrice(l.price):'';
+  var unit=l&&l.unit?'<span class="s-unit"> / '+l.unit+'</span>':'';
+  var img=(l&&l.image)?'<img loading="lazy" src="'+l.image+'" alt="'+(l.title||'')+'" onerror="this.outerHTML=window.imgFallback()">':imgFallback();
+  return '<div class="s-card" onclick="openStock('+(l&&l.id!==undefined?"'"+l.id+"'":'""')+')">'
+    +'<span class="s-stock '+sc+'">'+stockTxt+'</span>'
+    +'<div class="s-img">'+img+'</div>'
+    +'<div class="s-body"><div class="s-name">'+(l&&(l.title||l.name)||'Listing')+'</div>'+farm+seller
+    +'<div class="s-price-row">'+(price?'<span class="s-price">'+price+'</span>':'')+unit+'</div>'+loc+'</div></div>';
+}
+function renderStockGrid(list,meta){
+  var grid=document.getElementById('stock-grid');
+  if(!grid)return;
+  if(!list||!list.length){grid.innerHTML='<div class="store-empty"><i class="fas fa-box-open"></i><p>No matching farmer listings</p></div>';return;}
+  grid.innerHTML=list.map(renderStockCard).join('');
+}
+function openStock(id){ if(id) openBrowseListing(id); }
+function loadStockListings(){
+  if(!window.isAuth||!isAuthed())return;
+  var q=(S&&S.search)||'';
+  var params=[];
+  if(q)params.push('search='+encodeURIComponent(q));
+  if(S&&S.page)params.push('page='+S.page);
+  if(S&&S.limit)params.push('limit='+(S.limit||12));
+  isReq('GET','/marketplace/browse/listings'+(params.length?'?'+params.join('&'):'')).then(function(res){
     var d=unwrap(res);
-    var items=(d&&d.items)||[];
-    if(!items.length){document.getElementById('recent-section').style.display='none';return;}
-    var grid=document.getElementById('recent-row');
-    grid.innerHTML=items.map(function(p){
-      if((S.products||[]).some(function(x){return x.id===p.id})||(S.recommended||[]).some(function(x){return x.id===p.id}))return'';
-      var img=productImage(p);
-      var imgHTML=img?'<img loading="lazy" src="'+img+'" alt="'+p.name.replace(/"/g,'')+'" onerror="this.outerHTML=window.imgFallback()">':imgFallback();
-      return '<div class="reco-card" onclick="openProduct(\''+p.id+'\')">'+imgHTML+'<div class="reco-body"><div class="reco-name">'+p.name+'</div><div class="reco-price">'+fmtPrice(p.price)+(p.mrp?'<span class="mrp">'+fmtPrice(p.mrp)+'</span>':'')+'</div></div></div>';
-    }).join('');
-    document.getElementById('recent-section').style.display=grid.innerHTML?'block':'none';
-  }).catch(function(){});
+    renderStockGrid((d&&(d.items||d.listings))||[], d);
+    if(typeof S!=='undefined'&&S){S.total=(d&&(d.total||(d.items||[]).length))||0;
+      S.page=d&&d.page||S.page||1;S.totalPages=(d&&d.total_pages)?d.total_pages:Math.max(1,Math.ceil(S.total/(S.limit||12)));}
+    renderStockPager();
+  }).catch(function(err){var g=document.getElementById('stock-grid');if(g)g.innerHTML='<div class="store-empty"><i class="fas fa-triangle-exclamation"></i><p>Could not load stock</p></div>';});
 }
+function renderStockPager(){
+  var wrap=document.getElementById('store-pager')||document.getElementById('pager');
+  window._stockPagerEl=wrap;
+  if(!wrap)return;
+  if(S.mode==='stock'){
+    var h='';var p=S.page,tp=S.totalPages;
+    for(var i=1;i<=tp;i++)h+='<button class="'+(i===p?'active':'')+'" onclick="S.page='+i+';loadStockListings()">'+i+'</button>';
+    wrap.innerHTML=h;return;
+  }
+}
+window.switchMode=switchMode;window.loadStockListings=loadStockListings;window.openStock=openStock;
 
 /* ─── CART ─── */
 function loadCart(){
@@ -767,7 +825,6 @@ function renderWishlistSheet(){
 /* ─── PRODUCT DETAIL ─── */
 window.openProduct=function(id){
   var p=S.products.find(function(x){return x.id===id})||(S.recommended||[]).find(function(x){return x.id===id});
-  recordView(id);
   if(p){showProductModal(p);return;}
   isReq('GET','/input-store/products/'+id).then(function(res){showProductModal(unwrap(res))}).catch(function(e){toast(e.message||'Product not found','error')});
 };
@@ -921,7 +978,7 @@ function submitOrder(){
     var d=unwrap(res);
     document.getElementById('checkout-modal').classList.remove('open');
     showSuccess(d);
-    S.cart={items:[]};document.getElementById('cart-badge').textContent='';renderCartSheet();loadCart();loadProducts();loadRecentlyViewed();
+    S.cart={items:[]};document.getElementById('cart-badge').textContent='';renderCartSheet();loadCart();loadProducts();
   }).catch(function(err){
     var wb=document.getElementById('ck-wallet-box');
     if(err.status===400&&wb&&/insufficient/i.test(err.message||'')){
@@ -1044,7 +1101,7 @@ function resetAllFilters(){
 /* ─── BOOT ─── */
 function boot(){
   if(!requireAuth())return;
-  bindEvents();loadProfile();loadCategories();loadFiltersData();loadProducts();loadRecommended();loadRecentlyViewed();loadCart();loadWishlist();
+  bindEvents();loadProfile();loadCategories();loadFiltersData();loadProducts();loadRecommended();loadCart();loadWishlist();
 }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 window.loadProducts=loadProducts;window.loadCart=loadCart;window.imgFallback=imgFallback;
