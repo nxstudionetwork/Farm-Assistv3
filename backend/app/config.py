@@ -81,6 +81,11 @@ class Settings(BaseSettings):
     MARKET_PRICE_REFRESH_MINUTES: int = 30
     MARKET_PRICE_STALE_HOURS: int = 72
     MARKET_PRICE_FETCH_LIMIT: int = 500
+    # Scheduled automatic refresh (daily cadence by default). When disabled,
+    # the page stays fully functional but only refreshes via API-triggered
+    # syncs.
+    MARKET_PRICE_AUTO_UPDATE: bool = True
+    MARKET_PRICE_SCHEDULE_HOURS: float = 6.0
 
     # ---- Government Schemes (official GoI sources) ----
     # Configure in backend/.env. Only URLs/keys from official Government of

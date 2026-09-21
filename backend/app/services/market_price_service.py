@@ -131,6 +131,7 @@ def transform_record(rec: Dict[str, Any], source: str) -> Optional[Dict[str, Any
     modal = _parse_price(rec.get("Modal_Price") or rec.get("modal_price"))
     min_p = _parse_price(rec.get("Min_Price") or rec.get("min_price"))
     max_p = _parse_price(rec.get("Max_Price") or rec.get("max_price"))
+    arrival_qty = _parse_price(rec.get("Arrival_Quantity") or rec.get("arrival_quantity"))
     if not commodity or not market or not price_date:
         return None
     if modal is None and min_p is None and max_p is None:
@@ -155,6 +156,7 @@ def transform_record(rec: Dict[str, Any], source: str) -> Optional[Dict[str, Any
         "unit": "Rs/Quintal",
         "price_date": price_date,
         "arrival_date": _parse_source_date(rec.get("Arrival_Date")),
+        "arrival_quantity": arrival_qty,
         "source": source,
         "source_url": source_url,
         "source_timestamp": _clean_str(rec.get("Price_Date") or rec.get("Arrival_Date")),
@@ -185,7 +187,7 @@ def upsert_prices(db: Session, rows: List[Dict[str, Any]]) -> int:
             changed = False
             for field in ("min_price", "max_price", "modal_price", "district",
                           "state", "region", "source_url", "source_timestamp",
-                          "category", "unit", "arrival_date"):
+                          "category", "unit", "arrival_date", "arrival_quantity"):
                 if getattr(existing, field) != row.get(field):
                     setattr(existing, field, row.get(field))
                     changed = True
@@ -201,8 +203,8 @@ def upsert_prices(db: Session, rows: List[Dict[str, Any]]) -> int:
             **{k: row.get(k) for k in (
                 "commodity", "variety", "grade", "category", "market", "district",
                 "state", "region", "min_price", "max_price", "modal_price", "unit",
-                "price_date", "arrival_date", "source", "source_url",
-                "source_timestamp",
+                "price_date", "arrival_date", "arrival_quantity", "source",
+                "source_url", "source_timestamp",
             )},
         )
         # Advance the sequential FA-MKP-###### id without re-querying the DB.
@@ -518,6 +520,7 @@ def price_to_dict(row: MarketPrice, change: Optional[Dict[str, Any]] = None) -> 
         "unit": row.unit or "Rs/Quintal",
         "price_date": row.price_date,
         "arrival_date": row.arrival_date,
+        "arrival_quantity": row.arrival_quantity,
         "source": row.source,
         "source_url": row.source_url,
         "source_timestamp": row.source_timestamp,

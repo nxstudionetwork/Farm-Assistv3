@@ -344,6 +344,9 @@ async def startup():
             "unclaimed devices available to connect."
         )
 
+    from app.market_scheduler import start_market_price_scheduler
+    start_market_price_scheduler()
+
     print(f"{settings.APP_NAME} v{settings.APP_VERSION} started. DB tables created.")
     if techniques_summary is not None:
         print("Farm techniques catalogue ready (Techniques Hub fully populated).")

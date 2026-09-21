@@ -27,6 +27,7 @@ from app.models.market_price import (
 from app.schemas.market_price import (
     WatchlistCreate, WatchlistResponse, AlertCreate, AlertResponse,
 )
+from app.india_locations import STATES_UTS, STATE_DISTRICTS
 from app.services import market_price_service as svc
 
 router = APIRouter(prefix="/api/v1", tags=["Market Prices"])
@@ -36,6 +37,33 @@ router = APIRouter(prefix="/api/v1", tags=["Market Prices"])
 # re-serving recent scopes avoids recomputation and repeated slow calls.
 _AI_OVERVIEW_CACHE: Dict[str, Dict[str, Any]] = {}
 _AI_OVERVIEW_CACHE_TTL = 90.0
+
+
+def _official_state_key(state: Optional[str]) -> Optional[str]:
+    """Resolve a (possibly differently-cased) state/UT name to its official key."""
+    if not state:
+        return None
+    wanted = state.strip().lower()
+    for name in STATES_UTS:
+        if name.lower() == wanted:
+            return name
+    return None
+
+
+def _merge_unique(base: List[str], extra: List[str]) -> List[str]:
+    """Order-preserving union of two string lists (case-insensitive unique)."""
+    seen = set()
+    out: List[str] = []
+    for item in list(base) + list(extra):
+        item = (item or "").strip()
+        if not item:
+            continue
+        key = item.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    return out
 
 
 def _latest_only_query(db: Session):
@@ -169,6 +197,46 @@ def market_categories(
     return {"status": "success", "data": {"categories": categories}}
 
 
+@router.get("/market-prices/commodities")
+def market_commodities(
+    q: Optional[str] = Query(None, max_length=100),
+    category: Optional[str] = Query(None, max_length=60),
+    limit: int = Query(300, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Distinct commodities available in the market data (searchable list)."""
+    query = (
+        db.query(
+            MarketPrice.commodity,
+            func.count(MarketPrice.id).label("record_count"),
+            func.max(func.coalesce(MarketPrice.category, "Other")).label("category"),
+        )
+        .group_by(MarketPrice.commodity)
+    )
+    if q:
+        query = query.filter(func.lower(MarketPrice.commodity).like(f"%{q.strip().lower()}%"))
+    if category and category.strip().lower() != "all":
+        cat = category.strip().lower()
+        cat_rows = [
+            c for c, kws in svc.CATEGORY_KEYWORDS
+            if c.lower() == cat and kws
+        ]
+        if cat_rows:
+            like = [func.lower(MarketPrice.commodity).like(f"%{kw}%") for kw in cat_rows[0]]
+            query = query.filter(or_(*like))
+        else:
+            query = query.filter(func.lower(MarketPrice.category) == cat)
+    rows = query.order_by(MarketPrice.commodity.asc()).limit(limit).all()
+    return {"status": "success", "data": {
+        "commodities": [
+            {"name": name, "records": count or 0, "category": category_name or "Other"}
+            for name, count, category_name in rows
+        ],
+        "total": len(rows),
+    }}
+
+
 @router.get("/market-prices/markets")
 def market_locations(
     state: Optional[str] = Query(None),
@@ -177,24 +245,47 @@ def market_locations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    states_q = db.query(func.distinct(MarketPrice.state)).filter(MarketPrice.state.isnot(None))
-    states = sorted(s for (s,) in states_q.all() if s)
+    """Hierarchical location options.
 
+    ``states`` always includes the complete official Indian State/UT list (so
+    every State/UT can be selected even before data exists for it). When a
+    state is chosen, ``districts`` merges the official district master for that
+    State/UT with the districts present in the market data. ``regions`` and
+    ``markets`` reflect the markets actually covered by the data.
+    """
+    # Official master list is the baseline; data-derived states are merged in.
+    data_states = sorted(s for (s,) in
+                         db.query(func.distinct(MarketPrice.state))
+                         .filter(MarketPrice.state.isnot(None)).all() if s)
+    states = _merge_unique(STATES_UTS, data_states)
+
+    official_key = _official_state_key(state)
+    state_normalised = official_key if official_key else (state.strip() if state else None)
+    state_like = state_normalised.lower() if state_normalised else None
+
+    districts: List[str] = []
+    if official_key:
+        districts = list(STATE_DISTRICTS.get(official_key, []))
     districts_q = db.query(func.distinct(MarketPrice.district)).filter(MarketPrice.district.isnot(None))
-    if state:
-        districts_q = districts_q.filter(func.lower(MarketPrice.state) == state.strip().lower())
-    districts = sorted(d for (d,) in districts_q.all() if d)
+    if state_normalised:
+        districts_q = districts_q.filter(func.lower(MarketPrice.state) == state_like)
+    else:
+        # No state selected: only show data-derived districts to avoid
+        # returning the entire country master in one dropdown.
+        districts = []
+    data_districts = sorted(d for (d,) in districts_q.all() if d)
+    districts = _merge_unique(districts, data_districts)
 
     regions_q = db.query(func.distinct(MarketPrice.region)).filter(MarketPrice.region.isnot(None))
-    if state:
-        regions_q = regions_q.filter(func.lower(MarketPrice.state) == state.strip().lower())
+    if state_normalised:
+        regions_q = regions_q.filter(func.lower(MarketPrice.state) == state_like)
     if district:
         regions_q = regions_q.filter(func.lower(MarketPrice.district) == district.strip().lower())
     regions = sorted(r for (r,) in regions_q.all() if r)
 
     markets_q = db.query(func.distinct(MarketPrice.market))
-    if state:
-        markets_q = markets_q.filter(func.lower(MarketPrice.state) == state.strip().lower())
+    if state_normalised:
+        markets_q = markets_q.filter(func.lower(MarketPrice.state) == state_like)
     if district:
         markets_q = markets_q.filter(func.lower(MarketPrice.district) == district.strip().lower())
     if region:
@@ -203,6 +294,7 @@ def market_locations(
 
     return {"status": "success", "data": {
         "states": states,
+        "state_count": len(states),
         "districts": districts,
         "regions": regions,
         "markets": markets[:500],

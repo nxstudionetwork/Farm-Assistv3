@@ -211,6 +211,7 @@ ADDITIVE_COLUMNS = {
     ],
     "market_prices": [
         ("region", "VARCHAR(120)"),
+        ("arrival_quantity", "FLOAT"),
     ],
 }
 

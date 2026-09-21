@@ -36,6 +36,7 @@ class MarketPrice(Base):
 
     price_date = Column(String(10), nullable=False, index=True)  # ISO YYYY-MM-DD
     arrival_date = Column(String(10), nullable=True)
+    arrival_quantity = Column(Float, nullable=True)  # tonnes / quintals as published
 
     source = Column(String(160), nullable=False, default="AGMARKNET")
     source_url = Column(String(500), nullable=True)

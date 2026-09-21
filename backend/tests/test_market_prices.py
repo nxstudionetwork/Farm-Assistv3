@@ -115,6 +115,22 @@ def test_oilseeds_categorization(headers_a):
     assert {"Sesamum", "Nigerseed", "Sunflower Seed"}.issubset(commodities)
 
 
+def test_commodities_endpoint_lists_and_searches(headers_a):
+    resp = client.get("/api/v1/market-prices/commodities", headers=headers_a)
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    names = [c["name"].lower() for c in data["commodities"]]
+    assert "paddy" in names and "sesamum" in names
+    assert all(c["name"] and c["category"] for c in data["commodities"])
+
+    resp = client.get("/api/v1/market-prices/commodities", params={"q": "sesam"}, headers=headers_a)
+    hits = [c["name"].lower() for c in resp.json()["data"]["commodities"]]
+    assert "sesamum" in hits and len(hits) < len(names)
+
+    resp = client.get("/api/v1/market-prices/commodities", params={"q": "zzzz-no-match"}, headers=headers_a)
+    assert resp.json()["data"]["commodities"] == []
+
+
 def test_detail_carries_verified_source(headers_a):
     listed = client.get("/api/v1/market-prices?category=paddy", headers=headers_a).json()["data"]["items"]
     resp = client.get(f"/api/v1/market-prices/{listed[0]['id']}", headers=headers_a)
@@ -298,15 +314,30 @@ def test_location_cascade_filters_districts_and_markets(headers_a, db):
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert "Telangana" in data["states"] and "Andhra Pradesh" in data["states"]
+    # The filter supports the complete official India State/UT list (36).
+    for official in ("Telangana", "Maharashtra", "Rajasthan", "Delhi", "Puducherry"):
+        assert official in data["states"]
 
     resp = client.get("/api/v1/market-prices/markets", params={"state": "Telangana"}, headers=headers_a)
     data = resp.json()["data"]
-    assert data["districts"] == ["Khammam", "Nalgonda"]
+    # Districts merge the official master for the chosen State/UT with the
+    # districts present in the data, and never include another state's
+    # districts.
+    assert data["districts"][0] == "Adilabad"
+    assert "Hyderabad" in data["districts"]
+    assert "Khammam" in data["districts"] and "Nalgonda" in data["districts"]
     assert "Guntur" not in data["districts"]
 
     resp = client.get("/api/v1/market-prices/markets", params={"state": "Telangana", "district": "Nalgonda"}, headers=headers_a)
     data = resp.json()["data"]
     assert data["markets"] == ["Nalgonda Market"]
+
+    # A State/UT with no market data still lists its official districts and
+    # simply returns no markets ("All States/Districts" honoured).
+    resp = client.get("/api/v1/market-prices/markets", params={"state": "Puducherry"}, headers=headers_a)
+    data = resp.json()["data"]
+    assert data["districts"] == ["Karaikal", "Mahe", "Puducherry", "Yanam"]
+    assert data["markets"] == []
 
 
 def test_location_cascade_returns_regions(headers_a, db):

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="light" data-page="market-prices">
 <head>
   <meta charset="UTF-8">
@@ -63,6 +63,28 @@
     .mp-apply-btn{flex:1;justify-content:center;background:var(--primary-green,#1B5E3F);color:white}
     .mp-apply-btn:hover{background:#144a2f}
     .mp-apply-btn:disabled{opacity:0.6;cursor:not-allowed}
+    /* searchable selects (§1 / §7 filter area) */
+    .mp-filter-panel .mp-sel{position:relative;flex:1 1 140px;min-width:0}
+    .mp-filter-panel .mp-sel.mpp-sel-full{flex:1 1 100%}
+    .mp-sel-field{width:100%;box-sizing:border-box;padding:9px 28px 9px 10px;border-radius:9px;border:1px solid var(--border-light,#e5e7eb);font-size:12px;font-family:inherit;color:var(--text-primary,#1a1a2e);background:white;cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px;transition:border 0.2s;position:relative}
+    .mp-sel-field:hover{border-color:var(--medium-green,#2D8659)}
+    .mp-sel-field:focus-visible{outline:none;border-color:var(--medium-green,#2D8659)}
+    .mp-sel-value{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mp-sel-value.mp-sel-placeholder{color:var(--text-muted,#9ca3af)}
+    .mp-sel-arrow{color:var(--text-muted,#9ca3af);font-size:10px;flex-shrink:0;transition:transform 0.15s}
+    .mp-sel.open .mp-sel-arrow{transform:rotate(180deg)}
+    .mp-sel.disabled .mp-sel-field{opacity:0.55;cursor:not-allowed;background:#f3f4f6;border-color:var(--border-light,#e5e7eb)}
+    .mp-sel-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border-light,#e5e7eb);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,0.14);z-index:60;display:none;min-width:200px;max-height:240px;overflow:hidden;flex-direction:column}
+    .mp-sel.up .mp-sel-menu{top:auto;bottom:calc(100% + 4px)}
+    .mp-sel.open .mp-sel-menu{display:flex}
+    .mp-sel-search{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #eef1ee;position:relative;flex-shrink:0}
+    .mp-sel-search i{color:var(--text-muted,#9ca3af);font-size:11px}
+    .mp-sel-search input{flex:1;min-width:0;border:none;outline:none;font-size:12px;font-family:inherit;color:var(--text-primary,#1a1a2e);background:transparent}
+    .mp-sel-list{list-style:none;margin:0;padding:4px;overflow-y:auto;flex:1;max-height:190px}
+    .mp-sel-list li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;font-size:12px;color:var(--text-primary,#1a1a2e);cursor:pointer}
+    .mp-sel-list li i{margin-left:auto;color:var(--primary-green,#1B5E3F);font-size:11px}
+    .mp-sel-list li:hover{background:#f0f5f1}
+    .mp-sel-empty{padding:10px 12px;font-size:12px;color:var(--text-muted,#9ca3af);text-align:center}
     /* AI market overview */
     .mp-ai-overview{background:linear-gradient(135deg,#0F2E1E 0%,#1B5E3F 55%,#2D8659 100%);border-radius:12px;padding:14px 16px;color:white;margin-bottom:12px;position:relative;overflow:hidden}
     .mp-ai-overview::after{content:'';position:absolute;right:-46px;top:-46px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,0.07);pointer-events:none}
@@ -208,7 +230,7 @@
     .mp-chart-empty{margin-top:12px}
     .mp-signal{font-size:11px;font-weight:600;margin-left:auto}
     .mp-footer-note{font-size:11px;color:var(--text-muted,#9ca3af);line-height:1.6;border-top:1px solid var(--border-light,#e5e7eb);margin-top:22px;padding:12px 2px 4px;display:flex;gap:8px}
-    @media(max-width:520px){.mp-page{padding:12px}.mp-hero h1{font-size:19px}.mp-filter-panel select{flex:1 1 100%}.mp-dfacts{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.mp-page{padding:12px}.mp-hero h1{font-size:19px}.mp-filter-panel select{flex:1 1 100%}.mp-filter-panel .mp-sel{flex:1 1 100%}.mp-dfacts{grid-template-columns:repeat(2,1fr)}}
   </style>
 </head>
 <body>
@@ -263,7 +285,7 @@
       </div>
 
       <div class="mp-footer-note"><i class="fas fa-circle-info" style="margin-top:2px"></i>
-        <span>Prices are official Minimum Support Prices / Fair &amp; Remunerative Prices announced by the
+        <span><span id="mp-last-updated-line"></span>Prices are official Minimum Support Prices / Fair &amp; Remunerative Prices announced by the
         Ministry of Agriculture &amp; Farmers Welfare (Press Information Bureau). Each figure carries its source
         and announcement date. When the live AGMARKNET mandi feed is configured on the server, daily state-market
         prices and a true "Live" status appear here automatically.</span>
@@ -287,13 +309,14 @@
         <h2><i class="fas fa-sliders-h"></i> Filters</h2>
         <button class="mp-overlay-x" id="mp-filter-close" title="Close filters" aria-label="Close filters"><i class="fas fa-times"></i></button>
       </div>
-      <div class="mp-filter-hint"><i class="fas fa-map"></i> Choose a state first — districts &amp; mandals load automatically.</div>
+      <div class="mp-filter-hint"><i class="fas fa-map"></i> Choose a state first — districts &amp; markets load automatically. Every box is searchable.</div>
       <div class="mp-filter-panel">
         <div class="mp-frow">
+          <select id="mp-commodity"><option value="">All Commodities</option></select>
           <select id="mp-state"><option value="">All States</option></select>
           <select id="mp-district" disabled><option value="">All Districts</option></select>
           <select id="mp-region" disabled><option value="">All Regions</option></select>
-          <select id="mp-market" disabled><option value="">All Mandals</option></select>
+          <select id="mp-market" disabled><option value="">All Markets</option></select>
           <select id="mp-sort">
             <option value="recent">Recently updated</option>
             <option value="highest">Highest price</option>
@@ -342,7 +365,8 @@
     var aiEl = $('mp-ai'), _aiKey = '', _aiPending = '', _aiCache = {};
     var recEl = $('mp-recommended'), freshEl = $('mp-freshness');
     var searchInput = $('mp-search-input'), searchClear = $('mp-search-clear'), suggestEl = $('mp-suggest');
-    var stateSel = $('mp-state'), distSel = $('mp-district'), regionSel = $('mp-region'), marketSel = $('mp-market'), sortSel = $('mp-sort');
+    var sortSel = $('mp-sort');
+    var stateSel, distSel, regionSel, marketSel, commSel;
     var filterOverlay = $('mp-filter-overlay'), filterClose = $('mp-filter-close'), filterBtn = $('btn-filter'), filterBadge = $('mp-filter-badge');
     var loadMoreWrap = $('mp-load-more');
     var searchTimer = null;
@@ -392,6 +416,12 @@
       if(days < 7) return days + 'd ago';
       return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
     }
+    function fmtStamp(iso){
+      if(!iso) return '';
+      var d = new Date(iso);
+      if(isNaN(d.getTime())) return '';
+      return d.toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
+    }
     function changeChip(c){
       if(!c || !c.available || c.percent === null){
         return '<span class="mp-change na"><i class="fas fa-minus"></i> Change unavailable</span>';
@@ -422,23 +452,164 @@
       else { banner.style.display = 'none'; }
     }
 
+    /* ---------------- searchable selects (§1: State/UT -> District -> Market) ---------------- */
+    var _mpSelRegistry = [], _mpSelDocInit = false;
+    function buildSearchableSelect(root, placeholder, opts){
+      opts = opts || {};
+      var self = {};
+      self.placeholder = placeholder || 'Select';
+      self._options = [];
+      self._value = '';
+      self._disabled = false;
+      self._cbs = [];
+      self._open = false;
+
+      var wrap = document.createElement('div');
+      wrap.className = 'mp-sel' + (opts.full ? ' mpp-sel-full' : '');
+      wrap.innerHTML =
+        '<button type="button" class="mp-sel-field"><span class="mp-sel-value mp-sel-placeholder">' + esc(placeholder) + '</span><i class="fas fa-chevron-down mp-sel-arrow"></i></button>' +
+        '<div class="mp-sel-menu"><div class="mp-sel-search"><i class="fas fa-search"></i><input type="text" placeholder="Type to search..." autocomplete="off"></div>' +
+        '<ul class="mp-sel-list"></ul><div class="mp-sel-empty" style="display:none">No matches</div></div>';
+      if(root && root.parentNode){ root.parentNode.replaceChild(wrap, root); }
+      var menuEl = wrap.querySelector('.mp-sel-menu');
+      var searchEl = wrap.querySelector('.mp-sel-search input');
+      var listEl = wrap.querySelector('.mp-sel-list');
+      var emptyEl = wrap.querySelector('.mp-sel-empty');
+      var fieldEl = wrap.querySelector('.mp-sel-field');
+      var valueEl = wrap.querySelector('.mp-sel-value');
+
+      function ensurePosition(){
+        menuEl.style.bottom = '';
+        menuEl.classList.remove('up');
+        if(self._disabled) return;
+        var overlayCard = wrap.closest('.mp-filter-card') || wrap.closest('.mp-overlay-card');
+        var rect = wrap.getBoundingClientRect();
+        var spaceBelow = (overlayCard ? overlayCard.getBoundingClientRect().bottom : window.innerHeight) - rect.bottom;
+        if(spaceBelow < 230 && rect.top > spaceBelow){
+          menuEl.classList.add('up');
+          menuEl.style.bottom = (fieldEl.offsetHeight + 6) + 'px';
+        }
+      }
+      function close(){ self._open = false; wrap.classList.remove('open'); }
+      function open(){
+        if(self._disabled) return;
+        _mpSelRegistry.forEach(function(s){ if(s !== self && s._open){ s.close(); } });
+        ensurePosition();
+        self._open = true;
+        wrap.classList.add('open');
+        searchEl.value = '';
+        renderList();
+        setTimeout(function(){ try{ searchEl.focus(); }catch(e){} }, 10);
+      }
+      function toggle(){ if(self._open){ close(); } else { open(); } }
+
+      function parseOptionHtml(html){
+        var tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        var out = [];
+        tmp.querySelectorAll('option').forEach(function(o){
+          out.push({ value: o.getAttribute('value') || '', label: (o.textContent || '').trim() });
+        });
+        return out;
+      }
+      function renderField(){
+        var hit = null;
+        if(self._value){ hit = self._options.filter(function(o){ return String(o.value) === String(self._value); })[0]; }
+        if(hit){ valueEl.textContent = hit.label; valueEl.classList.remove('mp-sel-placeholder'); }
+        else {
+          valueEl.textContent = self._value || self.placeholder;
+          valueEl.classList.toggle('mp-sel-placeholder', !self._value);
+        }
+      }
+      function renderList(){
+        var q = self._open ? (searchEl.value || '').trim().toLowerCase() : '';
+        var items = self._options.filter(function(o){ return !q || o.label.toLowerCase().indexOf(q) !== -1; });
+        if(!items.length){ listEl.innerHTML = ''; emptyEl.style.display = 'block'; return; }
+        emptyEl.style.display = 'none';
+        listEl.innerHTML = items.map(function(o){
+          var sel = String(o.value) === String(self._value);
+          return '<li role="option" aria-selected="' + sel + '" data-v="' + esc(String(o.value)) + '" data-l="' + esc(o.label) + '">' + esc(o.label) + (sel ? '<i class="fas fa-check"></i>' : '') + '</li>';
+        }).join('');
+        listEl.querySelectorAll('li').forEach(function(li){
+          li.addEventListener('click', function(e){
+            e.stopPropagation();
+            self._value = li.getAttribute('data-v') || '';
+            searchEl.value = '';
+            renderField(); renderList();
+            close();
+            self._cbs.slice().forEach(function(cb){ try{ cb(); }catch(e){} });
+          });
+        });
+      }
+
+      Object.defineProperty(self, 'value', {
+        get: function(){ return self._value; },
+        set: function(v){ self._value = v || ''; renderField(); renderList(); }
+      });
+      Object.defineProperty(self, 'disabled', {
+        get: function(){ return self._disabled; },
+        set: function(v){
+          self._disabled = !!v;
+          wrap.classList.toggle('disabled', self._disabled);
+          if(self._disabled){ close(); }
+        }
+      });
+      Object.defineProperty(self, 'innerHTML', {
+        get: function(){ return ''; },
+        set: function(html){
+          var opts = parseOptionHtml(html);
+          self._options = opts;
+          if(self._value && !opts.some(function(o){ return String(o.value) === String(self._value); })){
+            self._value = '';
+          }
+          renderField(); renderList();
+        }
+      });
+      self.addEventListener = function(ev, cb){ if(ev === 'change' && typeof cb === 'function'){ self._cbs.push(cb); } };
+
+      fieldEl.addEventListener('click', function(e){ e.stopPropagation(); toggle(); });
+      searchEl.addEventListener('input', function(){ renderList(); });
+      searchEl.addEventListener('click', function(e){ e.stopPropagation(); });
+      listEl.addEventListener('click', function(e){ e.stopPropagation(); });
+      menuEl.addEventListener('click', function(e){ e.stopPropagation(); });
+      wrap.addEventListener('click', function(e){ e.stopPropagation(); });
+
+      _mpSelRegistry.push(self);
+      if(!_mpSelDocInit){
+        _mpSelDocInit = true;
+        document.addEventListener('click', function(){ _mpSelRegistry.forEach(function(s){ if(s._open){ s.close(); } }); });
+        document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ _mpSelRegistry.forEach(function(s){ if(s._open){ s.close(); } }); } });
+      }
+      return self;
+    }
+
+    stateSel = buildSearchableSelect($('mp-state'), 'All States');
+    distSel = buildSearchableSelect($('mp-district'), 'All Districts');
+    regionSel = buildSearchableSelect($('mp-region'), 'All Regions');
+    marketSel = buildSearchableSelect($('mp-market'), 'All Markets');
+    commSel = buildSearchableSelect($('mp-commodity'), 'All Commodities', { full: true });
+    commSel.innerHTML = '<option value="">All Commodities</option>';
+
     /* ---------------- freshness + snapshot ---------------- */
     function renderFreshness(f){
       if(!f) { freshEl.innerHTML = ''; return; }
       var label, cls, sub = '';
+      var stamp = f.last_fetch_timestamp ? fmtStamp(f.last_fetch_timestamp) : (f.latest_price_date ? isoTodate(f.latest_price_date) : '');
+      var rel = f.last_fetch_timestamp ? ('(' + timeAgo(f.last_fetch_timestamp) + ')') : '';
+      var luSpan = $('mp-last-updated-line');
+      if(stamp && luSpan){ luSpan.textContent = 'Last updated: ' + stamp + '. '; }
       if(!f.data_available){
         cls = 'unavailable'; label = 'Market data is temporarily unavailable.';
         sub = '<button class="mp-top-btn" id="mp-fresh-retry" style="padding:2px 10px;font-size:10px;margin-left:6px"><i class="fas fa-redo"></i> Retry</button>';
       } else if(f.label === 'live'){
         cls = 'live'; label = 'Live Market Data';
-        sub = 'Streaming from ' + esc(f.source);
+        sub = 'Streaming from ' + esc(f.source) + ' &middot; Last updated ' + stamp;
       } else if(f.label === 'stale'){
         cls = 'stale'; label = 'Data may be outdated.';
-        sub = 'Last updated ' + (f.last_fetch_timestamp ? timeAgo(f.last_fetch_timestamp) : (f.latest_price_date ? isoTodate(f.latest_price_date) : ''));
+        sub = 'Last updated ' + stamp + ' ' + rel;
       } else {
         cls = 'latest'; label = 'Latest available official market data';
-        var stamp = f.last_fetch_timestamp ? timeAgo(f.last_fetch_timestamp) : (f.latest_price_date ? isoTodate(f.latest_price_date) : '');
-        sub = 'Last updated: ' + stamp;
+        sub = 'Last updated: ' + stamp + ' ' + rel;
       }
       freshEl.innerHTML = '<span class="mp-dot ' + cls + '"></span><span class="mp-f-label">' + label + '</span><span class="mp-f-sub">' + sub + '</span>';
       var rb = $('mp-fresh-retry');
@@ -471,6 +642,7 @@
           b.classList.add('active');
           S.category = b.getAttribute('data-cat');
           S.commodity = '';
+          if(commSel){ commSel.value = ''; }
           S.page = 1;
           updateFilterBadge();
           loadList(false);
@@ -565,13 +737,13 @@
     function clearDistricts(){
       distSel.disabled = true; distSel.innerHTML = '<option value="">All Districts</option>';
       regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
-      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
     }
     function loadDistricts(keepApplied){
       var state = stateSel.value;
       distSel.disabled = !state;
       regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
-      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
       if(!state){ distSel.innerHTML = '<option value="">All Districts</option>'; return Promise.resolve(null); }
       distSel.innerHTML = '<option value="">Loading districts...</option>';
       return window.MarketPriceService.markets({ state: state }).then(function(d){
@@ -583,7 +755,7 @@
     function loadRegions(keepApplied){
       var state = stateSel.value, dist = distSel.value;
       regionSel.disabled = !state;
-      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
       if(!state){ regionSel.innerHTML = '<option value="">All Regions</option>'; return Promise.resolve(null); }
       regionSel.innerHTML = '<option value="">Loading regions...</option>';
       return window.MarketPriceService.markets({ state: state, district: dist }).then(function(d){
@@ -595,19 +767,24 @@
     function loadMarkets(keepApplied){
       var state = stateSel.value, dist = distSel.value, region = regionSel.value;
       marketSel.disabled = !state;
-      if(!state){ marketSel.innerHTML = '<option value="">All Mandals</option>'; return Promise.resolve(null); }
+      if(!state){ marketSel.innerHTML = '<option value="">All Markets</option>'; return Promise.resolve(null); }
       marketSel.innerHTML = '<option value="">Loading mandals...</option>';
       return window.MarketPriceService.markets({ state: state, district: dist, region: region }).then(function(d){
-        marketSel.innerHTML = '<option value="">All Mandals</option>' + (d.markets || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+        marketSel.innerHTML = '<option value="">All Markets</option>' + (d.markets || []).map(function(x){ return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
         if(keepApplied && S.market){ marketSel.value = S.market; }
         return null;
-      }).catch(function(){ marketSel.innerHTML = '<option value="">All Mandals</option>'; return null; });
+      }).catch(function(){ marketSel.innerHTML = '<option value="">All Markets</option>'; return null; });
     }
     function applyFilters(){
       S.state = stateSel.value;
       S.district = distSel.value;
       S.region = regionSel.value;
       S.market = marketSel.value;
+      S.commodity = commSel.value;
+      if(S.commodity && S.category !== 'all'){
+        S.category = 'all';
+        catsEl.querySelectorAll('.mp-cat').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-cat') === 'all'); });
+      }
       S.sort = sortSel.value;
       S.page = 1;
       updateFilterBadge();
@@ -646,9 +823,10 @@
     /* ---------------- filter dialog ---------------- */
     function syncFilterForm(){
       stateSel.value = S.state || '';
+      if(commSel){ commSel.value = S.commodity || ''; }
       distSel.innerHTML = '<option value="">All Districts</option>';
       regionSel.innerHTML = '<option value="">All Regions</option>';
-      marketSel.innerHTML = '<option value="">All Mandals</option>';
+      marketSel.innerHTML = '<option value="">All Markets</option>';
       distSel.disabled = !S.state;
       regionSel.disabled = true;
       marketSel.disabled = true;
@@ -1163,6 +1341,7 @@
                 catsEl.querySelectorAll('.mp-cat').forEach(function(x){ x.classList.remove('active'); });
                 S.q = '';
                 S.commodity = v;
+                if(commSel){ commSel.value = v; }
                 loadWithCommodity(v);
               } else {
                 if(k === 'states'){
@@ -1170,20 +1349,20 @@
                   distSel.disabled = false;
                   distSel.innerHTML = '<option value="">All Districts</option>';
                   regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
-                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
+                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
                   loadDistricts();
                 }
                 else if(k === 'districts'){
                   distSel.disabled = false;
                   distSel.value = v;
                   regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
-                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
+                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
                   loadRegions();
                 }
                 else if(k === 'regions'){
                   regionSel.disabled = false;
                   regionSel.value = v;
-                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
+                  marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
                   loadMarkets(true);
                 }
                 else if(k === 'markets'){ marketSel.value = v; }
@@ -1207,9 +1386,10 @@
       S.q = ''; S.category = 'all'; S.state=''; S.district=''; S.region=''; S.market=''; S.commodity=''; S.sort='recent'; S.page = 1;
       searchInput.value = ''; searchClear.style.display = 'none'; suggestEl.style.display = 'none';
       catsEl.querySelectorAll('.mp-cat').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-cat') === 'all'); });
+      if(commSel){ commSel.value = ''; }
       stateSel.value=''; distSel.disabled = true; distSel.innerHTML = '<option value="">All Districts</option>';
       regionSel.disabled = true; regionSel.innerHTML = '<option value="">All Regions</option>';
-      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Mandals</option>';
+      marketSel.disabled = true; marketSel.innerHTML = '<option value="">All Markets</option>';
       sortSel.value = 'recent';
       updateFilterBadge();
       loadList(false);
@@ -1282,8 +1462,24 @@
         renderStates(d.states || []);
         writeCache('markets', d.states || []);
       }).catch(function(){ });
+      loadCommodities();
       loadRecommended();
       loadAIOverview();
+    }
+    function loadCommodities(){
+      if(!commSel) return;
+      window.MarketPriceService.commodities({ limit: 600 }).then(function(d){
+        var arr = d.commodities || [];
+        var html = '<option value="">All Commodities</option>' + arr.map(function(c){
+          return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>';
+        }).join('');
+        if(commSel.value){
+          commSel.innerHTML = html; // keep the applied selection if it survived
+          if(!arr.some(function(c){ return c.name === commSel.value; })){ commSel.value = ''; }
+        } else {
+          commSel.innerHTML = html;
+        }
+      }).catch(function(){ });
     }
 
     document.addEventListener('DOMContentLoaded', function(){

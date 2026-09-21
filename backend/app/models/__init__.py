@@ -5,6 +5,9 @@ from app.models.farm import Farm, FarmPlot, FarmDocument
 from app.models.crop import (
     Crop, CropCycle, CropTask, FarmJournal, SoilRecord, IrrigationRecord
 )
+from app.models.sustainability import (
+    EnergyUsageRecord, SustainablePracticeRecord, SustainabilityProfileRecord
+)
 from app.models.finance import Transaction, Expense, Income, Budget, Loan
 from app.models.service import ServiceRequest, AgriculturalService
 from app.models.worker import (
