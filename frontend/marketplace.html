@@ -1,4 +1,4 @@
-?<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light" data-page="marketplace">
 <head>
   <meta charset="UTF-8">
@@ -488,6 +488,33 @@
       return false;
     }
     if (!isAuthed()) { window.location.href = 'login.html'; return; }
+
+    function fillSellerChip() {
+      try {
+        var chip = document.getElementById('seller-chip');
+        var span = chip && chip.querySelector('span');
+        if (!span) return;
+        var cached = localStorage.getItem('fa-current-user-data');
+        if (cached) {
+          try { var u = JSON.parse(cached); 
+            var nm = u && (u.full_name || u.seller_name || u.name);
+            if (nm) { span.textContent = nm; return; }
+          } catch (e) {}
+        }
+      } catch (e) {}
+      try {
+        if (window.AuthService && typeof AuthService.getMe === 'function') {
+          AuthService.getMe().then(function (me) {
+            var nm = me && (me.full_name || me.seller_name || me.name || me.display_name);
+            if (nm) {
+              var s = document.getElementById('seller-chip');
+              if (s) { var sp = s.querySelector('span'); if (sp) sp.textContent = nm; }
+            }
+          }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+    fillSellerChip();
 
     function wireEntry(id, href) {
       var el = document.getElementById(id);
