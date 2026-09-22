@@ -18,7 +18,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models.market_price import MarketPrice, MarketDataSync
+from app.models.market_price import MarketPrice, MarketPriceLatest, MarketDataSync
 from app.models.notification import Notification  # noqa: F401 (used via helper)
 from app.utils.auth import generate_id
 from app.utils.notification_helper import create_notification
@@ -216,7 +216,75 @@ def upsert_prices(db: Session, rows: List[Dict[str, Any]]) -> int:
         db.add(entry)
         stored += 1
     db.commit()
+    if stored:
+        rebuild_latest_snapshot(db)
     return stored
+
+
+def rebuild_latest_snapshot(db: Session) -> int:
+    """(Re)materialise ``market_price_latest``: the newest record per
+    (market, commodity, variety).
+
+    Every read channel (list, compare, recommended, AI overview) needs the
+    latest price per key. Computing that with a GROUP BY over all of
+    ``market_prices`` on each request gets slow as the table grows, so the
+    snapshot keeps the resolved rows in an indexed table. It is rebuilt after
+    every real ingest and once at startup.
+    """
+    db.query(MarketPriceLatest).delete(synchronize_session=False)
+    var_key = func.coalesce(MarketPrice.variety, "")
+    latest_sub = (
+        db.query(
+            MarketPrice.market.label("market"),
+            MarketPrice.commodity.label("commodity"),
+            var_key.label("variety_key"),
+            func.max(MarketPrice.price_date).label("max_date"),
+        )
+        .group_by(MarketPrice.market, MarketPrice.commodity, var_key)
+        .subquery()
+    )
+    rows = (
+        db.query(MarketPrice)
+        .join(
+            latest_sub,
+            and_(
+                MarketPrice.market == latest_sub.c.market,
+                MarketPrice.commodity == latest_sub.c.commodity,
+                var_key == latest_sub.c.variety_key,
+                MarketPrice.price_date == latest_sub.c.max_date,
+            ),
+        )
+        .all()
+    )
+    added = 0
+    for r in rows:
+        db.add(MarketPriceLatest(
+            id=r.id,
+            price_id=r.price_id,
+            variety_key=r.variety or "",
+            commodity=r.commodity,
+            variety=r.variety,
+            grade=r.grade,
+            category=r.category,
+            market=r.market,
+            district=r.district,
+            state=r.state,
+            region=r.region,
+            min_price=r.min_price,
+            max_price=r.max_price,
+            modal_price=r.modal_price,
+            unit=r.unit,
+            price_date=r.price_date,
+            arrival_date=r.arrival_date,
+            arrival_quantity=r.arrival_quantity,
+            source=r.source,
+            source_url=r.source_url,
+            source_timestamp=r.source_timestamp,
+            fetched_at=r.fetched_at,
+        ))
+        added += 1
+    db.commit()
+    return added
 
 
 # ---------------------------------------------------------------------------
@@ -431,10 +499,11 @@ def previous_price(db: Session, row: MarketPrice) -> Optional[MarketPrice]:
 def previous_prices_batch(db: Session, rows: "List[MarketPrice]") -> Dict[tuple, MarketPrice]:
     """Best previous (period-before) record per (market, commodity, variety).
 
-    Fuses the per-row lookups into a single query so list/summary/overview
-    callers avoid N+1 round trips. Callers pass the *latest* record per key
-    (which _latest_only_query guarantees); the previous record for a key is the
-    latest one with a strictly earlier price_date.
+    Callers pass the *latest* record per key (the materialised snapshot); the
+    previous record for a key is the latest one with a strictly earlier
+    price_date. Each key is served by one index seek on the existing
+    (commodity, market, price_date) index, which is far cheaper at scale than
+    grouping the whole history table per request.
     """
     if not rows:
         return {}
@@ -442,37 +511,21 @@ def previous_prices_batch(db: Session, rows: "List[MarketPrice]") -> Dict[tuple,
     for row in rows:
         key = (row.market, row.commodity, row.variety or "")
         cur_date[key] = max(cur_date.get(key, ""), row.price_date or "")
-    pairs = sorted(cur_date.items())
     best: Dict[tuple, MarketPrice] = {}
-    chunk = 200
-    for start in range(0, len(pairs), chunk):
-        batch = pairs[start:start + chunk]
-        conds = [
-            and_(
-                MarketPrice.market == m,
-                MarketPrice.commodity == c,
-                func.coalesce(MarketPrice.variety, "") == v,
-                MarketPrice.price_date < cur,
-                MarketPrice.modal_price.isnot(None),
-            )
-            for (m, c, v), cur in batch
-        ]
-        q = (
-            db.query(MarketPrice)
-            .filter(or_(*conds))
-            .order_by(
-                MarketPrice.market,
-                MarketPrice.commodity,
-                func.coalesce(MarketPrice.variety, ""),
-                MarketPrice.price_date.desc(),
-            )
+    for (market, commodity, variety), cur in cur_date.items():
+        sub = db.query(MarketPrice).filter(
+            MarketPrice.market == market,
+            MarketPrice.commodity == commodity,
+            MarketPrice.price_date < cur,
+            MarketPrice.modal_price.isnot(None),
         )
-        for cand in q.all():
-            key = (cand.market, cand.commodity, cand.variety or "")
-            if (cand.price_date or "") >= cur_date[key]:
-                continue
-            if key not in best:
-                best[key] = cand  # first hit is the latest record below the current date
+        if variety:
+            sub = sub.filter(func.coalesce(MarketPrice.variety, "") == variety)
+        else:
+            sub = sub.filter(or_(MarketPrice.variety.is_(None), MarketPrice.variety == ""))
+        prev = sub.order_by(MarketPrice.price_date.desc()).first()
+        if prev is not None:
+            best[(market, commodity, variety)] = prev
     return best
 
 

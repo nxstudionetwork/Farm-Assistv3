@@ -22,7 +22,7 @@ from app.models.user import User, FarmerProfile, UserAddress, UserSettings
 from app.models.farm import Farm
 from app.models.crop import Crop, CropCycle
 from app.models.market_price import (
-    MarketPrice, MarketWatchlist, MarketPriceAlert,
+    MarketPrice, MarketPriceLatest, MarketWatchlist, MarketPriceAlert,
 )
 from app.schemas.market_price import (
     WatchlistCreate, WatchlistResponse, AlertCreate, AlertResponse,
@@ -67,55 +67,43 @@ def _merge_unique(base: List[str], extra: List[str]) -> List[str]:
 
 
 def _latest_only_query(db: Session):
-    """Base query restricted to the newest record per (market, commodity, variety)."""
-    var_key = func.coalesce(MarketPrice.variety, "")
-    latest_sub = (
-        db.query(
-            MarketPrice.market.label("market"),
-            MarketPrice.commodity.label("commodity"),
-            var_key.label("var_key"),
-            func.max(MarketPrice.price_date).label("max_date"),
-        )
-        .group_by(MarketPrice.market, MarketPrice.commodity, var_key)
-        .subquery()
-    )
-    return db.query(MarketPrice).join(
-        latest_sub,
-        and_(
-            MarketPrice.market == latest_sub.c.market,
-            MarketPrice.commodity == latest_sub.c.commodity,
-            func.coalesce(MarketPrice.variety, "") == latest_sub.c.var_key,
-            MarketPrice.price_date == latest_sub.c.max_date,
-        ),
-    )
+    """Query of newest record per (market, commodity, variety).
+
+    Served from the materialised :class:`MarketPriceLatest` snapshot so list /
+    compare / recommended / AI overview reads never GROUP BY the full
+    history table per request. The snapshot is rebuilt on every ingest and at
+    startup (see ``market_price_service.rebuild_latest_snapshot``).
+    """
+    return db.query(MarketPriceLatest)
 
 
-def _apply_filters(q, *, search: Optional[str] = None, category: Optional[str] = None,
-                   state: Optional[str] = None, district: Optional[str] = None,
-                   region: Optional[str] = None, market: Optional[str] = None,
-                   commodity: Optional[str] = None):
+def _apply_filters(q, *, ent=MarketPriceLatest, search: Optional[str] = None,
+                   category: Optional[str] = None, state: Optional[str] = None,
+                   district: Optional[str] = None, region: Optional[str] = None,
+                   market: Optional[str] = None, commodity: Optional[str] = None):
+    C = ent
     if search:
         like = f"%{search.strip().lower()}%"
         q = q.filter(or_(
-            func.lower(MarketPrice.commodity).like(like),
-            func.lower(MarketPrice.market).like(like),
-            func.lower(func.coalesce(MarketPrice.district, "")).like(like),
-            func.lower(func.coalesce(MarketPrice.state, "")).like(like),
-            func.lower(func.coalesce(MarketPrice.region, "")).like(like),
-            func.lower(func.coalesce(MarketPrice.variety, "")).like(like),
+            func.lower(C.commodity).like(like),
+            func.lower(C.market).like(like),
+            func.lower(func.coalesce(C.district, "")).like(like),
+            func.lower(func.coalesce(C.state, "")).like(like),
+            func.lower(func.coalesce(C.region, "")).like(like),
+            func.lower(func.coalesce(C.variety, "")).like(like),
         ))
     if category and category.lower() != "all":
-        q = q.filter(func.lower(MarketPrice.category) == category.strip().lower())
+        q = q.filter(func.lower(C.category) == category.strip().lower())
     if state:
-        q = q.filter(func.lower(MarketPrice.state) == state.strip().lower())
+        q = q.filter(func.lower(C.state) == state.strip().lower())
     if district:
-        q = q.filter(func.lower(MarketPrice.district) == district.strip().lower())
+        q = q.filter(func.lower(C.district) == district.strip().lower())
     if region:
-        q = q.filter(func.lower(MarketPrice.region) == region.strip().lower())
+        q = q.filter(func.lower(C.region) == region.strip().lower())
     if market:
-        q = q.filter(func.lower(MarketPrice.market) == market.strip().lower())
+        q = q.filter(func.lower(C.market) == market.strip().lower())
     if commodity:
-        q = q.filter(func.lower(MarketPrice.commodity) == commodity.strip().lower())
+        q = q.filter(func.lower(C.commodity) == commodity.strip().lower())
     return q
 
 
@@ -400,7 +388,7 @@ def compare_markets(
         _latest_only_query(db),
         commodity=commodity, state=state, district=district, region=region,
     )
-    rows = q.order_by(MarketPrice.modal_price.desc()).all()
+    rows = q.order_by(MarketPriceLatest.modal_price.desc()).all()
     entries = [svc.price_to_dict(r) for r in rows if r.modal_price is not None]
 
     data: dict = {
@@ -477,9 +465,9 @@ def recommended_prices(
         for crop_name in crops:
             token = crop_name.strip().lower()
             if len(token) >= 3:
-                crop_filters.append(func.lower(MarketPrice.commodity).like(f"%{token}%"))
+                crop_filters.append(func.lower(MarketPriceLatest.commodity).like(f"%{token}%"))
         if crop_filters:
-            rows = base.filter(or_(*crop_filters)).order_by(MarketPrice.price_date.desc()).limit(60).all()
+            rows = base.filter(or_(*crop_filters)).order_by(MarketPriceLatest.price_date.desc()).limit(60).all()
             for row in rows:
                 key = (row.market, row.commodity, row.variety)
                 if key in seen:
@@ -494,8 +482,8 @@ def recommended_prices(
 
     if len(items) < 3 and states:
         rows = (
-            base.filter(func.lower(MarketPrice.state) == states[0].lower())
-            .order_by(MarketPrice.price_date.desc())
+            base.filter(func.lower(MarketPriceLatest.state) == states[0].lower())
+            .order_by(MarketPriceLatest.price_date.desc())
             .limit(30)
             .all()
         )
@@ -937,21 +925,21 @@ def list_market_prices(
     total = query.count()
     if sort == "highest":
         order = (
-            func.coalesce(MarketPrice.modal_price, -1).desc(),
-            MarketPrice.commodity.asc(),
-            MarketPrice.variety.asc(),
+            func.coalesce(MarketPriceLatest.modal_price, -1).desc(),
+            MarketPriceLatest.commodity.asc(),
+            MarketPriceLatest.variety.asc(),
         )
     elif sort == "lowest":
         order = (
-            func.coalesce(MarketPrice.modal_price, 1e12).asc(),
-            MarketPrice.commodity.asc(),
-            MarketPrice.variety.asc(),
+            func.coalesce(MarketPriceLatest.modal_price, 1e12).asc(),
+            MarketPriceLatest.commodity.asc(),
+            MarketPriceLatest.variety.asc(),
         )
     else:
         order = (
-            MarketPrice.price_date.desc(),
-            MarketPrice.commodity.asc(),
-            MarketPrice.market.asc(),
+            MarketPriceLatest.price_date.desc(),
+            MarketPriceLatest.commodity.asc(),
+            MarketPriceLatest.market.asc(),
         )
     rows = (
         query.order_by(*order)

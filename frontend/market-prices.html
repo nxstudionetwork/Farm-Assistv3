@@ -118,6 +118,9 @@
     .mp-ai-hint{font-size:9px;opacity:0.75;margin-top:8px;display:flex;align-items:center;gap:4px;position:relative;z-index:1;line-height:1.4}
     .mp-cats{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:2px 2px 6px;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
     .mp-cats::-webkit-scrollbar{display:none}
+    .mp-chips{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px}
+    .mp-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 11px;border-radius:16px;border:1px solid var(--medium-green,#2D8659);background:#EFF6EF;color:var(--primary-green,#1B5E3F);font-size:11px;font-weight:600;white-space:nowrap}
+    .mp-chip i{margin-left:2px;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--primary-green,#1B5E3F);color:#fff;font-size:9px;cursor:pointer;flex-shrink:0}
     .mp-cat{padding:5px 12px;border-radius:16px;border:1px solid var(--border-light,#e5e7eb);background:white;color:var(--text-secondary,#6b7280);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:5px}
     .mp-cat.active{background:var(--primary-green,#1B5E3F);color:white;border-color:var(--primary-green,#1B5E3F)}
     .mp-cat .mp-cat-count{font-size:9px;opacity:0.75}
@@ -255,10 +258,12 @@
             <button class="clear-btn" id="mp-search-clear"><i class="fas fa-times"></i></button>
             <div class="mp-suggest" id="mp-suggest"></div>
           </div>
-          <button class="mp-tool-icon" id="btn-filter" title="Filters"><i class="fas fa-sliders-h"></i><span class="mp-tool-dot" id="mp-filter-badge" style="display:none"></span></button>
-          <button class="mp-tool-icon" id="btn-watchlist" title="Watchlist"><i class="fas fa-bookmark"></i><span class="mp-badge" id="wl-count">0</span></button>
-          <button class="mp-tool-icon" id="btn-refresh" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+          <button class="mp-tool-icon" id="btn-filter" title="Filters" aria-label="Filters"><i class="fas fa-sliders-h"></i><span class="mp-tool-dot" id="mp-filter-badge" style="display:none"></span></button>
+          <button class="mp-tool-icon" id="btn-watchlist" title="Watchlist" aria-label="Watchlist"><i class="fas fa-bookmark"></i><span class="mp-badge" id="wl-count">0</span></button>
+          <button class="mp-tool-icon" id="btn-refresh" title="Refresh" aria-label="Refresh"><i class="fas fa-sync-alt"></i></button>
         </div>
+
+        <div id="mp-active-chips" class="mp-chips" style="display:none"></div>
 
         <div class="mp-cats" id="mp-cats"></div>
 
@@ -296,8 +301,9 @@
   <div class="mp-overlay" id="mp-details">
     <div class="mp-overlay-card">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <button class="mp-back-btn" id="mp-details-close"><i class="fas fa-arrow-left"></i> Back</button>
-        <h2 style="font-size:17px;font-weight:700;margin:0">Price Details</h2>
+        <button class="mp-back-btn" id="mp-details-close" aria-label="Back to market prices"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2 id="mp-details-title" style="font-size:16px;font-weight:700;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Price Details</h2>
+        <button class="mp-btn mp-btn-save" id="mp-details-save" style="flex-shrink:0" aria-label="Save to watchlist" title="Save to watchlist"><i class="fas fa-bookmark"></i><span class="mp-ds-label">Save</span></button>
       </div>
       <div id="mp-details-body"></div>
     </div>
@@ -358,6 +364,7 @@
       q: '', category: 'all', state: '', district: '', region: '', market: '', commodity: '', sort: 'recent',
       savedIds: {}, detailId: null, historyDays: 90
     };
+    var _histDepth = 0;
 
     var $ = function (id) { return document.getElementById(id); };
     var mainView = $('mp-main-view'), wlView = $('mp-watchlist-view');
@@ -790,13 +797,11 @@
       updateFilterBadge();
       loadList(false);
       loadAIOverview();
-      closeFilterDialog();
+      backOverlay();
     }
     function useSavedLocation(){
-      fetch('/api/v1/users/profile', { headers: { 'Authorization': 'Bearer ' + token }, credentials: 'same-origin' })
-        .then(function(r){ return r.json(); })
-        .then(function(p){
-          var addr = (p && p.data && p.data.address) || {};
+      (window.API && window.API.Profile ? window.API.Profile.get() : Promise.reject({ isAuthError: false })).then(function(p){
+          var addr = (p && p.address) || {};
           if(!addr.state){ showToast('No saved location found. Add your address in Profile.', 'info'); return; }
           stateSel.value = addr.state;
           loadDistricts().then(function(){
@@ -817,7 +822,7 @@
             showToast('Showing prices for ' + (reg || addr.district || addr.state), 'success');
           }).catch(function(){ applyFilters(); showToast('Showing prices for ' + addr.state, 'success'); });
         })
-        .catch(function(){ showToast('Could not load your saved location.', 'error'); });
+        .catch(function(err){ if(err && err.isAuthError){ handleApiError(err, null); return; } showToast('Could not load your saved location.', 'error'); });
     }
 
     /* ---------------- filter dialog ---------------- */
@@ -835,10 +840,12 @@
       return Promise.resolve(null);
     }
     function openFilterDialog(){
+      var wasActive = filterOverlay.classList.contains('active');
       syncFilterForm();
       filterOverlay.classList.add('active');
       filterBtn.classList.add('active');
       document.body.style.overflow = 'hidden';
+      if(!wasActive){ overlayPush(); }
     }
     function closeFilterDialog(){
       if(!filterOverlay.classList.contains('active')) return;
@@ -986,6 +993,7 @@
           delete S.savedIds[key];
           showToast('Removed from watchlist.', 'success');
           markSavedButtons();
+          markDetailSaveBtn();
           loadWatchlist(true);
         }).catch(function(err){ handleApiError(err, null); });
       } else {
@@ -997,12 +1005,23 @@
           S.savedIds[key] = d.watch_id;
           showToast('Saved ' + it.commodity + ' to your watchlist.', 'success');
           markSavedButtons();
+          markDetailSaveBtn();
           loadWatchlist(true);
         }).catch(function(err){
           if(err && err.status === 409){ showToast('Already in your watchlist.', 'info'); }
           else { handleApiError(err, null); }
         });
       }
+    }
+    function markDetailSaveBtn(){
+      var sBtn = $('mp-details-save');
+      var it = _detailItem;
+      if(!sBtn || !it) return;
+      var key = it.commodity + '|' + (it.market || '');
+      sBtn.innerHTML = S.savedIds[key]
+        ? '<i class="fas fa-check"></i><span class="mp-ds-label">Saved</span>'
+        : '<i class="fas fa-bookmark"></i><span class="mp-ds-label">Save</span>';
+      sBtn.classList.toggle('saved', !!S.savedIds[key]);
     }
     function markSavedButtons(){
       listEl.querySelectorAll('.mp-card').forEach(function(card){
@@ -1086,11 +1105,13 @@
     function openDetails(id){
       if(!id) return;
       if(S.detailId === id && S.detailsBusy) return;
+      var wasActive = $('mp-details').classList.contains('active');
       if(S.detailsBusy) S.detailSeq += 1;
       S.detailsBusy = true;
       var seq = ++S.detailSeq;
       S.detailId = id;
       $('mp-details').classList.add('active');
+      if(!wasActive){ overlayPush(); }
       var body = $('mp-details-body');
       body.innerHTML = '<div class="mp-skeleton"><div class="mp-skel-line"></div><div class="mp-skel-line"></div><div class="mp-skel-line"></div><div class="mp-skel-line"></div></div>';
       window.MarketPriceService.get(id).then(function(it){
@@ -1126,6 +1147,8 @@
         { l: 'Unit', v: esc((it.unit||'Rs/Quintal').replace(/Rs\/Quintal/,'Quintal')) },
         { l: 'Variety', v: it.variety ? esc(it.variety) : '—' },
         { l: 'Grade', v: it.grade ? esc(it.grade) : '—' },
+        { l: 'Trading Date', v: it.arrival_date ? isoTodate(it.arrival_date) : '—' },
+        { l: 'Arrival Quantity', v: it.arrival_quantity != null ? fmtNum(it.arrival_quantity) + ' ' + esc(it.unit ? it.unit.replace(/Rs\//,'').replace(/Quintal/,'qtl') : 'qtl') : '—' },
         { l: 'Source', v: it.source_url ? '<a class="mp-src" href="' + esc(it.source_url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Official source') + ' <i class="fa-solid fa-up-right-from-square" style="font-size:9px"></i></a>' : esc(it.source || '—') }
       ];
       body.innerHTML =
@@ -1146,12 +1169,16 @@
           ['7', '30', '90', '180', '730'].map(function(d){ var lbl = ({7:'7D',30:'1M',90:'3M',180:'6M',730:'Full'}[Number(d)]||'') ; return '<button class="mp-detail-tab' + (Number(d) === S.historyDays ? ' active' : '') + '" data-hist="' + d + '" title="' + (d === '730' ? 'Full official record' : '') + '">' + lbl + '</button>'; }).join('') +
         '</div><div id="mp-history"></div></div>' +
         '<div class="mp-dblock"><div class="mp-db-title"><i class="fas fa-store"></i> Compare Markets</div><div id="mp-compare"></div></div>' +
-        '<div id="mp-best"></div>' +
-        '<div style="margin-top:12px"><button class="mp-btn mp-btn-primary" style="width:100%;justify-content:center" id="mp-detail-save"><i class="fas fa-bookmark"></i> Save to Watchlist</button></div>';
+        '<div id="mp-best"></div>';
       var key = it.commodity + '|' + (it.market || '');
-      var sBtn = $('mp-detail-save');
-      if(S.savedIds[key]){ sBtn.innerHTML = '<i class="fas fa-check"></i> Saved'; sBtn.classList.add('saved'); }
-      sBtn.addEventListener('click', function(){ toggleSave(it); });
+      var titleEl = $('mp-details-title');
+      if(titleEl){ titleEl.textContent = esc(it.commodity) + (it.market ? ' – ' + esc(it.market) : ''); }
+      var sBtn = $('mp-details-save');
+      sBtn.innerHTML = S.savedIds[key]
+        ? '<i class="fas fa-check"></i><span class="mp-ds-label">Saved</span>'
+        : '<i class="fas fa-bookmark"></i><span class="mp-ds-label">Save</span>';
+      sBtn.classList.toggle('saved', !!S.savedIds[key]);
+      sBtn.onclick = function(e){ e.stopPropagation(); toggleSave(it); };
       bindHistTabs();
     }
     function openDetailsById(id){ if(id) openDetails(id); }
@@ -1289,6 +1316,27 @@
     function closeDetails(){
       $('mp-details').classList.remove('active');
     }
+    function overlayPush(){
+      try { history.pushState({ mpOv: 1 }, ''); _histDepth++; } catch(e){ }
+    }
+    function backOverlay(){
+      if(_histDepth > 0){
+        try { history.back(); } catch(e){ _histDepth = 0; }
+        return;
+      }
+      if($('mp-details').classList.contains('active')){ closeDetails(); }
+      else if(filterOverlay.classList.contains('active')){ closeFilterDialog(); }
+    }
+    function onPopState(){
+      if(_histDepth > 0){
+        _histDepth--;
+        if($('mp-details').classList.contains('active')){ closeDetails(); }
+        else if(filterOverlay.classList.contains('active')){ closeFilterDialog(); }
+      } else {
+        if($('mp-details').classList.contains('active')){ closeDetails(); }
+        else if(filterOverlay.classList.contains('active')){ closeFilterDialog(); }
+      }
+    }
 
     /* ---------------- search ---------------- */
     function commitSearch(){
@@ -1397,6 +1445,83 @@
     function updateFilterBadge(){
       var active = !!(S.q || S.state || S.district || S.region || S.market || S.category !== 'all' || S.sort !== 'recent' || S.commodity);
       filterBadge.style.display = active ? 'block' : 'none';
+      renderActiveChips();
+    }
+    function chipKey(a){
+      if(a.q) return 'q';
+      if(a.commodity) return 'commodity';
+      if(a.category && a.category !== 'all') return 'category';
+      if(a.state) return 'state';
+      if(a.district) return 'district';
+      if(a.region) return 'region';
+      if(a.market) return 'market';
+      if(a.sort && a.sort !== 'recent') return 'sort';
+      return null;
+    }
+    function chipLabel(a){
+      if(a.q) return 'Search: ' + a.q;
+      if(a.commodity) return 'Crop: ' + a.commodity;
+      if(a.category && a.category !== 'all') return 'Category: ' + a.category;
+      if(a.state) return 'State: ' + a.state;
+      if(a.district) return 'District: ' + a.district;
+      if(a.region) return 'Region: ' + a.region;
+      if(a.market) return 'Market: ' + a.market;
+      if(a.sort && a.sort !== 'recent') return 'Sort: ' + (a.sort === 'highest' ? 'Highest price' : 'Lowest price');
+      return null;
+    }
+    function renderActiveChips(){
+      var el = $('mp-active-chips');
+      if(!el) return;
+      var states = [];
+      var values = [
+        { q: S.q }, { commodity: S.commodity }, { category: S.category }, { state: S.state },
+        { district: S.district }, { region: S.region }, { market: S.market }, { sort: S.sort }
+      ];
+      values.forEach(function(a){
+        var k = chipKey(a);
+        if(!k) return;
+        var lbl = chipLabel(a);
+        if(lbl){ states.push({ k: k, l: lbl }); }
+      });
+      if(!states.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+      el.innerHTML = states.map(function(c){
+        return '<span class="mp-chip" data-chip="' + c.k + '">' + esc(c.l) + '<i class="fas fa-times" role="button" tabindex="0" aria-label="Remove ' + esc(c.l) + '" title="Remove ' + esc(c.l) + '"></i></span>';
+      }).join('');
+      el.style.display = 'flex';
+      el.querySelectorAll('.mp-chip').forEach(function(chip){
+        var k = chip.getAttribute('data-chip');
+        chip.addEventListener('click', function(e){ if(e.target.tagName === 'I'){ removeChip(k); } });
+        chip.addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); if(e.target.tagName === 'I'){ removeChip(k); } } });
+      });
+    }
+    function syncFilterSelects(){
+      if(stateSel) stateSel.value = S.state || '';
+      if(distSel){ distSel.value = S.district || ''; distSel.disabled = !S.state; }
+      if(regionSel){ regionSel.value = S.region || ''; regionSel.disabled = !S.state; }
+      if(marketSel){ marketSel.value = S.market || ''; marketSel.disabled = !S.state; }
+      if(commSel){ commSel.value = S.commodity || ''; }
+      if(sortSel) sortSel.value = S.sort || 'recent';
+      if(catsEl){ catsEl.querySelectorAll('.mp-cat').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-cat') === (S.category || 'all')); }); }
+    }
+    function removeChip(k){
+      if(k === 'q'){ S.q = ''; searchInput.value = ''; searchClear.style.display = 'none'; suggestEl.style.display = 'none'; }
+      else if(k === 'commodity'){ S.commodity = ''; if(commSel) commSel.value = ''; }
+      else if(k === 'category'){ S.category = 'all'; }
+      else if(k === 'state'){ S.state = ''; S.district = ''; S.region = ''; S.market = ''; clearDistricts(); }
+      else if(k === 'district'){
+        S.district = ''; S.region = ''; S.market = '';
+        if(S.state){ loadDistricts(); } else { clearDistricts(); }
+      }
+      else if(k === 'region'){
+        S.region = ''; S.market = '';
+        if(S.state){ loadRegions(); } else { clearDistricts(); }
+      }
+      else if(k === 'market'){ S.market = ''; if(S.state){ loadMarkets(); } else { clearDistricts(); } }
+      else if(k === 'sort'){ S.sort = 'recent'; if(sortSel) sortSel.value = 'recent'; }
+      syncFilterSelects();
+      updateFilterBadge();
+      loadList(false);
+      loadAIOverview();
     }
 
     /* ---------------- refresh ---------------- */
@@ -1489,13 +1614,13 @@
       $('btn-refresh').addEventListener('click', refresh);
       $('btn-watchlist').addEventListener('click', function(){ showView('watchlist'); });
       filterBtn.addEventListener('click', function(){
-        if(filterOverlay.classList.contains('active')){ closeFilterDialog(); }
+        if(filterOverlay.classList.contains('active')){ backOverlay(); }
         else { openFilterDialog(); }
       });
-      filterClose.addEventListener('click', closeFilterDialog);
-      filterOverlay.addEventListener('click', function(e){ if(e.target === filterOverlay){ closeFilterDialog(); } });
-      $('mp-details-close').addEventListener('click', closeDetails);
-      $('mp-details').addEventListener('click', function(e){ if(e.target === this) closeDetails(); });
+      filterClose.addEventListener('click', backOverlay);
+      filterOverlay.addEventListener('click', function(e){ if(e.target === filterOverlay){ backOverlay(); } });
+      $('mp-details-close').addEventListener('click', backOverlay);
+      $('mp-details').addEventListener('click', function(e){ if(e.target === this) backOverlay(); });
       searchInput.addEventListener('input', onSearchInput);
       searchInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ commitSearch(); } });
       searchClear.addEventListener('click', function(){ searchInput.value=''; searchClear.style.display='none'; suggestEl.style.display='none'; S.q=''; S.commodity=''; S.page=1; updateFilterBadge(); loadList(false); loadAIOverview(); });
@@ -1506,12 +1631,13 @@
       sortSel.addEventListener('change', function(){});
       $('btn-apply-filters').addEventListener('click', applyFilters);
       $('btn-use-location').addEventListener('click', useSavedLocation);
-      $('mp-clear-filters').addEventListener('click', function(){ resetFilters(); closeFilterDialog(); });
+      $('mp-clear-filters').addEventListener('click', function(){ resetFilters(); backOverlay(); });
       $('mp-btn-load-more').addEventListener('click', function(){ S.page += 1; loadList(true); });
       document.querySelectorAll('[data-back]').forEach(function(b){
         b.addEventListener('click', function(){ showView(b.getAttribute('data-back')); });
       });
-      document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ if(filterOverlay.classList.contains('active')){ closeFilterDialog(); } else { closeDetails(); } } });
+      document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ backOverlay(); } });
+      window.addEventListener('popstate', onPopState);
 
       // fire/init
       loadInitial();

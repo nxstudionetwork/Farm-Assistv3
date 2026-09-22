@@ -276,6 +276,12 @@ async def startup():
             # Crop catalogue used by the My Farm "Add Crop" flow.
             from app.database.seed_crops import seed_crops as _seed_crops
             crops_summary = {"created": _seed_crops(db), "total": db.query(Crop).count()}
+
+            # Materialise the "latest price per market/commodity/variety"
+            # snapshot so the market price reads never GROUP BY the whole
+            # history table per request. Idempotent; cheap on empty tables.
+            from app.services import market_price_service as _mp_svc
+            _mp_svc.rebuild_latest_snapshot(db)
         finally:
             db.close()
         return {

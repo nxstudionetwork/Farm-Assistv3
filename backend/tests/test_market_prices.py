@@ -15,6 +15,7 @@ from app.main import app
 from app.database.connection import engine, Base, SessionLocal
 from app.models import *
 from seed_market_prices import import_msp_prices
+from app.services import market_price_service as svc
 
 client = TestClient(app)
 
@@ -309,6 +310,7 @@ def test_location_cascade_filters_districts_and_markets(headers_a, db):
         MarketPrice(commodity="Paddy", variety="Common", market="Guntur Market", district="Guntur", state="Andhra Pradesh", modal_price=2380.0, unit="Rs/Quintal", price_date="2026-05-20", source="AGMARKNET demo"),
     ])
     db.commit()
+    svc.rebuild_latest_snapshot(db)
 
     resp = client.get("/api/v1/market-prices/markets", headers=headers_a)
     assert resp.status_code == 200
@@ -349,6 +351,7 @@ def test_location_cascade_returns_regions(headers_a, db):
         MarketPrice(commodity="Paddy", variety="Common", market="Pune APMC", district="Pune", state="Maharashtra", region="Haveli", modal_price=6000.0, unit="Rs/Quintal", price_date="2026-05-20", source="AGMARKNET demo"),
     ])
     db.commit()
+    svc.rebuild_latest_snapshot(db)
 
     resp = client.get("/api/v1/market-prices/markets", params={"state": "Telangana"}, headers=headers_a)
     data = resp.json()["data"]
@@ -376,6 +379,7 @@ def test_list_filters_by_region(headers_a, db):
         MarketPrice(commodity="Onion", variety="Onion", market="Siddipet", district="Siddipet", state="Telangana", region="Siddipet", modal_price=4500.0, unit="Rs/Quintal", price_date="2026-05-21", source="AGMARKNET demo"),
     ])
     db.commit()
+    svc.rebuild_latest_snapshot(db)
 
     resp = client.get("/api/v1/market-prices", params={"state": "Telangana", "region": "Kodad"}, headers=headers_a)
     data = resp.json()["data"]
@@ -391,6 +395,7 @@ def test_compare_markets_scoped_to_region(headers_a, db):
         MarketPrice(commodity="Paddy", variety="Common", market="Choutuppal Market", district="Nalgonda", state="Telangana", region="Choutuppal", modal_price=2750.0, unit="Rs/Quintal", price_date="2026-05-21", source="AGMARKNET demo"),
     ])
     db.commit()
+    svc.rebuild_latest_snapshot(db)
 
     resp = client.get(
         "/api/v1/market-prices/compare",

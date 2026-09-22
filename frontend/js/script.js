@@ -1104,40 +1104,6 @@ function initSoilHealth(containerId) {
 };
 window.initSoilHealth = initSoilHealth;
 
-/* ===== MARKET PRICES ===== */
-function initMarketPrices(containerId) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  const prices = (DB().marketPrices || []).slice(0, 15);
-  let html = `<div class="search-bar"><i class="fas fa-search"></i><input type="text" placeholder="Search commodity..." oninput="filterPrices(this.value)" id="price-search"></div>`;
-  html += `<div class="responsive-table"><table><thead><tr><th>Commodity</th><th>Price</th><th>Change</th><th>Mandi</th><th>Demand</th></tr></thead><tbody id="price-tbody">`;
-  prices.forEach(p => {
-    const up = p.trend === 'up';
-    html += `<tr class="price-row" onclick="showToast('${p.commodity}: ₹${p.price}/${p.unit} at ${p.mandi}. MSP: ₹${p.msp}','info')">
-      <td><strong>${p.commodity}</strong></td>
-      <td style="font-weight:700;">₹${p.price.toLocaleString()}</td>
-      <td style="color:${up?'var(--success)':'var(--danger)'};">${up?'▲':'▼'} ${p.change}</td>
-      <td>${p.mandi}</td>
-      <td><span class="badge ${p.demand==='High'?'badge-green':p.demand==='Medium'?'badge-warning':'badge-danger'}">${p.demand}</span></td>
-    </tr>`;
-  });
-  html += `</tbody></table></div>
-    <div style="display:flex;gap:8px;margin-top:12px;">
-      <button class="btn-primary btn-sm" onclick="showToast('Price alerts set for your tracked crops!','success')"><i class="fas fa-bell"></i> Set Alert</button>
-      <button class="btn-secondary btn-sm" onclick="showToast('MSP Kharif 2026: Rice ₹2,300, Cotton ₹7,100, Maize ₹2,100, Groundnut ₹5,700/qtl','info')"><i class="fas fa-landmark"></i> MSP Info</button>
-    </div>`;
-  el.innerHTML = html;
-};
-window.initMarketPrices = initMarketPrices;
-
-function filterPrices(query) {
-  const q = query.toLowerCase();
-  document.querySelectorAll('.price-row').forEach(r => {
-    r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
-  });
-}
-window.filterPrices = filterPrices;
-
 /* ===== CROP PROTECTION ===== */
 function initCropProtection(containerId) {
   const el = document.getElementById(containerId);
