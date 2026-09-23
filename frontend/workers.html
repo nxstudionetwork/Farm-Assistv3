@@ -123,6 +123,18 @@
     .wrk-bookings { display: flex; flex-direction: column; gap: 12px; }
     .wrk-booking-card { background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; box-shadow: var(--shadow-sm); }
     .wrk-booking-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--wrk-bg); color: var(--wrk); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+    .wrk-booking-avatar { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px; flex-shrink: 0; overflow: hidden; }
+    .wrk-booking-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .wrk-booking-id { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+    .wrk-history-list { display: flex; flex-direction: column; gap: 0; }
+    .wrk-history-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--border-light); position: relative; }
+    .wrk-history-row:last-child { border-bottom: none; }
+    .wrk-history-dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; background: var(--border-medium); }
+    .wrk-history-row:first-child .wrk-history-dot { background: var(--wrk); }
+    .wrk-history-main { flex: 1; min-width: 0; }
+    .wrk-history-status { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+    .wrk-history-meta { font-size: 10.5px; color: var(--text-muted); }
+    .wrk-history-note { font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
     .wrk-booking-info { flex: 1; min-width: 220px; }
     .wrk-booking-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
     .wrk-booking-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.55; }
@@ -134,6 +146,7 @@
     .wrk-badge.in_progress { background: #DBEAFE; color: #1E40AF; }
     .wrk-badge.completed { background: #E2E8F0; color: #334155; }
     .wrk-badge.cancelled, .wrk-badge.rejected { background: #F3F4F6; color: #6B7280; }
+    .wrk-badge.missed { background: #FEE2E2; color: #B91C1C; }
     .wrk-badge.paid { background: #DCFCE7; color: #166534; }
     .wrk-badge.unpaid, .wrk-badge.refunded { background: #FEF3C7; color: #92400E; }
 
@@ -387,7 +400,7 @@
   var PAGE_SIZE = 60;
   var searchTimer = null;
   var catalog = { page: 1, totalPages: 1, total: 0, items: [], loading: false };
-  var bookings = { page: 1, totalPages: 1, total: 0, items: [], loading: false, filter: 'all' };
+  var bookings = { page: 1, totalPages: 1, total: 0, items: [], loading: false, filter: 'upcoming' };
   var filtersData = null;
   var activeFilters = {};
   var filterCount = 0;
@@ -1224,15 +1237,24 @@
   }
 
   // ---------- Bookings ----------
+  var BK_STATUS_LABELS = { pending: 'Pending', confirmed: 'Upcoming', in_progress: 'In Progress', completed: 'Completed', cancelled: 'Cancelled', missed: 'Missed' };
+  function statusLabel(s) { return BK_STATUS_LABELS[s] || (s || 'pending').replace(/_/g, ' '); }
   var BK_GROUPS = [
-    { key: 'booked', label: 'Booked', icon: 'fa-calendar-check', match: function (b) { return ['pending', 'confirmed', 'in_progress'].indexOf(b.status) !== -1; } },
+    { key: 'upcoming', label: 'Upcoming', icon: 'fa-calendar-check', match: function (b) { return ['pending', 'confirmed'].indexOf(b.status) !== -1; } },
+    { key: 'in_progress', label: 'In Progress', icon: 'fa-spinner', match: function (b) { return b.status === 'in_progress'; } },
     { key: 'completed', label: 'Completed', icon: 'fa-check-circle', match: function (b) { return b.status === 'completed'; } },
-    { key: 'cancelled', label: 'Cancelled', icon: 'fa-ban', match: function (b) { return b.status === 'cancelled'; } }
+    { key: 'cancelled', label: 'Cancelled', icon: 'fa-ban', match: function (b) { return b.status === 'cancelled'; } },
+    { key: 'missed', label: 'Missed', icon: 'fa-hourglass-end', match: function (b) { return b.status === 'missed'; } }
   ];
+
+  function validBookingFilter(f) {
+    return f && (f === 'all' || BK_GROUPS.some(function (g) { return g.key === f; }));
+  }
 
   function loadBookings() {
     if (bookings.loading) return;
     bookings.loading = true;
+    if (!validBookingFilter(bookings.filter)) bookings.filter = 'upcoming';
     var list = $('wrkBookingsList');
     list.innerHTML = '<div class="wrk-skel"></div><div class="wrk-skel"></div>';
     var p = { page: 1, limit: 100 };
@@ -1242,7 +1264,7 @@
         bookings.items = [];
         bookings.total = 0;
         bookings.totalPages = 1;
-        bookings.filter = 'all';
+        bookings.filter = 'upcoming';
         renderBookingsChips();
         $('wrkBookingsPagination').innerHTML = '';
         list.innerHTML = '<div class="wrk-empty"><i class="fas fa-clipboard-list"></i><h3>No bookings yet</h3><p>Book a worker to see it here.</p></div>';
@@ -1251,9 +1273,6 @@
       bookings.items = res.items;
       bookings.total = res.total || 0;
       bookings.totalPages = 1;
-      if (bookings.filter !== 'all' && !(bookings.items || []).some(function (b) { return BK_GROUPS.some(function (g) { return g.key === bookings.filter && g.match(b); }); })) {
-        bookings.filter = 'all';
-      }
       renderBookingsChips();
       renderBookingsArea();
       refreshBookingCount();
@@ -1269,11 +1288,9 @@
     var el = $('wrkBkChips');
     if (!el) return;
     var all = (bookings.items || []).length;
-    if (!all) { el.style.display = 'none'; el.innerHTML = ''; return; }
     var html = '<button class="wrk-bk-chip' + (bookings.filter === 'all' ? ' active' : '') + '" onclick="WorkersApp.setBookingsFilter(\'all\')">All (' + all + ')</button>';
     BK_GROUPS.forEach(function (g) {
       var count = (bookings.items || []).filter(g.match).length;
-      if (!count) return;
       html += '<button class="wrk-bk-chip' + (bookings.filter === g.key ? ' active' : '') + '" onclick="WorkersApp.setBookingsFilter(\'' + g.key + '\')"><i class="fas ' + g.icon + '"></i> ' + g.label + ' (' + count + ')</button>';
     });
     el.innerHTML = html;
@@ -1281,7 +1298,7 @@
   }
 
   function setBookingsFilter(key) {
-    if (key !== 'all' && !(bookings.items || []).some(function (b) { return BK_GROUPS.some(function (g) { return g.key === key && g.match(b); }); })) return;
+    if (key !== 'all' && !validBookingFilter(key)) return;
     bookings.filter = key;
     renderBookingsChips();
     renderBookingsArea();
@@ -1289,14 +1306,21 @@
 
   function renderBookingsArea() {
     var list = $('wrkBookingsList');
-    var g = BK_GROUPS.filter(function (x) { return x.key === bookings.filter; })[0];
-    var rows = (bookings.items || []).filter(function (b) { return bookings.filter === 'all' ? true : g.match(b); });
+    var g = null;
+    if (bookings.filter !== 'all') g = BK_GROUPS.filter(function (x) { return x.key === bookings.filter; })[0];
+    var rows = (bookings.items || []).filter(function (b) { return g ? g.match(b) : true; });
     if (!rows.length) {
-      var emptyTitle = bookings.filter === 'all' ? 'No bookings yet' : 'No ' + g.label.toLowerCase() + ' bookings';
-      var emptyBody = bookings.filter === 'all'
-        ? '<p>Book a worker to see it here.</p><div style="margin-top:14px;"><button class="wrk-btn wrk-btn-primary" style="max-width:200px;margin:0 auto;" onclick="WorkersApp.switchTab(\'explore\')">Explore Workers</button></div>'
-        : '<p>Bookings in this status will appear here.</p>';
-      list.innerHTML = '<div class="wrk-empty"><i class="fas fa-clipboard-list"></i><h3>' + emptyTitle + '</h3>' + emptyBody + '</div>';
+      var emptyCopy;
+      if (bookings.filter === 'all' || bookings.filter === 'upcoming') {
+        emptyCopy = bookings.filter === 'all'
+          ? { icon: 'fa-clipboard-list', t: 'No bookings yet', b: '<p>Book a worker to see it here.</p><div style="margin-top:14px;"><button class="wrk-btn wrk-btn-primary" style="max-width:200px;margin:0 auto;" onclick="WorkersApp.switchTab(\'explore\')">Explore Workers</button></div>' }
+          : { icon: 'fa-calendar-check', t: 'No upcoming bookings', b: '<p>You have no upcoming or pending bookings.</p><div style="margin-top:14px;"><button class="wrk-btn wrk-btn-primary" style="max-width:200px;margin:0 auto;" onclick="WorkersApp.switchTab(\'explore\')">Explore Workers</button></div>' };
+      } else if (bookings.filter === 'missed') {
+        emptyCopy = { icon: 'fa-hourglass-end', t: 'No missed bookings', b: '<p>Bookings that were not completed on time appear here. You can mark them completed if the work was actually done.</p>' };
+      } else {
+        emptyCopy = { icon: 'fa-inbox', t: 'No ' + g.label.toLowerCase() + ' bookings', b: '<p>Bookings in this status will appear here.</p>' };
+      }
+      list.innerHTML = '<div class="wrk-empty"><i class="fas ' + emptyCopy.icon + '"></i><h3>' + emptyCopy.t + '</h3>' + emptyCopy.b + '</div>';
       $('wrkBookingsPagination').innerHTML = '';
       return;
     }
@@ -1308,31 +1332,57 @@
     var status = b.status || 'pending';
     var pay = b.payment_status || 'unpaid';
     var payCls = pay === 'completed' ? 'paid' : (pay === 'refunded' ? 'refunded' : 'unpaid');
-    var loc = [b.worker_name ? '' : '', b.farm_name ? ' on ' + b.farm_name : ''].join('');
     var timeStr = '';
     if (b.booking_date) timeStr += b.booking_date;
     if (b.start_time && b.end_time) timeStr += ' · ' + b.start_time + '–' + b.end_time;
     timeStr += (b.duration_days > 1 ? ' · ' + b.duration_days + ' days' : '');
+    var loc = '';
+    if (b.farm_name) loc += b.farm_name;
+    if (b.plot_name) loc += (loc ? ' · ' : '') + b.plot_name;
 
     var actions = '<button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.viewBooking(\'' + esc(b.booking_id) + '\')"><i class="fas fa-eye"></i> View</button>';
+
     if (status === 'pending' || status === 'confirmed') {
+      if (bookingCanStart(b)) {
+        actions += '<button class="wrk-btn wrk-btn-primary" onclick="WorkersApp.startJob(\'' + esc(b.booking_id) + '\')"><i class="fas fa-play"></i> Start Job</button>';
+      }
       actions += '<button class="wrk-btn wrk-btn-danger" onclick="WorkersApp.cancelBooking(\'' + esc(b.booking_id) + '\')"><i class="fas fa-ban"></i> Cancel</button>';
-    }
-    if (status === 'completed') {
+    } else if (status === 'in_progress') {
+      actions += '<button class="wrk-btn wrk-btn-primary" onclick="WorkersApp.markBookingCompleted(\'' + esc(b.booking_id) + '\')"><i class="fas fa-check"></i> Mark Completed</button>';
+      actions += '<button class="wrk-btn wrk-btn-danger" onclick="WorkersApp.cancelBooking(\'' + esc(b.booking_id) + '\')"><i class="fas fa-ban"></i> Cancel</button>';
+    } else if (status === 'completed') {
       actions += '<button class="wrk-btn wrk-btn-subtle" onclick="WorkersApp.openReview(\'' + esc(b.worker_id) + '\',\'' + esc(b.worker_name) + '\',\'' + esc(b.booking_id) + '\')"><i class="fas fa-star"></i> Review</button>';
+      actions += '<button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.rebookWorker(\'' + esc(b.worker_id) + '\')"><i class="fas fa-redo"></i> Book Again</button>';
+    } else if (status === 'cancelled') {
+      actions += '<button class="wrk-btn wrk-btn-primary" onclick="WorkersApp.rebookWorker(\'' + esc(b.worker_id) + '\')"><i class="fas fa-redo"></i> Book Again</button>';
+    } else if (status === 'missed') {
+      actions += '<button class="wrk-btn wrk-btn-subtle" onclick="WorkersApp.markBookingCompleted(\'' + esc(b.booking_id) + '\')"><i class="fas fa-check"></i> Mark Completed</button>';
+      actions += '<button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.rebookWorker(\'' + esc(b.worker_id) + '\')"><i class="fas fa-redo"></i> Book Again</button>';
     }
+
+    var avatarHtml = '<div class="wrk-booking-avatar" style="background:' + avatarColor(b.worker_id) + ';">' +
+      (b.worker_image ? '<img src="' + esc(b.worker_image) + '" alt="" onerror="this.style.display=\'none\';"/>' : '') +
+      '<span>' + esc(initials(b.worker_name) || 'W') + '</span></div>';
 
     return '' +
       '<div class="wrk-booking-card">' +
-        '<div class="wrk-booking-icon"><i class="fas fa-user-tie"></i></div>' +
+        avatarHtml +
         '<div class="wrk-booking-info">' +
-          '<div class="wrk-booking-title">' + esc(b.worker_name || 'Worker') + ' <span class="wrk-badge ' + status + '">' + esc(status.replace(/_/g, ' ')) + '</span></div>' +
-          '<div class="wrk-booking-sub">' + esc(b.work_type || 'Farm work') + loc + '</div>' +
+          '<div class="wrk-booking-title">' + esc(b.worker_name || 'Worker') + ' <span class="wrk-badge ' + status + '">' + esc(statusLabel(status)) + '</span></div>' +
+          '<div class="wrk-booking-sub">' + esc(b.work_type || 'Farm work') + (loc ? ' · ' + esc(loc) : '') + '</div>' +
           '<div class="wrk-booking-sub"><i class="fas fa-calendar"></i> ' + esc(timeStr || 'Date TBD') + '</div>' +
           '<div class="wrk-booking-sub"><span class="wrk-badge ' + payCls + '">Pay: ' + esc(pay) + '</span>' + (b.total_cost != null ? ' <b style="color:var(--wrk);">' + moneys(b.total_cost) + '</b>' : '') + '</div>' +
+          '<div class="wrk-booking-sub wrk-booking-id">' + esc(b.booking_id) + '</div>' +
           '<div class="wrk-booking-actions">' + actions + '</div>' +
         '</div>' +
       '</div>';
+  }
+
+  function bookingCanStart(b) {
+    if (!b.booking_date) return true;
+    var today = new Date();
+    var t = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    return String(b.booking_date) <= t;
   }
 
   function renderBookingsPagination() {
@@ -1385,27 +1435,75 @@
     var loc = b.booking_date || '';
     if (b.start_time && b.end_time) loc += ' · ' + b.start_time + '–' + b.end_time;
     loc += (b.duration_days > 1 ? ' · ' + b.duration_days + ' days' : '');
+    if (b.hours_per_day) loc += ' · ' + b.hours_per_day + ' hr/day';
 
     var actions = '';
     if (status === 'pending' || status === 'confirmed') {
+      if (bookingCanStart(b)) {
+        actions += '<button class="wrk-btn wrk-btn-primary" style="flex:1;" onclick="WorkersApp.startJob(\'' + esc(b.booking_id) + '\')"><i class="fas fa-play"></i> Start Job</button>';
+      }
       actions += '<button class="wrk-btn wrk-btn-danger" style="flex:1;" onclick="WorkersApp.cancelBookingFromDetail(\'' + esc(b.booking_id) + '\')"><i class="fas fa-ban"></i> Cancel Booking</button>';
-    }
-    if (status === 'completed') {
+    } else if (status === 'in_progress') {
+      actions += '<button class="wrk-btn wrk-btn-primary" style="flex:1;" onclick="WorkersApp.markBookingCompleted(\'' + esc(b.booking_id) + '\')"><i class="fas fa-check"></i> Mark Completed</button>';
+      actions += '<button class="wrk-btn wrk-btn-danger" style="flex:1;" onclick="WorkersApp.cancelBookingFromDetail(\'' + esc(b.booking_id) + '\')"><i class="fas fa-ban"></i> Cancel Booking</button>';
+    } else if (status === 'completed') {
       actions += '<button class="wrk-btn wrk-btn-primary" style="flex:1;" onclick="WorkersApp.openReview(\'' + esc(b.worker_id) + '\',\'' + esc(b.worker_name) + '\',\'' + esc(b.booking_id) + '\')"><i class="fas fa-star"></i> Review Worker</button>';
+      actions += '<button class="wrk-btn wrk-btn-ghost" style="flex:1;background:var(--wrk-bg);color:var(--wrk-dark);border:none;" onclick="WorkersApp.rebookWorker(\'' + esc(b.worker_id) + '\')"><i class="fas fa-redo"></i> Book Again</button>';
+    } else if (status === 'cancelled') {
+      actions += '<button class="wrk-btn wrk-btn-primary" style="flex:1;" onclick="WorkersApp.rebookWorker(\'' + esc(b.worker_id) + '\')"><i class="fas fa-redo"></i> Book Again</button>';
+    } else if (status === 'missed') {
+      actions += '<button class="wrk-btn wrk-btn-primary" style="flex:1;" onclick="WorkersApp.markBookingCompleted(\'' + esc(b.booking_id) + '\')"><i class="fas fa-check"></i> Mark Completed</button>';
+      actions += '<button class="wrk-btn wrk-btn-ghost" style="flex:1;background:var(--wrk-bg);color:var(--wrk-dark);border:none;" onclick="WorkersApp.rebookWorker(\'' + esc(b.worker_id) + '\')"><i class="fas fa-redo"></i> Book Again</button>';
     }
+    if (b.worker_phone) {
+      actions += '<button class="wrk-btn wrk-btn-subtle" style="flex:1;" onclick="WorkersApp.contactWorker(\'' + esc(b.booking_id) + '\')"><i class="fas fa-phone"></i> Contact</button>';
+    }
+
+    var flagHtml = '';
+    if (status === 'cancelled') {
+      flagHtml = '<div class="wrk-section"><h4><i class="fas fa-ban"></i> Cancellation</h4><div class="wrk-summary" style="margin:0;">' +
+        (b.cancelled_at ? '<div class="line"><span>Cancelled At</span><span>' + esc(String(b.cancelled_at).slice(0, 16)) + '</span></div>' : '') +
+        (b.cancelled_by ? '<div class="line"><span>Cancelled By</span><span>' + esc(b.cancelled_by) + '</span></div>' : '') +
+        (b.cancel_reason ? '<div class="line"><span>Reason</span><span>' + esc(b.cancel_reason) + '</span></div>' : '') +
+        '</div></div>';
+    } else if (status === 'missed') {
+      flagHtml = '<div class="wrk-section"><h4><i class="fas fa-hourglass-end"></i> Missed</h4><p style="font-size:12.5px;color:#B91C1C;line-height:1.6;">This booking was not completed by its scheduled time' +
+        (b.missed_at ? ' (' + esc(String(b.missed_at).slice(0, 16)) + ')' : '') +
+        ' and was automatically marked as missed. If the work was actually completed, use "Mark Completed" to correct it.</p></div>';
+    }
+
+    var historyHtml = (b.status_history && b.status_history.length)
+      ? '<div class="wrk-section"><h4><i class="fas fa-history"></i> Status History</h4><div class="wrk-history-list">' +
+        b.status_history.map(function (e) {
+          return '<div class="wrk-history-row">' +
+            '<span class="wrk-history-dot"></span>' +
+            '<div class="wrk-history-main">' +
+              '<div class="wrk-history-status">' + ((e.previous_status ? esc(statusLabel(e.previous_status)) + ' → ' : '') + esc(statusLabel(e.new_status))) + '</div>' +
+              (e.note ? '<div class="wrk-history-note">' + esc(e.note) + '</div>' : '') +
+              '<div class="wrk-history-meta">' + esc(String(e.created_at || '').slice(0, 16)) + (e.changed_by && e.changed_by !== 'farmer' ? ' · by ' + esc(e.changed_by) : '') + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+        '</div></div>'
+      : '';
 
     $('wrkBDetailContent').innerHTML =
       '<div class="wrk-detail-top">' +
-        '<div class="wrk-avatar-lg" style="background:' + avatarColor(b.worker_id) + ';">' + esc(initials(b.worker_name)) + '</div>' +
+        '<div class="wrk-avatar-lg" style="background:' + avatarColor(b.worker_id) + ';position:relative;overflow:hidden;">' +
+          (b.worker_image ? '<img src="' + esc(b.worker_image) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\';"/>' : '') +
+          '<span style="position:relative;">' + esc(initials(b.worker_name)) + '</span>' +
+        '</div>' +
         '<div style="flex:1;min-width:180px;">' +
           '<div class="wrk-detail-name">' + esc(b.worker_name || 'Worker') + (b.worker_verified ? ' <i class="fas fa-badge-check" style="color:#16A34A;font-size:14px;"></i>' : '') + '</div>' +
           (b.worker_rating != null && b.worker_rating > 0 ? '<div class="wrk-rating" style="margin-top:4px;">' + starsHTML(b.worker_rating) + ' ' + b.worker_rating + '</div>' : '') +
-          '<div style="margin-top:6px;"><span class="wrk-badge ' + status + '">' + esc(status.replace(/_/g, ' ')) + '</span> <span class="wrk-badge ' + pay + '">Pay: ' + esc(pay) + '</span></div>' +
+          (b.worker_village ? '<div style="margin-top:4px;font-size:11.5px;color:var(--text-muted);"><i class="fas fa-map-marker-alt"></i> ' + esc(b.worker_village) + (b.worker_district ? ', ' + esc(b.worker_district) : '') + '</div>' : '') +
+          '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;"><span class="wrk-badge ' + status + '">' + esc(statusLabel(status)) + '</span> <span class="wrk-badge ' + (pay === 'completed' ? 'paid' : (pay === 'refunded' ? 'refunded' : 'unpaid')) + '">Pay: ' + esc(pay) + '</span></div>' +
         '</div>' +
       '</div>' +
       '<div class="wrk-section"><h4><i class="fas fa-file-alt"></i> Booking Information</h4>' +
         '<div class="wrk-summary" style="margin:0;">' +
           '<div class="line"><span>Booking ID</span><span>' + esc(b.booking_id) + '</span></div>' +
+          '<div class="line"><span>Worker Phone</span><span>' + (b.worker_phone ? '<a href="tel:' + encodeURIComponent(b.worker_phone) + '" style="color:var(--wrk);font-weight:600;">' + esc(b.worker_phone) + '</a>' : '—') + '</span></div>' +
           '<div class="line"><span>Farm</span><span>' + esc(b.farm_name || '—') + '</span></div>' +
           '<div class="line"><span>Plot</span><span>' + esc(b.plot_name || '—') + '</span></div>' +
           '<div class="line"><span>Work Type</span><span>' + esc(b.work_type || '—') + '</span></div>' +
@@ -1415,7 +1513,9 @@
         '</div>' +
       '</div>' +
       (b.notes ? '<div class="wrk-section"><h4><i class="fas fa-sticky-note"></i> Notes</h4><p style="font-size:12.5px;color:var(--text-secondary);line-height:1.6;">' + esc(b.notes) + '</p></div>' : '') +
-      '<div style="display:flex;gap:10px;margin-top:4px;">' +
+      flagHtml +
+      historyHtml +
+      '<div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">' +
         '<button class="wrk-btn wrk-btn-ghost" style="flex:1;background:var(--wrk-bg);color:var(--wrk-dark);border:none;" onclick="WorkersApp.closeBDetail()">Close</button>' +
         actions +
       '</div>';
@@ -1440,7 +1540,7 @@
   }
 
   function doCancel(id) {
-    API.Worker.updateBooking(id, { status: 'cancelled' }).then(function () {
+    API.Worker.updateBooking(id, { status: 'cancelled', cancel_reason: null }).then(function () {
       toast('Booking cancelled successfully.', 'success');
       loadBookings();
       refreshBookingCount();
@@ -1448,6 +1548,42 @@
     }).catch(function (err) {
       toast(errMsg(err, 'Unable to cancel the booking.'), 'error');
     });
+  }
+
+  function startJob(id) {
+    API.Worker.updateBooking(id, { status: 'in_progress' }).then(function () {
+      toast('Work started on this booking.', 'success');
+      closeBDetail();
+      loadBookings();
+      refreshBookingCount();
+      refreshNotifBadge();
+    }).catch(function (err) {
+      toast(errMsg(err, 'Unable to start the job.'), 'error');
+    });
+  }
+
+  function markBookingCompleted(id) {
+    API.Worker.updateBooking(id, { status: 'completed' }).then(function () {
+      toast('Booking marked as completed. You can now review the worker.', 'success');
+      closeBDetail();
+      loadBookings();
+      refreshBookingCount();
+      refreshNotifBadge();
+    }).catch(function (err) {
+      toast(errMsg(err, 'Unable to mark the booking as completed.'), 'error');
+    });
+  }
+
+  function rebookWorker(workerId) {
+    closeBDetail();
+    switchTab('explore');
+    startBooking(workerId);
+  }
+
+  function contactWorker(bookingId) {
+    var b = (bookings.items || []).filter(function (x) { return x.booking_id === bookingId; })[0];
+    if (!b || !b.worker_phone) { toast('No phone number available for this worker.', 'error'); return; }
+    window.location.href = 'tel:' + encodeURIComponent(String(b.worker_phone));
   }
 
   // ---------- Review ----------
@@ -1628,6 +1764,10 @@
     viewBooking: viewBooking,
     cancelBooking: cancelBooking,
     cancelBookingFromDetail: cancelBookingFromDetail,
+    startJob: startJob,
+    markBookingCompleted: markBookingCompleted,
+    rebookWorker: rebookWorker,
+    contactWorker: contactWorker,
     openReview: openReview,
     submitReview: submitReview,
     onFarmChange: onFarmChange,

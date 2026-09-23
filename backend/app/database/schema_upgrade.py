@@ -213,6 +213,14 @@ ADDITIVE_COLUMNS = {
         ("region", "VARCHAR(120)"),
         ("arrival_quantity", "FLOAT"),
     ],
+    "worker_bookings": [
+        ("started_at", "DATETIME"),
+        ("completed_at", "DATETIME"),
+        ("cancelled_at", "DATETIME"),
+        ("cancelled_by", "VARCHAR(30)"),
+        ("cancel_reason", "TEXT"),
+        ("missed_at", "DATETIME"),
+    ],
 }
 
 

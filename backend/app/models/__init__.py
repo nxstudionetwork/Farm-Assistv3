@@ -12,6 +12,7 @@ from app.models.finance import Transaction, Expense, Income, Budget, Loan
 from app.models.service import ServiceRequest, AgriculturalService
 from app.models.worker import (
     Worker, WorkerAvailability, WorkerBooking, WorkerPayment, WorkerReview,
+    WorkerBookingStatusHistory,
     Equipment, EquipmentBooking
 )
 from app.models.marketplace import (
@@ -84,6 +85,7 @@ __all__ = [
     "Transaction", "Expense", "Income", "Budget", "Loan",
     "ServiceRequest",
     "Worker", "WorkerAvailability", "WorkerBooking", "WorkerPayment", "WorkerReview",
+    "WorkerBookingStatusHistory",
     "Equipment", "EquipmentBooking",
     "ProductCategory", "Seller", "Product", "MarketplaceCart", "MarketplaceCartItem", "MarketplaceWishlist", "MarketplaceOrder", "OrderItem",
     "Payment", "DeliveryTracking", "EquipmentMetadata", "FarmerRecentlyViewed",

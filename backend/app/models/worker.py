@@ -68,12 +68,24 @@ class WorkerBooking(Base):
     total_cost = Column(Float, nullable=True)
     status = Column(String(20), default="pending")
     notes = Column(Text, nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    cancelled_by = Column(String(30), nullable=True)
+    cancel_reason = Column(Text, nullable=True)
+    missed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     farmer = relationship("User", foreign_keys=[farmer_id], back_populates="worker_bookings_made")
     worker = relationship("Worker", back_populates="bookings")
     farm = relationship("Farm", back_populates="worker_bookings")
+    status_history = relationship(
+        "WorkerBookingStatusHistory",
+        back_populates="booking",
+        cascade="all, delete-orphan",
+        order_by="WorkerBookingStatusHistory.created_at",
+    )
 
 
 class WorkerPayment(Base):
@@ -98,6 +110,27 @@ class WorkerReview(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     worker = relationship("Worker", back_populates="reviews")
+
+
+class WorkerBookingStatusHistory(Base):
+    """Immutable audit trail of every worker-booking status change.
+
+    Kept deliberately small and append-only so the current status and the
+    reason/author behind it are always explainable (Missed vs Cancelled vs
+    Completed, who did it, and when).
+    """
+
+    __tablename__ = "worker_booking_status_history"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    booking_id = Column(String(36), ForeignKey("worker_bookings.id"), nullable=False, index=True)
+    previous_status = Column(String(20), nullable=True)
+    new_status = Column(String(20), nullable=False)
+    note = Column(Text, nullable=True)
+    changed_by = Column(String(30), default="farmer")  # farmer | worker | system
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    booking = relationship("WorkerBooking", back_populates="status_history")
 
 
 class Equipment(Base):

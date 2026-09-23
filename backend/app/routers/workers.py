@@ -15,6 +15,12 @@ from app.models.worker import (
     Equipment, EquipmentBooking
 )
 from app.models.wallet import Wallet, WalletTransaction
+from app.services.worker_booking_service import (
+    apply_status_transition,
+    record_status_history,
+    run_overdue_sweep,
+    now_utc,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["Workers & Equipment"])
 
@@ -36,6 +42,7 @@ class WorkerBookingCreate(BaseModel):
 class WorkerBookingUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
+    cancel_reason: Optional[str] = None
 
 
 class WorkerReviewCreate(BaseModel):
@@ -95,16 +102,19 @@ def _serialize_worker(w):
     }
 
 
-def _serialize_booking(b, worker=None, farm=None, plot=None, payment=None):
+def _serialize_booking(b, worker=None, farm=None, plot=None, payment=None, include_history=False):
     return {
         "id": b.id,
         "booking_id": b.booking_id,
         "worker_id": b.worker_id,
         "worker_name": worker.full_name if worker else None,
+        "worker_phone": worker.phone_number if worker else None,
         "worker_rating": worker.rating if worker else None,
         "worker_verified": worker.is_verified if worker else None,
         "worker_image": worker.profile_image if worker else None,
         "worker_skills": worker.skills if worker else None,
+        "worker_village": worker.village if worker else None,
+        "worker_district": worker.district if worker else None,
         "farm_id": b.farm_id,
         "farm_name": farm.farm_name if farm else None,
         "plot_id": b.plot_id,
@@ -120,6 +130,23 @@ def _serialize_booking(b, worker=None, farm=None, plot=None, payment=None):
         "payment_status": payment.status if payment else "unpaid",
         "payment_amount": payment.amount if payment else None,
         "notes": b.notes,
+        "started_at": str(b.started_at) if b.started_at else None,
+        "completed_at": str(b.completed_at) if b.completed_at else None,
+        "cancelled_at": str(b.cancelled_at) if b.cancelled_at else None,
+        "cancelled_by": b.cancelled_by,
+        "cancel_reason": b.cancel_reason,
+        "missed_at": str(b.missed_at) if b.missed_at else None,
+        "status_history": [
+            {
+                "id": h.id,
+                "previous_status": h.previous_status,
+                "new_status": h.new_status,
+                "note": h.note,
+                "changed_by": h.changed_by,
+                "created_at": str(h.created_at) if h.created_at else None,
+            }
+            for h in (b.status_history or [])
+        ] if include_history else None,
         "created_at": str(b.created_at) if b.created_at else None,
         "updated_at": str(b.updated_at) if b.updated_at else None,
     }
@@ -596,6 +623,15 @@ def create_worker_booking(
             paid = True
             booking.status = "confirmed"
 
+        record_status_history(
+            db,
+            booking,
+            new_status=booking.status,
+            previous_status=None,
+            note="Booking created.",
+            changed_by="farmer",
+        )
+
         create_notification(
             db=db,
             user_id=current_user.id,
@@ -644,8 +680,11 @@ def list_worker_bookings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    run_overdue_sweep(db)
     q = db.query(WorkerBooking).filter(WorkerBooking.farmer_id == current_user.id)
-    if status:
+    if status == "upcoming":
+        q = q.filter(WorkerBooking.status.in_(["pending", "confirmed"]))
+    elif status:
         q = q.filter(WorkerBooking.status == status)
 
     total = q.count()
@@ -677,6 +716,7 @@ def get_worker_booking(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    run_overdue_sweep(db)
     booking = db.query(WorkerBooking).filter(
         WorkerBooking.booking_id == booking_id,
         WorkerBooking.farmer_id == current_user.id,
@@ -691,7 +731,7 @@ def get_worker_booking(
 
     return {
         "status": "success",
-        "data": _serialize_booking(booking, worker=worker, farm=farm, plot=plot, payment=payment),
+        "data": _serialize_booking(booking, worker=worker, farm=farm, plot=plot, payment=payment, include_history=True),
     }
 
 
@@ -702,6 +742,7 @@ def update_worker_booking(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    run_overdue_sweep(db)
     booking = db.query(WorkerBooking).filter(
         WorkerBooking.booking_id == booking_id,
         WorkerBooking.farmer_id == current_user.id,
@@ -710,90 +751,74 @@ def update_worker_booking(
         raise HTTPException(status_code=404, detail="Booking not found")
 
     if payload.status:
+        requested = payload.status
         valid = ["pending", "confirmed", "in_progress", "completed", "cancelled"]
-        if payload.status not in valid:
-            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(valid)}")
-
-        if payload.status == "cancelled" and booking.status in ["pending", "confirmed", "in_progress"]:
-            payment = db.query(WorkerPayment).filter(
-                WorkerPayment.booking_id == booking.id,
-                WorkerPayment.status == "completed",
-            ).first()
-            refund_amount = 0.0
-            if payment:
-                wallet = _get_wallet(db, current_user.id)
-                if wallet:
-                    refund_amount = round(float(payment.amount or 0), 2)
-                    current_balance = round(float(wallet.balance or 0), 2)
-                    new_balance = round(current_balance + refund_amount, 2)
-                    txn = WalletTransaction(
-                        transaction_id=generate_id("FA-WTX", db, WalletTransaction),
-                        wallet_id=wallet.id,
-                        user_id=current_user.id,
-                        transaction_type="credit",
-                        amount=refund_amount,
-                        balance_after=new_balance,
-                        description=f"Refund for cancelled booking {booking_id}",
-                        reference_id=booking_id,
-                        payment_method="wallet",
-                        status="completed",
-                    )
-                    db.add(txn)
-                    wallet.balance = new_balance
-                    payment.status = "refunded"
-                else:
-                    refund_amount = 0.0
-
-            booking.status = "cancelled"
-            create_notification(
-                db=db,
-                user_id=current_user.id,
-                title="Booking Cancelled",
-                message=f"Booking {booking_id} has been cancelled."
-                + (f" ₹{refund_amount:,.2f} has been refunded to your wallet." if refund_amount > 0 else ""),
-                notification_type="task",
-                reference_id=booking.id,
-                reference_type="worker_booking",
-                icon="fa-calendar-times",
-                action_url="workers.html",
-            )
-        elif payload.status == "confirmed" and booking.status == "pending":
-            booking.status = "confirmed"
-            create_notification(
-                db=db,
-                user_id=current_user.id,
-                title="Booking Confirmed",
-                message=f"Booking {booking_id} has been confirmed.",
-                notification_type="task",
-                reference_id=booking.id,
-                reference_type="worker_booking",
-                icon="fa-calendar-check",
-                action_url="workers.html",
-            )
-        elif payload.status == "in_progress" and booking.status == "confirmed":
-            booking.status = "in_progress"
-        elif payload.status == "completed" and booking.status == "in_progress":
-            booking.status = "completed"
-            create_notification(
-                db=db,
-                user_id=current_user.id,
-                title="Booking Completed",
-                message=f"Booking {booking_id} has been completed. You can now leave a review.",
-                notification_type="task",
-                reference_id=booking.id,
-                reference_type="worker_booking",
-                icon="fa-check-circle",
-                action_url="workers.html",
-            )
-        else:
+        if requested not in valid:
             raise HTTPException(
                 status_code=400,
-                detail=f"Cannot change status from '{booking.status}' to '{payload.status}'",
+                detail=f"Invalid status. Must be one of: {', '.join(valid)}",
             )
+
+        try:
+            if requested == "cancelled":
+                payment = db.query(WorkerPayment).filter(
+                    WorkerPayment.booking_id == booking.id,
+                    WorkerPayment.status == "completed",
+                ).first()
+                refund_amount = 0.0
+                if payment:
+                    wallet = _get_wallet(db, current_user.id)
+                    if wallet:
+                        refund_amount = round(float(payment.amount or 0), 2)
+                        current_balance = round(float(wallet.balance or 0), 2)
+                        new_balance = round(current_balance + refund_amount, 2)
+                        txn = WalletTransaction(
+                            transaction_id=generate_id("FA-WTX", db, WalletTransaction),
+                            wallet_id=wallet.id,
+                            user_id=current_user.id,
+                            transaction_type="credit",
+                            amount=refund_amount,
+                            balance_after=new_balance,
+                            description=f"Refund for cancelled booking {booking_id}",
+                            reference_id=booking_id,
+                            payment_method="wallet",
+                            status="completed",
+                        )
+                        db.add(txn)
+                        wallet.balance = new_balance
+                        payment.status = "refunded"
+
+                cancel_msg = f"Booking {booking_id} has been cancelled."
+                if refund_amount > 0:
+                    cancel_msg += f" ₹{refund_amount:,.2f} has been refunded to your wallet."
+                apply_status_transition(
+                    db,
+                    booking,
+                    "cancelled",
+                    changed_by="farmer",
+                    cancel_reason=payload.cancel_reason,
+                    notification_message=cancel_msg,
+                )
+            elif requested == "confirmed":
+                apply_status_transition(db, booking, "confirmed", changed_by="farmer")
+            elif requested == "in_progress":
+                apply_status_transition(db, booking, "in_progress", changed_by="farmer")
+            elif requested == "completed":
+                # Recovering a wrongly auto-missed booking happens here.
+                apply_status_transition(
+                    db,
+                    booking,
+                    "completed",
+                    changed_by="farmer",
+                    note="The work was completed.",
+                )
+        except ValueError as exc:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=str(exc))
 
     if payload.notes is not None:
         booking.notes = payload.notes
-    booking.updated_at = datetime.utcnow()
+    booking.updated_at = now_utc()
     db.commit()
     db.refresh(booking)
 
@@ -910,3 +935,16 @@ def book_equipment(
             "message": "Equipment booked successfully",
         },
     }
+
+
+@router.on_event("startup")
+async def _start_worker_booking_scheduler():
+    """Keep overdue worker bookings consistent (Missed, never Cancelled).
+
+    Registered on this router so it needs no change to ``app.main``; the
+    backend remains the source of truth even while the loop is idling
+    (booking reads also run the overdue sweep).
+    """
+    from app.worker_booking_scheduler import start_worker_booking_scheduler
+
+    start_worker_booking_scheduler()
