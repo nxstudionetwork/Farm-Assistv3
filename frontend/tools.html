@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="api-base-url" content="/api/v1">
+  <script>window._API_BASE_URL = '/api/v1';</script>
   <title>Farm Assist - Tools & Equipment Marketplace</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
@@ -88,12 +90,6 @@
       margin: 0;
     }
 
-    .te-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
     .te-action-btn {
       position: relative;
       width: 44px;
@@ -137,13 +133,14 @@
     .te-mode-tabs {
       display: flex;
       gap: 10px;
-      margin-top: 20px;
+      margin-top: 0;
+      margin-bottom: 18px;
     }
 
     .te-mode-btn {
-      background: rgba(255, 255, 255, 0.16);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      color: #ffffff;
+      background: #ffffff;
+      border: 1px solid var(--te-border-green);
+      color: var(--te-dark-green);
       padding: 9px 20px;
       border-radius: 999px;
       font-size: 14px;
@@ -155,23 +152,27 @@
       transition: all 0.2s ease;
     }
 
+    .te-mode-btn:hover {
+      border-color: var(--te-primary-green);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    }
+
     .te-mode-btn.active {
-      background: #ffffff;
-      color: var(--te-dark-green);
-      border-color: #ffffff;
+      background: var(--te-primary-green);
+      color: #ffffff;
+      border-color: var(--te-primary-green);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     /* Search Bar */
     .te-search-bar {
-      margin-top: 18px;
       background: #ffffff;
       border-radius: 14px;
       display: flex;
       align-items: center;
       padding: 0 16px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.4);
+      border: 1px solid var(--te-border-green);
     }
 
     .te-search-bar i {
@@ -1192,13 +1193,15 @@
       from { opacity: 0; transform: translateY(12px); }
       to { opacity: 1; transform: translateY(0); }
     }
-<style>
-    /* Farm Assist Tools & Equipment - Extended components (booked/activity/listings) */
+/* Farm Assist Tools & Equipment - Extended components (booked/activity/listings) */
+    .te-quick-section {
+      margin-bottom: 18px;
+    }
+
     .te-quick-row {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-top: 18px;
       overflow-x: auto;
       padding-bottom: 4px;
       scrollbar-width: thin;
@@ -1210,21 +1213,22 @@
       gap: 8px;
       background: #ffffff;
       color: var(--te-dark-green);
-      border: 1px solid rgba(255, 255, 255, 0.6);
+      border: 1px solid var(--te-border-green);
       border-radius: 999px;
       padding: 9px 16px;
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
       transition: all 0.2s ease;
       flex-shrink: 0;
     }
 
     .te-quick-chip:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+      border-color: var(--te-primary-green);
     }
 
     .te-quick-chip i {
@@ -1593,10 +1597,24 @@
       line-height: 1.5;
     }
 
+    .te-day-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 4px 10px;
+    }
+
+    .te-day-ok { background: #e6f4e9; color: #1e7d3b; }
+    .te-day-no { background: #fdecea; color: #b3261e; }
+
     @media (max-width: 640px) {
       .te-form-grid { grid-template-columns: 1fr; }
-      .te-header-actions { display: none; }
-      .te-quick-row { margin-top: 14px; }
+      .te-quick-row { margin-top: 10px; }
+      .te-chip-label { display: none; }
+      .te-quick-chip { padding: 10px 13px; }
     }
   </style>
 </head>
@@ -1610,83 +1628,66 @@
     <div class="te-hero-top">
       <div class="te-title-wrap">
         <h1><i class="fas fa-toolbox"></i> TOOLS & EQUIPMENT</h1>
-        <p>Reliable agricultural tools, equipment, and machinery for everyday farm work.</p>
-      </div>
-      <div class="te-header-actions">
-        <button class="te-action-btn" id="btnOpenBooked" title="My Bookings" aria-label="Rental bookings">
-          <i class="fas fa-calendar-check"></i>
-          <span class="te-badge-count" id="bookedBadgeCount" style="display:none;">0</span>
-        </button>
-        <button class="te-action-btn" id="btnOpenActivity" title="Activity" aria-label="Recent activity">
-          <i class="fas fa-clock-rotate-left"></i>
-        </button>
-        <button class="te-action-btn" id="btnOpenSaved" title="Saved Wishlist" aria-label="Saved equipment">
-          <i class="fa-regular fa-heart"></i>
-          <span class="te-badge-count" id="wishBadgeCount" style="display:none;">0</span>
-        </button>
-        <button class="te-action-btn" id="btnOpenOrders" title="My Orders" aria-label="Orders history">
-          <i class="fas fa-box"></i>
-        </button>
-        <button class="te-action-btn" id="btnOpenCart" title="Cart" aria-label="View Cart">
-          <i class="fas fa-shopping-cart"></i>
-          <span class="te-badge-count" id="cartBadgeCount" style="display:none;">0</span>
-        </button>
+        <p>Find the right agricultural tools and equipment to rent or buy for your farm operations.</p>
       </div>
     </div>
+  </section>
 
-    <!-- Mode Switcher: All / Rent / Buy (default = All, mixed catalogue) -->
-    <div class="te-mode-tabs" id="modeTabs">
-      <button class="te-mode-btn active" data-mode="all" id="modeAllBtn">
-        <i class="fas fa-layer-group"></i> All Equipment
-      </button>
-      <button class="te-mode-btn" data-mode="buy" id="modeBuyBtn">
-        <i class="fas fa-shopping-bag"></i> Buy Tools & Equipment
-      </button>
-      <button class="te-mode-btn" data-mode="rent" id="modeRentBtn">
-        <i class="fas fa-calendar-alt"></i> Rent Farm Machinery
-      </button>
-    </div>
-
-    <!-- Quick actions row -->
-    <div class="te-quick-row" aria-label="Quick actions">
+  <!-- QUICK ACTIONS -->
+  <section class="te-quick-section" aria-label="Quick actions">
+    <div class="te-quick-row">
       <button class="te-quick-chip" id="btnQuickCart" title="Your Cart">
-        <i class="fas fa-shopping-cart"></i> Cart
+        <i class="fas fa-shopping-cart"></i> <span class="te-chip-label">Cart</span>
         <span class="te-badge-count" id="quickCartCount" style="display:none;">0</span>
       </button>
       <button class="te-quick-chip" id="btnQuickBooked" title="Rental bookings">
-        <i class="fas fa-calendar-check"></i> Booked
+        <i class="fas fa-calendar-check"></i> <span class="te-chip-label">Booked</span>
         <span class="te-badge-count" id="quickBookedCount" style="display:none;">0</span>
       </button>
       <button class="te-quick-chip" id="btnQuickOrders" title="Orders history">
-        <i class="fas fa-box"></i> Orders
+        <i class="fas fa-box"></i> <span class="te-chip-label">Orders</span>
       </button>
       <button class="te-quick-chip" id="btnQuickSaved" title="Saved equipment">
-        <i class="fa-regular fa-heart"></i> Saved
+        <i class="fa-regular fa-heart"></i> <span class="te-chip-label">Saved</span>
         <span class="te-badge-count" id="quickWishCount" style="display:none;">0</span>
       </button>
       <button class="te-quick-chip" id="btnQuickActivity" title="Recent activity">
-        <i class="fas fa-clock-rotate-left"></i> Activity
+        <i class="fas fa-clock-rotate-left"></i> <span class="te-chip-label">Activity</span>
       </button>
       <button class="te-quick-chip" id="btnQuickMyListings" title="My Listings">
-        <i class="fas fa-store"></i> My Listings
-      </button>
-    </div>
-
-    <!-- Search + Filter Toolbar -->
-    <div class="te-toolbar">
-      <div class="te-search-bar">
-        <i class="fas fa-search"></i>
-        <input type="search" id="teSearchInput" placeholder="Search tractors, power tillers, sprayers, cultivators, seed drills, pumps..." aria-label="Search tools and equipment">
-        <button type="button" class="te-search-clear" id="btnClearSearch" title="Clear search" aria-label="Clear search" style="display:none;">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <button type="button" class="te-filter-toggle" id="btnToggleFilters" aria-label="Toggle filters panel">
-        <i class="fas fa-sliders-h"></i> Filters
-        <span class="te-badge-count" id="filterCountBadge" style="display:none;">0</span>
+        <i class="fas fa-store"></i> <span class="te-chip-label">My Listings</span>
+        <span class="te-badge-count" id="quickListingsCount" style="display:none;">0</span>
       </button>
     </div>
   </section>
+
+  <!-- MODE SELECTION: All / Rent / Buy -->
+  <div class="te-mode-tabs" id="modeTabs" aria-label="Browse mode">
+    <button class="te-mode-btn active" data-mode="all" id="modeAllBtn">
+      <i class="fas fa-layer-group"></i> All Equipment
+    </button>
+    <button class="te-mode-btn" data-mode="buy" id="modeBuyBtn">
+      <i class="fas fa-shopping-bag"></i> Buy Tools & Equipment
+    </button>
+    <button class="te-mode-btn" data-mode="rent" id="modeRentBtn">
+      <i class="fas fa-calendar-alt"></i> Rent Farm Machinery
+    </button>
+  </div>
+
+  <!-- Search + Filter Toolbar -->
+  <div class="te-toolbar">
+    <div class="te-search-bar">
+      <i class="fas fa-search"></i>
+      <input type="search" id="teSearchInput" placeholder="Search tractors, power tillers, sprayers, cultivators, seed drills, pumps..." aria-label="Search tools and equipment">
+      <button type="button" class="te-search-clear" id="btnClearSearch" title="Clear search" aria-label="Clear search" style="display:none;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <button type="button" class="te-filter-toggle" id="btnToggleFilters" aria-label="Toggle filters panel">
+      <i class="fas fa-sliders-h"></i> Filters
+      <span class="te-badge-count" id="filterCountBadge" style="display:none;">0</span>
+    </button>
+  </div>
 
   <!-- HORIZONTAL CATEGORY NAVIGATION -->
   <nav class="te-categories-bar" id="categoryBar" aria-label="Equipment Categories">
@@ -2571,7 +2572,7 @@
     return '<article class="te-card" data-id="' + esc(p.id) + '">' +
       '<div class="te-card-img-wrap">' +
         imgHtml +
-        (isNew ? '<span class="te-new-badge"><i class="fas fa-sparkles"></i> NEW</span>' : '') +
+        (isNew ? '<span class="te-new-badge"><i class="fas fa-star"></i> NEW</span>' : '') +
         '<button class="te-wish-btn ' + (isWish ? 'saved' : '') + '" data-wish="' + esc(p.id) + '" aria-label="Save to Wishlist">' +
           '<i class="' + (isWish ? 'fas' : 'far') + ' fa-heart"></i>' +
         '</button>' +
@@ -2636,7 +2637,7 @@
     return '<article class="te-card" data-id="' + esc(r.id) + '">' +
       '<div class="te-card-img-wrap">' +
         imgHtml +
-        (r.recently_added ? '<span class="te-new-badge"><i class="fas fa-sparkles"></i> NEW</span>' : '') +
+        (r.recently_added ? '<span class="te-new-badge"><i class="fas fa-star"></i> NEW</span>' : '') +
         '<span class="te-avail-tag ' + statusClass + '"><i class="fas fa-circle"></i> ' + esc(statusLabel) + '</span>' +
       '</div>' +
       '<div class="te-card-body">' +
@@ -2707,7 +2708,9 @@
 
     grid.innerHTML = reset ? html : grid.innerHTML + html;
 
-    var totalText = items.length + ' equipment item' + (items.length > 1 ? 's' : '');
+    var shown = items.length;
+    var total = state.totalCount > shown ? state.totalCount : shown;
+    var totalText = total + ' equipment item' + (total !== 1 ? 's' : '') + (state.totalCount > shown ? ' (showing ' + shown + ')' : '');
     if (countLabel) countLabel.textContent = totalText;
     if (mobileCount) mobileCount.textContent = totalText;
 
@@ -2735,7 +2738,7 @@
         : '';
       return '<div class="te-rec-card" data-detail="' + esc(p.id) + '">' +
         imgHtml +
-        '<span class="te-rec-badge"><i class="fas fa-sparkles"></i> ' + esc(p.recommendation_reason || 'Recommended') + '</span>' +
+        '<span class="te-rec-badge"><i class="fas fa-star"></i> ' + esc(p.recommendation_reason || 'Recommended') + '</span>' +
         '<div style="font-size:13px;font-weight:700;color:#1e3526;line-height:1.3;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(p.name) + '</div>' +
         '<div style="font-size:15px;font-weight:800;color:var(--te-dark-green);margin-bottom:8px;">' + rupees(p.price) + '</div>' +
         '<button class="te-btn-cart" data-add="' + esc(p.id) + '" style="width:100%;"><i class="fas fa-cart-plus"></i> Add to Cart</button>' +
@@ -2901,7 +2904,7 @@
             '<button class="te-wish-btn ' + (isWish ? 'saved' : '') + '" data-wish="' + esc(p.id) + '" style="position:static;width:44px;height:44px;border-radius:10px;border:1px solid var(--te-border-green);" aria-label="Save to Wishlist" title="Save">' +
               '<i class="' + (isWish ? 'fas' : 'far') + ' fa-heart"></i>' +
             '</button>' +
-            '<button class="te-wish-btn te-share-btn" onclick="window.shareThis(\'' + esc(p.name) + '\')" style="position:static;width:44px;height:44px;border-radius:10px;" aria-label="Share equipment" title="Share">' +
+            '<button class="te-wish-btn te-share-btn" onclick="window.shareThis(\'' + esc(p.name) + '\', \'' + esc(p.id) + '\')" style="position:static;width:44px;height:44px;border-radius:10px;" aria-label="Share equipment" title="Share">' +
               '<i class="fas fa-share-nodes"></i>' +
             '</button>' +
           '</div>' +
@@ -2920,6 +2923,7 @@
 
       // Refresh recently viewed after view
       loadRecentlyViewed();
+      API.Equipment.recordView(p.id).catch(function () {});
     }).catch(function () {
       toast('Could not load equipment details.');
     });
@@ -2964,8 +2968,9 @@
     });
   }
 
-  window.shareThis = function (name) {
-    var url = window.location.href.split('#')[0] + '#tools-equipment';
+  window.shareThis = function (name, id) {
+    var base = window.location.href.split('#')[0];
+    var url = base + (id ? '#item=' + encodeURIComponent(id) : '#tools');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(function () {
         toast('Link to ' + name + ' copied — share with other farmers!');
@@ -3013,8 +3018,55 @@
         : 'This item shows live availability. Dates already booked by other farmers are blocked automatically.') +
       '</div>';
 
+    refreshRentalAvailability();
     updateRentalTotal();
     toggleModal('rentalBookingModal', true);
+  }
+
+  function refreshRentalAvailability() {
+    var id = document.getElementById('rbEquipId').value;
+    if (!id) return;
+    var days = parseInt(document.getElementById('rbDays').value, 10) || 1;
+    var dateEl = document.getElementById('rbDate');
+    var startDate = dateEl ? dateEl.value : '';
+    if (!startDate) return;
+
+    var availBox = document.getElementById('rentalModalAvail');
+    var confirmBtn = document.getElementById('btnConfirmRental');
+    if (availBox) {
+      availBox.innerHTML = '<div class="te-rent-desc"><i class="fas fa-spinner fa-spin"></i>&nbsp; Checking live availability…</div>';
+    }
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    API.Equipment.getRentalAvailability(id, { start_date: startDate, days: days }).then(function (res) {
+      var data = (res && res.data) || res;
+      var perDay = (data && data.per_day) || [];
+      if (!perDay.length || !availBox) {
+        if (confirmBtn) confirmBtn.disabled = false;
+        return;
+      }
+      var blocked = perDay.filter(function (d) { return !d.available; });
+      var chips = perDay.map(function (d) {
+        var can = d.available;
+        var label = new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        return '<span class="te-day-chip ' + (can ? 'te-day-ok' : 'te-day-no') + '" title="' + esc(d.date) + '">' +
+          label + ' <i class="fas fa-' + (can ? 'check-circle' : 'times-circle') + '"></i></span>';
+      }).join('');
+      availBox.innerHTML =
+        '<div style="font-size:11px;font-weight:800;color:var(--te-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Live Availability</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>' +
+        (blocked.length
+          ? '<div class="te-rent-desc" style="margin-top:8px;"><i class="fas fa-circle-info"></i>&nbsp; ' + blocked.length + ' of ' + perDay.length + ' selected day(s) are already booked.</div>'
+          : '');
+      if (confirmBtn) confirmBtn.disabled = blocked.length > 0;
+    }).catch(function (err) {
+      if (availBox) {
+        availBox.innerHTML = '<div class="te-rent-desc" style="color:#b3261e;"><i class="fas fa-circle-exclamation"></i>&nbsp; ' +
+          esc((err && err.message) || 'Could not check availability.') +
+          ' <span style="color:#3d5644;">(You can still try booking — the server will reject conflicts.)</span></div>';
+      }
+      if (confirmBtn) confirmBtn.disabled = false;
+    });
   }
 
   function updateRentalTotal() {
@@ -3104,7 +3156,7 @@
             '<button class="te-btn-cart" style="flex:1;padding:12px;" data-rent="' + esc(r.id) + '" ' + (isAvail ? '' : 'disabled') + '>' +
               '<i class="fas fa-calendar-check"></i> Book for Rent' +
             '</button>' +
-            '<button class="te-wish-btn te-share-btn" onclick="window.shareThis(\'' + esc(r.name) + '\')" style="position:static;width:44px;height:44px;border-radius:10px;" aria-label="Share equipment" title="Share">' +
+            '<button class="te-wish-btn te-share-btn" onclick="window.shareThis(\'' + esc(r.name) + '\', \'' + esc(r.id) + '\')" style="position:static;width:44px;height:44px;border-radius:10px;" aria-label="Share equipment" title="Share">' +
               '<i class="fas fa-share-nodes"></i>' +
             '</button>' +
           '</div>' +
@@ -3120,6 +3172,7 @@
       document.getElementById('rentDetailContent').innerHTML = html;
       appendRelated('rent', r.category_slug, r.id);
       toggleModal('rentDetailModal', true);
+      API.Equipment.recordView(r.id).catch(function () {});
 
       var b = document.querySelector('#rentDetailContent [data-rent="' + r.id + '"]');
       if (b) {
@@ -3148,7 +3201,6 @@
 
     API.Equipment.getMyRentals().then(function (res) {
       var bookings = (res && res.data && res.data.items) || (res && res.items) || [];
-      setBadge('bookedBadgeCount', bookings.length);
       setBadge('quickBookedCount', bookings.length);
 
       if (!bookings.length) {
@@ -3535,7 +3587,6 @@
     API.Marketplace.getCart().then(function (res) {
       state.cart = (res && res.data) || res || { items: [], total: 0, count: 0 };
       var cnt = state.cart.count || (state.cart.items ? state.cart.items.length : 0);
-      setBadge('cartBadgeCount', cnt);
       setBadge('quickCartCount', cnt);
     }).catch(function () {
       state.cart = { items: [], total: 0, count: 0 };
@@ -3620,7 +3671,6 @@
 
     API.Marketplace.getWishlist().then(function (res) {
       state.wishlist = (res && res.data && res.data.items) || (res && res.items) || [];
-      setBadge('wishBadgeCount', state.wishlist.length);
       setBadge('quickWishCount', state.wishlist.length);
 
       if (!state.wishlist.length) {
@@ -3696,7 +3746,6 @@
     if (isLoggedIn()) {
       API.Equipment.getMyRentals().then(function (res) {
         var bookings = (res && res.data && res.data.items) || (res && res.items) || [];
-        setBadge('bookedBadgeCount', bookings.length);
         setBadge('quickBookedCount', bookings.length);
       }).catch(function () {});
     }
@@ -3820,9 +3869,7 @@
     document.getElementById('coPhone').value = user.phone_number || '';
     document.getElementById('coTotalAmount').textContent = rupees(total);
 
-    toggleModal('cartDrawer', false);
-    document.getElementById('cartBackdrop').classList.remove('open');
-    document.getElementById('cartDrawer').classList.remove('open');
+    drawerClose('cart');
     updateCheckoutPaymentUI();
     toggleModal('checkoutModal', true);
   }
@@ -4125,25 +4172,13 @@
     if (sidebar) sidebar.classList.remove('mobile-open');
   });
 
-  // Header Drawers Toggle
-  document.getElementById('btnOpenCart').addEventListener('click', function () {
-    refreshCartBadge();
-    renderCartDrawer();
-    drawerOpen('cart');
-  });
-
+  // Header Drawers Toggle (open via quick-action chips below)
   document.getElementById('btnCloseCartDrawer').addEventListener('click', function () {
     drawerClose('cart');
   });
 
   document.getElementById('cartBackdrop').addEventListener('click', function () {
     drawerClose('cart');
-  });
-
-  document.getElementById('btnOpenOrders').addEventListener('click', function () {
-    if (!requireLogin()) return;
-    loadOrders();
-    drawerOpen('orders');
   });
 
   document.getElementById('btnCloseOrdersDrawer').addEventListener('click', function () {
@@ -4154,12 +4189,6 @@
     drawerClose('orders');
   });
 
-  document.getElementById('btnOpenSaved').addEventListener('click', function () {
-    if (!requireLogin()) return;
-    loadWishlist();
-    drawerOpen('wish');
-  });
-
   document.getElementById('btnCloseWishDrawer').addEventListener('click', function () {
     drawerClose('wish');
   });
@@ -4168,13 +4197,7 @@
     drawerClose('wish');
   });
 
-  // Header: Booked Drawer
-  document.getElementById('btnOpenBooked').addEventListener('click', function () {
-    if (!requireLogin()) return;
-    loadBooked();
-    drawerOpen('booked');
-  });
-
+  // Booked Drawer
   document.getElementById('btnCloseBookedDrawer').addEventListener('click', function () {
     drawerClose('booked');
   });
@@ -4183,13 +4206,7 @@
     drawerClose('booked');
   });
 
-  // Header: Activity Drawer
-  document.getElementById('btnOpenActivity').addEventListener('click', function () {
-    if (!requireLogin()) return;
-    loadActivity();
-    drawerOpen('activity');
-  });
-
+  // Activity Drawer
   document.getElementById('btnCloseActivityDrawer').addEventListener('click', function () {
     drawerClose('activity');
   });
@@ -4222,7 +4239,6 @@
   document.getElementById('ltypeBuy').addEventListener('click', function () { setListingTypeTab('buy'); });
   document.getElementById('btnCloseListingModal').addEventListener('click', function () { toggleModal('listingModal', false); });
   document.getElementById('listingForm').addEventListener('submit', submitListing);
-  document.getElementById('btnCloseRentDetailModal').addEventListener('click', function () { toggleModal('rentDetailModal', false); });
 
   // Quick action chips
   document.getElementById('btnQuickCart').addEventListener('click', function () {
@@ -4280,6 +4296,11 @@
       ['detailModal', 'compareModal', 'checkoutModal', 'rentalBookingModal', 'rentDetailModal', 'listingModal', 'reportModal'].forEach(function (id) {
         toggleModal(id, false);
       });
+      ['cart', 'orders', 'wish', 'booked', 'activity', 'listings'].forEach(drawerClose);
+      var sidebar = document.getElementById('filterSidebar');
+      if (sidebar) sidebar.classList.remove('mobile-open');
+      var closeMobile = document.getElementById('btnCloseMobileFilters');
+      if (closeMobile) closeMobile.style.display = 'none';
     }
   });
 
@@ -4361,12 +4382,18 @@
 
       // Clear cart items if bought from cart
       if (!state.directCheckoutItem) {
-        (state.cart.items || []).forEach(function (it) {
-          API.Marketplace.removeCartItem(it.id);
+        var removeJobs = (state.cart.items || []).map(function (it) {
+          return API.Marketplace.removeCartItem(it.id);
         });
+        Promise.all(removeJobs).then(function () {
+          refreshCartBadge();
+        }).catch(function () {
+          refreshCartBadge();
+        });
+      } else {
+        refreshCartBadge();
       }
       state.directCheckoutItem = null;
-      refreshCartBadge();
     }).catch(function (err) {
       var msg = (err && err.message) || 'Order could not be placed.';
       if ((err && err.status === 400) && /insufficient/i.test(msg)) {
@@ -4378,7 +4405,14 @@
   });
 
   // Rental Duration Input Change
-  document.getElementById('rbDays').addEventListener('input', updateRentalTotal);
+  document.getElementById('rbDays').addEventListener('input', function () {
+    updateRentalTotal();
+    refreshRentalAvailability();
+  });
+  document.getElementById('rbDate').addEventListener('input', function () {
+    updateRentalTotal();
+    refreshRentalAvailability();
+  });
 
   // Submit Rental Booking Form
   document.getElementById('rentalBookingForm').addEventListener('submit', function (e) {
@@ -4426,6 +4460,19 @@
 
     // 5. Initial Product Load
     fetchProducts(true);
+
+    // 6. Open shared item (#item=<id>) if present
+    var hash = window.location.hash || '';
+    if (hash.indexOf('#item=') === 0) {
+      var sharedId = decodeURIComponent(hash.slice(6));
+      if (sharedId) {
+        API.Equipment.getProduct(sharedId).then(function () {
+          openDetailModal(sharedId);
+        }).catch(function () {
+          openRentDetailModal(sharedId);
+        });
+      }
+    }
   });
 
 })();
