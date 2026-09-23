@@ -947,6 +947,24 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     setBuyerRecommendation: function (buyerId, recommended) {
       return http('POST', M + '/buyers/' + enc(buyerId) + '/recommend', { recommended: !!recommended }).then(unwrap);
+    },
+    getSettings: function () {
+      return http('GET', M + '/settings').then(unwrap);
+    },
+    saveSettings: function (data) {
+      return http('PUT', M + '/settings', data || {}).then(unwrap);
+    },
+    getInsights: function (params) {
+      return http('GET', M + '/insights' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    getBuyers: function (params) {
+      return http('GET', M + '/buyers' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    getBuyerDetail: function (buyerId) {
+      return http('GET', M + '/buyers/' + enc(buyerId)).then(unwrap);
+    },
+    writeBuyerMessage: function (buyerId, data) {
+      return http('POST', M + '/buyers/' + enc(buyerId) + '/message', data || {}).then(unwrap);
     }
   };
 

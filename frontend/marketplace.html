@@ -409,7 +409,7 @@
     <div class="mp-actions">
       <button class="mp-btn primary" id="quick-add"><i class="fas fa-plus"></i> &nbsp;List New Item</button>
       <button class="mp-btn ghost" id="my-listings-btn" type="button"><i class="fas fa-boxes-stacked"></i> My Listings <span class="tab-count" id="cnt-listings">0</span></button>
-      <button class="mp-btn ghost" id="settings-btn" type="button"><i class="fas fa-gear"></i> Marketplace Settings</button>
+      <button class="mp-btn ghost icon-only" id="settings-btn" type="button" title="Market Settings" aria-label="Market Settings"><i class="fas fa-gear"></i></button>
     </div>
 
     <!-- BACKEND STATUS BANNER -->
@@ -469,6 +469,59 @@
 
   </div>
 
+  <div class="mp-sheet-bg" id="settings-bg"></div>
+  <aside class="mp-sheet bottom" id="settings-sheet" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="mp-sheet-head">
+      <h3><i class="fas fa-gear" style="color:var(--mp-green)"></i> Market Settings</h3>
+      <button type="button" id="settings-sheet-close" aria-label="Close market settings"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="mp-sheet-body">
+      <div class="mp-loading" id="settings-loading">Loading market settings...</div>
+      <div class="mp-error" id="settings-error" style="display:none"><p>Unable to load market settings.</p><button class="mp-btn ghost" id="settings-reload" type="button"><i class="fas fa-rotate-right"></i> Retry</button></div>
+      <form id="settings-form" style="display:none">
+        <div class="mp-settings-field">
+          <label for="set-currency">Currency</label>
+          <select id="set-currency" name="currency">
+            <option value="NGN">NGN (N)</option>
+            <option value="USD">USD ($)</option>
+            <option value="GHS">GHS</option>
+            <option value="KES">KES</option>
+            <option value="ZAR">ZAR (R)</option>
+          </select>
+        </div>
+        <div class="mp-settings-field">
+          <label for="set-location">Farm location</label>
+          <input type="text" id="set-location" name="location" maxlength="120" />
+        </div>
+        <div class="mp-settings-field">
+          <label for="set-phone">Contact phone</label>
+          <input type="tel" id="set-phone" name="contact_phone" maxlength="30" />
+        </div>
+        <div class="mp-settings-field">
+          <label for="set-preference">Payment preference</label>
+          <select id="set-preference" name="payment_preference">
+            <option value="bank_transfer">Bank transfer</option>
+            <option value="mobile_money">Mobile money</option>
+            <option value="cash_on_delivery">Cash on delivery</option>
+          </select>
+        </div>
+        <div class="mp-settings-field">
+          <label for="set-notify">Buyer enquiry alerts</label>
+          <select id="set-notify" name="enquiry_alerts">
+            <option value="email">Email</option>
+            <option value="sms">SMS</option>
+            <option value="in_app">In-app only</option>
+          </select>
+        </div>
+        <div class="mp-settings-acts">
+          <button class="mp-btn ghost" type="button" id="settings-sheet-cancel">Cancel</button>
+          <button class="mp-btn primary" type="submit" id="settings-save"><i class="fas fa-floppy-disk"></i> Save Settings</button>
+        </div>
+      </form>
+      <div class="mp-settings-saved" id="settings-saved" style="display:none"><p><i class="fas fa-circle-check" style="color:#2e9c63"></i> Settings saved.</p></div>
+    </div>
+  </aside>
+
   <script src="js/services.js"></script>
   <script src="js/userStore.js"></script>
   <script src="assets/js/navigation.js"></script>
@@ -476,6 +529,7 @@
   <script>
   (function () {
     'use strict';
+    var SVC = window.MarketplaceSellerService;
 
     function isAuthed() {
       try {
@@ -525,7 +579,101 @@
     wireEntry('entry-sales', 'my-listings.html');
     wireEntry('entry-insights', 'my-listings.html');
 
-    var myListBtn = document.getElementById('my-listings-btn');
+    function settingsWiring() {
+      var openBtn = document.getElementById('settings-btn');
+      var bg = document.getElementById('settings-bg');
+      var sheet = document.getElementById('settings-sheet');
+      if (!openBtn || !sheet) return;
+
+      function openShow() {
+        bg.classList.add('open'); sheet.classList.add('open'); sheet.setAttribute('aria-hidden', 'false');
+      }
+      function hideAll() {
+        bg.classList.remove('open'); sheet.classList.remove('open'); sheet.setAttribute('aria-hidden', 'true');
+      }
+      openBtn.addEventListener('click', function () {
+        openShow();
+        var f = document.getElementById('settings-form');
+        if (f) f.style.display = 'none';
+        var saved = document.getElementById('settings-saved');
+        if (saved) saved.style.display = 'none';
+        var err = document.getElementById('settings-error');
+        if (err) err.style.display = 'none';
+        var load = document.getElementById('settings-loading');
+        if (load) load.style.display = 'block';
+        if (typeof SVC.getSettings === 'function') {
+          SVC.getSettings().then(function (s) {
+            if (load) load.style.display = 'none';
+            s = s || {};
+            var setFx = function (id, v) { var el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; };
+            setFx('set-currency', s.currency || 'NGN');
+            setFx('set-location', s.location || s.farm_location || '');
+            setFx('set-phone', s.contact_phone || s.phone || '');
+            var cur = document.getElementById('set-currency');
+            if (cur && s.currency) cur.value = s.currency;
+            var pref = document.getElementById('set-preference');
+            if (pref && s.payment_preference) pref.value = s.payment_preference;
+            var not = document.getElementById('set-notify');
+            if (not && s.enquiry_alerts) not.value = s.enquiry_alerts;
+            if (f) f.style.display = 'block';
+          }).catch(function () {
+            if (load) load.style.display = 'none';
+            if (err) err.style.display = 'block';
+          });
+        } else {
+          if (load) load.style.display = 'none';
+          if (err) { err.querySelector('p').textContent = 'Settings service is unavailable.'; err.style.display = 'block'; }
+        }
+      });
+
+      var submit = document.getElementById('settings-save');
+      if (submit && submit.closest('form')) submit.closest('form').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var btn = document.getElementById('settings-save');
+        var state = document.getElementById('settings-save-state');
+        if (btn) { btn.disabled = true; var lab = btn.querySelector('i'); if (lab) lab.classList.add('fa-spin'); }
+        if (state) state.textContent = 'Saving...';
+        if (typeof SVC.saveSettings === 'function') {
+          var data = {
+            currency: (document.getElementById('set-currency') || {}).value || 'NGN',
+            farm_location: (document.getElementById('set-location') || {}).value || '',
+            location: (document.getElementById('set-location') || {}).value || '',
+            contact_phone: (document.getElementById('set-phone') || {}).value || '',
+            payment_preference: (document.getElementById('set-preference') || {}).value || '',
+            enquiry_alerts: (document.getElementById('set-notify') || {}).value || ''
+          };
+          SVC.saveSettings(data).then(function () {
+            if (btn) { btn.disabled = false; var lb = btn.querySelector('i'); if (lb) lb.classList.remove('fa-spin'); }
+            if (state) state.textContent = 'Saved OK';
+            var saved = document.getElementById('settings-saved');
+            if (saved) saved.style.display = 'block';
+            if (f) f.style.display = 'none';
+            window.setTimeout(hideAll, 1200);
+          }).catch(function (e) {
+            if (btn) { btn.disabled = false; var le = btn.querySelector('i'); if (le) le.classList.remove('fa-spin'); }
+            if (state) state.textContent = (e && e.message) ? e.message : 'Failed to save';
+            var serr = document.getElementById('settings-error');
+            if (serr) { serr.querySelector('p').textContent = '' + ((e && e.message) || 'Failed to save settings.'); serr.style.display = 'block'; }
+          });
+        } else {
+          if (btn) btn.disabled = false;
+          if (state) state.textContent = 'Service missing';
+        }
+      });
+
+      function bind(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
+      bind('settings-sheet-close', hideAll);
+      bind('settings-cancel', hideAll);
+      bind('settings-reload', function () {
+        var err = document.getElementById('settings-error');
+        if (err) err.style.display = 'none';
+        openBtn.click();
+      });
+      var bgc = document.getElementById('settings-bg');
+      if (bgc) bgc.addEventListener('click', hideAll);
+      document.addEventListener('keydown', function (e) { if (e && e.key === 'Escape' && sheet.classList.contains('open')) hideAll(); });
+    }
+    settingsWiring();
     if (myListBtn) myListBtn.addEventListener('click', function () { window.location.href = 'my-listings.html'; });
     var quickAdd = document.getElementById('quick-add');
     if (quickAdd) quickAdd.addEventListener('click', function () { window.location.href = 'my-listings.html'; });
