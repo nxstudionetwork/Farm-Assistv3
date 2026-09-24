@@ -2586,8 +2586,8 @@
         '</div>' +
         '<h3 class="te-card-title" data-detail="' + esc(p.id) + '">' + esc(p.name) + '</h3>' +
         '<div style="margin:2px 0 4px;">' +
-          (p.source === 'marketplace' && p.seller && p.seller.is_verified ? '<span class="te-verified-badge"><i class="fas fa-badge-check"></i> Verified Seller</span>' : '') +
-          (p.source === 'catalogue' ? '<span class="te-verified-badge" style="background:#eef2e6;color:#586b2d;"><i class="fas fa-warehouse"></i> Farm Assist Catalogue</span>' : '') +
+          (p.catalog === true ? '<span class="te-verified-badge" style="background:#eef2e6;color:#586b2d;"><i class="fas fa-warehouse"></i> Farm Assist Catalogue</span>' : '') +
+          ((p.catalog !== true && p.seller && p.seller.is_verified) ? '<span class="te-verified-badge"><i class="fas fa-badge-check"></i> Verified Seller</span>' : '') +
           (p.condition && p.condition !== 'New' ? '<span class="te-cond-chip">' + esc(p.condition) + '</span>' : '') +
         '</div>' +
         (p.suitable_use ? '<div class="te-card-use-badge"><i class="fas fa-check-circle"></i> Best for: ' + esc(p.suitable_use) + '</div>' : '') +
@@ -2630,8 +2630,8 @@
     var nextAvail = r.next_available_date
       ? '<div style="font-size:11px;color:#c0650e;font-weight:700;margin-top:2px;"><i class="fas fa-circle-info"></i> Free again from ' + esc(r.next_available_date) + '</div>'
       : '';
-    var ownerTag = (r.listing_status && r.listing_status.toLowerCase() === 'active' && r.owner_name)
-      ? '<span class="te-verified-badge" style="margin-left:4px;"><i class="fas fa-user-check"></i> ' + esc(r.owner_name) + '</span>'
+    var ownerTag = (r.listing_status && r.listing_status.toLowerCase() === 'active' && (r.owner_name || r.provider))
+      ? '<span class="te-verified-badge" style="margin-left:4px;"><i class="fas fa-user-check"></i> ' + esc(r.owner_name || r.provider) + '</span>'
       : '<span class="te-verified-badge" style="background:#eef2e6;color:#586b2d;margin-left:4px;"><i class="fas fa-warehouse"></i> Farm Assist Catalogue</span>';
 
     return '<article class="te-card" data-id="' + esc(r.id) + '">' +
@@ -3114,8 +3114,8 @@
         ? '<img src="' + esc(r.image_url) + '" class="te-gallery-main" style="width:100%;height:auto;" alt="' + esc(r.name) + '">'
         : '<div class="te-card-fallback" style="height:200px;"><i class="fas fa-tractor"></i></div>';
 
-      var providerTag = (r.listing_status && r.listing_status.toLowerCase() === 'active' && r.owner_name)
-        ? '<span class="te-verified-badge"><i class="fas fa-user-check"></i> Lended by ' + esc(r.owner_name) + '</span>'
+      var providerTag = (r.listing_status && r.listing_status.toLowerCase() === 'active' && (r.owner_name || r.provider))
+        ? '<span class="te-verified-badge"><i class="fas fa-user-check"></i> Lended by ' + esc(r.owner_name || r.provider) + '</span>'
         : '<span class="te-verified-badge" style="background:#eef2e6;color:#586b2d;"><i class="fas fa-warehouse"></i> Farm Assist Catalogue</span>';
 
       var availabilityNote = !isAvail
@@ -3209,22 +3209,23 @@
       }
 
       body.innerHTML = bookings.map(function (b) {
-        var equip = b.equipment || {};
+        var equipName = b.equipment_name || b.name || 'Equipment';
+        var imgUrl = b.image_url;
         var cancelled = b.status === 'cancelled';
         var statusLabel = (b.status || 'requested').toUpperCase();
         var statusClass = cancelled ? 'off' : 'ok';
         var dateStr = b.booking_date ? new Date(b.booking_date).toLocaleDateString('en-IN') : '—';
-        var img = equip.image_url
-          ? '<img src="' + esc(equip.image_url) + '" class="te-listing-thumb" style="width:56px;height:52px;">'
+        var img = imgUrl
+          ? '<img src="' + esc(imgUrl) + '" class="te-listing-thumb" style="width:56px;height:52px;">'
           : '<div class="te-listing-thumb"><i class="fas fa-tractor"></i></div>';
         return '<div class="te-listing-item">' +
           img +
           '<div class="te-listing-info">' +
-            '<div class="te-listing-name">' + esc(equip.name || 'Equipment') + '</div>' +
+            '<div class="te-listing-name">' + esc(equipName) + '</div>' +
             '<div class="te-listing-meta"><i class="fas fa-calendar"></i> ' + dateStr + ' · ' + (b.duration_days || 0) + ' day(s) · ' + rupees(b.total_cost) + '</div>' +
             '<div class="te-listing-actions">' +
               '<span class="te-listing-status ' + statusClass + '">' + esc(statusLabel) + '</span>' +
-              (cancelled ? '' : '<button class="te-icon-btn danger" data-cancelbooking="' + esc(b.id) + '" title="Cancel booking"><i class="fas fa-times"></i></button>') +
+              (cancelled ? '' : '<button class="te-icon-btn danger" data-cancelbooking="' + esc(b.booking_id || b.id) + '" title="Cancel booking"><i class="fas fa-times"></i></button>') +
             '</div>' +
           '</div>' +
         '</div>';
@@ -3654,7 +3655,7 @@
           '</div>' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">' +
             '<span style="font-size:14px;font-weight:800;color:var(--te-primary-green);">' + rupees(o.total_amount) + '</span>' +
-            (!['delivered', 'cancelled'].includes(o.status) ? '<button class="te-btn-view" data-cancelorder="' + esc(o.order_id) + '" style="font-size:11px;padding:4px 8px;">Cancel</button>' : '') +
+            (!(o.can_cancel === false || ['received', 'cancelled'].indexOf(o.status) !== -1) ? '<button class="te-btn-view" data-cancelorder="' + esc(o.order_id) + '" style="font-size:11px;padding:4px 8px;">Cancel</button>' : '') +
           '</div>' +
         '</div>';
       }).join('');
@@ -3703,6 +3704,16 @@
       renderSkeletons();
     }
 
+    var priceMin = state.minPrice;
+    var priceMax = state.maxPrice;
+    if (state.rateRange !== 'all') {
+      var rp = String(state.rateRange).split('-');
+      var rMin = parseFloat(rp[0]);
+      var rMax = rp[1] ? parseFloat(rp[1]) : null;
+      if (!isNaN(rMin) && (priceMin === null || priceMin < rMin)) priceMin = rMin;
+      if (rMax !== null && rMax > 0 && (priceMax === null || priceMax > rMax)) priceMax = rMax;
+    }
+
     var params = {
       page: state.page,
       limit: state.limit,
@@ -3713,12 +3724,11 @@
       suitable_use: state.suitableUse !== 'all' ? state.suitableUse : null,
       brand: state.brand !== 'all' ? state.brand : null,
       condition: state.condition !== 'all' ? state.condition : null,
-      availability: state.availability !== 'all' ? state.availability : null,
+      availability: state.availability === 'available_now' ? 'available_now' : null,
       location: state.location !== 'all' ? state.location : null,
-      rate_range: state.rateRange !== 'all' ? state.rateRange : null,
-      min_price: state.minPrice,
-      max_price: state.maxPrice,
-      in_stock: state.inStock ? true : null,
+      min_price: priceMin,
+      max_price: priceMax,
+      in_stock: (state.inStock || state.availability === 'in_stock') ? true : null,
       verified_sellers: state.verifiedSellers ? true : null,
       delivery_available: state.deliveryAvailable ? true : null,
       pickup_available: state.pickupAvailable ? true : null,
@@ -3994,12 +4004,20 @@
     // Cancel Order
     if (btn.dataset.cancelorder) {
       var ordId = btn.dataset.cancelorder;
-      API.Marketplace.updateOrder(ordId, { status: 'cancelled' }).then(function () {
-        toast('Order ' + ordId + ' cancelled.');
-        loadOrders();
-      }).catch(function (err) {
-        toast(err.message || 'This order cannot be cancelled.');
-      });
+      var _base = (window.API && API.config && API.config.BASE_URL) || window._API_BASE_URL || '';
+      fetch(_base + '/orders/' + encodeURIComponent(ordId) + '?status=cancelled', { method: 'PUT' })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            if (!r.ok) throw (d && d.detail) ? new Error(d.detail) : new Error('Order could not be cancelled.');
+            return d;
+          });
+        })
+        .then(function () {
+          toast('Order ' + ordId + ' cancelled.');
+          loadOrders();
+        }).catch(function (err) {
+          toast(err.message || 'This order cannot be cancelled.');
+        });
       return;
     }
 
