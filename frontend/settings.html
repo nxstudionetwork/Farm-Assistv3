@@ -656,6 +656,71 @@
 
 
 <!-- ==================================================
+     SUB-PAGE: MARKETPLACE
+================================================== -->
+<div class="settings-sub-page" id="sub-marketplace">
+  <div class="settings-sub-header">
+    <button class="back-btn" onclick="navigateBack()"><i class="fas fa-arrow-left"></i> Settings</button>
+    <h2>Marketplace</h2>
+  </div>
+  <div class="settings-sub-body">
+    <section class="card-premium" style="padding:0;margin-top:16px;">
+      <div class="settings-section-title"><i class="fas fa-store"></i> Buyer &amp; Listing Preferences</div>
+      <div class="settings-card-body">
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-handshake"></i><div><div class="settings-title">Show as potential buyer</div><div class="settings-subtitle">Let other farmers know you are also looking to buy produce and farm items</div></div></div>
+          <label class="switch"><input type="checkbox" id="ms-available_as_buyer"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-comments"></i><div><div class="settings-title">Allow buyer enquiries</div><div class="settings-subtitle">Buyers can send you enquiries about your listed items</div></div></div>
+          <label class="switch"><input type="checkbox" id="ms-allow_buyer_enquiries"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-phone"></i><div><div class="settings-title">Show contact to buyers</div><div class="settings-subtitle">Display your phone number on listings so serious buyers can call you</div></div></div>
+          <label class="switch"><input type="checkbox" id="ms-show_contact_to_buyers"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-location-dot"></i><div><div class="settings-title">Show location to buyers</div><div class="settings-subtitle">Share your village or town so buyers know where the produce is</div></div></div>
+          <label class="switch"><input type="checkbox" id="ms-show_location_to_buyers"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-arrows-left-right"></i><div><div class="settings-title">Allow price negotiation</div><div class="settings-subtitle">Buyers may make counter-offers on your item prices</div></div></div>
+          <label class="switch"><input type="checkbox" id="ms-allow_negotiation"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-envelopes-bulk"></i><div><div class="settings-title">Enquiry notifications</div><div class="settings-subtitle">Get notified whenever a buyer enquires on your listings</div></div></div>
+          <label class="switch"><input type="checkbox" id="ms-receive_enquiry_notifications"><span class="slider"></span></label>
+        </div>
+        <div class="settings-row no-hover" style="cursor:default;">
+          <div class="settings-row-left"><i class="fas fa-bell"></i><div><div class="settings-title">Notify when sold</div><div class="settings-subtitle">Receive an alert when a listing you own is marked as sold</div></div></div>
+          <label class="switch"><input type="checkbox" id="ms-notify_when_sold"><span class="slider"></span></label>
+        </div>
+      </div>
+    </section>
+    <section class="card-premium" style="padding:0;">
+      <div class="settings-section-title"><i class="fas fa-eye"></i> Default Listing Visibility</div>
+      <div class="settings-card-body">
+        <div class="settings-field-group">
+          <div class="settings-field-label">New listings start as</div>
+          <select class="select-styled" id="ms-default_listing_visibility">
+            <option value="active">Active &mdash; visible to buyers</option>
+            <option value="pending">Pending &mdash; needs review</option>
+          </select>
+          <div class="language-preview">Changes save to your farm account and apply instantly.</div>
+        </div>
+      </div>
+    </section>
+    <div class="settings-action-row" style="justify-content:flex-end;align-items:center;">
+      <span id="ms-save-status" style="font-size:12px;margin-right:auto;color:var(--text-muted);"></span>
+      <button class="btn-secondary btn-sm" id="ms-reset"><i class="fas fa-rotate-left"></i> Reset</button>
+      <button class="btn-primary btn-sm" id="ms-save"><i class="fas fa-floppy-disk"></i> Save Changes</button>
+    </div>
+    <div class="settings-back-bottom" onclick="navigateBack()"><i class="fas fa-arrow-left"></i> Back to Settings</div>
+  </div>
+</div>
+
+
+<!-- ==================================================
      SUB-PAGE: SECURITY
 ================================================== -->
 <div class="settings-sub-page" id="sub-security-main">
@@ -1333,6 +1398,7 @@
     if (page === 'language') { populateLanguage(); }
     if (page === 'appearance') { updateThemeButtons(localStorage.getItem('fa-theme') || 'light'); }
     if (page === 'accessibility') { populateAccessibility(); }
+    if (page === 'marketplace') { loadMarketplaceSettings(); }
   };
 
   window.navigateBack = function() {
@@ -1545,6 +1611,112 @@
     updateLastSyncTime();
     computeCacheInfo();
   }
+
+  /* ======================================================
+     MARKETPLACE SETTINGS (subform in Settings page)
+  ====================================================== */
+  var MP_TOGGLE_KEYS = [
+    'available_as_buyer',
+    'allow_buyer_enquiries',
+    'show_contact_to_buyers',
+    'show_location_to_buyers',
+    'allow_negotiation',
+    'receive_enquiry_notifications',
+    'notify_when_sold'
+  ];
+
+  function mpGetService() {
+    if (typeof MarketplaceSellerService !== 'undefined') return MarketplaceSellerService;
+    return null;
+  }
+
+  function applyMarketplaceSettings(s) {
+    s = s || {};
+    MP_TOGGLE_KEYS.forEach(function (k) {
+      var el = document.getElementById('ms-' + k);
+      if (el) el.checked = !!s[k];
+    });
+    var vis = document.getElementById('ms-default_listing_visibility');
+    if (vis) vis.value = (s.default_listing_visibility === 'pending') ? 'pending' : 'active';
+  }
+
+  function collectMarketplaceSettings() {
+    var data = {};
+    MP_TOGGLE_KEYS.forEach(function (k) {
+      var el = document.getElementById('ms-' + k);
+      data[k] = el ? el.checked : false;
+    });
+    var vis = document.getElementById('ms-default_listing_visibility');
+    data.default_listing_visibility = (vis && vis.value === 'pending') ? 'pending' : 'active';
+    return data;
+  }
+
+  var mpLoaded = false;
+  function loadMarketplaceSettings() {
+    var svc = mpGetService();
+    if (!svc || !svc.getSettings) return;
+    svc.getSettings().then(function (d) {
+      var s = (d && (d.settings || (d.data && d.data.settings))) || (d && d.data) || {};
+      applyMarketplaceSettings(s);
+      mpLoaded = true;
+      var status = document.getElementById('ms-save-status');
+      if (status) status.textContent = '';
+    }).catch(function () {
+      mpLoaded = false;
+      var status = document.getElementById('ms-save-status');
+      if (status) {
+        status.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Could not load marketplace settings';
+        status.style.color = '#D32F2F';
+      }
+    });
+  }
+
+  function saveMarketplaceSettings() {
+    var svc = mpGetService();
+    var btn = document.getElementById('ms-save');
+    var status = document.getElementById('ms-save-status');
+    if (!svc || !svc.saveSettings || !mpLoaded) return;
+    if (btn) btn.disabled = true;
+    if (status) { status.textContent = ''; }
+    svc.saveSettings(collectMarketplaceSettings()).then(function (d) {
+      var s = (d && (d.settings || (d.data && d.data.settings))) || {};
+      applyMarketplaceSettings(s);
+      if (status) {
+        status.innerHTML = '<i class="fas fa-check"></i> Marketplace settings saved';
+        status.style.color = '#2D8659';
+      }
+    }).catch(function (err) {
+      if (status) {
+        var msg = (err && err.data && err.data.detail) || (err && err.message) || 'Could not save settings';
+        status.innerHTML = '<i class="fas fa-triangle-exclamation"></i> ' + msg;
+        status.style.color = '#D32F2F';
+      }
+    }).then(function () {
+      if (btn) btn.disabled = false;
+    });
+  }
+
+  function resetMarketplaceSettings() {
+    applyMarketplaceSettings({
+      available_as_buyer: false,
+      allow_buyer_enquiries: true,
+      show_contact_to_buyers: true,
+      show_location_to_buyers: true,
+      allow_negotiation: true,
+      receive_enquiry_notifications: true,
+      notify_when_sold: true,
+      default_listing_visibility: 'active'
+    });
+    if (mpLoaded) saveMarketplaceSettings();
+  }
+
+  function wireMarketplaceSettings() {
+    var save = document.getElementById('ms-save');
+    if (save) save.addEventListener('click', saveMarketplaceSettings);
+    var reset = document.getElementById('ms-reset');
+    if (reset) reset.addEventListener('click', resetMarketplaceSettings);
+  }
+  wireMarketplaceSettings();
 
   /* Load the authoritative profile from the backend so account fields never
      depend on a stale local copy (e.g. after signing in on another device). */
@@ -2377,6 +2549,12 @@
       ]
     },
     {
+      label: 'Marketplace',
+      items: [
+        { page: 'marketplace', icon: 'fa-store', color: 'icon-orange', title: 'Marketplace', subtitle: 'Buyer discovery, enquiries and listing visibility' }
+      ]
+    },
+    {
       label: 'Security & Privacy',
       items: [
         { page: 'security-main', icon: 'fa-shield-halved', color: 'icon-blue', title: 'Security', subtitle: 'PIN change and device logout' },
@@ -2448,7 +2626,7 @@
       notifications:1,'security-main':1,privacy:1,sessions:1,
       'connected-devices':1,
       datastorage:1,support:1,about:1,terms:1,
-      ai:1,actions:1
+      ai:1,actions:1,marketplace:1
     };
     if (valid[hash]) { try { window.navigateTo(hash); } catch(e){} }
   }
