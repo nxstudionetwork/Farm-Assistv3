@@ -195,6 +195,7 @@ ID_COLUMN_MAP: Dict[str, str] = {
     "NewsArticle": "news_id",
     "SavedNews": "saved_id",
     "MarketPrice": "price_id",
+    "MarketDataSync": "id",
     "MarketWatchlist": "watch_id",
     "MarketPriceAlert": "alert_id",
     "AgriculturalLoanProduct": "product_id",

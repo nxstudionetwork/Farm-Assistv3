@@ -11,6 +11,7 @@ data is served with honest freshness labels.
 """
 
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 import httpx
@@ -307,6 +308,79 @@ def _record_sync(db: Session, status: str, trigger: str, message: str,
     return sync
 
 
+def _refresh_from_bundled(
+    db: Session,
+    trigger: str,
+    filters: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    """Sync from the bundled verified official datasets (MSP/FRP + regional
+    AGMARKNET mandi records) when the live API feed is not configured.
+
+    These are the same idempotent seeders used at server startup, so this is a
+    real re-sync of verified official data - never fabricated. The resulting
+    sync row is honest about the source (bundled) rather than claiming "live".
+    """
+    try:
+        from seed_market_prices import build_rows as build_msp_rows
+        from seed_market_regions import build_rows as build_region_rows
+    except ImportError:
+        # seed modules live in the backend root; make it importable when the
+        # service is loaded from a different cwd (mirrors app/main.py startup).
+        import sys
+
+        backend_dir = str(Path(__file__).resolve().parent.parent.parent)
+        if backend_dir not in sys.path:
+            sys.path.insert(0, backend_dir)
+        from seed_market_prices import build_rows as build_msp_rows
+        from seed_market_regions import build_rows as build_region_rows
+
+    try:
+        rows = list(build_msp_rows()) + list(build_region_rows())
+    except Exception:
+        _record_sync(db, "failed", trigger, "Bundled verified dataset could not be loaded.")
+        return {
+            "ok": False,
+            "reason": "error",
+            "message": "Market data could not be refreshed right now.",
+        }
+
+    if not rows:
+        _record_sync(db, "failed", trigger, "Bundled verified dataset is empty.")
+        return {
+            "ok": False,
+            "reason": "error",
+            "message": "Market data could not be refreshed right now.",
+        }
+
+    # Apply the same Region/District/State/Commodity filters the live feed uses.
+    if filters:
+        lowered = {k.lower(): str(v).strip().lower() for k, v in filters.items() if v}
+        if lowered:
+            rows = [
+                r for r in rows
+                if all(str(r.get(key, "") or "").strip().lower() == value
+                       for key, value in lowered.items())
+            ]
+
+    stored = upsert_prices(db, rows) if rows else 0
+    if rows:
+        evaluate_alerts(db)
+    _record_sync(
+        db, "success", trigger,
+        f"Refreshed {len(rows)} records from the bundled verified official "
+        f"dataset (live AGMARKNET feed is not configured on the server).",
+        fetched=len(rows), stored=stored,
+    )
+    return {
+        "ok": True,
+        "cached": False,
+        "synced_at": datetime.utcnow().isoformat(),
+        "records_fetched": len(rows),
+        "records_stored": stored,
+        "message": f"Market data refreshed ({stored} new/updated records) from the bundled official dataset.",
+    }
+
+
 def sync_from_source(
     db: Session,
     trigger: str = "api",
@@ -345,15 +419,13 @@ def sync_from_source(
         }
 
     if not source_configured():
-        _record_sync(
-            db, "not_configured", trigger,
-            "MARKET_PRICE_API_KEY is not configured on the server.",
-        )
-        return {
-            "ok": False,
-            "reason": "not_configured",
-            "message": "Live market data source is not configured on the server.",
-        }
+        # No live API key on this server: fall back to the bundled verified
+        # official datasets (MSP/FRP + regional AGMARKNET mandi records). This
+        # is real data from the repository seeders, so a manual Refresh still
+        # re-syncs and updates the stored prices truthfully. Honesty is kept:
+        # the freshness label stays "latest" (never "live") because a live feed
+        # genuinely is not configured, and the sync message says so clearly.
+        return _refresh_from_bundled(db, trigger, filters)
 
     url = f"{settings.MARKET_PRICE_API_BASE_URL.rstrip('/')}/{settings.MARKET_PRICE_RESOURCE_ID}"
     params: Dict[str, Any] = {

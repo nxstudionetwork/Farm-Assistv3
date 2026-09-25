@@ -15,6 +15,7 @@ from app.main import app
 from app.database.connection import engine, Base, SessionLocal
 from app.models import *
 from seed_market_prices import import_msp_prices
+from seed_market_regions import import_region_prices
 from app.services import market_price_service as svc
 
 client = TestClient(app)
@@ -405,3 +406,55 @@ def test_compare_markets_scoped_to_region(headers_a, db):
     data = resp.json()["data"]
     assert data["market_count"] == 1
     assert data["markets"][0]["region"] == "Kodad"
+
+
+def test_seeders_coexist_without_sync_id_collision(db):
+    """Both bundled seeders must record their sync audit rows without hitting
+    the FA-IDS PK. Regression: MarketDataSync was missing from ID_COLUMN_MAP,
+    so generate_id always returned FA-IDS-000001 and the second seeder raised
+    a UNIQUE constraint failure on a fresh database."""
+    from app.models.market_price import MarketDataSync
+
+    before = db.query(MarketDataSync).count()
+    imported_msp = import_msp_prices(db, force=True)
+    imported_regions = import_region_prices(db, force=True)
+    rows = db.query(MarketDataSync).all()
+    assert before + 2 == len(rows)
+    assert imported_msp >= 0
+    assert imported_regions >= 0
+
+
+def test_refresh_without_source_populates_bundled_data(db, headers_a):
+    """Force refresh with no API key must fall back to the bundled verified
+    official datasets (MSP/FRP + AGMARKNET regions), keep the freshness label
+    honest ("latest", never "live"), and record a truthful sync message."""
+    from app.models.market_price import MarketPrice, MarketPriceLatest, MarketDataSync
+
+    db.query(MarketDataSync).delete(synchronize_session=False)
+    db.query(MarketPriceLatest).delete(synchronize_session=False)
+    db.query(MarketPrice).delete(synchronize_session=False)
+    db.commit()
+
+    result = svc.sync_from_source(db, trigger="api", force=True)
+    assert result["ok"] is True
+    assert result["cached"] is False
+    assert result["records_fetched"] >= 18
+    assert result["records_stored"] == result["records_fetched"]
+    assert "bundled" in result["message"]
+
+    freshness = svc.freshness_info(db)
+    assert freshness["data_available"] is True
+    assert freshness["label"] == "latest"
+    assert freshness["is_live"] is False
+    assert freshness["last_sync"]["status"] == "success"
+    assert "bundled" in (freshness["last_sync"]["message"] or "").lower()
+
+    # Filter cascade still resolves against the freshly-refreshed data.
+    resp = client.get(
+        "/api/v1/market-prices/markets",
+        params={"state": "Telangana", "district": "Nalgonda"},
+        headers=headers_a,
+    )
+    assert resp.status_code == 200
+    regions = resp.json()["data"]["regions"]
+    assert any("Kodad" in r for r in regions)
