@@ -197,6 +197,15 @@ ADDITIVE_COLUMNS = {
     ],
     "marketplace_listings": [
         ("is_deleted", "BOOLEAN DEFAULT 0"),
+        ("listing_type", "VARCHAR(10) DEFAULT 'sell'"),
+        ("rental_period", "VARCHAR(10)"),
+        ("min_rental_duration", "VARCHAR(60)"),
+        ("available_from", "VARCHAR(20)"),
+        ("available_until", "VARCHAR(20)"),
+        ("security_deposit", "FLOAT"),
+        ("rental_terms", "TEXT"),
+        ("service_area", "VARCHAR(200)"),
+        ("delivery_option", "VARCHAR(20)"),
     ],
     "marketplace_enquiries": [
         ("requested_quantity", "FLOAT"),

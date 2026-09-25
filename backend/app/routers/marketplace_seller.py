@@ -47,6 +47,9 @@ UNITS = ["kg", "g", "quintal", "tonne", "bag", "pack", "bundle", "piece", "set",
 PRICING_TYPES = ["fixed", "negotiable"]
 CONTACT_METHODS = ["in-app", "phone", "whatsapp"]
 ENQUIRY_STATUSES = ["new", "replied", "negotiating", "accepted", "completed", "closed", "rejected"]
+LISTING_TYPES = ["sell", "rent"]
+RENTAL_PERIODS = ["day", "week", "month"]
+DELIVERY_OPTIONS = ["delivery", "pickup", "both"]
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +58,7 @@ ENQUIRY_STATUSES = ["new", "replied", "negotiating", "accepted", "completed", "c
 class ListingCreate(BaseModel):
     title: str = Field(..., min_length=2, max_length=200)
     category_id: str = Field(..., min_length=1)
+    listing_type: str = "sell"
     description: Optional[str] = Field(None, max_length=5000)
     quantity: float = Field(gt=0)
     unit: str = "kg"
@@ -74,6 +78,16 @@ class ListingCreate(BaseModel):
     notes: Optional[str] = Field(None, max_length=2000)
     status: str = "active"
     images: List[str] = []
+
+    # Rental requirements (Rent listings only; ignored for Sell).
+    rental_period: Optional[str] = None
+    min_rental_duration: Optional[str] = Field(None, max_length=60)
+    available_from: Optional[str] = Field(None, max_length=20)
+    available_until: Optional[str] = Field(None, max_length=20)
+    security_deposit: Optional[float] = Field(None, ge=0)
+    service_area: Optional[str] = Field(None, max_length=200)
+    delivery_option: Optional[str] = None
+    rental_terms: Optional[str] = Field(None, max_length=4000)
 
     @field_validator("unit")
     @classmethod
@@ -96,6 +110,27 @@ class ListingCreate(BaseModel):
             raise ValueError(f"Invalid contact method. Must be one of: {', '.join(CONTACT_METHODS)}")
         return v
 
+    @field_validator("listing_type")
+    @classmethod
+    def _listing_type(cls, v):
+        if v not in LISTING_TYPES:
+            raise ValueError(f"Invalid listing type. Must be one of: {', '.join(LISTING_TYPES)}")
+        return v
+
+    @field_validator("rental_period")
+    @classmethod
+    def _rental_period(cls, v):
+        if v is not None and v not in RENTAL_PERIODS:
+            raise ValueError(f"Invalid rental period. Must be one of: {', '.join(RENTAL_PERIODS)}")
+        return v
+
+    @field_validator("delivery_option")
+    @classmethod
+    def _delivery_option(cls, v):
+        if v is not None and v not in DELIVERY_OPTIONS:
+            raise ValueError(f"Invalid delivery option. Must be one of: {', '.join(DELIVERY_OPTIONS)}")
+        return v
+
     @field_validator("status")
     @classmethod
     def _status(cls, v):
@@ -114,6 +149,7 @@ class ListingCreate(BaseModel):
 class ListingUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=2, max_length=200)
     category_id: Optional[str] = None
+    listing_type: Optional[str] = None
     description: Optional[str] = Field(None, max_length=5000)
     quantity: Optional[float] = Field(None, gt=0)
     unit: Optional[str] = None
@@ -133,6 +169,16 @@ class ListingUpdate(BaseModel):
     notes: Optional[str] = Field(None, max_length=2000)
     status: Optional[str] = None
     images: Optional[List[str]] = None
+
+    # Rental requirements (Rent listings only; ignored/cleared for Sell).
+    rental_period: Optional[str] = None
+    min_rental_duration: Optional[str] = Field(None, max_length=60)
+    available_from: Optional[str] = Field(None, max_length=20)
+    available_until: Optional[str] = Field(None, max_length=20)
+    security_deposit: Optional[float] = Field(None, ge=0)
+    service_area: Optional[str] = Field(None, max_length=200)
+    delivery_option: Optional[str] = None
+    rental_terms: Optional[str] = Field(None, max_length=4000)
 
 
 class ListingStatusUpdate(BaseModel):
@@ -191,6 +237,51 @@ def _category_payload(cat):
     return {"id": cat.id, "name": cat.name, "slug": cat.slug, "group": cat.group, "icon": cat.icon}
 
 
+REQUIRED_RENT_FIELDS = {
+    "rental_period": "rental price period (per day / week / month)",
+    "min_rental_duration": "minimum rental duration",
+    "available_from": "available from date",
+    "delivery_option": "delivery / pickup option",
+}
+
+
+def _validate_rent_requirements(values: dict) -> None:
+    """Reject a Rent listing that is missing any required rental information."""
+    if values.get("listing_type") != "rent":
+        return
+    missing = [label for key, label in REQUIRED_RENT_FIELDS.items() if not values.get(key)]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail="Rent listings require: " + ", ".join(missing),
+        )
+
+
+def _rental_values(payload, listing_type: str) -> dict:
+    """Rental columns for the payload - always empty for Sell listings."""
+    if listing_type != "rent":
+        return {
+            "rental_period": None,
+            "min_rental_duration": None,
+            "available_from": None,
+            "available_until": None,
+            "security_deposit": None,
+            "rental_terms": None,
+            "service_area": None,
+            "delivery_option": None,
+        }
+    return {
+        "rental_period": payload.rental_period,
+        "min_rental_duration": payload.min_rental_duration,
+        "available_from": payload.available_from,
+        "available_until": payload.available_until,
+        "security_deposit": payload.security_deposit,
+        "rental_terms": payload.rental_terms,
+        "service_area": payload.service_area,
+        "delivery_option": payload.delivery_option,
+    }
+
+
 def _listing_payload(db: Session, listing: MarketplaceListing) -> dict:
     sold_quantity = float(listing.sold_quantity or 0)
     remaining = max(float(listing.quantity or 0) - sold_quantity, 0)
@@ -212,6 +303,7 @@ def _listing_payload(db: Session, listing: MarketplaceListing) -> dict:
         "listing_id": listing.listing_id,
         "title": listing.title,
         "description": listing.description,
+        "listing_type": listing.listing_type or "sell",
         "category": _category_payload(listing.category),
         "category_id": listing.category_id,
         "quantity": listing.quantity,
@@ -228,6 +320,14 @@ def _listing_payload(db: Session, listing: MarketplaceListing) -> dict:
         "brand": listing.brand,
         "model": listing.model,
         "usage_details": listing.usage_details,
+        "rental_period": listing.rental_period,
+        "min_rental_duration": listing.min_rental_duration,
+        "available_from": listing.available_from,
+        "available_until": listing.available_until,
+        "security_deposit": listing.security_deposit,
+        "rental_terms": listing.rental_terms,
+        "service_area": listing.service_area,
+        "delivery_option": listing.delivery_option,
         "contact_method": listing.contact_method or "in-app",
         "notes": listing.notes,
         "status": listing.status,
@@ -714,6 +814,7 @@ def list_listings(
     location: Optional[str] = None,
     condition_type: Optional[str] = None,
     availability: Optional[str] = None,
+    listing_type: Optional[str] = Query(None, pattern="^(sell|rent)$"),
     group: Optional[str] = Query(None, pattern="^(produce|items)$"),
     sort: Optional[str] = Query(None, pattern="^(newest|price_asc|price_desc)$"),
     db: Session = Depends(get_db),
@@ -754,6 +855,14 @@ def list_listings(
         q = q.filter(MarketplaceListing.condition_type == condition_type)
     if availability:
         q = q.filter(MarketplaceListing.availability.ilike(f"%{availability}%"))
+    if listing_type:
+        # Legacy rows predate the column, so fall back to "sell" when NULL.
+        if listing_type == "sell":
+            q = q.filter(
+                or_(MarketplaceListing.listing_type == "sell", MarketplaceListing.listing_type.is_(None))
+            )
+        else:
+            q = q.filter(MarketplaceListing.listing_type == listing_type)
     if group:
         q = q.join(MarketplaceCategory, MarketplaceListing.category_id == MarketplaceCategory.id).filter(
             MarketplaceCategory.group == group
@@ -789,11 +898,15 @@ def create_listing(
     if not category:
         raise HTTPException(status_code=400, detail="Select a valid sell category")
 
+    rental = _rental_values(payload, payload.listing_type)
+    _validate_rent_requirements({"listing_type": payload.listing_type, **rental})
+
     listing_id = generate_id("FA-LST", db, MarketplaceListing)
     listing = MarketplaceListing(
         listing_id=listing_id,
         user_id=current_user.id,
         category_id=category.id,
+        listing_type=payload.listing_type,
         title=payload.title.strip(),
         description=payload.description,
         quantity=payload.quantity,
@@ -816,6 +929,7 @@ def create_listing(
         is_active=True,
         total_views=0,
         interested_count=0,
+        **rental,
     )
     db.add(listing)
     db.flush()
@@ -846,6 +960,26 @@ def update_listing(
     current_user: User = Depends(get_current_user),
 ):
     listing = _get_owned_listing(listing_id, current_user.id, db)
+
+    listing_type = payload.listing_type or (listing.listing_type or "sell")
+    if payload.listing_type is not None and payload.listing_type not in LISTING_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid listing type")
+
+    # A Rent listing must always hold its required rental information, so the
+    # effective (stored + submitted) state is validated, not just the request.
+    submitted = payload.model_dump(exclude_unset=True)
+    effective = {
+        "listing_type": listing_type,
+        "rental_period": submitted.get("rental_period", listing.rental_period),
+        "min_rental_duration": submitted.get("min_rental_duration", listing.min_rental_duration),
+        "available_from": submitted.get("available_from", listing.available_from),
+        "available_until": submitted.get("available_until", listing.available_until),
+        "security_deposit": submitted.get("security_deposit", listing.security_deposit),
+        "rental_terms": submitted.get("rental_terms", listing.rental_terms),
+        "service_area": submitted.get("service_area", listing.service_area),
+        "delivery_option": submitted.get("delivery_option", listing.delivery_option),
+    }
+    _validate_rent_requirements(effective)
 
     updates = {
         "title": payload.title,
@@ -878,6 +1012,18 @@ def update_listing(
         if field == "contact_method" and value not in CONTACT_METHODS:
             raise HTTPException(status_code=400, detail="Invalid contact method")
         setattr(listing, field, value)
+
+    listing.listing_type = listing_type
+    if listing_type != "rent":
+        for field in effective:
+            if field != "listing_type":
+                setattr(listing, field, None)
+    else:
+        for field in effective:
+            if field == "listing_type":
+                continue
+            if field in submitted:
+                setattr(listing, field, effective[field])
 
     if payload.category_id:
         category = _owner_seller(payload.category_id, db)

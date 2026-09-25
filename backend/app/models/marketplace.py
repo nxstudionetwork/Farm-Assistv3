@@ -298,6 +298,8 @@ class MarketplaceListing(Base):
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     category_id = Column(String(36), ForeignKey("marketplace_categories.id"), nullable=True, index=True)
 
+    listing_type = Column(String(10), default="sell", nullable=False, index=True)  # sell | rent
+
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
 
@@ -317,6 +319,15 @@ class MarketplaceListing(Base):
     brand = Column(String(100), nullable=True)
     model = Column(String(100), nullable=True)
     usage_details = Column(Text, nullable=True)
+
+    rental_period = Column(String(10), nullable=True)  # day | week | month
+    min_rental_duration = Column(String(60), nullable=True)
+    available_from = Column(String(20), nullable=True)
+    available_until = Column(String(20), nullable=True)
+    security_deposit = Column(Float, nullable=True)
+    rental_terms = Column(Text, nullable=True)
+    service_area = Column(String(200), nullable=True)
+    delivery_option = Column(String(20), nullable=True)  # delivery | pickup | both
 
     contact_method = Column(String(60), nullable=True)  # phone | whatsapp | in-app
     notes = Column(Text, nullable=True)
