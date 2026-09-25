@@ -129,13 +129,18 @@
       border: 2px solid #1B5E3F;
     }
 
-    /* Mode Switcher Tabs (Buy vs Rent) */
+    /* Mode Switcher Tabs (All vs Buy vs Rent) */
     .te-mode-tabs {
       display: flex;
       gap: 10px;
       margin-top: 0;
       margin-bottom: 18px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
+    .te-mode-tabs::-webkit-scrollbar { display: none; }
 
     .te-mode-btn {
       background: #ffffff;
@@ -150,6 +155,11 @@
       align-items: center;
       gap: 8px;
       transition: all 0.2s ease;
+      flex: 0 1 auto;
+      white-space: nowrap;
+    }
+    @media (min-width: 700px) {
+      .te-mode-btn { flex: 1 1 0; justify-content: center; }
     }
 
     .te-mode-btn:hover {
@@ -329,6 +339,10 @@
       align-items: start;
     }
 
+    .te-main-layout.no-sidebar {
+      grid-template-columns: 1fr;
+    }
+
     @media (max-width: 960px) {
       .te-main-layout {
         grid-template-columns: 1fr;
@@ -456,14 +470,7 @@
     }
 
     /* Mobile Filter Drawer Toggle */
-    .te-mobile-filter-bar {
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      gap: 12px;
-    }
-
+    #btnCloseMobileFilters { display: none; }
     @media (max-width: 960px) {
       .te-sidebar {
         display: none;
@@ -478,8 +485,8 @@
         overflow-y: auto;
         padding: 24px 20px;
       }
-      .te-mobile-filter-bar {
-        display: flex;
+      .te-sidebar.mobile-open #btnCloseMobileFilters {
+        display: block;
       }
     }
 
@@ -1288,6 +1295,11 @@
       gap: 10px;
       align-items: stretch;
       margin-top: 18px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 700px) {
+      .te-toolbar { gap: 8px; }
     }
 
     .te-search-bar { position: relative; flex: 1; min-width: 0; }
@@ -1336,11 +1348,6 @@
     .te-filter-toggle .te-badge-count { background: #ffffff; color: var(--te-primary-green); }
 
     .te-sidebar.hidden-filters { display: none; }
-
-    @media (max-width: 700px) {
-      .te-toolbar { flex-direction: column; }
-      .te-filter-toggle { padding: 13px 16px; width: 100%; }
-    }
 
     /* Mode chips (Rent / Buy / New) on cards */
     .te-mode-chip {
@@ -1661,16 +1668,16 @@
     </div>
   </section>
 
-  <!-- MODE SELECTION: All / Rent / Buy -->
+  <!-- MODE SELECTION: All / Buy / Rent -->
   <div class="te-mode-tabs" id="modeTabs" aria-label="Browse mode">
     <button class="te-mode-btn active" data-mode="all" id="modeAllBtn">
-      <i class="fas fa-layer-group"></i> All Equipment
+      <i class="fas fa-layer-group"></i> All
     </button>
     <button class="te-mode-btn" data-mode="buy" id="modeBuyBtn">
-      <i class="fas fa-shopping-bag"></i> Buy Tools & Equipment
+      <i class="fas fa-shopping-bag"></i> Buy
     </button>
     <button class="te-mode-btn" data-mode="rent" id="modeRentBtn">
-      <i class="fas fa-calendar-alt"></i> Rent Farm Machinery
+      <i class="fas fa-calendar-alt"></i> Rent
     </button>
   </div>
 
@@ -1705,16 +1712,8 @@
     <div class="te-rec-carousel" id="recommendationsCarousel"></div>
   </section>
 
-  <!-- MOBILE FILTER BUTTON BAR -->
-  <div class="te-mobile-filter-bar">
-    <button class="te-action-btn" id="btnMobileFilterToggle" style="background:#1B5E3F;color:#fff;width:auto;padding:0 16px;border-radius:10px;font-size:13px;font-weight:700;">
-      <i class="fas fa-sliders-h" style="margin-right:6px;"></i> Filters (<span id="mobileFilterCount">0</span>)
-    </button>
-    <div style="font-size:13px;font-weight:700;color:var(--te-muted);" id="mobileItemCount">Loading...</div>
-  </div>
-
   <!-- MAIN LAYOUT: SIDEBAR FILTERS + PRODUCT GRID -->
-  <div class="te-main-layout">
+  <div class="te-main-layout" id="teMainLayout">
 
     <!-- FILTERS SIDEBAR -->
     <aside class="te-sidebar" id="filterSidebar">
@@ -1844,7 +1843,7 @@
       <button class="te-apply-filters-btn" id="btnApplyFilters">
         <i class="fas fa-check"></i> Apply Filters
       </button>
-      <button class="te-btn-view" id="btnCloseMobileFilters" style="width:100%;margin-top:8px;display:none;">
+      <button class="te-btn-view" id="btnCloseMobileFilters" style="width:100%;margin-top:8px;">
         Close Filters
       </button>
     </aside>
@@ -2674,7 +2673,6 @@
   function renderProducts(items, reset) {
     var grid = document.getElementById('equipmentGrid');
     var countLabel = document.getElementById('resultsCountLabel');
-    var mobileCount = document.getElementById('mobileItemCount');
     if (!grid) return;
 
     if (!items || items.length === 0) {
@@ -2694,7 +2692,6 @@
         '</div>' +
       '</div>';
       if (countLabel) countLabel.textContent = '0 items found';
-      if (mobileCount) mobileCount.textContent = '0 items';
       var loadMoreBtn = document.getElementById('btnLoadMore');
       if (loadMoreBtn) loadMoreBtn.style.display = 'none';
       return;
@@ -2712,7 +2709,6 @@
     var total = state.totalCount > shown ? state.totalCount : shown;
     var totalText = total + ' equipment item' + (total !== 1 ? 's' : '') + (state.totalCount > shown ? ' (showing ' + shown + ')' : '');
     if (countLabel) countLabel.textContent = totalText;
-    if (mobileCount) mobileCount.textContent = totalText;
 
     var loadBtn = document.getElementById('btnLoadMore');
     if (loadBtn) {
@@ -2918,7 +2914,7 @@
       '<div id="relatedEquipmentBox" style="display:none;margin-top:20px;"></div>';
 
       document.getElementById('detailContent').innerHTML = html;
-      appendRelated('buy', p.category && p.category.slug, p.id);
+      appendRelated('buy', p.category && p.category.slug, p.id, 'detailContent');
       toggleModal('detailModal', true);
 
       // Refresh recently viewed after view
@@ -2937,8 +2933,9 @@
   };
 
   // --- RELATED EQUIPMENT + SHARE ---
-  function appendRelated(kind, categorySlug, excludeId) {
-    var box = document.getElementById('relatedEquipmentBox');
+  function appendRelated(kind, categorySlug, excludeId, containerId) {
+    var host = containerId ? document.getElementById(containerId) : null;
+    var box = host ? host.querySelector('#relatedEquipmentBox') : document.getElementById('relatedEquipmentBox');
     if (!box) return;
     if (!categorySlug) { box.style.display = 'none'; return; }
     API.Equipment.browse({ page: 1, limit: 6, mode: kind, category: categorySlug }).then(function (res) {
@@ -3170,7 +3167,7 @@
       '<div id="relatedEquipmentBox" style="display:none;margin-top:20px;"></div>';
 
       document.getElementById('rentDetailContent').innerHTML = html;
-      appendRelated('rent', r.category_slug, r.id);
+      appendRelated('rent', r.category_slug, r.id, 'rentDetailContent');
       toggleModal('rentDetailModal', true);
       API.Equipment.recordView(r.id).catch(function () {});
 
@@ -3791,8 +3788,6 @@
       if (document.getElementById(id).checked) count++;
     });
     state.activeFilterCount = count;
-    var mfc = document.getElementById('mobileFilterCount');
-    if (mfc) mfc.textContent = count;
     setBadge('filterCountBadge', count);
   }
 
@@ -4136,17 +4131,26 @@
     fetchProducts(true);
   });
 
-  // Filter panel toggle (mobile: opens sidebar drawer; desktop: collapses sidebar)
+  // Filter panel toggle (single filter button; opens sidebar as full-screen sheet on mobile, toggles on desktop)
   var filterToggleBtn = document.getElementById('btnToggleFilters');
   if (filterToggleBtn) filterToggleBtn.addEventListener('click', function () {
     var sidebar = document.getElementById('filterSidebar');
     if (!sidebar) return;
+    var layout = document.getElementById('teMainLayout');
     var isNarrow = window.innerWidth <= 960;
     if (isNarrow) {
-      sidebar.classList.toggle('mobile-open');
+      sidebar.classList.remove('hidden-filters');
+      sidebar.classList.add('mobile-open');
     } else {
+      sidebar.classList.remove('mobile-open');
       sidebar.classList.toggle('hidden-filters');
+      if (layout) layout.classList.toggle('no-sidebar', sidebar.classList.contains('hidden-filters'));
     }
+  });
+
+  document.getElementById('btnCloseMobileFilters').addEventListener('click', function () {
+    var sidebar = document.getElementById('filterSidebar');
+    if (sidebar) sidebar.classList.remove('mobile-open');
   });
 
   // Sort dropdown change
@@ -4176,18 +4180,6 @@
   // Clear Filters
   document.getElementById('btnClearFilters').addEventListener('click', function () {
     resetAllFilters();
-  });
-
-  // Mobile Filter Drawer Toggle
-  document.getElementById('btnMobileFilterToggle').addEventListener('click', function () {
-    var sidebar = document.getElementById('filterSidebar');
-    if (sidebar) sidebar.classList.add('mobile-open');
-    document.getElementById('btnCloseMobileFilters').style.display = 'block';
-  });
-
-  document.getElementById('btnCloseMobileFilters').addEventListener('click', function () {
-    var sidebar = document.getElementById('filterSidebar');
-    if (sidebar) sidebar.classList.remove('mobile-open');
   });
 
   // Header Drawers Toggle (open via quick-action chips below)
@@ -4249,7 +4241,7 @@
   });
 
   document.getElementById('btnOpenListingModal').addEventListener('click', function () {
-    openListingEditor('rent', null);
+    openListingEditor('buy', null);
   });
 
   // Listing Modal: type tabs + close + submit
@@ -4295,7 +4287,6 @@
   document.getElementById('btnCloseCheckoutModal').addEventListener('click', function () { toggleModal('checkoutModal', false); });
   document.getElementById('btnCloseRentalModal').addEventListener('click', function () { toggleModal('rentalBookingModal', false); });
   document.getElementById('btnCloseRentDetailModal').addEventListener('click', function () { toggleModal('rentDetailModal', false); });
-  document.getElementById('btnCloseListingModal').addEventListener('click', function () { toggleModal('listingModal', false); });
   document.getElementById('btnCloseReportModal').addEventListener('click', function () { toggleModal('reportModal', false); });
   document.getElementById('reportForm').addEventListener('submit', submitReport);
 
@@ -4317,8 +4308,6 @@
       ['cart', 'orders', 'wish', 'booked', 'activity', 'listings'].forEach(drawerClose);
       var sidebar = document.getElementById('filterSidebar');
       if (sidebar) sidebar.classList.remove('mobile-open');
-      var closeMobile = document.getElementById('btnCloseMobileFilters');
-      if (closeMobile) closeMobile.style.display = 'none';
     }
   });
 
