@@ -21,10 +21,11 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
-from app.utils.auth import get_current_user, generate_id
+from app.utils.auth import get_current_user, generate_id, verify_password
 from app.models.user import User
 from app.models.marketplace import (
     MarketplaceCategory,
@@ -33,6 +34,8 @@ from app.models.marketplace import (
     MarketplaceSale,
     MarketplaceSellerSettings,
 )
+from app.models.listing_cart import ListingCart, ListingCartItem, ListingPurchaseKey
+from app.models.wallet import Wallet, WalletTransaction
 from app.utils.notification_helper import create_notification
 from app.routers.marketplace_seller import (
     _find_or_create_conversation,
@@ -55,6 +58,24 @@ class PurchaseCreate(BaseModel):
     delivery_name: Optional[str] = Field(None, max_length=200)
     delivery_phone: Optional[str] = Field(None, max_length=15)
     delivery_address: Optional[str] = Field(None, max_length=1000)
+    wallet_pin: Optional[str] = Field(None, max_length=20)
+
+
+class ListingCartAdd(BaseModel):
+    quantity: float = Field(1, gt=0)
+
+
+class ListingCartUpdate(BaseModel):
+    quantity: float = Field(..., gt=0)
+
+
+class ListingCartCheckout(BaseModel):
+    payment_method: str = "cod"
+    idempotency_key: Optional[str] = Field(None, max_length=80)
+    delivery_name: Optional[str] = Field(None, max_length=200)
+    delivery_phone: Optional[str] = Field(None, max_length=15)
+    delivery_address: Optional[str] = Field(None, max_length=1000)
+    wallet_pin: Optional[str] = Field(None, max_length=20)
 
 
 def _browse_listing_payload(db: Session, listing: MarketplaceListing, settings: Optional[MarketplaceSellerSettings], viewer_id: str) -> dict:
@@ -346,6 +367,161 @@ def _money(value) -> str:
     return f"{float(value or 0):.2f}"
 
 
+def _payment_method(raw) -> str:
+    method = (raw or "cod").strip().lower()
+    if method == "cash_on_delivery":
+        return "cod"
+    return method if method in ("cod", "wallet") else "cod"
+
+
+def _listing_remaining(listing: MarketplaceListing) -> float:
+    return max(float(listing.quantity or 0) - float(listing.sold_quantity or 0), 0)
+
+
+def _active_listing(db: Session, listing_id: str) -> MarketplaceListing:
+    listing = (
+        db.query(MarketplaceListing)
+        .filter(
+            (MarketplaceListing.id == listing_id) | (MarketplaceListing.listing_id == listing_id),
+            MarketplaceListing.is_deleted == False,  # noqa: E712
+        )
+        .first()
+    )
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    if not (listing.status == "active" and listing.is_active):
+        raise HTTPException(status_code=400, detail="This listing is no longer available")
+    return listing
+
+
+def _replay_purchase(db: Session, buyer_id: str, idem_key: Optional[str], listing: MarketplaceListing) -> Optional[MarketplaceSale]:
+    """Return the order a previous request already created for this key."""
+    if not idem_key:
+        return None
+    key = (
+        db.query(ListingPurchaseKey)
+        .filter(ListingPurchaseKey.buyer_user_id == buyer_id, ListingPurchaseKey.idem_key == idem_key)
+        .first()
+    )
+    if key and key.sale_id:
+        found = db.query(MarketplaceSale).filter(MarketplaceSale.id == key.sale_id).first()
+        if found:
+            return found
+    # Backward compatibility for sales created before the key table existed.
+    return (
+        db.query(MarketplaceSale)
+        .filter(
+            MarketplaceSale.buyer_user_id == buyer_id,
+            MarketplaceSale.listing_id == listing.id,
+        )
+        .filter(MarketplaceSale.notes.like(f'%"idem": "{idem_key}"%'))
+        .first()
+    )
+
+
+def _record_purchase_key(db: Session, buyer_id: str, idem_key: str, sale: MarketplaceSale) -> None:
+    db.add(ListingPurchaseKey(buyer_user_id=buyer_id, idem_key=idem_key, sale_id=sale.id))
+
+
+def _verify_wallet_payment(db: Session, current_user: User, amount: float, wallet_pin) -> Wallet:
+    """Validate the wallet can pay before anything is written."""
+    wallet = db.query(Wallet).filter(Wallet.user_id == current_user.id).first()
+    if not wallet:
+        raise HTTPException(status_code=404, detail="Wallet not found")
+    if not wallet.is_active:
+        raise HTTPException(status_code=403, detail="Wallet is inactive")
+    if not wallet.is_setup_complete or not wallet.wallet_pin_hash:
+        raise HTTPException(status_code=403, detail="Complete wallet setup before paying")
+    if not (wallet_pin and verify_password(str(wallet_pin).strip(), wallet.wallet_pin_hash)):
+        raise HTTPException(status_code=401, detail="Invalid wallet PIN")
+    if round(float(wallet.balance or 0), 2) < amount:
+        raise HTTPException(status_code=400, detail="Insufficient wallet balance")
+    return wallet
+
+
+def _debit_wallet(db: Session, wallet: Wallet, current_user: User, amount: float, sale_id: str, sale_pk: str) -> None:
+    new_balance = round(float(wallet.balance or 0) - amount, 2)
+    db.add(
+        WalletTransaction(
+            transaction_id=generate_id("FA-WTX", db, WalletTransaction),
+            wallet_id=wallet.id,
+            user_id=current_user.id,
+            transaction_type="debit",
+            amount=amount,
+            balance_after=new_balance,
+            description=f"Payment for input store order {sale_id}",
+            reference_id=sale_id,
+            payment_method="input_store_purchase",
+            status="completed",
+        )
+    )
+    wallet.balance = new_balance
+
+
+def _sale_note(sale: MarketplaceSale) -> dict:
+    try:
+        value = json.loads(sale.notes or "{}")
+        return value if isinstance(value, dict) else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _refund_wallet(db: Session, buyer: User, amount: float, sale_id: str) -> None:
+    wallet = db.query(Wallet).filter(Wallet.user_id == buyer.id).first()
+    if wallet is None:
+        return
+    new_balance = round(float(wallet.balance or 0) + amount, 2)
+    db.add(
+        WalletTransaction(
+            transaction_id=generate_id("FA-WTX", db, WalletTransaction),
+            wallet_id=wallet.id,
+            user_id=buyer.id,
+            transaction_type="credit",
+            amount=amount,
+            balance_after=new_balance,
+            description=f"Refund for cancelled input store order {sale_id}",
+            reference_id=sale_id,
+            payment_method="input_store_refund",
+            status="completed",
+        )
+    )
+    wallet.balance = new_balance
+
+
+def _notify_new_order(db: Session, current_user: User, listing: MarketplaceListing, sale: MarketplaceSale, quantity: float, total_amount: float) -> None:
+    """Tell the selling farmer, then confirm to the buyer. Never the same person."""
+    when = datetime.utcnow().strftime("%d %b %Y, %I:%M %p")
+    create_notification(
+        db=db,
+        user_id=listing.user_id,
+        title="New order received",
+        message=(
+            f"New order received for {listing.title} — {quantity:g} {listing.unit or 'unit'} "
+            f"for Rs {_money(total_amount)} (order {sale.sale_id}, {when}). Status: pending."
+        ),
+        notification_type="order",
+        reference_id=sale.id,
+        reference_type="marketplace_sale",
+        icon="fa-bag-shopping",
+        action_url="marketplace.html",
+    )
+    create_notification(
+        db=db,
+        user_id=current_user.id,
+        title="Order placed successfully",
+        message=(
+            f"Your order for {listing.title} x {quantity:g} "
+            f"({_money(total_amount)}) is confirmed. Reference {sale.sale_id}. "
+            "The seller has been notified."
+        ),
+        notification_type="order",
+        reference_id=sale.id,
+        reference_type="marketplace_sale",
+        icon="fa-receipt",
+        action_url="input-store.html",
+    )
+
+
 @router.post("/listings/{listing_id}/purchase", status_code=201)
 def purchase_listing(
     listing_id: str,
@@ -360,26 +536,15 @@ def purchase_listing(
     can never redirect an order to another farmer. Price and availability are
     re-read from the database; the amount sent by the client is never trusted.
     """
-    listing = (
-        db.query(MarketplaceListing)
-        .filter(
-            (MarketplaceListing.id == listing_id) | (MarketplaceListing.listing_id == listing_id),
-            MarketplaceListing.is_deleted == False,  # noqa: E712
-        )
-        .first()
-    )
-    if not listing:
-        raise HTTPException(status_code=404, detail="Listing not found")
+    listing = _active_listing(db, listing_id)
     if listing.user_id == current_user.id:
         raise HTTPException(status_code=400, detail="You cannot buy your own listing")
-    if not (listing.status == "active" and listing.is_active):
-        raise HTTPException(status_code=400, detail="This listing is no longer available")
 
     quantity = float(payload.quantity)
     if quantity <= 0:
         raise HTTPException(status_code=400, detail="Quantity must be greater than zero")
 
-    remaining = max(float(listing.quantity or 0) - float(listing.sold_quantity or 0), 0)
+    remaining = _listing_remaining(listing)
     if remaining <= 0:
         raise HTTPException(status_code=409, detail="This item is out of stock")
     if quantity > remaining:
@@ -393,32 +558,29 @@ def purchase_listing(
         raise HTTPException(status_code=409, detail="This item is no longer purchasable")
     total_amount = round(unit_price * quantity, 2)
 
-    # Duplicate-click protection: the same idempotency key always resolves to the
-    # one order it already created, so a double click cannot double-charge.
+    method = _payment_method(payload.payment_method)
+
+    # Hard idempotency: the unique constraint on (buyer, key) is what actually
+    # blocks a double click, so a retry resolves to the one order it already made.
     if payload.idempotency_key:
-        existing = (
-            db.query(MarketplaceSale)
-            .filter(
-                MarketplaceSale.buyer_user_id == current_user.id,
-                MarketplaceSale.listing_id == listing.id,
-                MarketplaceSale.status != "cancelled",
-            )
-            .filter(MarketplaceSale.notes.like(f'%"idem": "{payload.idempotency_key}"%'))
-            .first()
-        )
-        if existing:
+        replay = _replay_purchase(db, current_user.id, payload.idempotency_key, listing)
+        if replay is not None:
             return JSONResponse(
                 status_code=200,
                 content={
                     "status": "success",
-                    "data": _sale_payload(existing, listing),
+                    "data": _sale_payload(replay, listing),
                     "message": "Order already placed",
                 },
             )
 
-    method = (payload.payment_method or "cod").strip().lower()
-    if method not in ("cod", "wallet", "cash_on_delivery"):
-        method = "cod"
+    if method == "wallet":
+        wallet = _verify_wallet_payment(
+            db,
+            current_user,
+            total_amount,
+            payload.wallet_pin,
+        )
 
     try:
         sale = MarketplaceSale(
@@ -431,7 +593,7 @@ def purchase_listing(
             unit_price=unit_price,
             total_amount=total_amount,
             status="pending",
-            payment_status="pending",
+            payment_status="pending" if method != "wallet" else "paid",
             delivery_status="pending",
             notes=json.dumps(
                 {
@@ -454,43 +616,33 @@ def purchase_listing(
             listing.sold_at = datetime.utcnow()
         listing.updated_at = datetime.utcnow()
 
-        when = datetime.utcnow().strftime("%d %b %Y, %I:%M %p")
-        seller_message = (
-            f"New order received for {listing.title} — {quantity:g} {listing.unit or 'unit'} "
-            f"for Rs {_money(total_amount)} (order {sale.sale_id}, {when}). Status: pending."
-        )
-        create_notification(
-            db=db,
-            user_id=listing.user_id,
-            title="New order received",
-            message=seller_message,
-            notification_type="order",
-            reference_id=sale.id,
-            reference_type="marketplace_sale",
-            icon="fa-bag-shopping",
-            action_url="marketplace.html",
-        )
-        create_notification(
-            db=db,
-            user_id=current_user.id,
-            title="Order placed successfully",
-            message=(
-                f"Your order for {listing.title} x {quantity:g} "
-                f"({_money(total_amount)}) is confirmed. Reference {sale.sale_id}. "
-                "The seller has been notified."
-            ),
-            notification_type="order",
-            reference_id=sale.id,
-            reference_type="marketplace_sale",
-            icon="fa-receipt",
-            action_url="input-store.html",
-        )
+        if method == "wallet":
+            _debit_wallet(db, wallet, current_user, total_amount, sale.sale_id, sale.id)
+
+        _notify_new_order(db, current_user, listing, sale, quantity, total_amount)
+
+        if payload.idempotency_key:
+            _record_purchase_key(db, current_user.id, payload.idempotency_key, sale)
 
         db.commit()
         db.refresh(sale)
     except HTTPException:
         db.rollback()
         raise
+    except IntegrityError:
+        # Lost a race on the idempotency key: the other request won.
+        db.rollback()
+        replay = _replay_purchase(db, current_user.id, payload.idempotency_key, listing) if payload.idempotency_key else None
+        if replay is not None:
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "status": "success",
+                    "data": _sale_payload(replay, listing),
+                    "message": "Order already placed",
+                },
+            )
+        raise HTTPException(status_code=409, detail="This order was already placed. Please refresh.")
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Order could not be placed. Please try again.")
@@ -541,6 +693,15 @@ def cancel_purchase(
         raise HTTPException(status_code=400, detail="A delivered order cannot be cancelled")
 
     listing = db.query(MarketplaceListing).filter(MarketplaceListing.id == sale.listing_id).first()
+
+    # A wallet-paid order is genuinely credited back; COD simply stays unpaid.
+    refunded = False
+    if sale.payment_status == "paid":
+        note = _sale_note(sale)
+        if note.get("payment_method") == "wallet":
+            _refund_wallet(db, current_user, float(sale.total_amount or 0), sale.sale_id)
+            refunded = True
+
     sale.status = "cancelled"
     sale.payment_status = "refunded" if sale.payment_status == "paid" else sale.payment_status
     sale.updated_at = datetime.utcnow()
@@ -642,3 +803,321 @@ def update_sale_status(
     db.commit()
     db.refresh(sale)
     return {"status": "success", "data": _sale_payload(sale, listing), "message": "Order updated"}
+
+
+# ─────────────────────────── listing (stock) cart ───────────────────────────
+# Kept separate from the Product cart in marketplace.py, whose cart_items
+# require a products FK. Same shopper, different catalogue.
+
+
+def _listing_cart_for_user(db: Session, user_id: str) -> ListingCart:
+    cart = db.query(ListingCart).filter(ListingCart.user_id == user_id).first()
+    if not cart:
+        cart = ListingCart(user_id=user_id)
+        db.add(cart)
+        db.commit()
+        db.refresh(cart)
+    return cart
+
+
+def _listing_cart_payload(db: Session, cart: ListingCart) -> dict:
+    items = []
+    stale = []
+    cod_available = bool(cart.items)
+    for item in list(cart.items):
+        listing = item.listing
+        if listing is None:
+            stale.append(item)
+            continue
+        remaining = _listing_remaining(listing)
+        buyable = bool(listing.status == "active" and listing.is_active and remaining > 0)
+        price = round(float(listing.price or 0), 2)
+        seller = db.query(User).filter(User.id == listing.user_id).first()
+        items.append({
+            "id": item.id,
+            "listing_id": listing.id,
+            "quantity": float(item.quantity or 0),
+            "subtotal": round(price * float(item.quantity or 0), 2),
+            "available": remaining,
+            "buyable": buyable,
+            "listing": {
+                "id": listing.id,
+                "listing_id": listing.listing_id,
+                "title": listing.title,
+                "price": price,
+                "unit": listing.unit,
+                "image_url": (listing.image_url if hasattr(listing, "image_url") else None),
+                "seller": {"id": listing.user_id, "full_name": seller.full_name if seller else None},
+            },
+        })
+        if not buyable:
+            cod_available = False
+    if stale:
+        for item in stale:
+            db.delete(item)
+        db.commit()
+    return {
+        "items": items,
+        "total": round(sum(i["subtotal"] for i in items), 2),
+        "count": len(items),
+        "cod_available": cod_available,
+    }
+
+
+@router.post("/listings/{listing_id}/cart")
+def add_listing_to_cart(
+    listing_id: str,
+    payload: ListingCartAdd,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    listing = _active_listing(db, listing_id)
+    if listing.user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot buy your own listing")
+
+    quantity = float(payload.quantity)
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be greater than zero")
+
+    cart = _listing_cart_for_user(db, current_user.id)
+    item = (
+        db.query(ListingCartItem)
+        .filter(ListingCartItem.cart_id == cart.id, ListingCartItem.listing_id == listing.id)
+        .first()
+    )
+    wanted = quantity + (float(item.quantity) if item else 0.0)
+    if wanted > _listing_remaining(listing):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Only {_listing_remaining(listing):g} {listing.unit or 'unit'} available",
+        )
+    if item:
+        item.quantity = wanted
+        item.updated_at = datetime.utcnow()
+    else:
+        db.add(ListingCartItem(cart_id=cart.id, listing_id=listing.id, quantity=quantity))
+    cart.updated_at = datetime.utcnow()
+    db.commit()
+    return {
+        "status": "success",
+        "data": _listing_cart_payload(db, _listing_cart_for_user(db, current_user.id)),
+        "message": "Added to cart",
+    }
+
+
+@router.get("/cart")
+def get_listing_cart(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    cart = _listing_cart_for_user(db, current_user.id)
+    return {"status": "success", "data": _listing_cart_payload(db, cart)}
+
+
+@router.patch("/cart/{item_id}")
+def update_listing_cart_item(
+    item_id: str,
+    payload: ListingCartUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    cart = _listing_cart_for_user(db, current_user.id)
+    item = (
+        db.query(ListingCartItem)
+        .filter(ListingCartItem.id == item_id, ListingCartItem.cart_id == cart.id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Cart item not found")
+    quantity = float(payload.quantity)
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be greater than zero")
+    if quantity > _listing_remaining(item.listing):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Only {_listing_remaining(item.listing):g} {item.listing.unit or 'unit'} available",
+        )
+    item.quantity = quantity
+    item.updated_at = datetime.utcnow()
+    cart.updated_at = datetime.utcnow()
+    db.commit()
+    return {
+        "status": "success",
+        "data": _listing_cart_payload(db, _listing_cart_for_user(db, current_user.id)),
+        "message": "Cart updated",
+    }
+
+
+@router.delete("/cart/{item_id}")
+def remove_listing_cart_item(
+    item_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    cart = _listing_cart_for_user(db, current_user.id)
+    item = (
+        db.query(ListingCartItem)
+        .filter(ListingCartItem.id == item_id, ListingCartItem.cart_id == cart.id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Cart item not found")
+    db.delete(item)
+    cart.updated_at = datetime.utcnow()
+    db.commit()
+    return {
+        "status": "success",
+        "data": _listing_cart_payload(db, _listing_cart_for_user(db, current_user.id)),
+        "message": "Removed from cart",
+    }
+
+
+@router.post("/cart/checkout", status_code=201)
+def checkout_listing_cart(
+    payload: ListingCartCheckout,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Turn every item in the stock cart into a real order for its own farmer.
+
+    The whole basket is validated before a single row is written, so a failure
+    halfway through cannot leave the buyer with a half-placed order.
+    """
+    cart = _listing_cart_for_user(db, current_user.id)
+    if not cart.items:
+        raise HTTPException(status_code=400, detail="Your cart is empty")
+
+    method = _payment_method(payload.payment_method)
+    replay_key = payload.idempotency_key or f"cart-{cart.id}-{current_user.id}"
+
+    replayed = _replay_cart_sale(db, current_user.id, replay_key)
+    if replayed is not None:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "data": replayed,
+                "message": "Order already placed",
+            },
+        )
+
+    # ── validate the whole basket first ──
+    planned = []
+    grand_total = 0.0
+    for item in cart.items:
+        listing = item.listing
+        if listing is None:
+            raise HTTPException(status_code=400, detail="A cart item is no longer available")
+        if listing.user_id == current_user.id:
+            raise HTTPException(status_code=400, detail="You cannot buy your own listing")
+        if not (listing.status == "active" and listing.is_active):
+            raise HTTPException(status_code=400, detail=f"'{listing.title}' is no longer available")
+        remaining = _listing_remaining(listing)
+        quantity = float(item.quantity or 0)
+        if quantity <= 0:
+            raise HTTPException(status_code=400, detail=f"Invalid quantity for '{listing.title}'")
+        if quantity > remaining:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Only {remaining:g} {listing.unit or 'unit'} of '{listing.title}' left",
+            )
+        price = round(float(listing.price or 0), 2)
+        if price <= 0:
+            raise HTTPException(status_code=400, detail=f"'{listing.title}' is no longer purchasable")
+        grand_total = round(grand_total + price * quantity, 2)
+        planned.append((item, listing, quantity, price))
+
+    if method == "wallet":
+        wallet = _verify_wallet_payment(db, current_user, grand_total, payload.wallet_pin)
+
+    sale_ids = []
+    try:
+        for index, (item, listing, quantity, unit_price) in enumerate(planned):
+            total_amount = round(unit_price * quantity, 2)
+            sale = MarketplaceSale(
+                sale_id=generate_id("FA-SAL", db, MarketplaceSale),
+                listing_id=listing.id,
+                buyer_user_id=current_user.id,
+                buyer_name=current_user.full_name,
+                buyer_phone=current_user.phone_number,
+                quantity=quantity,
+                unit_price=unit_price,
+                total_amount=total_amount,
+                status="pending",
+                payment_status="paid" if method == "wallet" else "pending",
+                delivery_status="pending",
+                notes=json.dumps({
+                    "idem": replay_key,
+                    "cart_index": index,
+                    "payment_method": method,
+                    "delivery_name": payload.delivery_name or current_user.full_name,
+                    "delivery_phone": payload.delivery_phone or current_user.phone_number,
+                    "delivery_address": payload.delivery_address,
+                    "listing_type": listing.listing_type,
+                }),
+            )
+            db.add(sale)
+            db.flush()
+
+            listing.sold_quantity = round(float(listing.sold_quantity or 0) + quantity, 4)
+            if listing.sold_quantity >= float(listing.quantity or 0):
+                listing.status = "sold"
+                listing.sold_at = datetime.utcnow()
+            listing.updated_at = datetime.utcnow()
+
+            if method == "wallet":
+                _debit_wallet(db, wallet, current_user, total_amount, sale.sale_id, sale.id)
+
+            _notify_new_order(db, current_user, listing, sale, quantity, total_amount)
+            sale_ids.append(_sale_payload(sale, listing))
+            db.delete(item)
+
+        cart.updated_at = datetime.utcnow()
+        db.flush()
+        db.add(ListingPurchaseKey(buyer_user_id=current_user.id, idem_key=replay_key, sale_id=None))
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except IntegrityError:
+        db.rollback()
+        again = _replay_cart_sale(db, current_user.id, replay_key)
+        if again is not None:
+            return JSONResponse(
+                status_code=200,
+                content={"status": "success", "data": again, "message": "Order already placed"},
+            )
+        raise HTTPException(status_code=409, detail="This order was already placed. Please refresh.")
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Checkout could not be completed. Please try again.")
+
+    return {
+        "status": "success",
+        "data": {"orders": sale_ids, "count": len(sale_ids), "total": grand_total},
+        "message": f"{len(sale_ids)} order(s) placed successfully",
+    }
+
+
+def _replay_cart_sale(db: Session, buyer_id: str, idem_key: str) -> Optional[dict]:
+    key = (
+        db.query(ListingPurchaseKey)
+        .filter(ListingPurchaseKey.buyer_user_id == buyer_id, ListingPurchaseKey.idem_key == idem_key)
+        .first()
+    )
+    if key is None:
+        return None
+    sales = (
+        db.query(MarketplaceSale)
+        .filter(MarketplaceSale.buyer_user_id == buyer_id)
+        .filter(MarketplaceSale.notes.like(f'%"idem": "{idem_key}"%'))
+        .order_by(MarketplaceSale.created_at)
+        .all()
+    )
+    if not sales:
+        return None
+    return {
+        "orders": [_sale_payload(s) for s in sales],
+        "count": len(sales),
+        "total": round(sum(float(s.total_amount or 0) for s in sales), 2),
+    }

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional, List
+import json
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from app.models.user import User
 from app.models.marketplace import (
     ProductCategory, Product, MarketplaceCart, MarketplaceCartItem, MarketplaceWishlist,
     MarketplaceOrder, OrderItem, DeliveryTracking, DeliveryContact, FarmerRecentlyViewed,
+    MarketplaceListing, MarketplaceSale,
 )
 from app.models.wallet import Wallet, WalletTransaction
 
@@ -140,6 +142,65 @@ def _order_slim(order: MarketplaceOrder) -> dict:
         "summary": _order_first_item(order),
         "can_cancel": st not in ("received", "cancelled"),
         "can_reorder": st == "received",
+        "order_type": "product",
+    }
+
+
+# Input Store "Stock" purchases are MarketplaceSale rows rather than
+# MarketplaceOrder rows, but the buyer sees them on the same Orders page, so they
+# are projected onto the identical shape instead of a second UI contract.
+#
+# A sale tracks order status and delivery status separately
+# (status: pending|confirmed|completed|cancelled, delivery_status:
+# pending|dispatched|delivered), so the canonical order status has to be derived
+# from both. This is the single source of truth for that derivation.
+def _sale_order_status(sale: MarketplaceSale) -> str:
+    st = (sale.status or "").strip().lower()
+    dv = (sale.delivery_status or "").strip().lower()
+    if st == "cancelled" or dv == "cancelled":
+        return "cancelled"
+    if st == "completed" or dv == "delivered":
+        return "received"
+    if dv == "dispatched" or st == "dispatched":
+        return "out_for_delivery"
+    if st == "confirmed":
+        return "processing"
+    return "placed"
+
+
+def _sale_as_order(sale: MarketplaceSale, listing=None) -> dict:
+    st = _sale_order_status(sale)
+    unit = listing.unit if listing is not None else None
+    title = listing.title if listing is not None else "Item"
+    try:
+        note = json.loads(sale.notes or "{}")
+        note = note if isinstance(note, dict) else {}
+    except (TypeError, ValueError):
+        note = {}
+    return {
+        "id": sale.id,
+        "order_id": sale.sale_id,
+        "sale_id": sale.sale_id,
+        "listing_id": sale.listing_id,
+        "total_amount": sale.total_amount,
+        "status": st,
+        "status_label": ORDER_STATUS_LABELS[st],
+        "payment_status": sale.payment_status,
+        "payment_method": note.get("payment_method") or sale.payment_status,
+        "estimated_delivery": None,
+        "received_at": str(sale.sold_at) if sale.sold_at else None,
+        "created_at": str(sale.created_at) if sale.created_at else None,
+        "notes": sale.notes,
+        "summary": {
+            "product_name": title,
+            "quantity": sale.quantity,
+            "unit_price": sale.unit_price,
+            "image_url": getattr(listing, "image_url", None) if listing is not None else None,
+            "unit": unit,
+        },
+        "can_cancel": st not in ("received", "cancelled"),
+        "can_reorder": st == "received",
+        "order_type": "listing",
     }
 
 
@@ -651,8 +712,30 @@ def list_orders(
     if status:
         q = q.filter(MarketplaceOrder.status == status)
 
-    total = q.count()
-    items = q.order_by(MarketplaceOrder.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    # Product orders plus the buyer's Input Store stock purchases, merged newest
+    # first. When a buyer has no stock purchases this is byte-identical to the
+    # previous product-only behaviour.
+    rows = [{"sort": o.created_at, "payload": _order_slim(o)}
+            for o in q.order_by(MarketplaceOrder.created_at.desc()).all()]
+
+    # Stock purchases are filtered through _sale_order_status so the ?status=
+    # filter and the rendered row can never disagree.
+    wanted = (status or "").strip().lower()
+    for sale in (
+        db.query(MarketplaceSale)
+        .filter(MarketplaceSale.buyer_user_id == current_user.id)
+        .order_by(MarketplaceSale.created_at.desc())
+        .all()
+    ):
+        if wanted and _sale_order_status(sale) != wanted:
+            continue
+        listing = db.query(MarketplaceListing).filter(MarketplaceListing.id == sale.listing_id).first()
+        rows.append({"sort": sale.created_at, "payload": _sale_as_order(sale, listing)})
+
+    rows.sort(key=lambda r: (r["sort"] is not None, r["sort"]), reverse=True)
+    total = len(rows)
+    start = (page - 1) * limit
+    items = [r["payload"] for r in rows[start:start + limit]]
 
     return {
         "status": "success",
@@ -660,7 +743,7 @@ def list_orders(
             "total": total,
             "page": page,
             "limit": limit,
-            "items": [_order_slim(o) for o in items],
+            "items": items,
         },
     }
 

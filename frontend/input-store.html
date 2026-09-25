@@ -287,11 +287,25 @@
     .s-meta span{font-size:10px;font-weight:600;color:var(--text-secondary);background:var(--bg-card-soft);border:1px solid var(--border-light);padding:2px 8px;border-radius:10px}
     .s-avail{font-size:11px;font-weight:600;color:var(--text-muted);margin-top:5px}
     .s-avail b{color:var(--text-primary)}
-    .s-actions{display:flex;gap:8px;padding:10px 14px 14px;border-top:1px solid var(--border-light);margin-top:auto;background:var(--bg-card-soft)}
-    .s-actions button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--is-radius-sm);padding:9px 10px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid transparent;transition:filter .2s,background .2s,border-color .2s}
+    .s-actions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px 14px;border-top:1px solid var(--border-light);margin-top:auto;background:var(--bg-card-soft)}
+    .s-actions button{flex:1 1 96px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--is-radius-sm);padding:9px 10px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid transparent;transition:filter .2s,background .2s,border-color .2s}
     .s-actions button:disabled{opacity:.55;cursor:not-allowed}
     .s-buy{background:var(--is-gold,#f0a500);color:#1f2d1f;border-color:var(--is-gold,#f0a500)}
     .s-buy:not(:disabled):hover{filter:brightness(.94)}
+    .s-cart{background:var(--is-green);color:#fff;border-color:var(--is-green)}
+    .s-cart:not(:disabled):hover{filter:brightness(1.08)}
+    .lc-row{display:flex;gap:10px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--border-light)}
+    .lc-info{flex:1;min-width:0}
+    .lc-name{font-size:13px;font-weight:700;color:var(--text-primary);overflow-wrap:anywhere}
+    .lc-meta{font-size:11px;color:var(--text-muted);margin-top:2px;overflow-wrap:anywhere}
+    .lc-qty{display:flex;align-items:center;gap:8px}
+    .lc-qty button{width:26px;height:26px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-card-soft);color:var(--text-primary);cursor:pointer;font-size:11px;display:inline-flex;align-items:center;justify-content:center}
+    .lc-qty button:disabled{opacity:.45;cursor:not-allowed}
+    .lc-qty span{min-width:26px;text-align:center;font-size:13px;font-weight:700}
+    .lc-rm{background:transparent;border:0;color:#c62828;cursor:pointer;padding:4px 6px}
+    .lc-warn{background:rgba(198,40,40,.08);color:#c62828;font-size:11px;padding:6px 8px;border-radius:8px;margin-top:6px}
+    .pin-row{display:none;margin-top:8px}
+    .pin-row.on{display:block}
     .s-msg{background:transparent;color:var(--is-green);border-color:var(--border-light)}
     .s-msg:not(:disabled):hover{background:rgba(46,125,50,.08)}
     .store-empty{grid-column:1/-1;text-align:center;padding:48px 24px}
@@ -342,6 +356,7 @@
     <button class="filter-mobile-btn" id="filter-mobile-btn"><i class="fas fa-sliders"></i> Filter</button>
     <button class="store-icon-btn" id="wishlist-trigger" title="Wishlist"><i class="fas fa-heart"></i><span class="badge" id="wk-badge"></span></button>
     <button class="store-icon-btn" id="cart-trigger" title="Cart"><i class="fas fa-shopping-cart"></i><span class="badge" id="cart-badge"></span></button>
+    <button class="store-icon-btn" id="stock-cart-trigger" title="Stock Cart"><i class="fas fa-tractor"></i><span class="badge" id="stock-cart-badge"></span></button>
     <button class="store-icon-btn" id="purchases-trigger" title="My Purchases"><i class="fas fa-box-open"></i><span class="badge" id="purchases-badge"></span></button>
     <a href="my-orders.html" class="store-icon-btn" title="My Orders" style="text-decoration:none"><i class="fas fa-box"></i></a>
   </div>
@@ -412,6 +427,12 @@
 <div class="sheet right" id="purchases-sheet">
   <div class="sheet-head"><h3><i class="fas fa-box-open" style="color:var(--is-green)"></i> My Purchases</h3><button class="close-btn" id="purchases-sheet-close"><i class="fas fa-xmark"></i></button></div>
   <div class="sheet-body" id="purchases-sheet-body"></div>
+</div>
+
+<!-- Stock Cart Drawer -->
+<div class="sheet right" id="stock-cart-sheet">
+  <div class="sheet-head"><h3><i class="fas fa-tractor" style="color:var(--is-green)"></i> Stock Cart</h3><button class="close-btn" id="stock-cart-sheet-close"><i class="fas fa-xmark"></i></button></div>
+  <div class="sheet-body" id="stock-cart-body"></div>
 </div>
 
 <!-- Stock Buy Now Modal -->
@@ -827,6 +848,7 @@ function renderStockCard(l){
     +'</div>'
     +'<div class="s-actions" onclick="event.stopPropagation()">'
     +'<button class="s-buy" data-lid="'+id+'"'+(out?' disabled':'')+' onclick="'+(out?'':'stockBuyNow(this)')+'"><i class="fas fa-bolt"></i> '+(out?'Sold Out':'Buy Now')+'</button>'
+    +'<button class="s-cart" data-lid="'+id+'"'+(out?' disabled':'')+' onclick="'+(out?'':'stockAddToCart(this)')+'"><i class="fas fa-cart-plus"></i> Add to Cart</button>'
     +'<button class="s-msg" onclick="openStock(\''+id+'\')"><i class="fas fa-paper-plane"></i> Message Seller</button>'
     +'</div></div>';
 }
@@ -843,10 +865,9 @@ function stockBuyNow(btn){
   if(!requireAuth())return;
   var id=btn&&btn.getAttribute?btn.getAttribute('data-lid'):'';
   if(!id)return;
-  var card=btn.closest?btn.closest('.s-card'):null;
-  var listing=null;
-  if(card)try{listing=JSON.parse(card.getAttribute('data-listing'));}catch(e){}
-  openStockBuy(id,listing);
+  // The live listing is re-fetched inside openStockBuy so price and availability
+  // can never be taken from the rendered card.
+  openStockBuy(id);
 }
 window.stockBuyNow=stockBuyNow;
 
@@ -856,7 +877,7 @@ function openStockBuy(id,listing){
   body.innerHTML='<div class="wk-note"><i class="fas fa-spinner fa-spin"></i> Loading purchase details…</div>';
   document.getElementById('stock-buy-modal').classList.add('open');
   isReq('GET','/marketplace/browse/listings/'+encodeURIComponent(id)).then(function(res){
-    var l=unwrap(res)||listing||{};
+    var l=unwrap(res)||{};
     var remaining=(l.remaining_quantity!=null)?Number(l.remaining_quantity):0;
     var price=Number(l.price||0);
     var unit=l.unit||'unit';
@@ -882,6 +903,7 @@ function openStockBuy(id,listing){
       +'<button type="button" class="pm-opt selected" data-pm="cod" onclick="selectStockPM(\'cod\')"><i class="fas fa-money-bill-wave"></i> Cash on Delivery</button>'
       +'<button type="button" class="pm-opt" data-pm="wallet" onclick="selectStockPM(\'wallet\')"><i class="fas fa-wallet"></i> Farm Assist Wallet</button>'
       +'</div><input type="hidden" id="sb-method" value="cod"></div>'
+      +'<div class="pin-row" id="sb-pin-row"><input id="sb-pin" type="password" inputmode="numeric" maxlength="8" placeholder="Wallet PIN (required for wallet payment)"></div>'
       +'</div>'
       +'<button class="is-btn gold" id="sb-submit" style="width:100%"><i class="fas fa-bolt"></i> Place Order</button>';
     _stockBuy={id:id,price:price,remaining:remaining,unit:unit,title:l.title||'Item',qty:1,key:null};
@@ -904,6 +926,8 @@ window.stockBuyQty=stockBuyQty;
 function selectStockPM(pm){
   document.querySelectorAll('#stock-buy-modal .pm-opt').forEach(function(b){b.classList.toggle('selected',b.dataset.pm===pm)});
   document.getElementById('sb-method').value=pm;
+  var row=document.getElementById('sb-pin-row');
+  if(row)row.classList.toggle('on',pm==='wallet');
 }
 window.selectStockPM=selectStockPM;
 function closeStockBuy(){
@@ -919,13 +943,15 @@ function submitStockBuy(){
   btn.disabled=true;
   btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Placing your order…';
   if(!_stockBuy.key)_stockBuy.key='sb-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
+  var pm=document.getElementById('sb-method').value;
   isReq('POST','/marketplace/browse/listings/'+encodeURIComponent(_stockBuy.id)+'/purchase',{
     quantity:_stockBuy.qty,
-    payment_method:document.getElementById('sb-method').value,
+    payment_method:pm,
     idempotency_key:_stockBuy.key,
     delivery_name:document.getElementById('sb-name').value,
     delivery_phone:document.getElementById('sb-phone').value,
-    delivery_address:document.getElementById('sb-address').value
+    delivery_address:document.getElementById('sb-address').value,
+    wallet_pin:pm==='wallet'?(document.getElementById('sb-pin')||{}).value:null
   }).then(function(res){
     var sale=unwrap(res)||{};
     document.getElementById('stock-buy-body').innerHTML='<div style="text-align:center;padding:18px 6px">'
@@ -970,6 +996,137 @@ function loadPurchases(){
   }).catch(function(){});
 }
 window.loadPurchases=loadPurchases;
+
+/* ─── STOCK CART (farmer listings; kept apart from the New/Product cart) ─── */
+var _stockCart={data:null,pm:'cod',key:null};
+
+function stockCartPath(){
+  return '/marketplace/browse';
+}
+function stockAddToCart(btn){
+  if(!requireAuth())return;
+  var id=btn&&btn.getAttribute?btn.getAttribute('data-lid'):'';
+  if(!id)return;
+  btn.disabled=true;
+  isReq('POST',stockCartPath()+'/listings/'+encodeURIComponent(id)+'/cart',{quantity:1})
+    .then(function(res){
+      toast((unwrap(res)||{}).message||'Added to cart','success');
+      renderStockCart(unwrap(res));
+      loadStockListings();
+    })
+    .catch(function(err){toast(err.message||'Could not add to cart','error');})
+    .then(function(){btn.disabled=false;});
+}
+function loadStockCart(){
+  if(!isAuthed())return Promise.resolve();
+  return isReq('GET',stockCartPath()+'/cart').then(function(res){renderStockCart(unwrap(res));}).catch(function(){});
+}
+function renderStockCart(cart){
+  _stockCart.data=cart||{items:[],total:0,count:0};
+  var badge=document.getElementById('stock-cart-badge');
+  if(badge)badge.textContent=_stockCart.data.count||'';
+  var body=document.getElementById('stock-cart-body');
+  if(!body)return;
+  if(!_stockCart.data.count){
+    body.innerHTML='<div class="store-empty"><i class="fas fa-tractor"></i><p>Your stock cart is empty.<br>Add a farmer listing to order it here.</p></div>';
+    return;
+  }
+  body.innerHTML=_stockCart.data.items.map(function(it){
+    var l=it.listing||{};
+    return '<div class="lc-row">'
+      +'<div class="lc-info"><div class="lc-name">'+esc(l.title||'Item')+'</div>'
+      +'<div class="lc-meta">'+fmtPrice(l.price)+' / '+esc(l.unit||'unit')+' &middot; '+(l.seller&&l.seller.full_name?esc(l.seller.full_name):'Seller')+'</div>'
+      +(it.buyable?'':'<div class="lc-warn">Only '+Number(it.available||0)+' left &mdash; reduce or remove to continue</div>')+'</div>'
+      +'<div class="lc-qty"><button type="button" onclick="stockCartQty(\''+it.id+'\',-1)"'+(it.quantity<=1?' disabled':'')+'><i class="fas fa-minus"></i></button>'
+      +'<span>'+Number(it.quantity)+'</span>'
+      +'<button type="button" onclick="stockCartQty(\''+it.id+'\',1)"'+(!it.buyable||it.quantity>=Number(it.available||0)?' disabled':'')+'><i class="fas fa-plus"></i></button></div>'
+      +'<button class="lc-rm" title="Remove" onclick="stockCartRemove(\''+it.id+'\')"><i class="fas fa-trash"></i></button>'
+      +'</div>';
+  }).join('')
+  +'<div class="checkout-total-row" style="margin-top:12px"><span>Total</span><span>'+fmtPrice(_stockCart.data.total)+'</span></div>'
+  +'<div class="checkout-form" style="margin-top:12px">'
+  +'<input id="sc-name" placeholder="Delivery Name" value="'+esc((profile&&profile.full_name)||'')+'">'
+  +'<input id="sc-phone" placeholder="Delivery Phone" value="'+esc((profile&&profile.phone_number)||'')+'">'
+  +'<textarea id="sc-address" placeholder="Delivery Address (Village / District / State / Pincode)"></textarea>'
+  +'<div class="ck-pay"><label class="ck-lbl">Payment Method</label><div class="pm-row">'
+  +'<button type="button" class="pm-opt selected" data-pm="cod" onclick="selectStockCartPM(\'cod\')"><i class="fas fa-money-bill-wave"></i> Cash on Delivery</button>'
+  +'<button type="button" class="pm-opt" data-pm="wallet" onclick="selectStockCartPM(\'wallet\')"><i class="fas fa-wallet"></i> Farm Assist Wallet</button>'
+  +'</div></div>'
+  +'<div class="pin-row" id="sc-pin-row"><input id="sc-pin" type="password" inputmode="numeric" maxlength="8" placeholder="Wallet PIN (required for wallet payment)"></div>'
+  +'</div>'
+  +'<button class="is-btn gold" style="width:100%;margin-top:12px" onclick="checkoutStockCart()"><i class="fas fa-lock"></i> Place Order</button>';
+}
+function stockCartQty(itemId,delta){
+  var it=(_stockCart.data&&_stockCart.data.items||[]).filter(function(x){return x.id===itemId})[0];
+  if(!it)return;
+  var next=Number(it.quantity)+delta;
+  if(next<1)return;
+  isReq('PATCH',stockCartPath()+'/cart/'+encodeURIComponent(itemId),{quantity:next})
+    .then(function(res){renderStockCart(unwrap(res));})
+    .catch(function(err){toast(err.message||'Could not update cart','error');});
+}
+function stockCartRemove(itemId){
+  isReq('DELETE',stockCartPath()+'/cart/'+encodeURIComponent(itemId))
+    .then(function(res){renderStockCart(unwrap(res));toast('Removed from cart','success');loadStockListings();})
+    .catch(function(err){toast(err.message||'Could not remove item','error');});
+}
+function selectStockCartPM(pm){
+  _stockCart.pm=pm;
+  document.querySelectorAll('#stock-cart-sheet .pm-opt').forEach(function(b){b.classList.toggle('selected',b.dataset.pm===pm)});
+  var row=document.getElementById('sc-pin-row');
+  if(row)row.classList.toggle('on',pm==='wallet');
+}
+function checkoutStockCart(){
+  if(!requireAuth()||!_stockCart.data||!_stockCart.data.count)return;
+  if(!_stockCart.key)_stockCart.key='sc-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
+  var pm=_stockCart.pm;
+  var body=document.getElementById('stock-cart-body');
+  var blocked=body.querySelector('button.is-btn.gold');
+  if(blocked){blocked.disabled=true;blocked.innerHTML='<i class="fas fa-spinner fa-spin"></i> Placing your orders…';}
+  isReq('POST',stockCartPath()+'/cart/checkout',{
+    payment_method:pm,
+    idempotency_key:_stockCart.key,
+    delivery_name:(document.getElementById('sc-name')||{}).value,
+    delivery_phone:(document.getElementById('sc-phone')||{}).value,
+    delivery_address:(document.getElementById('sc-address')||{}).value,
+    wallet_pin:pm==='wallet'?(document.getElementById('sc-pin')||{}).value:null
+  }).then(function(res){
+    var d=unwrap(res)||{};
+    _stockCart.key=null;
+    body.innerHTML='<div style="text-align:center;padding:18px 6px">'
+      +'<div style="font-size:40px;color:var(--is-green);margin-bottom:10px"><i class="fas fa-circle-check"></i></div>'
+      +'<h3 style="font-size:17px;font-weight:800;margin-bottom:6px">'+Number(d.count||0)+' order(s) placed</h3>'
+      +'<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Total '+fmtPrice(d.total)+'. Each farmer has been notified about their own item.</p>'
+      +'<div class="wk-note ok" style="text-align:left"><i class="fas fa-bell"></i> Your orders are now in My Purchases and My Orders.</div>'
+      +'<button class="is-btn primary" style="width:100%;margin-top:12px" onclick="closeStockCart();loadStockListings();loadPurchases()">Done</button>'
+      +'</div>';
+    var badge=document.getElementById('stock-cart-badge');
+    if(badge)badge.textContent='';
+    loadPurchases();
+  }).catch(function(err){
+    _stockCart.key=null;
+    toast(err.message||'Checkout failed','error');
+    loadStockCart();
+  });
+}
+function closeStockCart(){
+  if(typeof hideSheet==='function')hideSheet();
+  else{
+    var s=document.getElementById('stock-cart-sheet');
+    if(s)s.classList.remove('open');
+    var bg=document.getElementById('sheet-bg');
+    if(bg)bg.classList.remove('open');
+  }
+  _stockCart.key=null;
+  loadStockCart();
+}
+window.stockAddToCart=stockAddToCart;
+window.loadStockCart=loadStockCart;
+window.stockCartQty=stockCartQty;
+window.stockCartRemove=stockCartRemove;
+window.selectStockCartPM=selectStockCartPM;
+window.checkoutStockCart=checkoutStockCart;
+window.closeStockCart=closeStockCart;
 function loadStockListings(){
   if(!isAuthed()){window.location.href='login.html';return;}
   var params=[];
@@ -1582,6 +1739,10 @@ function bindEvents(){
   document.getElementById('purchases-trigger').addEventListener('click',function(){loadPurchases();showSheet('purchases-sheet')});
   document.getElementById('purchases-sheet-close').addEventListener('click',hideSheet);
 
+  // stock cart
+  document.getElementById('stock-cart-trigger').addEventListener('click',function(){loadStockCart();showSheet('stock-cart-sheet')});
+  document.getElementById('stock-cart-sheet-close').addEventListener('click',closeStockCart);
+
   // stock buy now modal
   document.getElementById('stock-buy-close').addEventListener('click',closeStockBuy);
   document.getElementById('stock-buy-modal').addEventListener('click',function(e){if(e.target===this)closeStockBuy()});
@@ -1611,7 +1772,7 @@ function resetAllFilters(){
 /* ─── BOOT ─── */
 function boot(){
   if(!requireAuth())return;
-  bindEvents();loadProfile();loadCategories();loadFiltersData();loadProducts();loadRecommended();loadCart();loadWishlist();loadPurchases();
+  bindEvents();loadProfile();loadCategories();loadFiltersData();loadProducts();loadRecommended();loadCart();loadWishlist();loadPurchases();loadStockCart();
 }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 window.loadProducts=loadProducts;window.loadCart=loadCart;window.imgFallback=imgFallback;
