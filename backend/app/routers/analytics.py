@@ -2388,6 +2388,24 @@ def _list_table_html(lst: List[Any]) -> str:
     return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
 
 
+def _render_value_html(value: Any, label: Optional[str] = None) -> str:
+    """Render a report section value, including nested dicts and lists.
+
+    Mirrors ``_flatten_csv`` so the HTML and CSV exports of a report always
+    carry the same detail (e.g. the Sustainability records and trends).
+    """
+    caption = f'<p class="sub-label">{_esc(label)}</p>' if label else ""
+    if isinstance(value, dict):
+        parts = [_kv_table_html(value)]
+        for key, sub in value.items():
+            if isinstance(sub, (dict, list)):
+                parts.append(_render_value_html(sub, str(key).replace("_", " ").title()))
+        return "".join(part for part in parts if part)
+    if isinstance(value, list):
+        return caption + _list_table_html(value)
+    return caption + f"<p>{_esc_v(value)}</p>"
+
+
 def _render_report_html(report: FarmReport) -> str:
     data = report.data_json or {}
     period = f"{report.date_from or '—'} to {report.date_to or 'today'}"
@@ -2405,12 +2423,7 @@ def _render_report_html(report: FarmReport) -> str:
             continue
         included.append(key)
         value = data[key]
-        if isinstance(value, dict):
-            body = _kv_table_html(value)
-        elif isinstance(value, list):
-            body = _list_table_html(value)
-        else:
-            body = f"<p>{_esc_v(value)}</p>"
+        body = _render_value_html(value)
         if not body.strip():
             continue
         sections_html.append(
@@ -2444,6 +2457,7 @@ def _render_report_html(report: FarmReport) -> str:
   table:not(.kv) td{{padding:6px 8px;border-bottom:1px solid #f3f4f6}}
   tr:nth-child(even) td{{background:#fafcfa}}
   .dim{{color:#9ca3af}} .note{{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;color:#92400e;font-size:13px}}
+  .sub-label{{font-size:12px;font-weight:700;color:#166534;margin:14px 0 4px}}
   .meta{{font-size:12px;color:#6b7280;margin-top:8px}}
 </style></head><body><div class="wrap">
 <header>

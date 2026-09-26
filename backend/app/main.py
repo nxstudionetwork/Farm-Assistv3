@@ -32,7 +32,7 @@ from .routers import (
     learning, techniques, emergency, market_prices,
     insurance, calendar, input_store, tools_equipment,
     marketplace_seller, monitoring, livestock, soil_irrigation,
-    crop_health, marketplace_browse,
+    crop_health, marketplace_browse, sustainability,
 )
 
 
@@ -107,6 +107,7 @@ app.include_router(tools_equipment.router, prefix="/api/v1/tools-equipment")
 app.include_router(livestock.router)
 app.include_router(soil_irrigation.router)
 app.include_router(crop_health.router)
+app.include_router(sustainability.router)
 
 
 

@@ -444,30 +444,6 @@ const FarmDB = (function() {
     {id:15,title:"Climate-Smart Agriculture Practices",category:"agri",level:"Advanced",duration:"4h 12 Lessons",rating:4.7,students:4300,image:"fa-globe",instructor:"Dr. Rajiv Mehta",description:"Adaptation strategies for climate change - drought-resistant varieties, weather forecasting integration, carbon farming, and climate risk management.",price:"Free",certificate:true,lessons:[{title:"Climate Change Impacts",duration:"25 min"},{title:"Resilient Crop Varieties",duration:"30 min"},{title:"Weather Forecasting Integration",duration:"22 min"},{title:"Carbon Sequestration",duration:"28 min"},{title:"Risk Management Tools",duration:"20 min"},{title:"Climate-Smart Villages",duration:"25 min"},{title:"Policy & Support Programs",duration:"18 min"}],progress:0}
   ];
 
-  // ========== SUSTAINABILITY DATA ==========
-  db.sustainabilityData = {
-    waterConserved: 245000,
-    co2Reduced: 128,
-    treesPlanted: 3500,
-    organicArea: 185,
-    solarCapacity: 45,
-    biodiversityScore: 78,
-    carbonFootprint: 320,
-    environmentalScore: 82,
-    waterUsageAnalytics: [
-      {month:"Jan",usage:420,rainfall:15},{month:"Feb",usage:380,rainfall:8},{month:"Mar",usage:510,rainfall:3},
-      {month:"Apr",usage:580,rainfall:0},{month:"May",usage:620,rainfall:2},{month:"Jun",usage:480,rainfall:60},
-      {month:"Jul",usage:350,rainfall:120},{month:"Aug",usage:330,rainfall:110},{month:"Sep",usage:360,rainfall:85}
-    ],
-    initiatives: [
-      {title:"Rainwater Harvesting System",progress:100,status:"Completed",impact:"50,000L storage",icon:"fa-cloud-rain"},
-      {title:"Solar Panel Installation",progress:100,status:"Completed",impact:"5kW capacity",icon:"fa-sun"},
-      {title:"Organic Farming Certification",progress:65,status:"In Progress",impact:"Certification by Dec 2026",icon:"fa-leaf"},
-      {title:"Tree Plantation Drive",progress:80,status:"In Progress",impact:"3,500 trees planted",icon:"fa-tree"},
-      {title:"Vermicompost Unit",progress:100,status:"Completed",impact:"2 tons/month",icon:"fa-recycle"}
-    ]
-  };
-
   return db;
 })();
 

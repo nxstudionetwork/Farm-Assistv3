@@ -1382,86 +1382,852 @@ function showCourseDetail(id) {
 window.showCourseDetail = showCourseDetail;
 
 /* ===== SUSTAINABILITY ===== */
+/* Real data only: every number comes from GET /api/v1/sustainability/dashboard,
+   which resolves the authenticated farmer server-side. No mock values. */
+const SUS = {
+  state: {
+    range: 'all', dfrom: '', dto: '',
+    farmId: '', plotId: '',
+    data: null, reports: [], bound: false
+  },
+
+  RANGES: [
+    { key: '30d', label: 'Last 30 days' },
+    { key: '90d', label: 'Last 90 days' },
+    { key: '12m', label: 'Last 12 months' },
+    { key: 'year', label: 'This year' },
+    { key: 'all', label: 'All time' }
+  ],
+
+  ENERGY_TYPES: ['electricity', 'fuel', 'diesel', 'solar', 'biomass', 'other'],
+  ENERGY_UNITS: ['kWh', 'Litres', 'kg'],
+  PRACTICE_CATEGORIES: ['soil', 'water', 'energy', 'waste', 'biodiversity'],
+  PRACTICE_STATUSES: ['active', 'planned', 'completed'],
+  PRACTICE_SUGGESTIONS: [
+    'Drip irrigation', 'Sprinkler irrigation', 'Rainwater harvesting', 'Mulching',
+    'Cover cropping', 'Composting', 'Vermicompost', 'Crop rotation', 'Integrated pest management',
+    'Organic manure', 'Solar water pump', 'Residue recycling', 'Agroforestry'
+  ],
+
+  /* ---------- helpers ---------- */
+  esc: function (v) {
+    if (v === null || v === undefined) return '';
+    return String(v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  },
+  num: function (v, dec) {
+    if (v === null || v === undefined || v === '' || isNaN(Number(v))) return null;
+    var d = dec === undefined ? 2 : dec;
+    return Number(v).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: d });
+  },
+  fmtDate: function (v) {
+    if (!v) return '\u2014';
+    var p = String(v).slice(0, 10).split('-');
+    if (p.length !== 3) return String(v);
+    var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return Number(p[2]) + ' ' + (months[Number(p[1]) - 1] || '') + ' ' + p[0];
+  },
+  val: function (v, unit, dec) {
+    var n = this.num(v, dec);
+    if (n === null) return 'Data not available yet';
+    return n + (unit ? ' <span class="unit">' + this.esc(unit) + '</span>' : '');
+  },
+  today: function () {
+    var d = new Date();
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+  },
+
+  /* ---------- data flow ---------- */
+  init: function () {
+    if (!document.getElementById('sustainability-content')) return;
+    if (!this.state.bound) {
+      this.state.bound = true;
+      var retry = document.getElementById('sus-retry');
+      if (retry) retry.addEventListener('click', function () { SUS.load(); });
+      var signin = document.getElementById('sus-signin');
+      if (signin) signin.addEventListener('click', function () { location.href = 'login.html'; });
+    }
+    this.load();
+  },
+
+  bounds: function () {
+    var r = this.state.range;
+    if (r === 'all') return { from: '', to: '' };
+    var now = new Date();
+    var start = new Date(now.getTime());
+    if (r === '30d') start.setDate(now.getDate() - 30);
+    else if (r === '90d') start.setDate(now.getDate() - 90);
+    else if (r === '12m') start.setFullYear(now.getFullYear() - 1);
+    else if (r === 'year') start = new Date(now.getFullYear(), 0, 1);
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return {
+      from: start.getFullYear() + '-' + pad(start.getMonth() + 1) + '-' + pad(start.getDate()),
+      to: now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
+    };
+  },
+
+  params: function () {
+    var b = this.state.range === 'custom'
+      ? { from: this.state.dfrom, to: this.state.dto }
+      : this.bounds();
+    return {
+      farm_id: this.state.farmId || undefined,
+      plot_id: this.state.plotId || undefined,
+      date_from: b.from || undefined,
+      date_to: b.to || undefined
+    };
+  },
+
+  showLoading: function () {
+    var load = document.getElementById('sus-loading');
+    var err = document.getElementById('sus-error');
+    var dash = document.getElementById('sus-dashboard');
+    if (load) load.hidden = false;
+    if (err) err.hidden = true;
+    if (dash) dash.hidden = true;
+  },
+
+  showError: function (err) {
+    var load = document.getElementById('sus-loading');
+    var box = document.getElementById('sus-error');
+    var dash = document.getElementById('sus-dashboard');
+    var title = document.getElementById('sus-error-title');
+    var text = document.getElementById('sus-error-text');
+    var signin = document.getElementById('sus-signin');
+    if (load) load.hidden = true;
+    if (dash) dash.hidden = true;
+    if (box) box.hidden = false;
+    var unauth = err && (err.status === 401 || err.status === 403);
+    if (title) title.textContent = unauth ? 'Sign in to view your sustainability data' : 'Unable to load sustainability data. Please try again.';
+    if (text) {
+      text.textContent = unauth
+        ? 'Your sustainability records belong to your farmer account, so you need to sign in first.'
+        : ((err && err.message) ? err.message : 'Check that the Farm Assist server is running, then try again.');
+    }
+    if (signin) signin.hidden = !unauth;
+  },
+
+  load: function () {
+    if (!window.API || !window.API.Sustainability) {
+      this.showError({ message: 'The Farm Assist service layer did not load.' });
+      return;
+    }
+    this.showLoading();
+    var self = this;
+    window.API.Sustainability.dashboard(this.params())
+      .then(function (res) {
+        /* services.js already unwraps {"status":"success","data":{...}} */
+        var payload = (res && res.summary && res.farms) ? res : (res && res.data ? res.data : null);
+        self.state.data = payload;
+        if (!payload) throw { message: 'The server returned an empty sustainability payload.' };
+        self.render();
+        self.loadReports();
+      })
+      .catch(function (err) { self.showError(err || {}); });
+  },
+
+  loadReports: function () {
+    var self = this;
+    if (!window.API || !window.API.Analytics) return;
+    window.API.Analytics.reportsList()
+      .then(function (res) {
+        var all = (res && res.items) ? res.items : ((res && res.reports) ? res.reports : (Array.isArray(res) ? res : []));
+        self.state.reports = all.filter(function (r) {
+          return String(r.report_type || '').toLowerCase() === 'sustainability';
+        });
+        self.renderReports();
+      })
+      .catch(function () { /* report list is optional */ });
+  },
+
+  /* ---------- control handlers ---------- */
+  onFarmChange: function () {
+    this.state.farmId = document.getElementById('sus-farm') ? document.getElementById('sus-farm').value : '';
+    this.state.plotId = '';
+    this.load();
+  },
+  onPlotChange: function () {
+    this.state.plotId = document.getElementById('sus-plot') ? document.getElementById('sus-plot').value : '';
+    this.load();
+  },
+  onRangeChange: function () {
+    var sel = document.getElementById('sus-range');
+    this.state.range = sel ? sel.value : 'all';
+    var custom = document.getElementById('sus-custom');
+    if (custom) custom.style.display = this.state.range === 'custom' ? 'flex' : 'none';
+    if (this.state.range === 'custom' && !this.state.dfrom) this.state.dfrom = this.today();
+    this.load();
+  },
+  applyCustom: function () {
+    var from = document.getElementById('sus-dfrom');
+    var to = document.getElementById('sus-dto');
+    this.state.dfrom = from ? from.value : '';
+    this.state.dto = to ? to.value : '';
+    this.load();
+  },
+  refresh: function () { this.load(); },
+  toggleCalc: function () {
+    var box = document.getElementById('sus-calc-body');
+    if (box) box.hidden = !box.hidden;
+  },
+
+  /* ---------- records ---------- */
+  submitEnergy: function (btn) {
+    var self = this;
+    var g = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    var farm = g('sus-energy-farm'), plot = g('sus-energy-plot');
+    var qty = g('sus-energy-qty');
+    var date = g('sus-energy-date');
+    if (!farm) { this.toast('Choose the farm this energy record belongs to.', 'error'); return; }
+    if (qty === '' || isNaN(Number(qty)) || Number(qty) < 0) { this.toast('Enter a valid usage amount.', 'error'); return; }
+    if (!date) { this.toast('Choose the date the energy was used.', 'error'); return; }
+    var payload = {
+      farm_id: farm,
+      plot_id: plot || null,
+      energy_type: g('sus-energy-type'),
+      quantity: Number(qty),
+      unit: g('sus-energy-unit'),
+      source: g('sus-energy-source') || null,
+      cost: g('sus-energy-cost') === '' ? null : Number(g('sus-energy-cost')),
+      usage_date: date,
+      notes: g('sus-energy-notes') || null
+    };
+    this.busy(btn, true);
+    window.API.Sustainability.addEnergy(payload)
+      .then(function () { self.toast('Energy record saved.', 'success'); self.load(); })
+      .catch(function (e) { self.toast(self.apiError(e, 'Could not save the energy record.'), 'error'); })
+      .then(function () { self.busy(btn, false); });
+  },
+  submitPractice: function (btn) {
+    var self = this;
+    var g = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    var farm = g('sus-practice-farm'), plot = g('sus-practice-plot');
+    var name = g('sus-practice-name');
+    if (!farm) { this.toast('Choose the farm this practice belongs to.', 'error'); return; }
+    if (name.length < 2) { this.toast('Enter the practice name.', 'error'); return; }
+    var payload = {
+      farm_id: farm,
+      plot_id: plot || null,
+      practice_name: name,
+      category: g('sus-practice-category'),
+      status: g('sus-practice-status'),
+      area_hectares: g('sus-practice-area') === '' ? null : Number(g('sus-practice-area')),
+      started_on: g('sus-practice-date') || null,
+      notes: g('sus-practice-notes') || null
+    };
+    this.busy(btn, true);
+    window.API.Sustainability.addPractice(payload)
+      .then(function () { self.toast('Sustainable practice saved.', 'success'); self.load(); })
+      .catch(function (e) { self.toast(self.apiError(e, 'Could not save the practice record.'), 'error'); })
+      .then(function () { self.busy(btn, false); });
+  },
+  removeRecord: function (kind, id) {
+    var self = this;
+    var call = kind === 'energy' ? window.API.Sustainability.deleteEnergy : window.API.Sustainability.deletePractice;
+    call(id)
+      .then(function () { self.toast('Record removed.', 'success'); self.load(); })
+      .catch(function (e) { self.toast(self.apiError(e, 'Could not remove the record.'), 'error'); });
+  },
+  busy: function (btn, on) {
+    if (!btn) return;
+    if (on) { btn.dataset.label = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving'; }
+    else { btn.disabled = false; btn.innerHTML = btn.dataset.label || 'Save'; }
+  },
+  toast: function (msg, type) {
+    if (typeof window.showToast === 'function') window.showToast(msg, type || 'info');
+  },
+  apiError: function (e, fallback) {
+    if (e && e.detail) return e.detail;
+    if (e && e.message) return e.message;
+    return fallback;
+  },
+
+  /* ---------- reports ---------- */
+  generateReport: function (btn) {
+    var self = this;
+    var d = this.state.data;
+    if (!d) { this.toast('Nothing to report yet.', 'info'); return; }
+    this.busy(btn, true);
+    var parts = [];
+    if (d.summary.water_usage.available) parts.push('water ' + self.num(d.summary.water_usage.value, 0) + ' L');
+    if (d.summary.energy_usage.available) parts.push('energy ' + self.num(d.summary.energy_usage.value, 1) + ' ' + (d.summary.energy_usage.unit || ''));
+    if (d.summary.soil_health.available) parts.push('soil pH ' + self.num(d.summary.soil_health.ph, 2));
+    if (d.summary.practices.available) parts.push(d.summary.practices.count + ' practice(s)');
+    parts.push(d.summary.records.count + ' record(s) in total');
+    var payload = {
+      report_type: 'Sustainability',
+      title: 'Sustainability Report - ' + (d.scope.label || 'All farms'),
+      farm_id: this.state.farmId || undefined,
+      plot_id: this.state.plotId || undefined,
+      date_from: d.period.from || undefined,
+      date_to: d.period.to || undefined,
+      summary: d.scope.label + ', ' + d.period.label + ': ' + parts.join(', ') + '.',
+      data: { sustainability: d }
+    };
+    window.API.Analytics.reportCreate(payload)
+      .then(function () { self.toast('Sustainability report generated.', 'success'); self.loadReports(); })
+      .catch(function (e) { self.toast(self.apiError(e, 'Report generation failed.'), 'error'); })
+      .then(function () { self.busy(btn, false); });
+  },
+  downloadReport: function (id, fmt) {
+    var self = this;
+    var token = localStorage.getItem('fa-auth-token');
+    var base = (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL) || 'http://localhost:8000/api/v1';
+    var headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    fetch(base + '/analytics/reports/' + encodeURIComponent(id) + '/' + fmt, { headers: headers, credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = id + '.' + fmt;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+      })
+      .catch(function () { self.toast('Could not download the report.', 'error'); });
+  },
+  deleteReport: function (id) {
+    var self = this;
+    window.API.Analytics.reportDelete(id)
+      .then(function () { self.toast('Report deleted.', 'success'); self.loadReports(); })
+      .catch(function (e) { self.toast(self.apiError(e, 'Could not delete the report.'), 'error'); });
+  },
+
+  /* ---------- rendering ---------- */
+  render: function () {
+    var dash = document.getElementById('sus-dashboard');
+    var load = document.getElementById('sus-loading');
+    var err = document.getElementById('sus-error');
+    if (!dash) return;
+    var d = this.state.data;
+    if (load) load.hidden = true;
+    if (err) err.hidden = true;
+    dash.hidden = false;
+    dash.innerHTML =
+      this.headerHtml(d) +
+      this.controlsHtml(d) +
+      this.notesHtml(d) +
+      this.summaryHtml(d) +
+      this.indicatorsHtml(d) +
+      this.chartsHtml(d) +
+      this.recordsHtml(d) +
+      this.formsHtml(d) +
+      this.guidanceHtml(d) +
+      this.calcHtml(d) +
+      this.reportsHtml();
+  },
+
+  headerHtml: function (d) {
+    var period = d.period && d.period.label ? d.period.label : 'All time';
+    var s = d.sensors || {};
+    var sensorLine = s.total
+      ? ' &middot; Sensors: ' + s.connected + ' of ' + s.total + ' connected'
+      : ' &middot; No sensors registered';
+    return '<div class="page-header">' +
+      '<h1><i class="fas fa-leaf"></i> Sustainability Dashboard</h1>' +
+      '<span style="font-size:11px;color:var(--text-muted);text-align:right;">' +
+      this.esc(d.scope.label) + ' &middot; ' + this.esc(period) + sensorLine +
+      (d.farmer && d.farmer.name ? '<br>' + this.esc(d.farmer.name) : '') + '</span>' +
+      '</div>';
+  },
+
+  controlsHtml: function (d) {
+    var farms = d.farms || [];
+    var farmOpts = '<option value="">All farms</option>';
+    farms.forEach(function (f) {
+      farmOpts += '<option value="' + SUS.esc(f.id) + '"' + (SUS.state.farmId === f.id ? ' selected' : '') + '>' + SUS.esc(f.farm_name) + '</option>';
+    });
+    var selected = null;
+    farms.forEach(function (f) {
+      if (SUS.state.farmId && f.id === SUS.state.farmId) selected = f;
+    });
+    if (!selected && farms.length === 1) selected = farms[0];
+    var plotOpts = '<option value="">All fields</option>';
+    var plotList = selected ? (selected.plots || []) : [];
+    var allPlots = [];
+    farms.forEach(function (f) { (f.plots || []).forEach(function (p) { allPlots.push({ f: f, p: p }); }); });
+    if (selected) {
+      plotList.forEach(function (p) {
+        plotOpts += '<option value="' + SUS.esc(p.id) + '"' + (SUS.state.plotId === p.id ? ' selected' : '') + '>' + SUS.esc(p.plot_name) + '</option>';
+      });
+    } else {
+      allPlots.forEach(function (row) {
+        plotOpts += '<option value="' + SUS.esc(row.p.id) + '"' + (SUS.state.plotId === row.p.id ? ' selected' : '') + '>' +
+          SUS.esc(row.p.plot_name) + (farms.length > 1 ? ' (' + SUS.esc(row.f.farm_name) + ')' : '') + '</option>';
+      });
+    }
+    var multiFarm = farms.length > 1;
+    var multiPlot = (selected ? plotList.length : allPlots.length) > 1 || (!selected && allPlots.length > 0);
+    var rangeOpts = this.RANGES.map(function (r) {
+      return '<option value="' + r.key + '"' + (this.state.range === r.key ? ' selected' : '') + '>' + r.label + '</option>';
+    }, this).join('');
+    rangeOpts += '<option value="custom"' + (this.state.range === 'custom' ? ' selected' : '') + '>Custom range</option>';
+
+    return '<section class="card-premium sus-section">' +
+      '<div class="sus-toolbar">' +
+      (multiFarm ? '<div class="sus-field"><label for="sus-farm">Farm</label><select class="form-select" id="sus-farm" onchange="SustainabilityPage.onFarmChange()">' + farmOpts + '</select></div>' : '') +
+      (multiPlot ? '<div class="sus-field"><label for="sus-plot">Field</label><select class="form-select" id="sus-plot" onchange="SustainabilityPage.onPlotChange()">' + plotOpts + '</select></div>' : '') +
+      '<div class="sus-field"><label for="sus-range">Period</label><select class="form-select" id="sus-range" onchange="SustainabilityPage.onRangeChange()">' + rangeOpts + '</select></div>' +
+      '<div class="sus-field sus-range" id="sus-custom" style="' + (this.state.range === 'custom' ? '' : 'display:none') + '">' +
+      '<input type="date" class="form-input" id="sus-dfrom" value="' + this.esc(this.state.dfrom) + '">' +
+      '<span style="font-size:11px;color:var(--text-muted);">to</span>' +
+      '<input type="date" class="form-input" id="sus-dto" value="' + this.esc(this.state.dto) + '">' +
+      '<button class="btn-secondary sus-btn-sm" type="button" onclick="SustainabilityPage.applyCustom()">Apply</button>' +
+      '</div>' +
+      '<div class="sus-actions">' +
+      '<button class="btn-secondary" type="button" onclick="SustainabilityPage.refresh()"><i class="fas fa-rotate-right"></i> Refresh</button>' +
+      '<button class="btn-primary" type="button" id="sus-report-btn" onclick="SustainabilityPage.generateReport(this)"><i class="fas fa-file-lines"></i> Generate Report</button>' +
+      '</div></div></section>';
+  },
+
+  notesHtml: function (d) {
+    var notes = (d.notes || []).slice();
+    if (d.generated_at) {
+      notes.push('Figures computed by the Farm Assist server on ' + this.esc(d.generated_at.replace('T', ' ')) + ' UTC from your own records.');
+    }
+    if (!notes.length) return '';
+    return '<section class="sus-section">' + notes.map(function (n, i) {
+      return '<div class="sus-note' + (i === 0 ? '' : ' info') + '"><i class="fas fa-circle-info"></i><span>' + this.esc(n) + '</span></div>';
+    }, this).join('') + '</section>';
+  },
+
+  card: function (icon, label, valueHtml, subHtml, na) {
+    return '<div class="sus-card' + (na ? ' na' : '') + '">' +
+      '<i class="fas ' + icon + ' sus-ic"></i>' +
+      '<div class="sus-val">' + valueHtml + '</div>' +
+      '<div class="sus-label">' + this.esc(label) + '</div>' +
+      (subHtml ? '<div class="sus-sub">' + subHtml + '</div>' : '') +
+      '</div>';
+  },
+
+  summaryHtml: function (d) {
+    var s = d.summary || {};
+    var e = this.esc.bind(this);
+    var out = [];
+
+    var area = s.area || {};
+    out.push(this.card('fa-vector-square', 'Farm Area',
+      area.available ? e(this.num(area.total, 2)) + ' <span class="unit">' + e(area.unit) + '</span>' : 'Data not available yet',
+      area.available ? e(area.farms) + ' farm(s) &middot; ' + e(area.plots) + ' field(s)' : 'Add a farm with an area to see this metric',
+      !area.available));
+
+    var w = s.water_usage || {};
+    out.push(this.card('fa-tint', 'Water Usage',
+      w.available ? e(this.num(w.value, 0)) + ' <span class="unit">' + e(w.unit) + '</span>' : 'Data not available yet',
+      w.available ? e(w.records) + ' irrigation record(s)' + (w.per_acre ? ' &middot; ' + e(this.num(w.per_acre, 0)) + ' L/acre' : '') : 'Log irrigation to calculate water usage',
+      !w.available));
+
+    var ws = s.water_saved || {};
+    out.push(this.card('fa-droplet', 'Water Saved',
+      ws.available ? e(this.num(ws.value, 0)) + ' <span class="unit">' + e(ws.unit) + '</span>' : 'Data not available yet',
+      e(ws.reason || ''), !ws.available));
+
+    var en = s.energy_usage || {};
+    out.push(this.card('fa-bolt', 'Energy Usage',
+      en.available ? e(this.num(en.value, 1)) + ' <span class="unit">' + e(en.unit) + '</span>' : 'Data not available yet',
+      en.available ? e(en.records) + ' record(s)' + (en.cost ? ' &middot; ' + e(this.num(en.cost, 0)) + ' cost' : '') : 'Add an energy record to calculate energy usage',
+      !en.available));
+
+    var re = s.renewable_energy || {};
+    out.push(this.card('fa-solar-panel', 'Renewable Energy',
+      re.available ? e(this.num(re.share_pct, 1)) + ' <span class="unit">% of ' + e(this.num(re.value, 1)) + ' ' + e(re.unit) + '</span>' : 'Data not available yet',
+      re.available ? 'Renewable share of recorded energy' : e(re.reason || ''),
+      !re.available));
+
+    var sh = s.soil_health || {};
+    var shVal = 'Data not available yet';
+    if (sh.available) {
+      shVal = 'pH ' + e(this.num(sh.ph, 2));
+    }
+    out.push(this.card('fa-seedling', 'Soil Health', shVal,
+      sh.available ? e(sh.tests) + ' test(s) &middot; organic matter ' + e(this.num(sh.organic_matter, 2)) + '% &middot; moisture ' + e(this.num(sh.moisture, 1)) + '%' +
+        (sh.last_test ? '<br>Last test ' + e(this.fmtDate(sh.last_test)) : '') : 'Record a soil test to see soil indicators',
+      !sh.available));
+
+    var pr = s.practices || {};
+    out.push(this.card('fa-leaf', 'Sustainable Practices',
+      pr.available ? e(pr.count) + ' <span class="unit">record(s)</span>' : 'Data not available yet',
+      pr.available ? (pr.by_category && Object.keys(pr.by_category).length
+        ? e(Object.keys(pr.by_category).join(', ')) + (pr.area_hectares ? ' &middot; ' + e(this.num(pr.area_hectares, 2)) + ' ha' : '')
+        : 'No category recorded yet')
+        : 'Record a practice such as cover cropping or composting',
+      !pr.available));
+
+    var cc = s.crop_coverage || {};
+    out.push(this.card('fa-wheat-awn', 'Crop Coverage',
+      cc.available ? e(cc.plots_with_crops) + ' <span class="unit">of ' + e(cc.plots) + ' field(s)</span>' : 'Data not available yet',
+      cc.available ? ((cc.crops && cc.crops.length ? e(cc.crops.join(', ')) : 'Active crop cycles') + (cc.area ? ' &middot; ' + e(this.num(cc.area, 2)) + ' ' + e(cc.unit) : '')) : 'No active crop cycle for this selection',
+      !cc.available));
+
+    var wa = s.waste || {};
+    out.push(this.card('fa-recycle', 'Waste / Organic Waste',
+      wa.available ? e(wa.count) + ' <span class="unit">' + e(wa.unit) + '</span>' : 'Data not available yet',
+      wa.available ? 'Composting and residue recycling practices' : e(wa.reason || ''),
+      !wa.available));
+
+    var rc = s.records || {};
+    out.push(this.card('fa-database', 'Sustainability Records',
+      rc.available ? e(rc.count) : 'No records yet',
+      'Water ' + e(rc.water) + ' &middot; Energy ' + e(rc.energy) + ' &middot; Practices ' + e(rc.practices) + ' &middot; Soil ' + e(rc.soil),
+      !rc.available));
+
+    return '<section class="sus-section"><h3><i class="fas fa-gauge-high"></i> Sustainability Overview</h3>' +
+      '<p class="sus-hint">Every figure below is calculated on the server from your own farm, field, irrigation, soil, energy and practice records.</p>' +
+      '<div class="sus-cards">' + out.join('') + '</div></section>';
+  },
+
+  indicatorsHtml: function (d) {
+    var list = d.indicators || [];
+    if (!list.length) return '';
+    var e = this.esc.bind(this);
+    var boxes = list.map(function (i) {
+      var ok = i.available && i.value !== null && i.value !== undefined;
+      return '<div class="box"><div class="k">' + e(i.label) + '</div>' +
+        '<div class="v' + (ok ? '' : ' na') + '">' + (ok ? e(this.num(i.value, 2)) + (i.unit ? ' ' + e(i.unit) : '') : 'Data not available yet') + '</div>' +
+        '<div class="b">' + e(i.basis || '') + '</div></div>';
+    }, this).join('');
+    return '<section class="sus-section"><h3><i class="fas fa-calculator"></i> Data-Based Indicators</h3>' +
+      '<p class="sus-hint">Simple ratios built from your records. Farm Assist does not publish a made-up sustainability score.</p>' +
+      '<div class="sus-kv">' + boxes + '</div></section>';
+  },
+
+  emptyBlock: function (icon, title, text) {
+    return '<div class="sus-empty"><i class="fas ' + icon + '"></i><h4>' + this.esc(title) + '</h4><p>' + this.esc(text) + '</p></div>';
+  },
+
+  barChart: function (series, unit, altColor) {
+    if (!series || !series.length) return null;
+    var max = 0;
+    series.forEach(function (s) { if (Number(s.value) > max) max = Number(s.value); });
+    if (max <= 0) max = 1;
+    var e = this.esc.bind(this);
+    var bars = series.map(function (s, i) {
+      var h = Math.max(2, Math.round((Number(s.value) / max) * 100));
+      return '<div class="sus-bar-group">' +
+        '<div class="sus-bar-value">' + e(this.num(s.value, 0)) + '</div>' +
+        '<div class="sus-bars-inner"><div class="sus-bar' + (altColor && i % 2 ? ' alt' : '') + '" style="height:' + h + '%"></div></div>' +
+        '<div class="sus-bar-label">' + e(s.label) + '</div>' +
+        '</div>';
+    }, this).join('');
+    return '<div class="sus-bars">' + bars + '</div>' +
+      '<div class="sus-legend"><span>' + e(unit || '') + '</span></div>';
+  },
+
+  hBars: function (series, unit) {
+    if (!series || !series.length) return null;
+    var e = this.esc.bind(this);
+    var max = 0;
+    series.forEach(function (s) { if (Number(s.value) > max) max = Number(s.value); });
+    if (max <= 0) max = 1;
+    return '<div class="sus-lines">' + series.map(function (s) {
+      var pct = Math.max(2, Math.round((Number(s.value) / max) * 100));
+      return '<div class="sus-line"><div class="name" title="' + e(s.label) + '">' + e(s.label) + '</div>' +
+        '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="val">' + e(this.num(s.value, 0)) + ' ' + e(unit || '') + '</div></div>';
+    }, this).join('') + '</div>';
+  },
+
+  donut: function (split) {
+    if (!split || !split.available) return null;
+    var e = this.esc.bind(this);
+    var total = Number(split.renewable || 0) + Number(split.non_renewable || 0);
+    if (total <= 0) return null;
+    var pct = Math.round((Number(split.renewable || 0) / total) * 100);
+    return '<div class="sus-donut-wrap"><div class="sus-donut" style="background:conic-gradient(var(--premium-green) 0% ' + pct + '%, var(--border-light) ' + pct + '% 100%)">' +
+      '<div class="hole"><b>' + pct + '%</b><small>renewable</small></div></div>' +
+      '<div class="sus-legend-list">' +
+      '<div class="row"><span class="dot" style="background:var(--premium-green)"></span>Renewable<b>' + e(this.num(split.renewable, 1)) + ' ' + e(split.unit || '') + '</b></div>' +
+      '<div class="row"><span class="dot" style="background:var(--border-light)"></span>Non-renewable<b>' + e(this.num(split.non_renewable, 1)) + ' ' + e(split.unit || '') + '</b></div>' +
+      '</div></div>';
+  },
+
+  chartCard: function (icon, title, hint, body) {
+    return '<div class="card-premium"><h3 style="font-size:14px;margin-bottom:2px;display:flex;align-items:center;gap:8px;">' +
+      '<i class="fas ' + icon + '" style="color:var(--premium-green);"></i>' + this.esc(title) + '</h3>' +
+      (hint ? '<p class="sus-hint">' + this.esc(hint) + '</p>' : '') + (body || '') + '</div>';
+  },
+
+  chartsHtml: function (d) {
+    var t = d.trends || {};
+    var cards = [];
+
+    var waterChart = this.barChart(t.water_monthly, (t.water_unit || 'Litres') + ' per month');
+    cards.push(this.chartCard('fa-water', 'Water Usage Over Time', 'Litres logged per month from your irrigation records.',
+      waterChart || this.emptyBlock('fa-water', 'No water usage recorded', 'Log irrigation on Soil & Irrigation and the monthly water chart appears here.')));
+
+    var byField = this.hBars(t.water_by_plot, t.water_unit || 'L');
+    cards.push(this.chartCard('fa-location-dot', 'Water Usage By Field', 'Where the recorded water went.',
+      byField || this.emptyBlock('fa-location-dot', 'No field-level water data', 'Add fields and log irrigation per field to see the split.')));
+
+    var byCrop = this.hBars(t.water_by_crop, t.water_unit || 'L');
+    cards.push(this.chartCard('fa-wheat-awn', 'Water Usage By Crop', 'Water linked to the active crop cycle of each field.',
+      byCrop || this.emptyBlock('fa-wheat-awn', 'No crop-linked water data', 'Water usage is grouped by the active crop cycle of each field.')));
+
+    var energyChart = this.barChart(t.energy_monthly, (t.energy_unit || 'kWh') + ' per month', true);
+    cards.push(this.chartCard('fa-bolt', 'Energy Usage Over Time', 'Recorded energy per month.',
+      energyChart || this.emptyBlock('fa-bolt', 'No energy usage recorded', 'Add an energy record (solar, diesel, electricity) to build this chart.')));
+
+    var donut = this.donut(t.energy_split);
+    cards.push(this.chartCard('fa-solar-panel', 'Renewable vs Non-Renewable Energy', 'Share of recorded energy from solar, biomass or other renewable sources.',
+      donut || this.emptyBlock('fa-solar-panel', 'Renewable share unavailable', 'Record energy usage with a solar or biomass source to compare renewable and non-renewable use.')));
+
+    var soilChart = this.barChart(t.soil_ph, 'Average pH per month', true);
+    cards.push(this.chartCard('fa-seedling', 'Soil Condition Trend (pH)', t.soil_trend_basis || 'Average of the most recent soil test per field.',
+      soilChart || this.emptyBlock('fa-seedling', 'Not enough soil tests', 'Record at least one soil test per field to see the pH trend.')));
+
+    var omChart = this.barChart(t.soil_organic_matter, 'Average organic matter % per month', true);
+    cards.push(this.chartCard('fa-mountain', 'Organic Matter Trend', t.soil_trend_basis || 'Average of the most recent soil test per field.',
+      omChart || this.emptyBlock('fa-mountain', 'No organic matter data', 'Organic matter is read from your soil tests; nothing is estimated here.')));
+
+    var moistureChart = this.barChart(t.soil_moisture, 'Average soil moisture % per month', true);
+    cards.push(this.chartCard('fa-tint', 'Soil Moisture Trend', t.soil_trend_basis || 'Average of the most recent soil test per field.',
+      moistureChart || this.emptyBlock('fa-tint', 'No soil moisture data', 'Connect a soil moisture sensor or record soil tests to see this trend.')));
+
+    return '<section class="sus-section"><h3><i class="fas fa-chart-column"></i> Sustainability Charts</h3>' +
+      '<p class="sus-hint">Charts are drawn only from data returned by the API. Empty charts show why the data is missing instead of a fake trend.</p>' +
+      '<div class="sus-chart-grid">' + cards.join('') + '</div></section>';
+  },
+
+  table: function (headers, rows, opts) {
+    opts = opts || {};
+    var e = this.esc.bind(this);
+    if (!rows.length) {
+      return this.emptyBlock(opts.icon || 'fa-inbox', opts.emptyTitle || 'No records yet', opts.emptyText || 'Nothing has been recorded for this selection yet.');
+    }
+    var head = headers.map(function (h) { return '<th>' + e(h) + '</th>'; }).join('');
+    var body = rows.map(function (r) {
+      return '<tr>' + r.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+    }).join('');
+    return '<div class="sus-table-wrap"><table class="sus-table"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>' +
+      '<p class="sus-scroll-hint' + (opts.hint ? ' show' : '') + '">Swipe the table sideways to see all columns.</p>';
+  },
+
+  recordsHtml: function (d) {
+    var e = this.esc.bind(this);
+    var r = d.records || {};
+    var trunc = d.truncated || {};
+    var sections = '';
+
+    var water = (r.water || []).map(function (x) {
+      return [
+        e(this.fmtDate(x.date)), e(x.farm), e(x.plot), e(x.crop || '\u2014'),
+        e(this.num(x.amount, 2)) + ' ' + e(x.unit), e(x.method || '\u2014'),
+        x.duration_minutes != null ? e(this.num(x.duration_minutes, 0)) + ' min' : '\u2014'
+      ];
+    }, this);
+    sections += this.chartCard('fa-tint', 'Water Usage Records',
+      water.length + ' record(s) from Soil & Irrigation' + (trunc.water ? ' (latest ' + water.length + ' shown)' : ''),
+      this.table(['Date', 'Farm', 'Field', 'Crop', 'Amount', 'Unit', 'Source', 'Duration'], water, {
+        hint: true, icon: 'fa-tint', emptyTitle: 'No water usage recorded',
+        emptyText: 'Log irrigation on Soil & Irrigation. Every entry is counted here - nothing is estimated.'
+      }));
+
+    var energy = (r.energy || []).map(function (x) {
+      return [
+        e(this.fmtDate(x.date)), e(x.energy_type), e(x.source || '\u2014'), e(x.farm), e(x.plot || '\u2014'),
+        e(this.num(x.quantity, 2)) + ' ' + e(x.unit),
+        '<span class="badge ' + (x.renewable ? 'badge-green' : 'badge-warning') + '">' + (x.renewable ? 'Renewable' : 'Non-renewable') + '</span>',
+        x.cost != null ? e(this.num(x.cost, 0)) : '\u2014',
+        '<button class="btn-secondary sus-btn-sm" type="button" onclick="SustainabilityPage.removeRecord(\'energy\', \'' + e(x.id || '') + '\')"><i class="fas fa-trash"></i></button>'
+      ];
+    }, this);
+    sections += this.chartCard('fa-bolt', 'Energy Records',
+      energy.length + ' record(s)' + (trunc.energy ? ' (latest ' + energy.length + ' shown)' : ''),
+      this.table(['Date', 'Type', 'Source', 'Farm', 'Field', 'Usage', 'Renewable', 'Cost', ''], energy, {
+        hint: true, icon: 'fa-bolt', emptyTitle: 'No energy records yet',
+        emptyText: 'Add pump hours, diesel or solar generation below to see energy usage on the farm.'
+      }));
+
+    var practices = (r.practices || []).map(function (x) {
+      return [
+        e(x.practice), '<span class="badge badge-green">' + e(x.category) + '</span>',
+        e(x.farm), e(x.plot || '\u2014'),
+        '<span class="badge ' + ((x.status === 'active') ? 'badge-green' : (x.status === 'planned' ? 'badge-warning' : 'badge-green')) + '">' + e(x.status) + '</span>',
+        e(this.fmtDate(x.started_on)),
+        x.area_hectares != null ? e(this.num(x.area_hectares, 2)) + ' ha' : '\u2014',
+        e(x.notes || ''),
+        '<button class="btn-secondary sus-btn-sm" type="button" onclick="SustainabilityPage.removeRecord(\'practice\', \'' + e(x.id || '') + '\')"><i class="fas fa-trash"></i></button>'
+      ];
+    }, this);
+    sections += this.chartCard('fa-leaf', 'Sustainable Practice Records',
+      practices.length + ' record(s)' + (trunc.practices ? ' (latest ' + practices.length + ' shown)' : ''),
+      this.table(['Practice', 'Category', 'Farm', 'Field', 'Status', 'Started', 'Area', 'Notes', ''], practices, {
+        hint: true, icon: 'fa-leaf', emptyTitle: 'No practice records yet',
+        emptyText: 'Record cover cropping, composting, drip irrigation or waste practices to track your sustainability effort.'
+      }));
+
+    var soil = (r.soil || []).map(function (x) {
+      return [
+        e(this.fmtDate(x.date)), e(x.plot), e(x.soil_type || '\u2014'),
+        x.ph != null ? e(this.num(x.ph, 2)) : '\u2014',
+        x.nitrogen != null ? e(this.num(x.nitrogen, 1)) : '\u2014',
+        x.phosphorus != null ? e(this.num(x.phosphorus, 1)) : '\u2014',
+        x.potassium != null ? e(this.num(x.potassium, 1)) : '\u2014',
+        x.organic_matter != null ? e(this.num(x.organic_matter, 2)) + '%' : '\u2014',
+        x.moisture != null ? e(this.num(x.moisture, 1)) + '%' : '\u2014'
+      ];
+    }, this);
+    sections += this.chartCard('fa-seedling', 'Soil Test Records',
+      soil.length + ' test(s)' + (trunc.soil ? ' (latest ' + soil.length + ' shown)' : ''),
+      this.table(['Date', 'Field', 'Soil type', 'pH', 'Nitrogen', 'Phosphorus', 'Potassium', 'Organic matter', 'Moisture'], soil, {
+        hint: true, icon: 'fa-seedling', emptyTitle: 'No soil tests yet',
+        emptyText: 'Soil tests recorded on Soil & Irrigation feed the soil health cards and charts.'
+      }));
+
+    return '<section class="sus-section"><h3><i class="fas fa-table-list"></i> Sustainability Records</h3>' +
+      '<p class="sus-hint">Records straight from your database. Tables scroll sideways on small screens.</p>' +
+      '<div class="sus-chart-grid">' + sections + '</div></section>';
+  },
+
+  fieldOptions: function (farms, selectedFarm, includeAll, currentPlot) {
+    var e = this.esc.bind(this);
+    var opts = includeAll ? '<option value="">' + (includeAll === 'farm' ? 'Whole farm' : 'All fields') + '</option>' : '';
+    farms.forEach(function (f) {
+      if (selectedFarm && f.id !== selectedFarm) return;
+      (f.plots || []).forEach(function (p) {
+        opts += '<option value="' + e(p.id) + '"' + (currentPlot === p.id ? ' selected' : '') + '>' + e(p.plot_name) + '</option>';
+      });
+    });
+    return opts;
+  },
+
+  formsHtml: function (d) {
+    var e = this.esc.bind(this);
+    var farms = d.farms || [];
+    if (!farms.length) {
+      return '<section class="sus-section" id="add-energy"><h3><i class="fas fa-plus-circle"></i> Record Sustainability Data</h3>' +
+        this.emptyBlock('fa-tractor', 'Add a farm first', 'Energy and practice records are always attached to one of your farms, so create the farm on My Farm first.') +
+        '</section>';
+    }
+    var farmOpts = farms.map(function (f) {
+      return '<option value="' + e(f.id) + '"' + (d.scope.farm_id === f.id ? ' selected' : '') + '>' + e(f.farm_name) + '</option>';
+    }).join('');
+    var plotOptsEnergy = this.fieldOptions(farms, d.scope.farm_id, 'farm', d.scope.plot_id);
+    var plotOptsPractice = this.fieldOptions(farms, d.scope.farm_id, 'farm', d.scope.plot_id);
+    var plotSelect = function (id, opts) {
+      return '<select class="form-select" id="' + id + '" onchange="SustainabilityPage.syncPlots(this)">' + opts + '</select>';
+    };
+    var energyTypes = this.ENERGY_TYPES.map(function (t) {
+      return '<option value="' + t + '">' + t.charAt(0).toUpperCase() + t.slice(1) + '</option>';
+    }).join('');
+    var energyUnits = this.ENERGY_UNITS.map(function (u) {
+      return '<option value="' + u + '">' + u + '</option>';
+    }).join('');
+    var cats = this.PRACTICE_CATEGORIES.map(function (c) {
+      return '<option value="' + c + '">' + c.charAt(0).toUpperCase() + c.slice(1) + '</option>';
+    }).join('');
+    var stats = this.PRACTICE_STATUSES.map(function (s) {
+      return '<option value="' + s + '">' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>';
+    }).join('');
+    var dl = this.PRACTICE_SUGGESTIONS.map(function (s) { return '<option value="' + e(s) + '">'; }).join('');
+
+    return '<section class="sus-section" id="add-energy"><h3><i class="fas fa-plus-circle"></i> Record Sustainability Data</h3>' +
+      '<p class="sus-hint">Records are saved through the Farm Assist backend and linked to your farm account. They appear on this page after a refresh.</p>' +
+      '<div class="card-premium"><div class="sus-forms">' +
+
+      '<div><div class="sus-form-title"><i class="fas fa-bolt"></i> Energy usage record</div>' +
+      '<div class="sus-form-hint">Pump hours, diesel, electricity or solar generation. Saving the same day and type again updates that record instead of double counting.</div>' +
+      '<div class="sus-form-grid">' +
+      '<div class="form-group"><label class="form-label" for="sus-energy-farm">Farm</label><select class="form-select" id="sus-energy-farm" onchange="SustainabilityPage.syncPlots(this)">' + farmOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-energy-plot">Field (optional)</label>' + plotSelect('sus-energy-plot', plotOptsEnergy) + '</div>' +
+      '<div class="form-group"><label class="form-label" for="sus-energy-type">Energy type</label><select class="form-select" id="sus-energy-type">' + energyTypes + '</select></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-energy-unit">Unit</label><select class="form-select" id="sus-energy-unit">' + energyUnits + '</select></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-energy-qty">Usage</label><input class="form-input" type="number" step="0.01" min="0" id="sus-energy-qty" placeholder="e.g. 12.5"></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-energy-date">Date</label><input class="form-input" type="date" id="sus-energy-date" value="' + this.today() + '"></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-energy-source">Source (optional)</label><input class="form-input" type="text" id="sus-energy-source" maxlength="80" placeholder="e.g. Solar pump, grid, tractor"></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-energy-cost">Cost (optional)</label><input class="form-input" type="number" step="0.01" min="0" id="sus-energy-cost" placeholder="0.00"></div>' +
+      '<div class="form-group full"><label class="form-label" for="sus-energy-notes">Notes (optional)</label><input class="form-input" type="text" id="sus-energy-notes" maxlength="200" placeholder="Anything worth remembering"></div>' +
+      '</div><button class="btn-primary" type="button" onclick="SustainabilityPage.submitEnergy(this)"><i class="fas fa-save"></i> Save energy record</button></div>' +
+
+      '<div id="add-practice"><div class="sus-form-title"><i class="fas fa-leaf"></i> Sustainable practice record</div>' +
+      '<div class="sus-form-hint">Water saving, organic compost, soil improvement, waste management or any other practice you apply.</div>' +
+      '<div class="sus-form-grid">' +
+      '<div class="form-group"><label class="form-label" for="sus-practice-farm">Farm</label><select class="form-select" id="sus-practice-farm" onchange="SustainabilityPage.syncPlots(this)">' + farmOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-practice-plot">Field (optional)</label>' + plotSelect('sus-practice-plot', plotOptsPractice) + '</div>' +
+      '<div class="form-group full"><label class="form-label" for="sus-practice-name">Practice</label><input class="form-input" type="text" id="sus-practice-name" list="sus-practice-list" maxlength="120" placeholder="e.g. Drip irrigation"><datalist id="sus-practice-list">' + dl + '</datalist></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-practice-category">Category</label><select class="form-select" id="sus-practice-category">' + cats + '</select></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-practice-status">Status</label><select class="form-select" id="sus-practice-status">' + stats + '</select></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-practice-area">Area covered (hectares, optional)</label><input class="form-input" type="number" step="0.01" min="0" id="sus-practice-area" placeholder="0.00"></div>' +
+      '<div class="form-group"><label class="form-label" for="sus-practice-date">Started on (optional)</label><input class="form-input" type="date" id="sus-practice-date" value="' + this.today() + '"></div>' +
+      '<div class="form-group full"><label class="form-label" for="sus-practice-notes">Notes (optional)</label><input class="form-input" type="text" id="sus-practice-notes" maxlength="200" placeholder="Anything worth remembering"></div>' +
+      '</div><button class="btn-primary" type="button" onclick="SustainabilityPage.submitPractice(this)"><i class="fas fa-save"></i> Save practice record</button></div>' +
+
+      '</div></div></section>';
+  },
+
+  syncPlots: function (farmSelect) {
+    /* Keep the optional field dropdown in step with the selected farm. */
+    var farms = (this.state.data && this.state.data.farms) || [];
+    var farm = null;
+    farms.forEach(function (f) { if (f.id === farmSelect.value) farm = f; });
+    if (!farm) return;
+    var self = this;
+    ['sus-energy-plot', 'sus-practice-plot'].forEach(function (plotId) {
+      var sel = document.getElementById(plotId);
+      if (!sel) return;
+      var keep = sel.value;
+      sel.innerHTML = self.fieldOptions(farms, farm.id, 'farm', keep);
+    });
+  },
+
+  guidanceHtml: function (d) {
+    var e = this.esc.bind(this);
+    var list = d.guidance || [];
+    if (!list.length) return '';
+    var icons = { high: 'fa-circle-exclamation', medium: 'fa-triangle-exclamation', low: 'fa-lightbulb' };
+    var items = list.map(function (g) {
+      var sev = g.severity || 'low';
+      return '<div class="sus-guide ' + e(sev) + '"><i class="fas ' + (icons[sev] || icons.low) + ' gi"></i><div>' +
+        '<div class="gt">' + e(g.title) + '</div>' +
+        '<div class="gd">' + e(g.detail) + '</div>' +
+        (g.action ? '<a class="ga" href="' + e(g.href || '#') + '">' + e(g.action) + ' <i class="fas fa-arrow-right"></i></a>' : '') +
+        '</div></div>';
+    }).join('');
+    return '<section class="sus-section"><h3><i class="fas fa-lightbulb"></i> What You Can Improve</h3>' +
+      '<p class="sus-hint">Based on the records that exist for this selection. Nothing here is assumed - each item names the data that is missing.</p>' + items + '</section>';
+  },
+
+  calcHtml: function (d) {
+    var e = this.esc.bind(this);
+    var list = d.calculations || [];
+    if (!list.length) return '';
+    var rows = list.map(function (c) {
+      return '<div class="row"><b>' + e(c.metric) + '</b> (' + e(c.records) + ' record(s) used)<br>' + e(c.formula) + '</div>';
+    }).join('');
+    return '<section class="sus-section"><div class="card-premium"><details class="sus-calc"><summary>How each number is calculated</summary>' +
+      '<div id="sus-calc-body" style="margin-top:10px;">' + rows + '</div></details></div></section>';
+  },
+
+  reportsHtml: function () {
+    var e = this.esc.bind(this);
+    var list = this.state.reports || [];
+    var body = list.length
+      ? '<div class="sus-reports">' + list.map(function (r) {
+        return '<div class="sus-report-item"><div class="ri"><i class="fas fa-file-lines"></i></div>' +
+          '<div><div class="rt">' + e(r.title || r.report_type) + '</div>' +
+          '<div class="rm">' + e(r.report_id) + ' &middot; ' + e(r.farm_name || 'All farms') +
+          (r.date_from ? ' &middot; ' + e(r.date_from) + ' to ' + e(r.date_to || 'today') : '') + '</div></div>' +
+          '<div class="ra">' +
+          '<button class="btn-secondary sus-btn-sm" type="button" onclick="SustainabilityPage.downloadReport(\'' + e(r.report_id) + '\', \'html\')">HTML</button>' +
+          '<button class="btn-secondary sus-btn-sm" type="button" onclick="SustainabilityPage.downloadReport(\'' + e(r.report_id) + '\', \'csv\')">CSV</button>' +
+          '<button class="btn-secondary sus-btn-sm" type="button" onclick="SustainabilityPage.deleteReport(\'' + e(r.report_id) + '\')"><i class="fas fa-trash"></i></button>' +
+          '</div></div>';
+      }).join('') + '</div>'
+      : this.emptyBlock('fa-file-circle-question', 'No sustainability report yet', 'Generate a report to export these figures as HTML or CSV. The report contains the same real data shown on this page.');
+    return '<section class="sus-section"><h3><i class="fas fa-file-lines"></i> Reports</h3>' +
+      '<p class="sus-hint">Farm Assist report generation is connected: the report is stored on the server with your real sustainability data.</p>' + body + '</section>';
+  }
+};
+window.SustainabilityPage = SUS;
+
 function initSustainability() {
-  const el = document.getElementById("sustainability-content");
-  if (!el) return;
-  const sd = DB().sustainabilityData || {};
-  const insights = sd.waterUsageAnalytics || [];
-  const maxUsage = Math.max(...insights.map(i => i.usage), 1);
-  const initiatives = sd.initiatives || [];
-
-  let html = `<div class="page-header"><h1><i class="fas fa-leaf" style="color:var(--primary-green);"></i> Sustainability Dashboard</h1><span style="font-size:12px;color:var(--text-muted);">Environmental Score: ${sd.environmentalScore || 0}/100</span></div>`;
-
-  // Stats row
-  html += `<div class="grid-2" style="margin-bottom:12px;">
-    <div class="stat-box"><i class="fas fa-tint" style="color:var(--primary-green);"></i><div class="stat-box-num">${(sd.waterConserved || 0).toLocaleString()} L</div><div class="stat-box-label">Water Conserved</div></div>
-    <div class="stat-box"><i class="fas fa-tree" style="color:var(--primary-green);"></i><div class="stat-box-num">${(sd.treesPlanted || 0).toLocaleString()}</div><div class="stat-box-label">Trees Planted</div></div>
-    <div class="stat-box"><i class="fas fa-solar-panel" style="color:var(--primary-green);"></i><div class="stat-box-num">${sd.solarCapacity || 0} kW</div><div class="stat-box-label">Solar Capacity</div></div>
-    <div class="stat-box"><i class="fas fa-seedling" style="color:var(--primary-green);"></i><div class="stat-box-num">${sd.organicArea || 0} acres</div><div class="stat-box-label">Organic Area</div></div>
-  </div>`;
-
-  // Environmental score gauge
-  const sc = sd.environmentalScore || 0;
-  html += `<div class="card-premium"><h4 style="margin-bottom:8px;"><i class="fas fa-chart-pie" style="color:var(--primary-green);"></i> Environmental Score</h4>
-    <div style="display:flex;align-items:center;gap:16px;">
-      <div style="width:80px;height:80px;border-radius:50%;background:conic-gradient(var(--primary-green) 0% ${sc}%, var(--border-light) ${sc}% 100%);display:flex;align-items:center;justify-content:center;">
-        <div style="width:60px;height:60px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--primary-green);">${sc}%</div>
-      </div>
-      <div style="flex:1;"><p style="font-size:12px;color:var(--text-secondary);">Your farm's environmental sustainability score. Based on water conservation, renewable energy use, organic practices, and biodiversity.</p>
-        <div style="display:flex;gap:8px;margin-top:6px;">
-          <button class="btn-primary btn-sm" onclick="showToast('AI suggests: Plant 50 more trees and install solar pump to improve score.','success')">AI Suggestion</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
-
-  // Water usage chart
-  if (insights.length > 0) {
-    html += `<div class="card-premium"><h4 style="margin-bottom:8px;"><i class="fas fa-water" style="color:var(--primary-green);"></i> Water Usage (kL/month)</h4>
-      <div style="display:flex;gap:6px;align-items:flex-end;height:100px;padding:8px 0;">`;
-    insights.forEach(i => {
-      const h = (i.usage / maxUsage) * 80;
-      html += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;">
-        <div style="width:100%;height:${h}px;background:var(--primary-green);border-radius:4px 4px 0 0;transition:height 0.5s;min-height:4px;"></div>
-        <span style="font-size:8px;color:var(--text-muted);margin-top:4px;">${i.month}</span>
-      </div>`;
-    });
-    html += `</div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);">
-      <span>🌧️ Rainfall: ${insights.map(i=>i.rainfall).join('mm, ')}mm</span>
-    </div></div>`;
-  }
-
-  // Initiatives
-  if (initiatives.length > 0) {
-    html += `<div class="card-premium"><h4 style="margin-bottom:8px;"><i class="fas fa-tasks" style="color:var(--primary-green);"></i> Green Initiatives</h4>`;
-    initiatives.forEach(inv => {
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light);">
-        <i class="fas ${inv.icon}" style="color:var(--primary-green);width:20px;"></i>
-        <div style="flex:1;"><strong style="font-size:12px;">${inv.title}</strong><div style="font-size:10px;color:var(--text-muted);">${inv.impact}</div></div>
-        <span class="badge ${inv.status === 'Completed' ? 'badge-green' : 'badge-warning'}">${inv.status}</span>
-        <div style="width:60px;"><div class="progress-bar"><div class="progress-fill" style="width:${inv.progress}%"></div></div><span style="font-size:9px;color:var(--text-muted);">${inv.progress}%</span></div>
-      </div>`;
-    });
-    html += `</div>`;
-  }
-
-  // AI Suggestions & Carbon footprint
-  html += `<div class="grid-2">
-    <div class="card-premium" onclick="showToast('Switch to solar pumps and organic farming to reduce carbon footprint.','info')" style="cursor:pointer;">
-      <i class="fas fa-cloud" style="color:var(--primary-green);font-size:22px;display:block;margin-bottom:4px;"></i>
-      <h4 style="font-size:13px;">Carbon Footprint</h4>
-      <p style="font-size:11px;color:var(--text-secondary);">${sd.carbonFootprint || 0} kg CO₂/year</p>
-      <p style="font-size:10px;color:var(--text-muted);">Reduce by 15% with solar adoption</p>
-    </div>
-    <div class="card-premium" onclick="showToast('AI recommends: Implement drip irrigation on 2 more plots to save 20% more water.','success')" style="cursor:pointer;">
-      <i class="fas fa-robot" style="color:var(--primary-green);font-size:22px;display:block;margin-bottom:4px;"></i>
-      <h4 style="font-size:13px;">AI Suggestion</h4>
-      <p style="font-size:11px;color:var(--text-secondary);">Plant nitrogen-fixing trees along boundaries</p>
-      <p style="font-size:10px;color:var(--text-muted);">Improves soil & biodiversity</p>
-    </div>
-  </div>`;
-
-  el.innerHTML = html;
+  SUS.init();
 }
 window.initSustainability = initSustainability;
 

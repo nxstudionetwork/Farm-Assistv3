@@ -1798,6 +1798,27 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  var SustainabilityService = {
+    _qs: function (params) {
+      return AnalyticsService._qs(params);
+    },
+    dashboard: function (params) {
+      return http('GET', '/sustainability/dashboard' + this._qs(params)).then(unwrap);
+    },
+    addEnergy: function (data) {
+      return http('POST', '/sustainability/energy', data).then(unwrap);
+    },
+    addPractice: function (data) {
+      return http('POST', '/sustainability/practices', data).then(unwrap);
+    },
+    deleteEnergy: function (id) {
+      return http('DELETE', '/sustainability/energy/' + encodeURIComponent(id)).then(unwrap);
+    },
+    deletePractice: function (id) {
+      return http('DELETE', '/sustainability/practices/' + encodeURIComponent(id)).then(unwrap);
+    }
+  };
+
   var IntegrationService = {
     status: function () {
       return http('GET', '/integrations/status').then(unwrap);
@@ -2617,6 +2638,7 @@ Backend: FastAPI served from the same origin (port 8000).
     Speech: SpeechService,
     QR: QRService,
     Analytics: AnalyticsService,
+    Sustainability: SustainabilityService,
     Integrations: IntegrationService,
     Messages: MessageService,
     Feedback: FeedbackService,

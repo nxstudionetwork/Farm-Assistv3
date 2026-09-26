@@ -6,14 +6,180 @@
   <title>Farm Assist - Sustainability</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* ============ Sustainability Dashboard ============ */
+    .sus-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+    .sus-toolbar .sus-field { display:flex; flex-direction:column; gap:4px; min-width:150px; flex:1 1 150px; }
+    .sus-toolbar label { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; }
+    .sus-toolbar .form-input, .sus-toolbar .form-select { padding:8px 10px; font-size:12px; }
+    .sus-toolbar .sus-range { display:flex; gap:6px; align-items:center; }
+    .sus-toolbar .sus-actions { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+
+    .sus-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; }
+    .sus-card { background:var(--bg-card); border:1px solid var(--border-light); border-radius:14px; padding:12px 14px; }
+    .sus-card .sus-ic { font-size:18px; color:var(--premium-green); }
+    .sus-card .sus-val { font-size:19px; font-weight:800; color:var(--text-primary); line-height:1.25; margin-top:6px; word-break:break-word; }
+    .sus-card .sus-val .unit { font-size:11px; font-weight:700; color:var(--text-muted); margin-left:2px; }
+    .sus-card .sus-label { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-top:4px; }
+    .sus-card .sus-sub { font-size:10px; color:var(--text-muted); margin-top:3px; line-height:1.5; }
+    .sus-card.na .sus-val { font-size:12px; font-weight:700; color:var(--text-muted); }
+    .sus-card.na { background:var(--bg-card-soft); }
+
+    .sus-kv { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; }
+    .sus-kv .box { background:var(--bg-card); border:1px solid var(--border-light); border-radius:12px; padding:10px 12px; }
+    .sus-kv .k { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; font-weight:700; }
+    .sus-kv .v { font-size:16px; font-weight:800; color:var(--text-primary); margin-top:3px; }
+    .sus-kv .v.na { font-size:11px; font-weight:700; color:var(--text-muted); }
+    .sus-kv .b { font-size:10px; color:var(--text-muted); margin-top:3px; line-height:1.5; }
+
+    .sus-chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .sus-bars { display:flex; align-items:flex-end; gap:8px; height:150px; padding-top:8px; overflow-x:auto; }
+    .sus-bar-group { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; min-width:34px; }
+    .sus-bars-inner { display:flex; align-items:flex-end; justify-content:center; height:118px; width:100%; }
+    .sus-bar { width:18px; border-radius:4px 4px 0 0; min-height:2px; background:var(--premium-green); transition:height .4s; }
+    .sus-bar.alt { background:var(--medium-green); }
+    .sus-bar-label { font-size:9px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+    .sus-bar-value { font-size:9px; color:var(--text-secondary); font-weight:700; white-space:nowrap; }
+    .sus-legend { display:flex; gap:14px; flex-wrap:wrap; font-size:10px; color:var(--text-muted); margin-top:8px; }
+    .sus-legend span i { width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:5px; }
+
+    .sus-donut-wrap { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+    .sus-donut { width:118px; height:118px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+    .sus-donut .hole { width:82px; height:82px; border-radius:50%; background:var(--bg-card); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .sus-donut .hole b { font-size:18px; color:var(--text-primary); }
+    .sus-donut .hole small { font-size:9px; color:var(--text-muted); }
+    .sus-legend-list { flex:1 1 160px; }
+    .sus-legend-list .row { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-secondary); padding:5px 0; border-bottom:1px solid var(--border-light); }
+    .sus-legend-list .row:last-child { border-bottom:none; }
+    .sus-legend-list .dot { width:10px; height:10px; border-radius:3px; flex:0 0 auto; }
+    .sus-legend-list .row b { margin-left:auto; color:var(--text-primary); }
+
+    .sus-lines { display:flex; flex-direction:column; gap:8px; }
+    .sus-line { display:flex; align-items:center; gap:10px; font-size:11px; }
+    .sus-line .name { flex:1 1 120px; color:var(--text-secondary); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sus-line .bar { flex:1 1 60px; height:9px; background:var(--border-light); border-radius:5px; overflow:hidden; }
+    .sus-line .bar i { display:block; height:100%; background:var(--premium-green); border-radius:5px; }
+    .sus-line .val { flex:0 0 92px; text-align:right; color:var(--text-muted); font-weight:700; }
+
+    .sus-table-wrap { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .sus-table { width:100%; border-collapse:collapse; font-size:12px; min-width:520px; }
+    .sus-table th { text-align:left; padding:9px 8px; font-weight:700; color:var(--text-muted); font-size:10px; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border-light); white-space:nowrap; }
+    .sus-table td { padding:9px 8px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); white-space:nowrap; }
+    .sus-table tr:last-child td { border-bottom:none; }
+    .sus-table tr:hover td { background:var(--bg-card-soft); }
+    .sus-scroll-hint { font-size:10px; color:var(--text-muted); margin-top:6px; display:none; }
+    .sus-scroll-hint.show { display:block; }
+
+    .sus-empty { text-align:center; padding:26px 14px; }
+    .sus-empty i { font-size:34px; color:var(--text-muted); opacity:.45; margin-bottom:8px; }
+    .sus-empty h4 { font-size:13px; color:var(--text-secondary); margin-bottom:5px; }
+    .sus-empty p { font-size:11px; color:var(--text-muted); line-height:1.6; }
+
+    .sus-note { font-size:11px; color:var(--text-secondary); display:flex; gap:8px; align-items:flex-start; padding:9px 11px; border-radius:12px; background:var(--sun-soft); border-left:3px solid var(--warning); margin-bottom:6px; }
+    .sus-note.info { background:var(--soft-green); border-left-color:var(--premium-green); }
+    .sus-note i { margin-top:2px; }
+
+    .sus-guide { display:flex; gap:12px; padding:12px; border:1px solid var(--border-light); border-radius:12px; background:var(--bg-card); margin-bottom:10px; align-items:flex-start; }
+    .sus-guide i.gi { font-size:16px; margin-top:2px; flex:0 0 auto; }
+    .sus-guide.high i.gi { color:#d64545; }
+    .sus-guide.medium i.gi { color:#d97706; }
+    .sus-guide.low i.gi { color:var(--premium-green); }
+    .sus-guide .gt { font-size:13px; font-weight:700; color:var(--text-primary); }
+    .sus-guide .gd { font-size:11px; color:var(--text-secondary); margin-top:3px; line-height:1.6; }
+    .sus-guide .ga { font-size:11px; font-weight:700; color:var(--premium-green); text-decoration:none; display:inline-block; margin-top:7px; }
+
+    .sus-forms { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .sus-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .sus-form-grid .full { grid-column:1 / -1; }
+    .sus-form-title { font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:4px; display:flex; align-items:center; gap:7px; }
+    .sus-form-title i { color:var(--premium-green); }
+    .sus-form-hint { font-size:10px; color:var(--text-muted); margin-bottom:10px; line-height:1.5; }
+
+    .sus-calc { font-size:11px; color:var(--text-secondary); }
+    .sus-calc summary { cursor:pointer; font-weight:700; color:var(--text-primary); font-size:12px; }
+    .sus-calc .row { padding:9px 0; border-bottom:1px solid var(--border-light); line-height:1.6; }
+    .sus-calc .row:last-child { border-bottom:none; }
+    .sus-calc .row b { color:var(--text-primary); }
+
+    .sus-reports { display:flex; flex-direction:column; gap:8px; }
+    .sus-report-item { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 12px; border:1px solid var(--border-light); border-radius:12px; background:var(--bg-card); }
+    .sus-report-item .ri { width:32px; height:32px; border-radius:9px; background:var(--soft-green); color:var(--premium-green); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+    .sus-report-item .rt { font-size:12px; font-weight:700; color:var(--text-primary); }
+    .sus-report-item .rm { font-size:10px; color:var(--text-muted); }
+    .sus-report-item .ra { display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+    .sus-btn-sm { font-size:10px; padding:5px 10px; }
+
+    .sus-section { margin-bottom:14px; }
+    .sus-section > h3 { font-size:15px; margin:0 0 4px; display:flex; align-items:center; gap:8px; }
+    .sus-section > h3 i { color:var(--premium-green); }
+    .sus-section > .sus-hint { font-size:11px; color:var(--text-muted); margin-bottom:10px; }
+
+    .sus-sk { display:block; height:12px; border-radius:6px; background:linear-gradient(90deg,var(--border-light) 25%,#ececec 50%,var(--border-light) 75%); background-size:200% 100%; animation:susSk 1.2s infinite; margin-bottom:10px; }
+    @keyframes susSk { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .sus-sk-card { height:78px; border-radius:14px; margin-bottom:12px; }
+
+    @media (max-width: 900px) {
+      .sus-chart-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width: 720px) {
+      .sus-forms { grid-template-columns:1fr; }
+      .sus-toolbar .sus-actions { margin-left:0; width:100%; }
+      .sus-toolbar .sus-actions .btn-primary, .sus-toolbar .sus-actions .btn-secondary { flex:1 1 auto; }
+    }
+    @media (max-width: 480px) {
+      .sus-cards { grid-template-columns:repeat(2, minmax(0,1fr)); }
+      .sus-kv { grid-template-columns:repeat(2, minmax(0,1fr)); }
+      .sus-form-grid { grid-template-columns:1fr; }
+      .sus-card .sus-val { font-size:17px; }
+      .sus-line .name { flex:1 1 90px; }
+      .sus-line .val { flex:0 0 78px; }
+      .sus-scroll-hint.show { display:block; }
+    }
+    @media (max-width: 340px) {
+      .sus-cards, .sus-kv { grid-template-columns:1fr; }
+    }
+  </style>
 </head>
 <body>
 
   <main class="page-container" id="sustainability-content">
-    <div style="text-align:center;padding:40px;">
-      <i class="fas fa-spinner fa-spin" style="font-size:32px;color:var(--primary-green);"></i>
-      <p style="margin-top:12px;color:var(--text-muted);">Loading sustainability data...</p>
-    </div>
+
+    <!-- Loading state -->
+    <section id="sus-loading">
+      <div class="page-header">
+        <h1><i class="fas fa-leaf"></i> Sustainability Dashboard</h1>
+      </div>
+      <div class="card-premium">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+          <i class="fas fa-spinner fa-spin" style="color:var(--premium-green);"></i> Loading sustainability data...
+        </p>
+        <div class="sus-cards">
+          <div class="sus-sk sus-sk-card"></div>
+          <div class="sus-sk sus-sk-card"></div>
+          <div class="sus-sk sus-sk-card"></div>
+          <div class="sus-sk sus-sk-card"></div>
+        </div>
+        <div class="sus-sk" style="width:70%;"></div>
+        <div class="sus-sk" style="width:55%;"></div>
+        <div class="sus-sk" style="width:62%;"></div>
+      </div>
+    </section>
+
+    <!-- Error state -->
+    <section class="card-premium" id="sus-error" hidden>
+      <div class="sus-empty">
+        <i class="fas fa-triangle-exclamation" style="opacity:1;color:#d64545;"></i>
+        <h4 id="sus-error-title">Unable to load sustainability data</h4>
+        <p id="sus-error-text">Please try again. If the problem continues, check that the Farm Assist server is running.</p>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn-primary" id="sus-retry" type="button"><i class="fas fa-rotate-right"></i> Try Again</button>
+        <button class="btn-secondary" id="sus-signin" type="button" hidden><i class="fas fa-right-to-bracket"></i> Sign In</button>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <div id="sus-dashboard" hidden></div>
   </main>
 
   <script src="js/database.js"></script>
