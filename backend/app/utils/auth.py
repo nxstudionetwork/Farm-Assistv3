@@ -125,6 +125,7 @@ ID_COLUMN_MAP: Dict[str, str] = {
     "Crop": "crop_id",
     "CropCycle": "cycle_id",
     "CropTask": "task_id",
+    "CropHealthCheck": "check_id",
     "Transaction": "transaction_id",
     "Expense": "expense_id",
     "Income": "income_id",

@@ -21,9 +21,10 @@ farmer's data.
 """
 
 from datetime import datetime, date, timedelta
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -32,6 +33,7 @@ from app.models.crop import (
     Crop,
     CropCycle,
     CropTask,
+    CropHealthCheck,
     FarmJournal,
     IrrigationRecord,
     SoilRecord,
@@ -40,9 +42,10 @@ from app.models.farm import Farm, FarmPlot
 from app.models.monitoring import MonitoringAlert
 from app.models.user import User
 from app.routers.sensors import Sensor
+from app.services import crop_guidance_service as guidance
 from app.services.ai_service import chat_with_ai
 from app.services.weather_service import get_current_weather
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, generate_id
 
 router = APIRouter(prefix="/api/v1/crop-health", tags=["Crop Health"])
 
@@ -1434,6 +1437,280 @@ def _crop_cycle_dict(cycle, crop) -> Optional[dict]:
     }
 
 
+# Legacy 5-stage label -> canonical guidance stage key.
+LEGACY_TO_CANONICAL = {
+    "seedling": "germination",
+    "vegetative": "vegetative",
+    "flowering": "flowering",
+    "fruiting": "fruiting",
+    "maturity": "maturity",
+    "harvest": "harvest",
+    "germination": "germination",
+    "land_prep": "land_prep",
+    "seed_selection": "seed_selection",
+    "sowing": "sowing",
+    "post_harvest": "post_harvest",
+}
+
+
+def _canonical_stage(current_stage: Optional[str]) -> Optional[str]:
+    if not current_stage:
+        return None
+    key = str(current_stage).strip().lower()
+    return LEGACY_TO_CANONICAL.get(key, key if key in guidance.STAGE_KEYS else None)
+
+
+def _pending_tasks(db: Session, cycle: Optional[CropCycle]) -> list:
+    if cycle is None:
+        return []
+    rows = (
+        db.query(CropTask)
+        .filter(CropTask.crop_cycle_id == cycle.id)
+        .order_by(CropTask.due_date.asc().nulls_last())
+        .all()
+    )
+    today = _now().date().isoformat()
+    return [
+        {
+            "task_id": t.task_id,
+            "title": t.title,
+            "due_date": t.due_date,
+            "due_time": t.due_time,
+            "priority": t.priority,
+            "category": t.category,
+            "status": t.status,
+            "overdue": bool(t.due_date and t.status != "completed" and t.due_date < today),
+        }
+        for t in rows
+    ]
+
+
+def _health_check_dict(hc: CropHealthCheck) -> dict:
+    return {
+        "check_id": hc.check_id,
+        "user_id": hc.user_id,
+        "farm_id": hc.farm_id,
+        "plot_id": hc.plot_id,
+        "crop_cycle_id": hc.crop_cycle_id,
+        "crop_id": hc.crop_id,
+        "stage": hc.stage,
+        "observations": hc.observations,
+        "symptom_codes": hc.symptom_codes or [],
+        "possible_concern": hc.possible_concern,
+        "recommended_action": hc.recommended_action,
+        "follow_up": hc.follow_up,
+        "health_status": hc.health_status,
+        "photo_url": hc.photo_url,
+        "notes": hc.notes,
+        "created_at": _stamp(hc.created_at),
+    }
+
+
+def _check_history(db: Session, cycle: Optional[CropCycle], plot_ids) -> list:
+    q = db.query(CropHealthCheck)
+    if cycle is not None:
+        q = q.filter(CropHealthCheck.crop_cycle_id == cycle.id)
+    elif plot_ids:
+        q = q.filter(CropHealthCheck.plot_id.in_(plot_ids))
+    else:
+        return []
+    rows = q.order_by(CropHealthCheck.created_at.desc()).limit(30).all()
+    return [_health_check_dict(hc) for hc in rows]
+
+
+def _companion_sections(db: Session, ctx: dict) -> dict:
+    """
+    Build the crop-cycle timeline, 'Your Crop Health Plan', the 'Watch for
+    This' list and the health-check history for the overview payload.
+    """
+    cycle = ctx["cycle"]
+    crop = ctx["crop"]
+    stage = ctx["stage"]
+    crop_name = ctx["crop_name"]
+
+    canonical_current = _canonical_stage(stage.get("current_stage"))
+    days = stage.get("days_since_sowing")
+    duration = stage.get("growth_duration_days")
+
+    # Cycle timeline (10 canonical stages).
+    cycle_timeline = guidance.build_cycle(
+        crop_name, days if days is not None else None, duration, canonical_current
+    )
+
+    # Watch-for-this for the current stage.
+    watch_stage = canonical_current or cycle_timeline.get("current_stage") or "vegetative"
+    watch = guidance.build_watch(crop_name, watch_stage)
+
+    # Your Crop Health Plan (data + knowledge driven).
+    factor_map = {f["key"]: f for f in ctx["factors"]}
+    plan = guidance.build_plan(
+        crop_name,
+        watch_stage,
+        days,
+        duration,
+        factors=factor_map,
+        weather=ctx["weather"],
+        tasks_due=_pending_tasks(db, cycle),
+    )
+
+    checks = _check_history(db, cycle, [ctx["plot"].id] if ctx["plot"] else [])
+
+    # Per-stage clickable detail (activities + watch) for the whole timeline.
+    profile, _ = guidance.get_crop_profile(crop_name)
+    stage_details = {}
+    for key in guidance.STAGE_KEYS:
+        stage_details[key] = {
+            "label": guidance.STAGE_LABELS.get(key, key),
+            "icon": guidance.STAGE_ICONS.get(key, "fa-leaf"),
+            "activities": guidance._activity_items(profile, key)[:4],
+            "watch": guidance.build_watch(crop_name, key),
+        }
+
+    return {
+        "cycle": cycle_timeline,
+        "watch": watch,
+        "plan": plan,
+        "health_checks": checks,
+        "stage_details": stage_details,
+        "symptom_catalogue": guidance.SYMPTOM_CATALOGUE,
+        "helper_note": (
+            "Crop Health guidance is generated from your real farm records and a "
+            "general crop-lifecycle reference. It is assistance, not a diagnosis. "
+            "Confirm anything unusual with photos or a local expert before treatment."
+        ),
+    }
+
+
+class CropHealthCheckRequest(BaseModel):
+    """Submit a 'Check Crop Health' observation for the authenticated crop."""
+
+    cycle_id: Optional[str] = None
+    farm_id: Optional[str] = None
+    plot_id: Optional[str] = None
+    stage: Optional[str] = None
+    symptoms: List[str] = []
+    observations: Optional[str] = None
+    photo_url: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post("/check", response_model=dict)
+def crop_health_check(
+    payload: CropHealthCheckRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Evaluate a crop-health check from the farmer's observations.
+
+    Returns a structured, rule-based result (Observation -> Possible concern ->
+    Recommended action -> Follow-up) and persists it to the crop health history.
+    It never claims a diagnosis.
+    """
+    _, _, _, farm, plot, cycle = _resolve_scope(
+        db, current_user, payload.farm_id, payload.plot_id, payload.cycle_id
+    )
+    if cycle is None:
+        raise HTTPException(status_code=404, detail="No crop cycle found for this scope")
+
+    crop = db.get(Crop, cycle.crop_id) if cycle.crop_id else None
+    crop_name = crop.name if crop else None
+
+    stage_key = payload.stage
+    if not stage_key:
+        canonical = _canonical_stage(cycle.current_stage)
+        stage_key = canonical or (
+            guidance.compute_stage_state({}, 0, crop.growth_duration_days if crop else None)
+        )
+
+    result = guidance.evaluate_check(
+        crop_name, stage_key, payload.symptoms, payload.observations
+    )
+
+    check_id = generate_id("FA-CHK", db, CropHealthCheck)
+    check = CropHealthCheck(
+        check_id=check_id,
+        user_id=current_user.id,
+        farm_id=cycle.farm_id,
+        plot_id=cycle.plot_id,
+        crop_cycle_id=cycle.id,
+        crop_id=cycle.crop_id,
+        stage=stage_key,
+        observations=payload.observations,
+        symptom_codes=list(payload.symptoms),
+        possible_concern=result["possible_concern"],
+        recommended_action=result["recommended_action"],
+        follow_up=result["follow_up"],
+        health_status=result["health_status"],
+        photo_url=payload.photo_url,
+        notes=payload.notes,
+    )
+    db.add(check)
+    db.commit()
+    db.refresh(check)
+
+    return {
+        "status": "success",
+        "message": "Crop health check recorded",
+        "data": {
+            "check": _health_check_dict(check),
+            "result": result,
+        },
+    }
+
+
+@router.get("/checks", response_model=dict)
+def crop_health_checks(
+    farm_id: Optional[str] = None,
+    plot_id: Optional[str] = None,
+    cycle_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Full crop health check history for the authenticated crop."""
+    _, _, _, farm, plot, cycle = _resolve_scope(
+        db, current_user, farm_id, plot_id, cycle_id
+    )
+    if cycle is None:
+        raise HTTPException(status_code=404, detail="Crop not found for this scope")
+    checks = _check_history(db, cycle, [plot.id] if plot else [])
+    return {
+        "status": "success",
+        "data": {
+            "has_checks": bool(checks),
+            "checks": checks,
+            "helper_note": (
+                "Every check is stored from your own observations. Guidance is "
+                "assistance, not a diagnosis."
+            ),
+        },
+    }
+
+
+@router.get("/plan", response_model=dict)
+async def crop_health_plan(
+    farm_id: Optional[str] = None,
+    plot_id: Optional[str] = None,
+    cycle_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Your Crop Health Plan: Now / This Week / Coming Up for the selected crop."""
+    ctx = await _assemble(db, current_user, farm_id, plot_id, cycle_id)
+    companion = _companion_sections(db, ctx)
+    return {
+        "status": "success",
+        "data": {
+            "crop": _crop_cycle_dict(ctx["cycle"], ctx["crop"]),
+            "has_crop": ctx["cycle"] is not None,
+            "plan": companion["plan"],
+            "watch": companion["watch"],
+            "cycle": companion["cycle"],
+            "stage_details": companion["stage_details"],
+        },
+    }
+
+
 @router.get("/overview", response_model=dict)
 async def crop_health_overview(
     farm_id: Optional[str] = None,
@@ -1448,6 +1725,7 @@ async def crop_health_overview(
 
     soil_record = ctx["soil_record"]
     irrigation = ctx["latest_irrigation"]
+    companion = _companion_sections(db, ctx)
 
     return {
         "status": "success",
@@ -1503,6 +1781,13 @@ async def crop_health_overview(
             "crop_needs": ctx["needs"],
             "what_may_happen": ctx["outcomes"],
             "growth_stage": ctx["stage"],
+            "cycle": companion["cycle"],
+            "watch": companion["watch"],
+            "plan": companion["plan"],
+            "health_checks": companion["health_checks"],
+            "stage_details": companion["stage_details"],
+            "symptom_catalogue": companion["symptom_catalogue"],
+            "helper_note": companion["helper_note"],
             "history": ctx["history"],
             "events": ctx["events"],
             "actions": ctx["actions"],

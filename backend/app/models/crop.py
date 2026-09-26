@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import (
-    Column, String, DateTime, Float, ForeignKey, Text, Boolean
+    Column, String, DateTime, Float, ForeignKey, Text, Boolean, JSON
 )
 from sqlalchemy.orm import relationship
 from app.database.base import Base
@@ -111,4 +111,25 @@ class IrrigationRecord(Base):
     water_quantity = Column(Float, nullable=True)
     water_unit = Column(String(20), nullable=True)
     irrigation_date = Column(DateTime, default=datetime.utcnow)
+
+
+class CropHealthCheck(Base):
+    __tablename__ = "crop_health_checks"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    check_id = Column(String(20), unique=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    farm_id = Column(String(36), ForeignKey("farms.id"), nullable=True)
+    plot_id = Column(String(36), ForeignKey("farm_plots.id"), nullable=True)
+    crop_cycle_id = Column(String(36), ForeignKey("crop_cycles.id"), nullable=True)
+    crop_id = Column(String(36), ForeignKey("crops.id"), nullable=True)
+    stage = Column(String(50), nullable=True)
+    observations = Column(Text, nullable=True)
+    symptom_codes = Column(JSON, nullable=True)
+    possible_concern = Column(Text, nullable=True)
+    recommended_action = Column(Text, nullable=True)
+    follow_up = Column(Text, nullable=True)
+    health_status = Column(String(30), default="normal")
+    photo_url = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

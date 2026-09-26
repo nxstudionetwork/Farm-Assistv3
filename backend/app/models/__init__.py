@@ -3,7 +3,8 @@ from app.models.user import (
 )
 from app.models.farm import Farm, FarmPlot, FarmDocument
 from app.models.crop import (
-    Crop, CropCycle, CropTask, FarmJournal, SoilRecord, IrrigationRecord
+    Crop, CropCycle, CropTask, FarmJournal, SoilRecord, IrrigationRecord,
+    CropHealthCheck,
 )
 from app.models.sustainability import (
     EnergyUsageRecord, SustainablePracticeRecord, SustainabilityProfileRecord
@@ -83,6 +84,7 @@ __all__ = [
     "LoginHistory", "UserSession", "UserSettings",
     "Farm", "FarmPlot", "FarmDocument",
     "Crop", "CropCycle", "CropTask", "FarmJournal", "SoilRecord", "IrrigationRecord",
+    "CropHealthCheck",
     "Transaction", "Expense", "Income", "Budget", "Loan",
     "ServiceRequest",
     "Worker", "WorkerAvailability", "WorkerBooking", "WorkerPayment", "WorkerReview",

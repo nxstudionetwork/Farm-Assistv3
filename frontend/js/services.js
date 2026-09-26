@@ -2508,6 +2508,23 @@ Backend: FastAPI served from the same origin (port 8000).
         plot_id: plotId,
         cycle_id: cycleId
       })).then(unwrap);
+    },
+    check: function (payload) {
+      return http('POST', '/crop-health/check', payload).then(unwrap);
+    },
+    history: function (farmId, plotId, cycleId) {
+      return http('GET', '/crop-health/checks' + monQ({
+        farm_id: farmId,
+        plot_id: plotId,
+        cycle_id: cycleId
+      })).then(unwrap);
+    },
+    plan: function (farmId, plotId, cycleId) {
+      return http('GET', '/crop-health/plan' + monQ({
+        farm_id: farmId,
+        plot_id: plotId,
+        cycle_id: cycleId
+      })).then(unwrap);
     }
   };
 

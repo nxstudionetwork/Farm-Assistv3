@@ -7,6 +7,25 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
+    /* =========================================================================
+     * CROP HEALTH — crop journey companion
+     * Identity: Crop -> Stage -> Health -> Risk -> Action -> Progress
+     * ========================================================================= */
+
+    .ch-shell { display: grid; grid-template-columns: 72px 1fr; gap: 18px; }
+    .ch-rail { display: flex; flex-direction: column; align-items: center; gap: 0; padding-top: 6px; }
+    .ch-rail-dot {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-card); border: 2px solid var(--border-light);
+      color: var(--text-muted); font-size: 15px; position: relative; z-index: 1;
+      transition: all .25s ease;
+    }
+    .ch-rail-dot.done { background: var(--soft-green); border-color: var(--soft-green); color: var(--primary-green); }
+    .ch-rail-dot.now { background: var(--primary-green); border-color: var(--primary-green); color: #fff; box-shadow: 0 0 0 4px rgba(27,94,63,.14); }
+    .ch-rail-line { width: 2px; flex: 1; min-height: 8px; background: var(--border-light); }
+    .ch-rail-item { display: flex; flex-direction: column; align-items: center; }
+
     .ch-selectors {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
       background: var(--bg-card); border: 1px solid var(--border-light);
@@ -20,17 +39,30 @@
       font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
       color: var(--text-secondary); margin: 22px 0 10px; display: flex; align-items: center; gap: 8px;
     }
-    .ch-lbl:first-of-type { margin-top: 6px; }
+    .ch-lbl .pill { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--text-muted); background: var(--bg-card-soft); border: 1px solid var(--border-light); border-radius: 20px; padding: 2px 10px; text-transform: none; letter-spacing: 0; }
 
-    .ch-hero { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: center; }
-    .ch-ring-wrap { position: relative; width: 150px; height: 150px; margin: 0 auto; }
-    .ch-ring-svg { transform: rotate(0deg); }
-    .ch-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .ch-score { font-size: 34px; font-weight: 800; line-height: 1; color: var(--premium-green); }
-    .ch-score-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-    .ch-hero-status { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-    .ch-hero-crop { font-size: 15px; font-weight: 700; color: var(--text-primary); }
-    .ch-hero-exp { font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+    /* Current stage hero */
+    .ch-hero { display: grid; grid-template-columns: 180px 1fr; gap: 22px; align-items: center; position: relative; overflow: hidden; }
+    .ch-hero::after {
+      content: ''; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px;
+      background: radial-gradient(circle, rgba(27,94,63,.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .ch-hero-stage {
+      display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+    }
+    .ch-hero-icon {
+      width: 96px; height: 96px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--primary-green), var(--medium-green));
+      color: #fff; font-size: 38px; box-shadow: 0 10px 24px rgba(27,94,63,.25);
+    }
+    .ch-hero-stage-name { font-size: 16px; font-weight: 800; color: var(--text-primary); }
+    .ch-hero-progress { width: 100%; max-width: 150px; height: 8px; border-radius: 8px; background: var(--bg-card-soft); border: 1px solid var(--border-light); overflow: hidden; }
+    .ch-hero-progress > span { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--primary-green), var(--medium-green)); transition: width .6s ease; }
+    .ch-hero-copy h2 { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .ch-hero-copy p { font-size: 13px; line-height: 1.65; color: var(--text-secondary); margin-bottom: 10px; }
+    .ch-hero-meta { display: flex; flex-wrap: wrap; gap: 8px; }
 
     .ch-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
     .ch-good { background: var(--soft-green); color: var(--primary-green); }
@@ -40,6 +72,75 @@
     .ch-na { background: #EEF1EC; color: var(--text-muted); }
     .ch-info { background: var(--sky-soft); color: #1F6FA8; }
 
+    .ch-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--text-secondary); background: var(--bg-card-soft); border: 1px solid var(--border-light); }
+    .ch-chip i { color: var(--primary-green); }
+
+    /* Crop cycle timeline */
+    .ch-cycle { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding: 6px 2px 10px; scrollbar-width: thin; }
+    .ch-cycle-stage {
+      flex: 1 0 104px; max-width: 140px; display: flex; flex-direction: column;
+      border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+      background: var(--bg-card-soft); padding: 10px 8px; cursor: pointer; position: relative;
+      transition: all .2s ease;
+    }
+    .ch-cycle-stage:hover { border-color: var(--medium-green); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .ch-cycle-stage.done { opacity: .82; }
+    .ch-cycle-stage.now { border-color: var(--primary-green); background: #F3F8F1; }
+    .ch-cycle-stage.now::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary-green), var(--medium-green));
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    }
+    .ch-cycle-stage .ico { font-size: 16px; color: var(--text-muted); margin-bottom: 6px; }
+    .ch-cycle-stage.done .ico, .ch-cycle-stage.now .ico { color: var(--primary-green); }
+    .ch-cycle-stage .nm { font-size: 11.5px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+    .ch-cycle-stage .dy { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+    .ch-cycle-stage .st-tag { margin-top: 7px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); }
+    .ch-cycle-stage.now .st-tag { color: var(--primary-green); }
+
+    .ch-stage-detail { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 14px; margin-top: 4px; box-shadow: var(--shadow-sm); }
+    .ch-stage-detail h4 { font-size: 13px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ch-stage-detail h4 i { color: var(--primary-green); }
+    .ch-stage-detail .acts { list-style: none; padding: 0; margin: 0; }
+    .ch-stage-detail .acts li { font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); padding: 3px 0 3px 16px; position: relative; }
+    .ch-stage-detail .acts li::before { content: '\2713'; position: absolute; left: 0; color: var(--primary-green); font-weight: 800; }
+
+    /* Plan tabs */
+    .ch-plan-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .ch-plan-tab {
+      flex: 1; min-width: 110px; padding: 10px 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border-light); background: var(--bg-card-soft); cursor: pointer;
+      font-size: 12.5px; font-weight: 700; color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center; gap: 7px; transition: all .2s ease;
+    }
+    .ch-plan-tab i { color: var(--text-muted); }
+    .ch-plan-tab .cnt { background: var(--soft-green); color: var(--primary-green); border-radius: 20px; font-size: 11px; padding: 1px 8px; font-weight: 800; }
+    .ch-plan-tab.on { background: var(--primary-green); border-color: var(--primary-green); color: #fff; }
+    .ch-plan-tab.on i, .ch-plan-tab.on .cnt { color: #fff; }
+    .ch-plan-tab.on .cnt { background: rgba(255,255,255,.22); }
+
+    .ch-item {
+      display: flex; gap: 12px; padding: 13px; border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm); margin-bottom: 10px; background: var(--bg-card);
+      box-shadow: var(--shadow-sm); align-items: flex-start;
+    }
+    .ch-item:last-child { margin-bottom: 0; }
+    .ch-item .lvl { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; background: var(--soft-green); color: var(--primary-green); }
+    .ch-item .body { flex: 1; min-width: 0; }
+    .ch-item .t { font-size: 13px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ch-item .w { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.55; }
+    .ch-item .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+    .ch-src { font-size: 9.5px; font-weight: 700; color: var(--text-muted); background: var(--bg-card-soft); border: 1px solid var(--border-light); border-radius: 20px; padding: 2px 8px; text-transform: uppercase; letter-spacing: .3px; }
+    .ch-src.data { color: #1F6FA8; background: var(--sky-soft); border-color: transparent; }
+
+    .ch-pri { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; padding: 2px 8px; border-radius: 10px; }
+    .ch-pri.high { background: #FFF0F0; color: var(--danger); }
+    .ch-pri.medium { background: #FFF6E0; color: #A67C00; }
+    .ch-pri.low { background: var(--bg-card-soft); color: var(--text-muted); }
+
+    .ch-add-task { margin-left: auto; flex-shrink: 0; }
+
+    /* Health overview factors */
     .ch-condition-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .ch-factor { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 13px; box-shadow: var(--shadow-sm); }
     .ch-factor.na { opacity: .72; }
@@ -51,110 +152,123 @@
     .ch-factor-exp { font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
     .ch-factor-upd { font-size: 10px; color: var(--text-muted); margin-top: 6px; }
 
-    .ch-soil-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 12px; }
-    .ch-soil-chip { border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 8px 10px; background: var(--bg-card-soft); }
-    .ch-soil-chip .k { font-size: 10px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .ch-soil-chip .v { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-top: 2px; }
-    .ch-soil-chip .v small { font-size: 10px; font-weight: 500; color: var(--text-muted); }
+    /* Watch cards */
+    .ch-watch-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .ch-watch {
+      background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+      padding: 13px; box-shadow: var(--shadow-sm); cursor: pointer; transition: all .2s ease;
+    }
+    .ch-watch:hover { border-color: var(--medium-green); transform: translateY(-2px); }
+    .ch-watch .wt { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; flex-wrap: wrap; }
+    .ch-watch .wt i { color: var(--primary-green); }
+    .ch-watch .wd { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .ch-watch .go { margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--medium-green); display: inline-flex; align-items: center; gap: 5px; }
 
-    .ch-narrative { font-size: 13.5px; line-height: 1.75; color: var(--text-primary); }
+    .ch-sv { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
+    .ch-sv.high { background: #FFF0F0; color: var(--danger); }
+    .ch-sv.medium { background: #FFF6E0; color: #A67C00; }
+    .ch-sv.critical { background: #FFF0F0; color: var(--danger); animation: chPulse 1.6s infinite; }
+    @keyframes chPulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 
-    .ch-need { display: flex; gap: 11px; padding: 12px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: 10px; background: var(--bg-card); }
-    .ch-need:last-child { margin-bottom: 0; }
-    .ch-need .ico { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--soft-green); color: var(--primary-green); flex-shrink: 0; font-size: 14px; }
-    .ch-need .body { flex: 1; }
-    .ch-need .t { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 2px; flex-wrap: wrap; }
-    .ch-need .d { font-size: 12px; line-height: 1.55; color: var(--text-secondary); }
+    /* Check form */
+    .ch-check-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .ch-sym-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .ch-sym {
+      display: flex; align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm); cursor: pointer; background: var(--bg-card-soft);
+      transition: all .15s ease; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+    }
+    .ch-sym:hover { border-color: var(--medium-green); }
+    .ch-sym.on { border-color: var(--primary-green); background: #F3F8F1; color: var(--primary-green); }
+    .ch-sym input { display: none; }
+    .ch-sym .tip { display: block; font-size: 10px; font-weight: 500; color: var(--text-muted); margin-top: 1px; }
 
-    .ch-outcome { border-left: 3px solid var(--border-medium); padding: 10px 14px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--bg-card-soft); margin-bottom: 10px; }
-    .ch-outcome:last-child { margin-bottom: 0; }
-    .ch-outcome.positive { border-left-color: var(--success); }
-    .ch-outcome.warning { border-left-color: var(--warning); }
-    .ch-outcome.neutral { border-left-color: var(--info); }
-    .ch-outcome .c { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; color: var(--text-secondary); margin-bottom: 3px; }
-    .ch-outcome .o { font-size: 13px; line-height: 1.55; color: var(--text-primary); }
+    .ch-field-txt label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin-bottom: 6px; }
+    .ch-field-txt textarea, .ch-field-txt input[type="text"], .ch-field-txt input[type="file"] {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+      background: var(--bg-card-soft); color: var(--text-primary); font-size: 13px; outline: none;
+    }
+    .ch-field-txt textarea { min-height: 84px; resize: vertical; }
+    .ch-field-txt input:focus, .ch-field-txt textarea:focus { border-color: var(--medium-green); }
 
-    .ch-stages { display: flex; align-items: center; gap: 4px; overflow-x: auto; padding: 4px 0 8px; }
-    .ch-stage { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 74px; flex: 1; opacity: .5; }
-    .ch-stage.past { opacity: .85; }
-    .ch-stage.current { opacity: 1; }
-    .ch-stage-dot { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--bg-card-soft); border: 2px solid var(--border-light); color: var(--text-muted); font-size: 15px; }
-    .ch-stage.past .ch-stage-dot { background: var(--soft-green); border-color: var(--soft-green); color: var(--primary-green); }
-    .ch-stage.current .ch-stage-dot { background: var(--primary-green); border-color: var(--primary-green); color: white; box-shadow: 0 0 0 4px rgba(27,94,63,.14); }
-    .ch-stage-name { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-align: center; }
-    .ch-stage.current .ch-stage-name { color: var(--primary-green); }
-    .ch-stage-line { flex: 0 0 16px; height: 2px; background: var(--border-light); margin-top: -22px; }
-    .ch-stage-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
-    .ch-stage-meta .m { background: var(--bg-card-soft); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 9px 11px; }
-    .ch-stage-meta .m .k { font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
-    .ch-stage-meta .m .v { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-top: 3px; }
+    .ch-result {
+      margin-top: 16px; border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+      overflow: hidden; background: var(--bg-card);
+    }
+    .ch-result-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border-light); background: var(--bg-card-soft); flex-wrap: wrap; }
+    .ch-result-head h4 { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+    .ch-result-body { padding: 14px; display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .ch-result-row { border-left: 3px solid var(--border-medium); padding: 9px 14px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--bg-card-soft); }
+    .ch-result-row .c { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin-bottom: 3px; }
+    .ch-result-row .o { font-size: 13px; line-height: 1.6; color: var(--text-primary); }
+    .ch-result-row.concern { border-left-color: #E9B640; }
+    .ch-result-row.action { border-left-color: var(--primary-green); }
+    .ch-result-row.follow { border-left-color: #1F6FA8; }
 
+    /* History timeline */
     .ch-timeline { position: relative; padding-left: 22px; }
     .ch-timeline::before { content: ''; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--border-light); }
     .ch-tl-item { position: relative; padding-bottom: 16px; }
     .ch-tl-item:last-child { padding-bottom: 0; }
     .ch-tl-item::before { content: ''; position: absolute; left: -20px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-muted); border: 2px solid white; box-shadow: 0 0 0 2px var(--border-light); }
-    .ch-tl-item.good::before, .ch-tl-item.healthy::before, .ch-tl-item.excellent::before { background: var(--primary-green); box-shadow: 0 0 0 2px var(--primary-green); }
-    .ch-tl-item.needs_attention::before { background: var(--warning); box-shadow: 0 0 0 2px var(--warning); }
+    .ch-tl-item.normal::before, .ch-tl-item.healthy::before, .ch-tl-item.excellent::before, .ch-tl-item.good::before { background: var(--primary-green); box-shadow: 0 0 0 2px var(--primary-green); }
+    .ch-tl-item.watch::before { background: #1F6FA8; box-shadow: 0 0 0 2px #1F6FA8; }
+    .ch-tl-item.attention::before, .ch-tl-item.needs_attention::before { background: var(--warning); box-shadow: 0 0 0 2px var(--warning); }
     .ch-tl-item.at_risk::before { background: #C05621; box-shadow: 0 0 0 2px #C05621; }
     .ch-tl-item.critical::before { background: var(--danger); box-shadow: 0 0 0 2px var(--danger); }
     .ch-tl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
     .ch-tl-date { font-size: 12px; font-weight: 700; color: var(--text-primary); }
     .ch-tl-src { font-size: 10px; color: var(--text-muted); }
+    .ch-tl-body { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; margin-top: 2px; }
     .ch-trend { font-size: 12px; font-weight: 700; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 6px; }
     .ch-trend.improving { color: var(--primary-green); }
     .ch-trend.declining { color: var(--danger); }
     .ch-trend.stable { color: #C05621; }
 
-    .ch-event { display: flex; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
-    .ch-event:last-child { border-bottom: none; padding-bottom: 0; }
-    .ch-event .ico { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--soft-green); color: var(--primary-green); flex-shrink: 0; font-size: 14px; }
-    .ch-event .body { flex: 1; }
-    .ch-event .t { font-size: 13px; font-weight: 700; color: var(--text-primary); }
-    .ch-event .d { font-size: 12px; color: var(--text-secondary); margin-top: 2px; line-height: 1.5; }
-    .ch-event .dt { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+    /* Deep links to source features */
+    .ch-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .ch-link {
+      display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm); background: var(--bg-card); box-shadow: var(--shadow-sm);
+      color: inherit; text-decoration: none; transition: all .2s ease;
+    }
+    .ch-link:hover { border-color: var(--medium-green); transform: translateY(-2px); }
+    .ch-link .ico { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--soft-green); color: var(--primary-green); flex-shrink: 0; font-size: 15px; }
+    .ch-link .nm { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+    .ch-link .ds { font-size: 11px; color: var(--text-muted); }
 
-    .ch-action { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: 10px; background: var(--bg-card); }
-    .ch-action:last-child { margin-bottom: 0; }
-    .ch-action .num { width: 28px; height: 28px; border-radius: 50%; background: var(--primary-green); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
-    .ch-action .body { flex: 1; }
-    .ch-action .t { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .ch-action .d { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.55; }
-    .ch-pri { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; padding: 2px 8px; border-radius: 10px; }
-    .ch-pri.high { background: #FFF0F0; color: var(--danger); }
-    .ch-pri.medium { background: #FFF6E0; color: #A67C00; }
-    .ch-pri.low { background: var(--bg-card-soft); color: var(--text-muted); }
+    .ch-note { display: flex; gap: 9px; padding: 10px 13px; background: var(--sky-soft); border: 1px solid rgba(31,111,168,.18); color: #1F5F8F; border-radius: var(--radius-sm); font-size: 12px; line-height: 1.55; margin-bottom: 16px; }
+    .ch-note i { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
 
-    .ch-ai-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-    .ch-ai-head .tag { margin-left: auto; }
-    .ch-ai-sec { margin-bottom: 14px; }
-    .ch-ai-sec:last-child { margin-bottom: 0; }
-    .ch-ai-sec h4 { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
-    .ch-ai-sec p, .ch-ai-sec li { font-size: 13px; line-height: 1.6; color: var(--text-primary); }
-    .ch-ai-sec ul { list-style: none; padding: 0; margin: 0; }
-    .ch-ai-sec li { padding: 4px 0 4px 16px; position: relative; }
-    .ch-ai-sec li::before { content: '\2022'; position: absolute; left: 2px; color: var(--medium-green); }
-    .ch-ai-summary { margin-top: 12px; padding: 12px; background: #F6F9F4; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 13px; line-height: 1.7; color: var(--text-primary); white-space: pre-wrap; }
-    .ch-tag { font-size: 10px; font-weight: 700; color: var(--text-muted); background: var(--bg-card-soft); border: 1px solid var(--border-light); border-radius: 20px; padding: 3px 10px; }
-
+    .ch-narrative { font-size: 13.5px; line-height: 1.75; color: var(--text-primary); }
     .ch-empty-inner { text-align: center; padding: 44px 20px; }
     .ch-empty-ico { font-size: 46px; color: var(--text-muted); opacity: .5; margin-bottom: 14px; }
     .ch-empty-inner h3 { font-size: 16px; color: var(--text-secondary); margin-bottom: 6px; }
     .ch-empty-inner p { font-size: 12.5px; color: var(--text-muted); margin-bottom: 18px; }
+
     .ch-skel { background: linear-gradient(90deg,#eef1ec 25%,#f7f9f5 50%,#eef1ec 75%); background-size: 200% 100%; animation: chShimmer 1.3s infinite; border-radius: 10px; }
     @keyframes chShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     .ch-error { display: none; align-items: center; gap: 10px; background: #FFF0F0; border: 1px solid #f5c2c2; color: #c0392b; border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 14px; font-size: 13px; }
     .ch-error.show { display: flex; }
 
+    .ch-busy { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
+    .ch-spin { animation: chSpin 1s linear infinite; }
+    @keyframes chSpin { to { transform: rotate(360deg); } }
+
+    .u-hidden { display: none !important; }
+
     @media (max-width: 720px) {
       .ch-selectors { grid-template-columns: 1fr; }
       .ch-hero { grid-template-columns: 1fr; gap: 14px; }
       .ch-condition-grid { grid-template-columns: 1fr 1fr; }
-      .ch-stage-meta { grid-template-columns: 1fr 1fr; }
+      .ch-check-form { grid-template-columns: 1fr; }
+      .ch-links { grid-template-columns: 1fr; }
+      .ch-cycle-stage { flex-basis: 88px; }
     }
     @media (max-width: 420px) {
       .ch-condition-grid { grid-template-columns: 1fr; }
+      .ch-sym-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -171,9 +285,14 @@
     <div class="page-header">
       <div>
         <h1><i class="fas fa-leaf" style="color:var(--primary-green);margin-right:8px;"></i>Crop Health</h1>
-        <p>Monitor how your crops are doing, understand their current health, and know what they need to grow well.</p>
+        <p>Monitor your crop, understand its current growth stage, and follow the right actions throughout the crop cycle.</p>
       </div>
       <button class="btn-secondary" id="ch-refresh"><i class="fas fa-rotate"></i> Refresh</button>
+    </div>
+
+    <div class="ch-note" id="ch-helper-note">
+      <i class="fas fa-circle-info"></i>
+      <span>Crop Health guidance is built from your real farm records and a general crop-lifecycle reference. It is assistance, not a diagnosis. Confirm anything unusual with photos or a local expert before treatment.</span>
     </div>
 
     <div class="ch-selectors">
@@ -182,92 +301,123 @@
         <select class="form-select" id="sel-farm"><option value="">Select Farm</option></select>
       </div>
       <div class="ch-field">
-        <label for="sel-plot">Plot</label>
-        <select class="form-select" id="sel-plot"><option value="">Select Plot</option></select>
+        <label for="sel-plot">Field</label>
+        <select class="form-select" id="sel-plot"><option value="">Select Field</option></select>
       </div>
       <div class="ch-field">
-        <label for="sel-crop">Crop</label>
+        <label for="sel-crop">Crop / Season</label>
         <select class="form-select" id="sel-crop"><option value="">Select Crop</option></select>
       </div>
     </div>
 
     <div id="ch-loading">
       <div class="ch-skel" style="height:150px;margin-bottom:16px;"></div>
-      <div class="ch-skel" style="height:96px;margin-bottom:12px;"></div>
-      <div class="ch-skel" style="height:96px;"></div>
+      <div class="ch-skel" style="height:120px;margin-bottom:12px;"></div>
+      <div class="ch-skel" style="height:120px;"></div>
     </div>
 
     <div id="ch-empty" class="card-premium u-hidden"></div>
 
     <div id="ch-main" class="u-hidden">
+      <div class="ch-shell">
+        <div class="ch-rail" id="ch-rail"></div>
 
-      <div class="ch-lbl"><i class="fas fa-heart-pulse"></i> Current Crop Health</div>
-      <div class="card-premium">
-        <div class="ch-hero">
-          <div>
-            <div class="ch-ring-wrap">
-              <svg class="ch-ring-svg" width="150" height="150" viewBox="0 0 150 150">
-                <circle cx="75" cy="75" r="54" fill="none" stroke="var(--border-light)" stroke-width="10"/>
-                <circle id="ch-ring" cx="75" cy="75" r="54" fill="none" stroke="var(--premium-green)" stroke-width="10" stroke-linecap="round" transform="rotate(-90 75 75)" stroke-dasharray="339.29" stroke-dashoffset="339.29"/>
-              </svg>
-              <div class="ch-ring-center">
-                <div class="ch-score" id="ch-score">--</div>
-                <div class="ch-score-lbl">/ 100</div>
+        <div style="min-width:0;">
+
+          <!-- Current Crop Stage -->
+          <div class="ch-lbl"><i class="fas fa-heart-pulse"></i> Current Crop Stage</div>
+          <div class="card-premium">
+            <div class="ch-hero" id="ch-hero"></div>
+          </div>
+
+          <!-- Crop Cycle -->
+          <div class="ch-lbl" id="ch-cycle-lbl">
+            <i class="fas fa-route"></i> Crop Cycle
+            <span class="pill" id="ch-cycle-pill"></span>
+          </div>
+          <div class="card-premium">
+            <div class="ch-cycle" id="ch-cycle"></div>
+            <div id="ch-stage-detail" class="ch-stage-detail u-hidden"></div>
+          </div>
+
+          <!-- Your Crop Health Plan -->
+          <div class="ch-lbl"><i class="fas fa-clipboard-check"></i> Your Crop Health Plan</div>
+          <div class="card-premium">
+            <div class="ch-plan-tabs" id="ch-plan-tabs"></div>
+            <div id="ch-plan-body"></div>
+          </div>
+
+          <!-- Health Overview -->
+          <div class="ch-lbl"><i class="fas fa-chart-simple"></i> Health Overview</div>
+          <div class="card-premium">
+            <div class="ch-condition-grid" id="ch-condition"></div>
+          </div>
+
+          <!-- Watch for This -->
+          <div class="ch-lbl"><i class="fas fa-triangle-exclamation"></i> Watch for This</div>
+          <div class="card-premium">
+            <div id="ch-watch"></div>
+          </div>
+
+          <!-- Check Crop Health -->
+          <div class="ch-lbl"><i class="fas fa-stethoscope"></i> Check Crop Health</div>
+          <div class="card-premium">
+            <div class="ch-check-form">
+              <div>
+                <div class="ch-field-txt" style="margin-bottom:12px;">
+                  <label>What did you observe? (tap any that apply)</label>
+                  <div class="ch-sym-grid" id="ch-symptoms"></div>
+                </div>
+                <div class="ch-field-txt">
+                  <label>Notes (optional)</label>
+                  <textarea id="ch-observations" placeholder="Describe what you see, how long it has been happening, where on the plant, etc."></textarea>
+                </div>
+              </div>
+              <div>
+                <div class="ch-field-txt" style="margin-bottom:12px;">
+                  <label>Photo (optional)</label>
+                  <input type="file" id="ch-photo" accept="image/*">
+                  <div id="ch-photo-preview" style="margin-top:8px;"></div>
+                </div>
+                <div class="ch-field-txt">
+                  <label>What to expect</label>
+                  <div class="ch-narrative" style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                    Your check is stored to the crop's health history and turned into a structured result:
+                    Observation &rarr; Possible concern &rarr; Recommended action &rarr; Follow-up. This is assistance, never a diagnosis.
+                  </div>
+                </div>
+                <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+                  <button class="btn-primary" id="ch-check-btn"><i class="fas fa-stethoscope"></i> Run Crop Health Check</button>
+                  <span class="ch-busy u-hidden" id="ch-check-busy"><i class="fas fa-spinner ch-spin"></i> Analysing your observations...</span>
+                </div>
               </div>
             </div>
+            <div id="ch-check-result"></div>
           </div>
-          <div>
-            <div class="ch-hero-status">
-              <span class="ch-hero-crop" id="ch-crop-title">Crop</span>
-              <span id="ch-health-badge"></span>
-            </div>
-            <div class="ch-hero-exp" id="ch-health-exp"></div>
+
+          <!-- Health History -->
+          <div class="ch-lbl"><i class="fas fa-clock-rotate-left"></i> Health History</div>
+          <div class="card-premium"><div id="ch-history"></div></div>
+
+          <!-- Source feature links -->
+          <div class="ch-lbl"><i class="fas fa-link"></i> Related Farm Data</div>
+          <div class="ch-links">
+            <a class="ch-link" href="weather.html">
+              <span class="ico"><i class="fas fa-cloud-sun"></i></span>
+              <span><span class="nm">Weather Risk</span><br><span class="ds">Upcoming conditions for this crop</span></span>
+            </a>
+            <a class="ch-link" href="soil.html">
+              <span class="ico"><i class="fas fa-seedling"></i></span>
+              <span><span class="nm">Soil &amp; Irrigation</span><br><span class="ds">Moisture, nutrients and watering</span></span>
+            </a>
+            <a class="ch-link" href="tasks.html">
+              <span class="ico"><i class="fas fa-list-check"></i></span>
+              <span><span class="nm">My Tasks</span><br><span class="ds">Crop plan actions and reminders</span></span>
+            </a>
           </div>
+
         </div>
       </div>
-
-      <div class="ch-lbl"><i class="fas fa-clipboard-check"></i> Crop Condition</div>
-      <div class="card-premium">
-        <div class="ch-condition-grid" id="ch-condition"></div>
-        <div id="ch-soil-wrap" class="u-hidden">
-          <div class="ch-factor-label" style="margin-top:16px;font-size:12px;color:var(--text-muted);">Recorded soil values</div>
-          <div class="ch-soil-grid" id="ch-soil"></div>
-        </div>
-      </div>
-
-      <div class="ch-lbl"><i class="fas fa-magnifying-glass"></i> What's Happening?</div>
-      <div class="card-premium"><div class="ch-narrative" id="ch-happening"></div></div>
-
-      <div class="ch-lbl"><i class="fas fa-wheat-awn"></i> What Your Crop Needs</div>
-      <div class="card-premium"><div id="ch-needs"></div></div>
-
-      <div class="ch-lbl"><i class="fas fa-chart-line"></i> What May Happen</div>
-      <div class="card-premium"><div id="ch-outlook"></div></div>
-
-      <div class="ch-lbl"><i class="fas fa-seedling"></i> Growth Stage</div>
-      <div class="card-premium">
-        <div class="ch-stages" id="ch-stages"></div>
-        <div class="ch-stage-meta" id="ch-stage-meta"></div>
-      </div>
-
-      <div class="ch-lbl"><i class="fas fa-clock-rotate-left"></i> Health History</div>
-      <div class="card-premium"><div id="ch-history"></div></div>
-
-      <div class="ch-lbl"><i class="fas fa-list"></i> Recent Crop Events</div>
-      <div class="card-premium"><div id="ch-events"></div></div>
-
-      <div class="ch-lbl"><i class="fas fa-circle-check"></i> What You Should Do</div>
-      <div class="card-premium"><div id="ch-actions"></div></div>
-
-      <div class="ch-lbl"><i class="fas fa-robot"></i> AI Crop Health Overview</div>
-      <div class="card-premium">
-        <div class="ch-ai-head">
-          <div style="font-size:12.5px;color:var(--text-secondary);">A plain-language summary built only from your recorded crop, soil, water and weather information.</div>
-          <span class="ch-tag tag" id="ch-ai-model"></span>
-        </div>
-        <div id="ch-ai-body"></div>
-      </div>
-
     </div>
   </main>
 
@@ -289,6 +439,11 @@
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    function plain(s) {
+      if (!s) return '';
+      return esc(s).replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    }
+
     function fmtDate(v) {
       if (!v) return '';
       var s = String(v);
@@ -297,15 +452,25 @@
       return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
+    function daysFromNow(offset) {
+      var d = new Date();
+      d.setDate(d.getDate() + offset);
+      var m = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return d.getFullYear() + '-' + m + '-' + day;
+    }
+
     function badgeInfo(code) {
       var map = {
         excellent: ['Excellent', 'ch-good'],
         healthy: ['Healthy', 'ch-good'],
         good: ['Good', 'ch-good'],
+        normal: ['Looking healthy', 'ch-good'],
         needs_attention: ['Needs Attention', 'ch-warn'],
         at_risk: ['At Risk', 'ch-risk'],
         critical: ['Critical', 'ch-crit'],
-        attention: ['Needs Attention', 'ch-warn'],
+        attention: ['Needs attention', 'ch-warn'],
+        watch: ['Watch', 'ch-info'],
         unknown: ['Not Available', 'ch-na'],
         insufficient: ['Insufficient Data', 'ch-na']
       };
@@ -318,14 +483,6 @@
       return '<span class="ch-badge ' + b.cls + '">' + b.label + '</span>';
     }
 
-    function bandColor(code) {
-      if (code === 'excellent' || code === 'healthy' || code === 'good') return 'var(--premium-green)';
-      if (code === 'needs_attention') return '#E9B640';
-      if (code === 'at_risk') return '#E65100';
-      if (code === 'critical') return 'var(--danger)';
-      return 'var(--text-muted)';
-    }
-
     function factorIcon(key) {
       var m = {
         growth: 'fa-arrow-trend-up', water: 'fa-droplet', soil: 'fa-seedling',
@@ -334,12 +491,9 @@
       return m[key] || 'fa-circle-info';
     }
 
-    function stageIcon(key) {
-      var m = {
-        seedling: 'fa-seedling', vegetative: 'fa-leaf', flowering: 'fa-spa',
-        fruiting: 'fa-apple-whole', harvest: 'fa-wheat-awn'
-      };
-      return m[key] || 'fa-seedling';
+    function priBadge(p) {
+      var p = p || 'medium';
+      return '<span class="ch-pri ' + esc(p) + '">' + esc(p) + '</span>';
     }
 
     function emptyBlock(icon, title, text, href, btn) {
@@ -350,23 +504,16 @@
         '</div>';
     }
 
-    function factorCard(f) {
-      if (!f) return '';
-      var available = f.available === true;
-      var code = available ? f.status : 'unknown';
-      var value = (f.value !== null && f.value !== undefined && f.value !== '') ? String(f.value) : 'Not Available';
-      return '<div class="ch-factor' + (available ? '' : ' na') + '">' +
-        '<div class="ch-factor-top">' +
-          '<span class="ch-factor-ico"><i class="fas ' + factorIcon(f.key) + '"></i></span>' +
-          '<span class="ch-factor-label">' + esc(f.label) + '</span>' +
-          statusBadge(code) +
-        '</div>' +
-        '<div class="ch-factor-val">' + esc(value) + '</div>' +
-        '<div class="ch-factor-exp">' + esc(f.explanation) + '</div>' +
-        (f.updated_at ? '<div class="ch-factor-upd"><i class="fas fa-clock"></i> Updated ' + esc(fmtDate(f.updated_at)) + '</div>' : '') +
-      '</div>';
-    }
+    var state = {
+      data: null,
+      activeTab: 'now',
+      selectedStage: null,
+      selectedCycle: null
+    };
 
+    /* ------------------------------------------------------------------ */
+    /* Selectors                                                           */
+    /* ------------------------------------------------------------------ */
     function renderSelectors(data) {
       var farmSel = el('sel-farm'), plotSel = el('sel-plot'), cropSel = el('sel-crop');
       var scope = data.scope || {};
@@ -382,19 +529,524 @@
       });
       plotSel.innerHTML = plots.map(function (p) {
         return '<option value="' + esc(p.id) + '">' + esc(p.plot_name) + '</option>';
-      }).join('') || '<option value="">No plots</option>';
+      }).join('') || '<option value="">No fields</option>';
       plotSel.disabled = !plots.length;
       if (scope.plot_id) plotSel.value = scope.plot_id;
 
       var crops = data.crops || [];
       cropSel.innerHTML = crops.map(function (c) {
-        var label = c.crop_name + (c.variety ? ' (' + c.variety + ')' : '') + (c.plot_name ? ' \u00B7 ' + c.plot_name : '');
+        var label = c.crop_name + (c.variety ? ' (' + c.variety + ')' : '');
+        label += c.season ? ' \u00B7 ' + c.season : '';
+        label += ' \u00B7 ' + fmtDate(c.sowing_date);
         return '<option value="' + esc(c.cycle_id) + '">' + esc(label) + '</option>';
-      }).join('') || '<option value="">No crops</option>';
+      }).join('') || '<option value="">No crop cycles</option>';
       cropSel.disabled = !crops.length;
       if (scope.cycle_id) cropSel.value = scope.cycle_id;
     }
 
+    /* ------------------------------------------------------------------ */
+    /* Rail: Crop -> Stage -> Health -> Risk -> Action -> Progress         */
+    /* ------------------------------------------------------------------ */
+    function renderRail(data) {
+      var rail = el('ch-rail');
+      var items = [
+        { key: 'crop', icon: 'fa-seedling', title: 'Crop', done: !!data.crop },
+        { key: 'stage', icon: 'fa-route', title: 'Stage', done: !!(data.cycle && data.cycle.current_stage) },
+        { key: 'health', icon: 'fa-heart-pulse', title: 'Health', done: !!(data.health && data.health.available) },
+        { key: 'risk', icon: 'fa-triangle-exclamation', title: 'Risk', done: !!(data.watch && data.watch.length) },
+        { key: 'action', icon: 'fa-clipboard-check', title: 'Action', done: !!(data.plan && (data.plan.now || data.plan.this_week)) },
+        { key: 'progress', icon: 'fa-arrow-trend-up', title: 'Progress', done: !!(data.cycle && data.cycle.overall_pct !== undefined) }
+      ];
+      if (!data.has_crop) {
+        items.forEach(function (it, i) {
+          if (i > 0) it.done = false;
+        });
+      }
+      rail.innerHTML = items.map(function (it, i) {
+        return '<div class="ch-rail-item">' +
+          '<div class="ch-rail-dot' + (it.done ? ' done' : (i === 0 && data.has_crop ? ' now' : '')) + '" title="' + esc(it.title) + '"><i class="fas ' + it.icon + '"></i></div>' +
+          (i < items.length - 1 ? '<div class="ch-rail-line"></div>' : '') +
+          '</div>';
+      }).join('');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Current stage hero                                                  */
+    /* ------------------------------------------------------------------ */
+    function renderHero(data) {
+      var crop = data.crop || {};
+      var cycle = data.cycle || {};
+      var g = data.growth_stage || {};
+      var h = data.health || {};
+      var box = el('ch-hero');
+
+      var icon = cycle.current_icon || 'fa-leaf';
+      var stageName = cycle.current_label || g.current_stage_label || 'Not recorded';
+      var pct = (cycle.overall_pct !== undefined && cycle.overall_pct !== null) ? cycle.overall_pct : g.progress_pct;
+      var healthBadge = statusBadge(h.available ? h.status_code : 'insufficient');
+
+      var meta = [];
+      meta.push('<span class="ch-chip"><i class="fas fa-seedling"></i>' + esc(crop.crop_name || 'Crop') + (crop.variety ? ' \u00B7 ' + esc(crop.variety) : '') + '</span>');
+      if (g.days_since_sowing !== null && g.days_since_sowing !== undefined) {
+        meta.push('<span class="ch-chip"><i class="fas fa-calendar-days"></i>Day ' + g.days_since_sowing + '</span>');
+      }
+      if (cycle.next_stage) {
+        meta.push('<span class="ch-chip"><i class="fas fa-forward"></i>Next: ' + esc(cycle.next_stage.label) + '</span>');
+      }
+      if (crop.season) meta.push('<span class="ch-chip"><i class="fas fa-cloud-sun"></i>' + esc(crop.season) + '</span>');
+
+      var heroRight = '<div class="ch-hero-copy">' +
+        '<h2>' + esc(stageName) + ' ' + healthBadge + '</h2>' +
+        '<p>' + esc(h.explanation || g.expected_stage ? 'The crop is being tracked against its expected lifecycle.' : '') + '</p>' +
+        '<div class="ch-hero-meta">' + meta.join('') + '</div>' +
+        '</div>';
+
+      box.innerHTML =
+        '<div class="ch-hero-stage">' +
+          '<div class="ch-hero-icon"><i class="fas ' + esc(icon) + '"></i></div>' +
+          '<div class="ch-hero-stage-name">' + esc(cycle.current_label || stageName) + '</div>' +
+          (pct !== null && pct !== undefined ?
+            '<div class="ch-hero-progress"><span style="width:' + pct + '%"></span></div>' +
+            '<div style="font-size:11px;color:var(--text-muted);font-weight:700;">' + pct + '% of crop cycle</div>' : '') +
+        '</div>' +
+        heroRight;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Crop cycle timeline (clickable stages)                              */
+    /* ------------------------------------------------------------------ */
+    function renderCycle(data) {
+      var cycle = data.cycle || {};
+      var stages = cycle.stages || [];
+      var box = el('ch-cycle');
+      el('ch-cycle-pill').textContent = cycle.is_generic
+        ? 'General guidance'
+        : ((cycle.crop || '') + ' \u00B7 ' + (cycle.total_days ? cycle.total_days + ' days' : 'timing varies'));
+      if (!stages.length) {
+        box.innerHTML = '<div class="ch-narrative">The crop cycle will appear once a crop is selected.</div>';
+        return;
+      }
+
+      box.innerHTML = stages.map(function (s) {
+        var sTag = s.state === 'current' ? '<div class="st-tag"><i class="fas fa-play"></i> Now</div>'
+          : s.state === 'completed' ? '<div class="st-tag">Done</div>'
+          : '<div class="st-tag"><i class="fas fa-clock"></i> Upcoming</div>';
+        var dates = '';
+        if (s.start_date) dates = '<div class="dy">' + fmtDate(s.start_date) + (s.end_date ? ' \u2192 ' + fmtDate(s.end_date) : '') + '</div>';
+        return '<button class="ch-cycle-stage ' + esc(s.state) + '" data-stage="' + esc(s.key) + '">' +
+          '<div class="ico"><i class="fas ' + esc(s.icon || 'fa-leaf') + '"></i></div>' +
+          '<div class="nm">' + esc(s.label) + '</div>' +
+          dates +
+          sTag +
+          '</button>';
+      }).join('');
+
+      box.querySelectorAll('.ch-cycle-stage').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var key = btn.getAttribute('data-stage');
+          state.selectedStage = key;
+          renderStageDetail(data, key);
+        });
+      });
+
+      // Auto-open the current stage detail
+      if (cycle.current_stage && stages.some(function (s) { return s.key === cycle.current_stage; })) {
+        renderStageDetail(data, cycle.current_stage);
+      } else {
+        el('ch-stage-detail').classList.add('u-hidden');
+      }
+    }
+
+    function renderStageDetail(data, key) {
+      var detail = (data.stage_details || {})[key];
+      var box = el('ch-stage-detail');
+      if (!detail) {
+        box.classList.add('u-hidden');
+        return;
+      }
+      var icon = detail.icon || 'fa-leaf';
+      var acts = (detail.activities || []).map(function (a) {
+        return '<li>' + esc(a.action || a) + '</li>';
+      }).join('');
+      var watch = (detail.watch || []).slice(0, 2).map(function (w) {
+        return '<div style="margin-top:6px;font-size:12px;color:var(--text-secondary);line-height:1.5;"><i class="fas fa-eye" style="color:var(--primary-green);margin-right:6px;"></i>' + esc(w.title) + (w.severity ? ' <span class="ch-sv ' + esc(w.severity) + '" style="margin-left:4px;">' + esc(w.severity) + '</span>' : '') + '</div>';
+      }).join('');
+      box.innerHTML =
+        '<h4><i class="fas ' + esc(icon) + '"></i> ' + esc(detail.label) + '</h4>' +
+        (acts ? '<ul class="acts">' + acts + '</ul>' : '<div class="ch-narrative" style="font-size:12.5px;">Key activities for this stage are covered in the plan below.</div>') +
+        (watch ? '<h4 style="margin-top:12px;"><i class="fas fa-eye"></i> Watch for</h4>' + watch : '');
+      box.classList.remove('u-hidden');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Your Crop Health Plan                                               */
+    /* ------------------------------------------------------------------ */
+    function renderPlan(data) {
+      var plan = data.plan || {};
+      var tabs = el('ch-plan-tabs');
+      var body = el('ch-plan-body');
+      var defs = [
+        { key: 'now', icon: 'fa-bolt', label: 'Now' },
+        { key: 'this_week', icon: 'fa-calendar-week', label: 'This Week' },
+        { key: 'coming_up', icon: 'fa-calendar-plus', label: 'Coming Up' }
+      ];
+      tabs.innerHTML = defs.map(function (d) {
+        var items = plan[d.key] || [];
+        return '<button class="ch-plan-tab' + (state.activeTab === d.key ? ' on' : '') + '" data-tab="' + d.key + '">' +
+          '<i class="fas ' + d.icon + '"></i> ' + d.label +
+          (items.length ? ' <span class="cnt">' + items.length + '</span>' : '') +
+          '</button>';
+      }).join('');
+
+      tabs.querySelectorAll('.ch-plan-tab').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          state.activeTab = btn.getAttribute('data-tab');
+          renderPlan(data);
+        });
+      });
+
+      var items = plan[state.activeTab] || [];
+      if (!items.length) {
+        body.innerHTML = '<div class="ch-narrative">No actions are pending in this time frame right now. Check the adjacent tabs, or run a Crop Health Check below.</div>';
+        return;
+      }
+      body.innerHTML = items.map(function (it, i) {
+        var icon = it.source === 'data' ? 'fa-database' : 'fa-seedling';
+        var srcTag = it.source === 'data' ? '<span class="ch-src data">From your data</span>' : '<span class="ch-src">Stage guidance</span>';
+        var stageTag = it.stage_label ? '<span class="ch-src">' + esc(it.stage_label) + '</span>' : '';
+        var addBtn = '';
+        if (it.can_track) {
+          addBtn = '<button class="btn-secondary ch-add-task" data-add="' + i + '" style="padding:6px 10px;font-size:11px;border-radius:10px;"><i class="fas fa-plus"></i> Add to Tasks</button>';
+        } else if (it.existing_task_id) {
+          addBtn = '<span class="ch-src" title="Already scheduled in Tasks">Already in Tasks</span>';
+        }
+        return '<div class="ch-item">' +
+          '<div class="lvl"><i class="fas ' + icon + '"></i></div>' +
+          '<div class="body">' +
+            '<div class="t">' + esc(it.action) + priBadge(it.priority) + '</div>' +
+            '<div class="w">' + esc(it.why || '') + '</div>' +
+            '<div class="tags">' +
+              (it.when ? '<span class="ch-src"><i class="fas fa-clock"></i> ' + esc(it.when) + '</span>' : '') +
+              stageTag + srcTag +
+            '</div>' +
+          '</div>' +
+          addBtn +
+          '</div>';
+      }).join('');
+
+      body.querySelectorAll('[data-add]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var idx = parseInt(btn.getAttribute('data-add'), 10);
+          addPlanItemToTasks(data, items[idx], btn);
+        });
+      });
+    }
+
+    function addPlanItemToTasks(data, item, btn) {
+      var scope = (data.scope || {});
+      var cycleId = scope.cycle_id;
+      if (!cycleId) {
+        showToast('Select a crop first', 'warning');
+        return;
+      }
+      var orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner ch-spin"></i> Adding...';
+      var payload = {
+        crop_cycle_id: cycleId,
+        title: item.action,
+        description: 'Crop Health plan \u00B7 ' + (item.stage_label || '') + ' \u00B7 ' + (item.when || ''),
+        category: item.category || 'Crop Care',
+        due_date: item.bucket === 'coming_up' ? daysFromNow(7) : (item.bucket === 'now' ? daysFromNow(0) : daysFromNow(3)),
+        priority: item.priority || 'medium'
+      };
+      API.Crop.createTask(payload).then(function (res) {
+        state.data = null;
+        btn.innerHTML = '<i class="fas fa-check"></i> Added';
+        showToast('Added to Tasks', 'success');
+        refresh();
+      }).catch(function () {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        showToast('Could not add task. Try again.', 'error');
+      });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Health overview (observed vs guidance)                              */
+    /* ------------------------------------------------------------------ */
+    function factorCard(f) {
+      if (!f) return '';
+      var available = f.available === true;
+      var code = available ? f.status : 'unknown';
+      var value = (f.value !== null && f.value !== undefined && f.value !== '') ? String(f.value) : 'Not available';
+      var srcTag = available ? '<span class="ch-src data" style="font-size:9px;">Observed data</span>' : '<span class="ch-src">No data yet</span>';
+      return '<div class="ch-factor' + (available ? '' : ' na') + '">' +
+        '<div class="ch-factor-top">' +
+          '<span class="ch-factor-ico"><i class="fas ' + factorIcon(f.key) + '"></i></span>' +
+          '<span class="ch-factor-label">' + esc(f.label) + '</span>' +
+          statusBadge(code) +
+        '</div>' +
+        '<div class="ch-factor-val">' + esc(value) + '</div>' +
+        '<div class="ch-factor-exp">' + esc(f.explanation) + '</div>' +
+        '<div class="ch-factor-upd">' + srcTag + (f.updated_at ? ' \u00B7 Updated ' + esc(fmtDate(f.updated_at)) : '') + '</div>' +
+      '</div>';
+    }
+
+    function renderCondition(data) {
+      var order = ['growth', 'water', 'soil', 'weather', 'pest', 'care'];
+      var byKey = {};
+      (data.factors || []).forEach(function (f) { byKey[f.key] = f; });
+      el('ch-condition').innerHTML = order.map(function (k) { return factorCard(byKey[k]); }).join('');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Watch for This                                                      */
+    /* ------------------------------------------------------------------ */
+    function renderWatch(data) {
+      var box = el('ch-watch');
+      var watch = data.watch || [];
+      if (!watch.length) {
+        box.innerHTML = '<div class="ch-narrative">Nothing specific to watch for in the current stage. Keep monitoring growth, moisture and leaves.</div>';
+        return;
+      }
+      box.innerHTML = '<div class="ch-watch-list">' + watch.map(function (w, i) {
+        return '<div class="ch-watch" data-watch="' + i + '">' +
+          '<div class="wt"><i class="fas fa-eye"></i> ' + esc(w.title) + '<span class="ch-sv ' + esc(w.severity || 'medium') + '">' + esc(w.severity || 'watch') + '</span></div>' +
+          '<div class="wd">' + esc(w.observe) + '</div>' +
+          '<div class="go"><i class="fas fa-circle-question"></i> Why it matters &amp; what to do</div>' +
+          '</div>';
+      }).join('') + '</div>';
+
+      box.querySelectorAll('[data-watch]').forEach(function (card) {
+        card.addEventListener('click', function () {
+          var idx = parseInt(card.getAttribute('data-watch'), 10);
+          showWatchModal(watch[idx]);
+        });
+      });
+    }
+
+    function showWatchModal(w) {
+      var modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(10,26,18,.5);display:flex;align-items:center;justify-content:center;padding:16px;';
+      modal.innerHTML =
+        '<div style="background:var(--bg-card);border-radius:var(--radius-md);max-width:520px;width:100%;box-shadow:var(--shadow-lg);position:relative;max-height:88vh;overflow:auto;padding:20px;">' +
+        '<button id="ch-modal-x" style="position:absolute;top:12px;right:12px;border:none;background:var(--bg-card-soft);width:32px;height:32px;border-radius:50%;cursor:pointer;color:var(--text-secondary);"><i class="fas fa-times"></i></button>' +
+        '<h3 style="font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:14px;padding-right:30px;"><i class="fas fa-eye" style="color:var(--primary-green);margin-right:8px;"></i>' + esc(w.title) + '</h3>' +
+        '<div class="ch-result-body" style="padding:0;">' +
+          '<div class="ch-result-row"><div class="c">What you may observe</div><div class="o">' + esc(w.observe) + '</div></div>' +
+          '<div class="ch-result-row concern"><div class="c">Why it matters</div><div class="o">' + esc(w.why) + '</div></div>' +
+          '<div class="ch-result-row follow"><div class="c">What would help confirm it</div><div class="o">' + esc(w.confirm) + '</div></div>' +
+          '<div class="ch-result-row action"><div class="c">Recommended next step</div><div class="o">' + esc(w.next) + '</div></div>' +
+          (w.expert ? '<div class="ch-result-row concern"><div class="c">When to contact an expert</div><div class="o">' + esc(w.expert) + '</div></div>' : '') +
+        '</div>' +
+        '</div>';
+      document.body.appendChild(modal);
+      modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
+      modal.querySelector('#ch-modal-x').addEventListener('click', function () { modal.remove(); });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Check Crop Health                                                   */
+    /* ------------------------------------------------------------------ */
+    function renderSymptoms(data) {
+      var catalogue = data.symptom_catalogue || [];
+      var grid = el('ch-symptoms');
+      if (!catalogue.length) {
+        grid.innerHTML = '<div class="ch-narrative" style="font-size:12px;">Symptom options are not available right now. You can still add notes.</div>';
+        return;
+      }
+      grid.innerHTML = catalogue.map(function (s) {
+        return '<label class="ch-sym" data-code="' + esc(s.code) + '">' +
+          '<i class="fas fa-circle-check"></i>' +
+          '<span>' + esc(s.label) + (s.tip ? '<span class="tip">' + esc(s.tip) + '</span>' : '') + '</span>' +
+          '</label>';
+      }).join('');
+      grid.querySelectorAll('.ch-sym').forEach(function (sym) {
+        sym.addEventListener('click', function () {
+          sym.classList.toggle('on');
+        });
+      });
+    }
+
+    function selectedSymptoms() {
+      var codes = [];
+      el('ch-symptoms').querySelectorAll('.ch-sym.on').forEach(function (sym) {
+        codes.push(sym.getAttribute('data-code'));
+      });
+      return codes;
+    }
+
+    function renderCheckResult(res) {
+      var box = el('ch-check-result');
+      if (!res) return;
+      var r = res.result || {};
+      var status = r.health_status || 'watch';
+      box.innerHTML =
+        '<div class="ch-result">' +
+          '<div class="ch-result-head">' +
+            '<h4><i class="fas fa-stethoscope" style="color:var(--primary-green);margin-right:6px;"></i> Check Result</h4>' +
+            statusBadge(status) +
+            (r.is_generic ? '<span class="ch-src">General guidance</span>' : '') +
+          '</div>' +
+          '<div class="ch-result-body">' +
+            '<div class="ch-result-row"><div class="c">Observation</div><div class="o">' + esc(r.observation) + '</div></div>' +
+            '<div class="ch-result-row concern"><div class="c">Possible concern</div><div class="o">' + esc(r.possible_concern) + '</div></div>' +
+            '<div class="ch-result-row action"><div class="c">Recommended action</div><div class="o">' + esc(r.recommended_action) + '</div></div>' +
+            '<div class="ch-result-row follow"><div class="c">Follow-up</div><div class="o">' + esc(r.follow_up) + '</div></div>' +
+          '</div>' +
+          '<div class="ch-note" style="margin:14px 14px 0;background:var(--bg-card-soft);border:none;color:var(--text-muted);font-size:11.5px;">' +
+            '<i class="fas fa-circle-info"></i><span>' + esc(r.helper_note) + '</span>' +
+          '</div>' +
+          '<div style="padding:14px;"><button class="btn-primary" id="ch-add-check-task"><i class="fas fa-plus"></i> Add follow-up to Tasks</button></div>' +
+        '</div>';
+      var addBtn = el('ch-add-check-task');
+      if (addBtn) addBtn.addEventListener('click', function () {
+        addFollowUpTask(res);
+      });
+    }
+
+    function addFollowUpTask(res) {
+      var r = res.result || {};
+      var data = state.data || {};
+      var scope = data.scope || {};
+      var btn = el('ch-add-check-task');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner ch-spin"></i> Adding...';
+      API.Crop.createTask({
+        crop_cycle_id: scope.cycle_id,
+        title: 'Crop health check follow-up: ' + (r.selected_labels && r.selected_labels.length ? r.selected_labels.join(', ') : 'review crop'),
+        description: plain(r.recommended_action),
+        category: 'Crop Health',
+        due_date: daysFromNow(3),
+        priority: r.health_status === 'critical' || r.health_status === 'attention' ? 'high' : 'medium'
+      }).then(function () {
+        btn.innerHTML = '<i class="fas fa-check"></i> Added to Tasks';
+        showToast('Follow-up added to Tasks', 'success');
+      }).catch(function () {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plus"></i> Add follow-up to Tasks';
+        showToast('Could not add task. Try again.', 'error');
+      });
+    }
+
+    function submitCheck() {
+      var data = state.data || {};
+      var scope = data.scope || {};
+      if (!scope.cycle_id) {
+        showToast('Select a crop first', 'warning');
+        return;
+      }
+      var symptoms = selectedSymptoms();
+      var observations = el('ch-observations').value.trim();
+      if (!symptoms.length && !observations) {
+        showToast('Select at least one symptom or add a note', 'warning');
+        return;
+      }
+      var photoFile = el('ch-photo').files && el('ch-photo').files[0];
+      var busy = el('ch-check-busy');
+      var btn = el('ch-check-btn');
+      btn.disabled = true;
+      busy.classList.remove('u-hidden');
+
+      function finish(payload) {
+        API.CropHealth.check(payload).then(function (res) {
+          btn.disabled = false;
+          busy.classList.add('u-hidden');
+          renderCheckResult(res);
+          el('ch-observations').value = '';
+          el('ch-photo').value = '';
+          el('ch-photo-preview').innerHTML = '';
+          el('ch-symptoms').querySelectorAll('.ch-sym.on').forEach(function (s) { s.classList.remove('on'); });
+          state.data = null;
+          refresh();
+        }).catch(function () {
+          btn.disabled = false;
+          busy.classList.add('u-hidden');
+          showToast('Check failed. Please try again.', 'error');
+        });
+      }
+
+      var base = {
+        cycle_id: scope.cycle_id,
+        farm_id: scope.farm_id,
+        plot_id: scope.plot_id,
+        symptoms: symptoms,
+        observations: observations
+      };
+      if (!photoFile) {
+        finish(base);
+        return;
+      }
+      // Upload photo via the exported StorageService (accepts a FormData).
+      var fd = new FormData();
+      fd.append('file', photoFile);
+      API.FileStorage.upload(fd).then(function (up) {
+        var url = up && (up.url || (up.data && up.data.url));
+        finish(Object.assign({}, base, { photo_url: url || null }));
+      }).catch(function () {
+        // Photo upload failed - continue the check without it.
+        base.notes = 'Photo could not be uploaded';
+        finish(base);
+      });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Health history                                                      */
+    /* ------------------------------------------------------------------ */
+    function renderHistory(data) {
+      var box = el('ch-history');
+      var checks = data.health_checks || [];
+      var hist = data.history || {};
+      var trendHtml = '';
+      if (hist.trend) {
+        var ti = hist.trend === 'improving' ? 'fa-arrow-trend-up' : (hist.trend === 'declining' ? 'fa-arrow-trend-down' : 'fa-equals');
+        trendHtml = '<div class="ch-trend ' + esc(hist.trend) + '"><i class="fas ' + ti + '"></i> ' + esc(hist.trend_label || '') + '</div>';
+      }
+
+      var points = [];
+      checks.forEach(function (c) {
+        points.push({
+          date: c.created_at,
+          label: fmtDate(c.created_at),
+          status_code: c.health_status || 'watch',
+          title: 'Crop health check',
+          body: c.possible_concern || c.observations || 'Check recorded',
+          source: 'your check'
+        });
+      });
+      (hist.points || []).forEach(function (p) {
+        if (points.some(function (x) { return x.date === p.date; })) return;
+        points.push({
+          date: p.date,
+          label: p.label || fmtDate(p.date),
+          status_code: p.status_code || 'good',
+          title: 'Assessment',
+          body: p.source || 'Assessment recorded',
+          source: p.source || ''
+        });
+      });
+      points.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+
+      if (!points.length) {
+        box.innerHTML = '<div class="ch-narrative">' + esc(hist.message || 'No health checks have been recorded yet. Run a Crop Health Check above to start the history.') + '</div>';
+        return;
+      }
+      box.innerHTML = trendHtml + '<div class="ch-timeline">' + points.slice(0, 12).map(function (p) {
+        return '<div class="ch-tl-item ' + esc(p.status_code) + '">' +
+          '<div class="ch-tl-head">' +
+            '<span class="ch-tl-date">' + esc(p.label) + '</span>' +
+            statusBadge(p.status_code) +
+          '</div>' +
+          '<div class="ch-tl-body">' + esc(p.title) + (p.source ? ' <span class="ch-tl-src">\u00B7 ' + esc(p.source) + '</span>' : '') + '</div>' +
+          (p.body && p.body !== p.title ? '<div class="ch-tl-body" style="color:var(--text-muted);font-size:11.5px;">' + esc(p.body) + '</div>' : '') +
+          '</div>';
+      }).join('') + '</div>';
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Empty / error / loader                                              */
+    /* ------------------------------------------------------------------ */
     function renderEmpty(data) {
       var box = el('ch-empty');
       if (!data.farms || !data.farms.length) {
@@ -405,8 +1057,8 @@
         return true;
       }
       if (!data.has_crop) {
-        box.innerHTML = emptyBlock('fa-seedling', 'No crop recorded',
-          'Add a crop cycle for this farm or plot to see its health and care guidance.', 'farm.html', 'Add Crop Cycle');
+        box.innerHTML = emptyBlock('fa-seedling', 'No active crop cycle',
+          'Add a crop and sowing date for this farm or field to see its crop cycle, plan and health guidance.', 'farm.html', 'Go to My Farm');
         box.classList.remove('u-hidden');
         el('ch-main').classList.add('u-hidden');
         return true;
@@ -416,291 +1068,70 @@
       return false;
     }
 
-    function renderHealth(data) {
-      var h = data.health || {};
-      var ring = el('ch-ring');
-      var circ = 2 * Math.PI * 54;
-      el('ch-crop-title').textContent = (data.crop && data.crop.crop_name) || 'Crop';
-
-      if (h.available && h.score !== null && h.score !== undefined) {
-        ring.setAttribute('stroke-dasharray', circ);
-        ring.setAttribute('stroke-dashoffset', circ * (1 - h.score / 100));
-        ring.setAttribute('stroke', bandColor(h.status_code));
-        var scoreEl = el('ch-score');
-        scoreEl.textContent = h.score;
-        scoreEl.style.color = bandColor(h.status_code);
-      } else {
-        ring.setAttribute('stroke-dasharray', circ);
-        ring.setAttribute('stroke-dashoffset', circ);
-        ring.setAttribute('stroke', 'var(--text-muted)');
-        var s = el('ch-score');
-        s.textContent = '--';
-        s.style.color = 'var(--text-muted)';
-      }
-
-      var badge = badgeInfo(h.status_code || 'insufficient');
-      var badgeEl = el('ch-health-badge');
-      badgeEl.className = 'ch-badge ' + badge.cls;
-      badgeEl.textContent = badge.label;
-      el('ch-health-exp').textContent = h.explanation || 'More information is needed to assess this crop.';
-    }
-
-    function renderCondition(data) {
-      var order = ['growth', 'water', 'soil', 'weather', 'pest', 'care'];
-      var byKey = {};
-      (data.factors || []).forEach(function (f) { byKey[f.key] = f; });
-      el('ch-condition').innerHTML = order.map(function (k) { return factorCard(byKey[k]); }).join('');
-
-      var soil = data.soil || {};
-      var wrap = el('ch-soil-wrap');
-      if (soil.available && soil.params && soil.params.length) {
-        var chips = soil.params.filter(function (p) { return p.value !== null && p.value !== undefined; }).map(function (p) {
-          return '<div class="ch-soil-chip">' +
-            '<div class="k">' + esc(p.label) + statusBadge(p.status) + '</div>' +
-            '<div class="v">' + esc(p.value) + ' <small>' + esc(p.unit || '') + '</small></div>' +
-          '</div>';
-        }).join('');
-        if (chips) {
-          el('ch-soil').innerHTML = chips;
-          wrap.classList.remove('u-hidden');
-          return;
-        }
-      }
-      wrap.classList.add('u-hidden');
-    }
-
-    function renderHappening(data) {
-      el('ch-happening').textContent = data.whats_happening || 'Not enough recorded information to describe the current condition yet.';
-    }
-
-    function renderNeeds(data) {
-      var needs = data.crop_needs || [];
-      if (!needs.length) {
-        el('ch-needs').innerHTML = '<div class="ch-narrative">Your crop currently appears to be in good condition. Continue regular monitoring and routine care.</div>';
-        return;
-      }
-      el('ch-needs').innerHTML = needs.map(function (n) {
-        return '<div class="ch-need">' +
-          '<div class="ico"><i class="fas ' + esc(n.icon || 'fa-circle-check') + '"></i></div>' +
-          '<div class="body">' +
-            '<div class="t">' + esc(n.label) + statusBadge(n.status) + '</div>' +
-            '<div class="d">' + esc(n.detail) + '</div>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function renderOutlook(data) {
-      var outcomes = data.what_may_happen || [];
-      if (!outcomes.length) {
-        el('ch-outlook').innerHTML = '<div class="ch-narrative">No specific outlook is available yet. Keep monitoring the crop so any change is noticed early.</div>';
-        return;
-      }
-      el('ch-outlook').innerHTML = outcomes.map(function (o) {
-        var tone = o.tone || 'neutral';
-        return '<div class="ch-outcome ' + esc(tone) + '">' +
-          '<div class="c">' + esc(o.condition) + '</div>' +
-          '<div class="o">' + esc(o.outlook) + '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function renderStage(data) {
-      var g = data.growth_stage || {};
-      var stages = g.stages || [];
-      if (stages.length) {
-        el('ch-stages').innerHTML = stages.map(function (s, i) {
-          var cls = s.is_current ? 'current' : (s.is_past ? 'past' : '');
-          return '<div class="ch-stage ' + cls + '">' +
-            '<div class="ch-stage-dot"><i class="fas ' + stageIcon(s.key) + '"></i></div>' +
-            '<div class="ch-stage-name">' + esc(s.label) + '</div>' +
-          '</div>' + (i < stages.length - 1 ? '<div class="ch-stage-line"></div>' : '');
-        }).join('');
-      } else {
-        el('ch-stages').innerHTML = '<div class="ch-narrative">Growth stage information is not available yet.</div>';
-      }
-
-      var meta = [];
-      meta.push(['Current Stage', g.current_stage_label || (g.current_stage ? g.current_stage : 'Not Available')]);
-      meta.push(['Days Since Planting', (g.days_since_sowing !== null && g.days_since_sowing !== undefined) ? (g.days_since_sowing + ' day(s)') : 'Not Available']);
-      meta.push(['Next Stage', g.next_stage_label || 'Not Available']);
-      meta.push(['Days to Next Stage', (g.days_to_next_stage !== null && g.days_to_next_stage !== undefined) ? (g.days_to_next_stage + ' day(s)') : 'Not Available']);
-      meta.push(['Planting Date', g.sowing_date ? fmtDate(g.sowing_date) : 'Not Available']);
-      meta.push(['Expected Harvest', g.expected_harvest_date ? fmtDate(g.expected_harvest_date) : 'Not Available']);
-      meta.push(['Recorded Stage', g.stage_recorded ? 'Yes' : 'Estimated']);
-      meta.push(['Progress', (g.progress_pct !== null && g.progress_pct !== undefined) ? (g.progress_pct + '%') : 'Not Available']);
-
-      el('ch-stage-meta').innerHTML = meta.map(function (m) {
-        return '<div class="m"><div class="k">' + esc(m[0]) + '</div><div class="v">' + esc(m[1]) + '</div></div>';
-      }).join('');
-    }
-
-    function renderHistory(data) {
-      var box = el('ch-history');
-      var history = data.history || {};
-      if (!history.available || !(history.points || []).length) {
-        box.innerHTML = '<div class="ch-narrative">' + esc(history.message || 'Crop health history will appear as more records become available.') + '</div>';
-        return;
-      }
-      var trendHtml = '';
-      if (history.trend) {
-        var ti = history.trend === 'improving' ? 'fa-arrow-trend-up' : (history.trend === 'declining' ? 'fa-arrow-trend-down' : 'fa-equals');
-        trendHtml = '<div class="ch-trend ' + esc(history.trend) + '"><i class="fas ' + ti + '"></i> ' + esc(history.trend_label || '') + '</div>';
-      }
-      var items = history.points.map(function (p) {
-        var b = badgeInfo(p.status_code);
-        return '<div class="ch-tl-item ' + esc(p.status_code) + '">' +
-          '<div class="ch-tl-head">' +
-            '<span class="ch-tl-date">' + esc(p.label || fmtDate(p.date)) + '</span>' +
-            '<span class="ch-badge ' + b.cls + '">' + b.label + '</span>' +
-            (p.score !== null && p.score !== undefined ? '<span class="ch-tl-src">' + p.score + '/100</span>' : '') +
-          '</div>' +
-          '<div class="ch-tl-src">' + esc(p.source || '') + '</div>' +
-        '</div>';
-      }).join('');
-      box.innerHTML = trendHtml + '<div class="ch-timeline">' + items + '</div>';
-    }
-
-    function renderEvents(data) {
-      var events = data.events || [];
-      if (!events.length) {
-        el('ch-events').innerHTML = '<div class="ch-narrative">No recent crop events have been recorded yet.</div>';
-        return;
-      }
-      el('ch-events').innerHTML = events.map(function (e) {
-        return '<div class="ch-event">' +
-          '<div class="ico"><i class="fas ' + esc(e.icon || 'fa-circle-info') + '"></i></div>' +
-          '<div class="body">' +
-            '<div class="t">' + esc(e.title) + '</div>' +
-            (e.detail ? '<div class="d">' + esc(e.detail) + '</div>' : '') +
-            '<div class="dt">' + esc(fmtDate(e.date)) + '</div>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function renderActions(data) {
-      var actions = data.actions || [];
-      if (!actions.length) {
-        el('ch-actions').innerHTML = '<div class="ch-narrative">No specific action is required right now. Continue regular monitoring and routine care.</div>';
-        return;
-      }
-      el('ch-actions').innerHTML = actions.map(function (a, i) {
-        var pri = a.priority || 'low';
-        return '<div class="ch-action">' +
-          '<div class="num">' + (a.step || (i + 1)) + '</div>' +
-          '<div class="body">' +
-            '<div class="t"><i class="fas ' + esc(a.icon || 'fa-circle-check') + '" style="color:var(--primary-green);"></i> ' + esc(a.title) + '<span class="ch-pri ' + esc(pri) + '">' + esc(pri) + '</span></div>' +
-            '<div class="d">' + esc(a.detail) + '</div>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function aiSection(title, text) {
-      if (!text) return '';
-      return '<div class="ch-ai-sec"><h4><i class="fas fa-circle-info"></i> ' + esc(title) + '</h4><p>' + esc(text) + '</p></div>';
-    }
-
-    function aiList(title, items, icon, tone) {
-      if (!items || !items.length) return '';
-      return '<div class="ch-ai-sec"><h4><i class="fas ' + esc(icon || 'fa-circle-info') + '"></i> ' + esc(title) + '</h4><ul>' +
-        items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
-    }
-
-    function renderAI(res) {
-      var box = el('ch-ai-body');
-      var tag = el('ch-ai-model');
-      if (!res || res.status !== 'ok' || !res.overview) {
-        tag.textContent = '';
-        box.innerHTML = '<div class="ch-narrative">' + esc((res && res.message) || 'More information is needed to build a crop health overview.') + '</div>';
-        return;
-      }
-      var o = res.overview;
-      tag.textContent = res.model && res.model !== 'rules' ? ('AI \u00B7 ' + res.model) : 'Data summary';
-      box.innerHTML =
-        aiSection('Current Condition', o.current_condition) +
-        aiList("What's Going Well", o.what_is_going_well, 'fa-circle-check') +
-        aiList('What Needs Attention', o.what_needs_attention, 'fa-triangle-exclamation') +
-        aiList('What the Crop Needs', o.what_the_crop_needs, 'fa-hand-holding-droplet') +
-        aiList('What May Happen', o.what_may_happen, 'fa-forward') +
-        aiList('Recommended Next Steps', o.recommended_next_steps, 'fa-arrow-right') +
-        (o.ai_summary ? '<div class="ch-ai-summary">' + esc(o.ai_summary) + '</div>' : '');
-    }
-
-    function render(data) {
-      renderSelectors(data);
-      var empty = renderEmpty(data);
-      el('ch-loading').classList.add('u-hidden');
-      el('ch-error').classList.remove('show');
-      if (empty) {
-        el('ch-ai-body').innerHTML = '';
-        el('ch-ai-model').textContent = '';
-        return;
-      }
-      renderHealth(data);
-      renderCondition(data);
-      renderHappening(data);
-      renderNeeds(data);
-      renderOutlook(data);
-      renderStage(data);
-      renderHistory(data);
-      renderEvents(data);
-      renderActions(data);
-      loadAI(data);
-    }
-
-    function loadAI(data) {
-      var box = el('ch-ai-body');
-      box.innerHTML = '<div class="ch-skel" style="height:56px;margin-bottom:10px;"></div><div class="ch-skel" style="height:56px;"></div>';
-      el('ch-ai-model').textContent = '';
-      var s = data.scope || {};
-      return API.CropHealth.aiOverview(s.farm_id, s.plot_id, s.cycle_id)
-        .then(function (res) { renderAI(res); })
-        .catch(function () {
-          el('ch-ai-model').textContent = '';
-          box.innerHTML = '<div class="ch-narrative">Unable to load the crop health overview. <a href="#" id="ch-ai-retry" style="color:var(--primary-green);font-weight:700;">Retry</a></div>';
-          var r = el('ch-ai-retry');
-          if (r) r.addEventListener('click', function (e) { e.preventDefault(); loadAI(data); });
-        });
-    }
-
     function showError() {
       el('ch-loading').classList.add('u-hidden');
+      el('ch-main').classList.add('u-hidden');
+      el('ch-empty').classList.add('u-hidden');
       el('ch-error').classList.add('show');
     }
 
+    /* ------------------------------------------------------------------ */
+    /* Render + load                                                       */
+    /* ------------------------------------------------------------------ */
+    function render(data) {
+      state.data = data;
+      renderSelectors(data);
+      renderRail(data);
+      renderHero(data);
+      renderCycle(data);
+      renderPlan(data);
+      renderCondition(data);
+      renderWatch(data);
+      renderSymptoms(data);
+      el('ch-check-result').innerHTML = '';
+      renderHistory(data);
+      el('ch-loading').classList.add('u-hidden');
+      if (data.helper_note) {
+        el('ch-helper-note').querySelector('span').textContent = data.helper_note;
+      }
+      if (state.selectedStage && data.stage_details && data.stage_details[state.selectedStage]) {
+        renderStageDetail(data, state.selectedStage);
+      }
+    }
+
     var lastParams = {};
-    var stateData = null;
 
     function load(params) {
       lastParams = params || {};
       el('ch-error').classList.remove('show');
-      if (!stateData) {
+      if (!state.data) {
         el('ch-loading').classList.remove('u-hidden');
         el('ch-main').classList.add('u-hidden');
         el('ch-empty').classList.add('u-hidden');
       }
       return API.CropHealth.overview(lastParams.farm_id, lastParams.plot_id, lastParams.cycle_id)
-        .then(function (res) { stateData = res; render(res); })
+        .then(function (res) {
+          var empty = renderEmpty(res);
+          if (!empty) render(res);
+          else state.data = null;
+        })
         .catch(function () { showError(); });
     }
 
-    function onFarmChange() {
-      load({ farm_id: el('sel-farm').value });
-    }
-    function onPlotChange() {
-      load({ farm_id: el('sel-farm').value, plot_id: el('sel-plot').value });
-    }
-    function onCropChange() {
-      load({ farm_id: el('sel-farm').value, plot_id: el('sel-plot').value, cycle_id: el('sel-crop').value });
-    }
+    function onFarmChange() { state.data = null; load({ farm_id: el('sel-farm').value }); }
+    function onPlotChange() { state.data = null; load({ farm_id: el('sel-farm').value, plot_id: el('sel-plot').value }); }
+    function onCropChange() { state.data = null; load({ farm_id: el('sel-farm').value, plot_id: el('sel-plot').value, cycle_id: el('sel-crop').value }); }
     function refresh() {
+      state.data = null;
       load({
         farm_id: el('sel-farm').value || undefined,
         plot_id: el('sel-plot').value || undefined,
         cycle_id: el('sel-crop').value || undefined
       });
+    }
+
+    function showToast(msg, type) {
+      if (typeof window.showToast === 'function') window.showToast(msg, type || 'info');
     }
 
     function init() {
@@ -713,6 +1144,17 @@
       el('sel-crop').addEventListener('change', onCropChange);
       el('ch-refresh').addEventListener('click', refresh);
       el('ch-retry').addEventListener('click', refresh);
+      el('ch-check-btn').addEventListener('click', submitCheck);
+      el('ch-photo').addEventListener('change', function () {
+        var f = el('ch-photo').files && el('ch-photo').files[0];
+        var preview = el('ch-photo-preview');
+        if (!f) { preview.innerHTML = ''; return; }
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          preview.innerHTML = '<img src="' + e.target.result + '" style="max-width:160px;border-radius:10px;border:1px solid var(--border-light);display:block;">';
+        };
+        reader.readAsDataURL(f);
+      });
       load({});
     }
 
