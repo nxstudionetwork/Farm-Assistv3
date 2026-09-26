@@ -2402,6 +2402,10 @@ Backend: FastAPI served from the same origin (port 8000).
     rotateToken: function (sensorId) {
       return http('POST', '/sensors/' + encodeURIComponent(sensorId) + '/rotate-token').then(unwrap);
     },
+    /** Store readings the browser collected from a Bluetooth LE sensor */
+    pushReadings: function (sensorId, payload) {
+      return http('POST', '/sensors/' + encodeURIComponent(sensorId) + '/readings', payload).then(unwrap);
+    },
     /** Submit authenticated readings as physical hardware (X-Sensor-Token) */
     ingest: function (payload, authToken) {
       var headers = { 'Content-Type': 'application/json' };

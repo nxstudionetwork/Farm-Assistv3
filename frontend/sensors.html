@@ -128,6 +128,27 @@
     .sn-verify-result.info { background:#fff8e6; border:1px solid #f0d9a8; color:#9a6b00; }
     .sn-verify-result.bad { background:#FFF0F0; border:1px solid #f3c6c6; color:#c0392b; }
 
+    /* ---------- bluetooth pairing ---------- */
+    .bt-block { border:1px solid var(--border-light); border-radius:12px; padding:14px; margin-bottom:12px; background:#fbfdfb; }
+    .bt-block.unsupported { background:#f7f7f7; }
+    .bt-head { display:flex; align-items:flex-start; gap:10px; }
+    .bt-head > i { font-size:19px; color:#2d6a9f; margin-top:2px; }
+    .bt-head strong { font-size:13px; font-weight:800; color:var(--text-primary); text-transform:none; letter-spacing:0; }
+    .bt-hint { font-size:11px; color:var(--text-muted); margin:4px 0 0; line-height:1.55; }
+    .bt-hint code { background:#eef2f7; padding:1px 4px; border-radius:4px; font-size:10px; }
+    .bt-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:11px; }
+    .bt-status { display:flex; align-items:flex-start; gap:8px; font-size:12px; line-height:1.5; margin-top:11px; padding:10px 12px; border-radius:10px; }
+    .bt-status.ok { background:var(--sn-soft); color:#1e7a43; border:1px solid rgba(45,134,89,.28); }
+    .bt-status.info { background:#eef4fb; color:#1d5c8f; border:1px solid #cfe0f2; }
+    .bt-status.bad { background:#FFF0F0; color:#c0392b; border:1px solid #f3c6c6; }
+    .bt-status.warn { background:#fff8e6; color:#9a6b00; border:1px solid #f0d9a8; }
+    .bt-picked { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px; font-weight:600; color:var(--text-primary); background:#fff; border:1px solid var(--border-light); border-radius:10px; padding:9px 11px; }
+    .bt-picked i { color:var(--sn-green); }
+    .bt-stream-row { margin-top:11px; }
+    .bt-adv { margin-top:11px; border-top:1px dashed var(--border-light); padding-top:10px; }
+    .bt-adv summary { font-size:11px; font-weight:700; color:var(--text-secondary); cursor:pointer; text-transform:uppercase; letter-spacing:.3px; }
+    .bt-adv .form-row label { display:block; }
+
     /* ---------- modal helpers ---------- */
     .modal-backdrop { position:fixed; inset:0; background:rgba(17,40,28,.45); backdrop-filter:blur(2px); z-index:1200; display:none; align-items:center; justify-content:center; padding:16px; }
     .modal-backdrop.active { display:flex; }
@@ -237,6 +258,42 @@
           <label>What it measures</label>
           <select id="cv-type"></select>
         </div>
+
+        <!-- Bluetooth Low Energy pairing (real Web Bluetooth) -->
+        <div class="bt-block" id="bt-block">
+          <div class="bt-head">
+            <i class="fab fa-bluetooth-b"></i>
+            <div>
+              <strong>Connect over Bluetooth</strong>
+              <p class="bt-hint" id="bt-hint">Pair a nearby Bluetooth Low Energy sensor and read it live in this browser. The Device ID is taken from the device name, and you can still correct it below.</p>
+            </div>
+          </div>
+          <div class="bt-actions">
+            <button class="btn-secondary" type="button" id="bt-scan-btn" onclick="btScan()"><i class="fab fa-bluetooth-b"></i> Scan for sensor</button>
+            <button class="btn-secondary" type="button" id="bt-restore-btn" onclick="btRestore()" style="display:none"><i class="fas fa-link"></i> Reconnect last device</button>
+            <button class="btn-secondary" type="button" id="bt-stop-btn" onclick="btStop(true)" style="display:none"><i class="fas fa-stop"></i> Stop live reading</button>
+          </div>
+          <div class="bt-status" id="bt-status" style="display:none"></div>
+          <div class="bt-picked" id="bt-picked" style="display:none">
+            <i class="fas fa-mobile-screen-button"></i>
+            <span id="bt-picked-txt"></span>
+          </div>
+          <div class="bt-stream-row">
+            <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:12px;font-weight:600;color:var(--text-secondary);">
+              <input type="checkbox" id="bt-stream" checked style="width:auto;">
+              Read live values from this device and save them to the sensor record
+            </label>
+          </div>
+          <details class="bt-adv">
+            <summary>Custom / vendor device</summary>
+            <p class="bt-hint" style="margin-top:8px;">If your hardware uses a proprietary GATT characteristic, enter its UUID. The page reads it, then tries JSON (<code>{"soil_moisture": 41.2}</code>) or <code>metric=value</code> pairs.</p>
+            <div class="form-row" style="margin-top:8px;">
+              <label>Notify / read characteristic UUID</label>
+              <input type="text" id="bt-custom-uuid" placeholder="e.g. 0000ffe1-0000-1000-8000-00805f9b34fb" autocomplete="off" spellcheck="false">
+            </div>
+          </details>
+        </div>
+
         <div class="modal-actions">
           <button class="btn-secondary" onclick="closeModal('connect-modal')">Cancel</button>
           <button class="btn-primary" id="cv-verify-btn" onclick="verifySensor()"><i class="fas fa-magnifying-glass"></i> Verify Sensor</button>
@@ -419,7 +476,17 @@
       pollInterval: 30000,
       busy: false,
       verifiedDevice: null,
-      lastAuthToken: null
+      lastAuthToken: null,
+      bt: {
+        device: null,
+        server: null,
+        sensorId: null,
+        live: false,
+        timer: null,
+        flushTimer: null,
+        pending: {},
+        handlers: []
+      }
     };
 
     var METRIC_DEFS = {
@@ -917,6 +984,7 @@
       document.getElementById('cv-verify-btn').disabled = false;
       document.getElementById('cv-verify-btn').innerHTML = '<i class="fas fa-magnifying-glass"></i> Verify Sensor';
       document.getElementById('cv-device').value = '';
+      btInitUi();
       if (!state.available.length) {
         window.API.Sensor.available().then(function (d) {
           state.available = d || [];
@@ -1065,16 +1133,471 @@
         plot_id: document.getElementById('cv-plot').value || null,
         sensor_name: document.getElementById('cv-name').value.trim() || null
       })
-        .then(function () {
+        .then(function (res) {
           closeModal('connect-modal');
           showToast('Sensor connected successfully', 'success');
           state.verifiedDevice = null;
           refreshAll();
+          var stream = document.getElementById('bt-stream');
+          if (state.bt.device && stream && stream.checked) {
+            var connected = res && res.data && (res.data.sensor || res.data);
+            btStartLive(connected && connected.id ? connected.id : null);
+          }
         })
         .catch(function (e) {
           btn.disabled = false;
           btn.innerHTML = '<i class="fas fa-link"></i> Connect Sensor';
           showToast(friendlyError(e, 'Could not connect the sensor'), 'error');
+        });
+    }
+
+    // ---------- bluetooth (Web Bluetooth Low Energy) ----------
+
+    /* Standard Bluetooth SIG characteristics. Keys are 16-bit assigned
+       numbers; values describe how the raw DataView is decoded. */
+    var BT_CHARS = {
+      0x2A6E: { metric: 'temperature', type: 'sint16', factor: 0.1 },      // Temperature 0.1 C
+      0x2A6B: { metric: 'temperature', type: 'sint16', factor: 0.01 },     // Temperature C
+      0x2A6C: { metric: 'humidity', type: 'uint16', factor: 0.01 },        // Humidity 0.01 %
+      0x2A6D: { metric: 'pressure', type: 'sint32', factor: 0.0001 },      // Pressure 0.01 Pa -> hPa
+      0x2A63: { metric: 'light_intensity', type: 'uint24', factor: 0.01 }, // Illuminance 0.01 lux
+      0x2A94: { metric: 'light_intensity', type: 'uint16', factor: 1 },    // Illuminance lux
+      0x2A19: { metric: 'battery', type: 'uint8', factor: 1 }              // Battery level %
+    };
+
+    /* Services asked for in the chooser. Every other service is still
+       inspected after connecting, so vendor devices keep working. */
+    var BT_SERVICES = [0x181A, 0x180F, 0x1813]; // ESS, Battery, Pressure
+
+    /* Metrics the backend accepts; anything else is dropped instead of
+       failing the whole batch with a 422. */
+    var BT_SENDABLE = ['soil_moisture', 'soil_temperature', 'temperature', 'humidity',
+      'pressure', 'light', 'light_intensity', 'rainfall', 'air_quality', 'water_level',
+      'water_temperature', 'flow_rate', 'tank_level', 'ph', 'soil_ph', 'ec', 'soil_ec',
+      'nitrogen', 'phosphorus', 'potassium', 'soil_nitrogen', 'soil_phosphorus',
+      'soil_potassium', 'battery', 'battery_percentage', 'battery_voltage',
+      'signal_strength', 'device_uptime'];
+
+    function btSupported() {
+      return !!(window.navigator && navigator.bluetooth &&
+        typeof navigator.bluetooth.requestDevice === 'function');
+    }
+
+    function btIsSecure() {
+      if (!window.isSecureContext) return false;
+      var h = window.location.hostname;
+      return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]' ||
+        window.location.protocol === 'https:';
+    }
+
+    function btStatus(kind, msg) {
+      var el = document.getElementById('bt-status');
+      if (!el) return;
+      el.className = 'bt-status ' + kind;
+      el.style.display = 'flex';
+      var icon = kind === 'ok' ? 'circle-check' : (kind === 'bad' ? 'circle-xmark' :
+        (kind === 'warn' ? 'triangle-exclamation' : 'circle-info'));
+      el.innerHTML = '<i class="fas fa-' + icon + '" style="margin-top:2px"></i><div>' + esc(msg) + '</div>';
+    }
+
+    function btErrorMessage(e) {
+      var n = e && e.name;
+      if (n === 'NotFoundError') return 'No device was chosen, so the scan was cancelled.';
+      if (n === 'NotAllowedError') return 'Bluetooth permission was denied. Allow this page to use Bluetooth, then try again.';
+      if (n === 'SecurityError') return 'Bluetooth is blocked because this page is not a secure context. Open the app over HTTPS or on localhost.';
+      if (n === 'NotSupportedError') return 'This browser does not support Bluetooth Low Energy.';
+      if (n === 'NetworkError') return 'The Bluetooth adapter is unavailable. Turn Bluetooth on, close other Bluetooth tools, then try again.';
+      if (n === 'InvalidStateError') return 'Bluetooth is unavailable. Turn it on and reload the page.';
+      if (n === 'NotReadableError') return 'Another application is using the Bluetooth adapter. Close it and try again.';
+      if (n === 'NotFoundError') return 'The device is no longer in range. Turn the sensor on and scan again.';
+      return (e && e.message) || 'Bluetooth failed unexpectedly. Please try again.';
+    }
+
+    function btShortUuid(uuid) {
+      if (typeof uuid === 'number' && uuid >= 0 && uuid <= 0xFFFF) return uuid;
+      var s = String(uuid || '').toLowerCase();
+      var m = /^0000([0-9a-f]{4})-0000-1000-8000-00805f9b34fb$/.exec(s);
+      if (m) return parseInt(m[1], 16);
+      var full = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.exec(s);
+      return full ? s : null;
+    }
+
+    function btCustomUuid() {
+      var el = document.getElementById('bt-custom-uuid');
+      var raw = el ? el.value.trim() : '';
+      if (!raw) return null;
+      if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(raw) &&
+        !/^0x[0-9a-fA-F]{1,4}$/.test(raw) && !/^[0-9a-fA-F]{4}$/.test(raw)) {
+      btStatus('bad', 'The custom characteristic UUID is not a valid 16-bit or 128-bit UUID.');
+      return null;
+      }
+      if (/^0x/i.test(raw)) return raw.slice(2).toLowerCase();
+      if (/^[0-9a-fA-F]{4}$/.test(raw)) return '0000' + raw.toLowerCase() + '-0000-1000-8000-00805f9b34fb';
+      return raw.toLowerCase();
+    }
+
+    function btSensorType() {
+      var info = state.verifiedDevice && state.verifiedDevice.info;
+      if (info && info.sensor_type) return String(info.sensor_type);
+      if (state.selected && state.selected.sensor_type) return String(state.selected.sensor_type);
+      var sel = document.getElementById('cv-type');
+      return sel ? sel.value : '';
+    }
+
+    /* Soil probes reuse the standard humidity/temperature characteristics
+       but report them as soil metrics. */
+    function btRemap(metric) {
+      var m = String(metric || '').toLowerCase();
+      var type = btSensorType().toLowerCase();
+      if (type.indexOf('soil') !== -1) {
+        if (m === 'humidity') return 'soil_moisture';
+        if (m === 'temperature') return 'soil_temperature';
+      }
+      if (m === 'battery_percentage') return 'battery';
+      return m;
+    }
+
+    function btDecode(def, dv) {
+      var raw;
+      switch (def.type) {
+        case 'uint8': raw = dv.getUint8(0); break;
+        case 'uint16': raw = dv.getUint16(0, true); break;
+        case 'uint24': raw = dv.getUint8(0) | (dv.getUint8(1) << 8) | (dv.getUint8(2) << 16); break;
+        case 'uint32': raw = dv.getUint32(0, true); break;
+        case 'sint16': raw = dv.getInt16(0, true); break;
+        case 'sint32': raw = dv.getInt32(0, true); break;
+        case 'float': raw = dv.getFloat32(0, true); break;
+        default: return null;
+      }
+      var val = raw * def.factor;
+      return Math.round(val * 1000) / 1000;
+    }
+
+    function btDecodeText(bytes) {
+      var text = '';
+      for (var i = 0; i < bytes.length; i++) text += String.fromCharCode(bytes[i]);
+      return text.replace(/\0/g, '').trim();
+    }
+
+    /* Vendor characteristics carry JSON, metric=value pairs or a bare number. */
+    function btDecodeCustom(characteristic, dv) {
+      var bytes = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+      var text = btDecodeText(bytes);
+      if (!text) return null;
+
+      var parsed = null;
+      try { parsed = JSON.parse(text); } catch (e) { parsed = null; }
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        var out = {};
+        Object.keys(parsed).forEach(function (k) {
+          if (!/^[a-z][a-z0-9_]{0,40}$/i.test(k)) return;
+          var v = parsed[k];
+          if (v && typeof v === 'object' && 'value' in v) v = v.value;
+          if (typeof v === 'boolean') v = v ? 1 : 0;
+          var n = Number(v);
+          if (isFinite(n)) out[k.toLowerCase()] = n;
+        });
+        if (Object.keys(out).length) return out;
+      }
+
+      var pairs = {};
+      text.split(/[;,&\s]+/).forEach(function (chunk) {
+        var m = /^([a-z][a-z0-9_]{0,40})[:=](-?\d+(?:\.\d+)?)$/i.exec(chunk);
+        if (m) pairs[m[1].toLowerCase()] = parseFloat(m[2]);
+      });
+      if (Object.keys(pairs).length) return pairs;
+
+      var single = Number(text);
+      if (isFinite(single)) {
+        var metric = btRemap(btSensorType());
+        if (metric) { var only = {}; only[metric] = single; return only; }
+      }
+      return null;
+    }
+
+    function btInitUi() {
+      var block = document.getElementById('bt-block');
+      if (!block) return;
+      var status = document.getElementById('bt-status');
+      if (!btSupported()) {
+        block.classList.add('unsupported');
+        document.getElementById('bt-scan-btn').disabled = true;
+        document.getElementById('bt-restore-btn').style.display = 'none';
+        btStatus('bad', 'Web Bluetooth is not available in this browser. Use Chrome or Edge on HTTPS or localhost to pair a sensor, or enter the Device ID manually below.');
+        return;
+      }
+      if (!btIsSecure()) {
+        block.classList.add('unsupported');
+        document.getElementById('bt-scan-btn').disabled = true;
+        document.getElementById('bt-restore-btn').style.display = 'none';
+        btStatus('bad', 'Bluetooth needs a secure page. Open this app over HTTPS or on localhost, then reload.');
+        return;
+      }
+      status.style.display = 'none';
+      if (!navigator.bluetooth.getDevices) {
+        document.getElementById('bt-restore-btn').style.display = 'none';
+      } else {
+        navigator.bluetooth.getDevices().then(function (list) {
+          if (list && list.length) document.getElementById('bt-restore-btn').style.display = 'inline-flex';
+        }).catch(function () { });
+      }
+    }
+
+    /* Fill the Device ID from the advertised name, e.g. "FarmSense SNS-101" -> "SNS-101". */
+    function btDeviceIdFromName(name) {
+      var n = String(name || '').trim();
+      if (!n) return null;
+      var m = /([A-Z]{2,5}-[A-Z0-9]{2,8})/i.exec(n);
+      if (m) return m[1].toUpperCase();
+      m = /([A-Z]{2,5}[-_]?[A-Z0-9]{4,10})$/i.exec(n);
+      return m ? m[1].toUpperCase() : null;
+    }
+
+    function btAdopt(device) {
+      state.bt.device = device;
+      var nameEl = document.getElementById('bt-picked-txt');
+      var box = document.getElementById('bt-picked');
+      var derived = btDeviceIdFromName(device.name);
+      if (derived) {
+        var input = document.getElementById('cv-device');
+        input.value = derived;
+        var nm = document.getElementById('cv-name');
+        if (nm && !nm.value.trim()) nm.value = device.name || '';
+        var opts = (state.available || []).filter(function (d) {
+          return (d.device_identifier || d.sensor_id) === derived;
+        })[0];
+        if (opts) fillTypes(opts.sensor_type);
+      }
+      if (nameEl) nameEl.textContent = (device.name || 'Unnamed device') +
+        (device.id ? ' \u00B7 paired in this browser' : '');
+      if (box) box.style.display = 'flex';
+      if (derived) {
+        btStatus('info', 'Device ID set to ' + derived + '. Checking the sensor registry...');
+        verifySensor();
+      } else {
+        btStatus('warn', 'Paired with ' + (device.name || 'this device') + '. Enter its Device ID below to continue.');
+      }
+    }
+
+    function btScan() {
+      if (!btSupported()) { btStatus('bad', 'Web Bluetooth is not available in this browser. Enter the Device ID manually below.'); return; }
+      var custom = btCustomUuid();
+      if (document.getElementById('bt-custom-uuid').value.trim() && !custom) return;
+      var opts = { optionalServices: BT_SERVICES.slice() };
+      if (custom) opts.optionalServices.push(custom);
+      var btn = document.getElementById('bt-scan-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Waiting for device...';
+      btStatus('info', 'Choose your sensor in the browser dialog, then turn it on if it is not listed.');
+      navigator.bluetooth.requestDevice(opts)
+        .then(function (device) { btAdopt(device); })
+        .catch(function (e) {
+          if (e && e.name === 'NotFoundError') btStatus('info', 'Scan cancelled. No device was paired.');
+          else btStatus('bad', btErrorMessage(e));
+        })
+        .finally(function () {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fab fa-bluetooth-b"></i> Scan for sensor';
+        });
+    }
+
+    function btRestore() {
+      if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
+      btStatus('info', 'Looking for a sensor this browser already has permission for...');
+      navigator.bluetooth.getDevices()
+        .then(function (list) {
+          if (!list || !list.length) { btStatus('warn', 'No previously paired sensor found. Use Scan for sensor.'); return; }
+          btAdopt(list[0]);
+        })
+        .catch(function (e) { btStatus('bad', btErrorMessage(e)); });
+    }
+
+    function btPollTimer() {
+      return window.setInterval(function () {
+        if (state.bt.server) btReadAll();
+      }, 20000);
+    }
+
+    function btStartLive(sensorId) {
+      var device = state.bt.device;
+      if (!device) return;
+      if (state.bt.live) return;
+      if (!device.gatt) {
+        btStatus('bad', 'This device does not expose a Bluetooth connection. Check that it is a Bluetooth Low Energy sensor.');
+        return;
+      }
+      if (!sensorId) { btStatus('info', 'Connect the sensor to your account first, then live reading starts automatically.'); return; }
+      state.bt.sensorId = sensorId;
+      btStatus('info', 'Connecting to ' + (device.name || 'the sensor') + ' over Bluetooth...');
+      device.gatt.connect()
+        .then(function (server) {
+          state.bt.server = server;
+          state.bt.sensorId = sensorId;
+          if (!device.__btBound) {
+            device.__btBound = true;
+            device.addEventListener('gattserverdisconnected', btOnDisconnect);
+          }
+          return btDiscover(server, sensorId);
+        })
+        .then(function (count) {
+          state.bt.live = true;
+          document.getElementById('bt-stop-btn').style.display = 'inline-flex';
+          if (state.bt.timer) window.clearInterval(state.bt.timer);
+          state.bt.timer = btPollTimer();
+          if (count) btStatus('ok', 'Live Bluetooth reading is on. Values are saved to this sensor as they arrive.');
+          else btStatus('warn', 'Connected over Bluetooth, but this device exposes no known measurements. Add a custom characteristic UUID below if it uses a vendor format.');
+        })
+        .catch(function (e) {
+          state.bt.server = null;
+          btStatus('bad', 'Could not connect over Bluetooth: ' + btErrorMessage(e));
+        });
+    }
+
+    function btOnDisconnect() {
+      var sensorId = state.bt.sensorId;
+      btTeardown();
+      if (sensorId) {
+        btStatus('bad', 'The sensor disconnected. Keep it powered on and use Reconnect to resume live reading.');
+        window.API.Sensor.refresh(sensorId)
+          .then(function (res) {
+            var fresh = res && res.data && (res.data.sensor || res.data);
+            if (fresh) updateSensorInState(fresh);
+            refreshDetailSilently(sensorId);
+          })
+          .catch(function () { });
+      }
+    }
+
+    function btTeardown() {
+      if (state.bt.flushTimer) { window.clearTimeout(state.bt.flushTimer); state.bt.flushTimer = null; }
+      if (state.bt.timer) { window.clearInterval(state.bt.timer); state.bt.timer = null; }
+      state.bt.handlers.forEach(function (h) {
+        try { h.ch.removeEventListener('characteristicvaluechanged', h.onValue); } catch (e) { }
+      });
+      state.bt.handlers = [];
+      state.bt.live = false;
+      state.bt.server = null;
+      var btn = document.getElementById('bt-stop-btn');
+      if (btn) btn.style.display = 'none';
+    }
+
+    function btStop(userInitiated) {
+      var server = state.bt.server;
+      btTeardown();
+      if (server) {
+        try { server.disconnect(); } catch (e) { }
+      }
+      if (userInitiated) btStatus('info', 'Live Bluetooth reading stopped. The paired device stays connected to this browser.');
+    }
+
+    function btDiscover(server, sensorId) {
+      var found = 0;
+      return server.getPrimaryServices()
+        .then(function (services) {
+          var custom = btCustomUuid();
+          return services.reduce(function (chain, service) {
+            return chain.then(function () {
+              return service.getCharacteristics().then(function (chars) {
+                chars.forEach(function (ch) {
+                  var u = btShortUuid(ch.uuid);
+                  var known = !!BT_CHARS[u];
+                  var isCustom = !!(custom && (String(ch.uuid).toLowerCase() === custom || u === btShortUuid(custom)));
+                  if (!known && !isCustom) return;
+                  found++;
+                  var metric = known ? BT_CHARS[u] : null;
+                  var onValue = function (event) {
+                    var values = metric
+                      ? (function () { var v = btDecode(metric, event.target.value); var o = {}; o[btRemap(metric.metric)] = v; return o; })()
+                      : btDecodeCustom(event.target, event.target.value);
+                    if (values) btQueue(sensorId, values);
+                  };
+                  ch.addEventListener('characteristicvaluechanged', onValue);
+                  state.bt.handlers.push({ ch: ch, onValue: onValue });
+                  ch.readValue()
+                    .then(function () {
+                      onValue({ target: ch });
+                      if (ch.properties.notify || ch.properties.indicate) {
+                        return ch.startNotifications().then(function () {
+                          if (metric) btStatus('ok', 'Live Bluetooth reading is on \u00B7 ' + metric.metric.replace(/_/g, ' ') + '.');
+                        }).catch(function () { });
+                      }
+                    })
+                    .catch(function () { });
+                });
+              }).catch(function () { });
+            });
+          }, Promise.resolve());
+        })
+        .then(function () { return found; })
+        .catch(function () { return found; });
+    }
+
+    function btReadAll() {
+      var server = state.bt.server;
+      if (!server) return;
+      server.getPrimaryServices().then(function (services) {
+        services.forEach(function (service) {
+          service.getCharacteristics().then(function (chars) {
+            chars.forEach(function (ch) {
+              var def = BT_CHARS[btShortUuid(ch.uuid)];
+              if (!def) return;
+              if (ch.readValue) {
+                ch.readValue().then(function () {
+                  var o = {};
+                  o[btRemap(def.metric)] = btDecode(def, ch.value);
+                  btQueue(state.bt.sensorId, o);
+                }).catch(function () { });
+              }
+            });
+          }).catch(function () { });
+        });
+      }).catch(function () { });
+    }
+
+    function btQueue(sensorId, values) {
+      if (!sensorId) return;
+      var added = 0;
+      Object.keys(values).forEach(function (k) {
+        var v = values[k];
+        if (v === null || v === undefined || !isFinite(v)) return;
+        var key = btRemap(k);
+        if (BT_SENDABLE.indexOf(key) === -1) return;
+        state.bt.pending[key] = v;
+        added++;
+      });
+      if (!added) return;
+      if (state.bt.flushTimer) return;
+      state.bt.flushTimer = window.setTimeout(btFlush, 1500);
+    }
+
+    function btFlush() {
+      if (state.bt.flushTimer) { window.clearTimeout(state.bt.flushTimer); state.bt.flushTimer = null; }
+      var data = state.bt.pending;
+      var sensorId = state.bt.sensorId;
+      state.bt.pending = {};
+      var keys = Object.keys(data);
+      if (!keys.length || !sensorId) return;
+      var summary = keys.map(function (k) {
+        return k.replace(/_/g, ' ') + ' ' + data[k];
+      }).join(' \u00B7 ');
+      btStatus('ok', 'Live Bluetooth reading is on \u00B7 ' + summary);
+      window.API.Sensor.pushReadings(sensorId, {
+        data: data,
+        timestamp: new Date().toISOString(),
+        source: 'web-bluetooth'
+      })
+        .then(function (res) {
+          var fresh = res && res.data && res.data.sensor;
+          if (fresh) {
+            updateSensorInState(fresh);
+            if (state.selected && state.selected.id === fresh.id) {
+              state.selected = fresh;
+              refreshDetailSilently(fresh.id);
+            }
+          }
+        })
+        .catch(function (e) {
+          btStatus('bad', 'Bluetooth read succeeded but saving failed: ' + friendlyError(e, 'Could not save this reading.'));
         });
     }
 
@@ -1412,6 +1935,9 @@
       openConnect: openConnect,
       verifySensor: verifySensor,
       stepConnect: stepConnect,
+      btScan: btScan,
+      btRestore: btRestore,
+      btStop: btStop,
       onPickAvailable: onPickAvailable,
       onConnectFarmChange: onConnectFarmChange,
       submitConnect: submitConnect,

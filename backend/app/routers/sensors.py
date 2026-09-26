@@ -300,6 +300,14 @@ class SensorIngestIn(BaseModel):
     data: Optional[dict] = None
 
 
+class SensorBrowserReadingIn(BaseModel):
+    """Readings collected in the browser from a Bluetooth Low Energy sensor."""
+
+    data: dict = Field(...)
+    timestamp: Optional[str] = Field(None, max_length=64)
+    source: Optional[str] = Field("web-bluetooth", max_length=40)
+
+
 def _stamp(dt: Optional[datetime]) -> Optional[str]:
     return dt.strftime("%Y-%m-%dT%H:%M:%S") if dt else None
 
@@ -430,6 +438,107 @@ def _parse_reading_time(raw: Optional[str]) -> Optional[datetime]:
     if dt.tzinfo is not None:
         dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
     return dt
+
+
+def _record_readings(
+    db: Session,
+    sensor: Sensor,
+    payload: dict,
+    received_at: Optional[datetime] = None,
+    recorded_at: Optional[datetime] = None,
+    source: Optional[str] = None,
+) -> dict:
+    """Validate a payload of readings and persist it for one sensor.
+
+    Shared by the hardware token endpoint (``POST /sensors/data``) and the
+    browser Bluetooth endpoint (``POST /sensors/{sensor_id}/readings``) so both
+    paths use the identical metric whitelist, range checks, last-reading,
+    battery, last-seen and status handling. Unsupported or out-of-range
+    metrics are rejected with 422 rather than silently stored.
+    """
+    if not isinstance(payload, dict) or not payload:
+        raise HTTPException(status_code=400, detail="No reading data provided.")
+
+    received_at = received_at or _now()
+    recorded_at = recorded_at or received_at
+
+    readings = []
+    battery = None
+    for metric, value in payload.items():
+        meta = SENSOR_METRICS.get(metric)
+        if not meta:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "metric": metric,
+                    "message": f"Unsupported metric '{metric}'.",
+                    "supported": list(SENSOR_METRICS.keys()),
+                },
+            )
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=422, detail=f"Metric '{metric}' must be a numeric value."
+            )
+        label, unit, lo, hi = meta
+        if lo is not None and num < lo:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Metric '{metric}' value {num} is below the supported range ({lo} to {hi} {unit}).".strip(),
+            )
+        if hi is not None and num > hi:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Metric '{metric}' value {num} exceeds the supported range ({lo} to {hi} {unit}).".strip(),
+            )
+        stored = {metric: num}
+        if source:
+            stored["source"] = source
+        readings.append(
+            SensorReading(
+                id=gen_uuid(),
+                sensor_id=sensor.id,
+                user_id=sensor.user_id,
+                farm_id=sensor.farm_id,
+                plot_id=sensor.plot_id,
+                reading_type=metric,
+                value=num,
+                unit=unit,
+                recorded_at=recorded_at,
+                received_at=received_at,
+                payload=stored,
+            )
+        )
+        if metric in ("battery", "battery_percentage") and battery is None:
+            battery = num
+
+    if not readings:
+        raise HTTPException(status_code=400, detail="No valid readings in payload.")
+
+    first = readings[0]
+    sensor.last_reading = {
+        "metric": first.reading_type,
+        "value": first.value,
+        "unit": first.unit,
+        "recorded_at": _stamp(first.recorded_at),
+    }
+    sensor.last_seen = received_at
+    sensor.connected_at = sensor.connected_at or received_at
+    if sensor.status != "connected":
+        sensor.status = "connected"
+    if battery is not None:
+        sensor.battery_level = round(battery, 2)
+    db.add_all(readings)
+    db.add(sensor)
+    db.commit()
+
+    return {
+        "received_at": _stamp(received_at),
+        "recorded_at": _stamp(recorded_at),
+        "count": len(readings),
+        "metrics": [r.reading_type for r in readings],
+    }
 
 
 @router.get("/sensors", response_model=dict)
@@ -835,85 +944,61 @@ def ingest_sensor_data(
     if not isinstance(payload, dict) or not payload:
         raise HTTPException(status_code=400, detail="No reading data provided.")
 
-    received_at = _now()
-    recorded_at = _parse_reading_time(body.timestamp) or received_at
-
-    readings = []
-    battery = None
-    for metric, value in payload.items():
-        meta = SENSOR_METRICS.get(metric)
-        if not meta:
-            raise HTTPException(
-                status_code=422,
-                detail={
-                    "metric": metric,
-                    "message": f"Unsupported metric '{metric}'.",
-                    "supported": list(SENSOR_METRICS.keys()),
-                },
-            )
-        try:
-            num = float(value)
-        except (TypeError, ValueError):
-            raise HTTPException(
-                status_code=422, detail=f"Metric '{metric}' must be a numeric value."
-            )
-        label, unit, lo, hi = meta
-        if lo is not None and num < lo:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Metric '{metric}' value {num} is below the supported range ({lo} to {hi} {unit}).".strip(),
-            )
-        if hi is not None and num > hi:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Metric '{metric}' value {num} exceeds the supported range ({lo} to {hi} {unit}).".strip(),
-            )
-        readings.append(
-            SensorReading(
-                id=gen_uuid(),
-                sensor_id=sensor.id,
-                user_id=sensor.user_id,
-                farm_id=sensor.farm_id,
-                plot_id=sensor.plot_id,
-                reading_type=metric,
-                value=num,
-                unit=unit,
-                recorded_at=recorded_at,
-                received_at=received_at,
-                payload={metric: num},
-            )
-        )
-        if metric in ("battery", "battery_percentage") and battery is None:
-            battery = num
-
-    if not readings:
-        raise HTTPException(status_code=400, detail="No valid readings in payload.")
-
-    first = readings[0]
-    sensor.last_reading = {
-        "metric": first.reading_type,
-        "value": first.value,
-        "unit": first.unit,
-        "recorded_at": _stamp(first.recorded_at),
-    }
-    sensor.last_seen = received_at
-    sensor.connected_at = sensor.connected_at or received_at
-    if sensor.status != "connected":
-        sensor.status = "connected"
-    if battery is not None:
-        sensor.battery_level = round(battery, 2)
-    db.add_all(readings)
-    db.add(sensor)
-    db.commit()
+    recorded_at = _parse_reading_time(body.timestamp)
+    result = _record_readings(
+        db, sensor, payload, received_at=_now(), recorded_at=recorded_at, source="device"
+    )
 
     return {
         "status": "success",
         "message": "Readings recorded.",
+        "data": result,
+    }
+
+
+@router.post("/sensors/{sensor_id}/readings", status_code=201, response_model=dict)
+def submit_browser_readings(
+    sensor_id: str,
+    body: SensorBrowserReadingIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Store readings collected in the browser from a Bluetooth Low Energy sensor.
+
+    The farmer JWT authenticates the farmer and ownership is resolved
+    server-side, so a browser can never post readings for somebody else's
+    sensor. Values go through the same metric whitelist and range validation
+    as the hardware endpoint, and the sensor status, last reading, last seen
+    and battery level are updated exactly the same way.
+    """
+    sensor = _resolve_owned(db, current_user, sensor_id)
+    if not sensor.is_active:
+        raise HTTPException(
+            status_code=409,
+            detail="This sensor is not active. Reconnect it before sending readings.",
+        )
+    if sensor.status == "disconnected":
+        raise HTTPException(
+            status_code=409,
+            detail="This sensor is disconnected. Use Reconnect before sending readings.",
+        )
+
+    recorded_at = _parse_reading_time(body.timestamp)
+    result = _record_readings(
+        db,
+        sensor,
+        body.data,
+        received_at=_now(),
+        recorded_at=recorded_at,
+        source=(body.source or "web-bluetooth"),
+    )
+    return {
+        "status": "success",
+        "message": "Readings recorded.",
         "data": {
-            "received_at": _stamp(received_at),
-            "recorded_at": _stamp(recorded_at),
-            "count": len(readings),
-            "metrics": [r.reading_type for r in readings],
+            **result,
+            "sensor_id": sensor.sensor_id,
+            "sensor": _sensor_dict(db, sensor),
         },
     }
 
