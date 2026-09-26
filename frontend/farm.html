@@ -2,262 +2,934 @@
 <html lang="en" data-theme="light" data-page="farm">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Farm Assist - My Farm</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Farm | Farm Assist - Central Farm Management Hub</title>
+  <meta name="description" content="Manage your farms, plots, and crops. Get real-time farm health insights, soil conditions, weather advisories, activities, and tasks in one place.">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
+    /* =========================================================================
+       MY FARM — Central Farm Overview & Management Hub
+       Design System: Premium Agricultural Modernism
+       ========================================================================= */
+
     :root {
-      --fa-green: var(--primary-green, #1B5E3F);
+      --mf-green: var(--primary-green, #1B5E3F);
+      --mf-green-dark: var(--primary-dark, #0F2E1E);
+      --mf-green-light: var(--light-green, #52B788);
+      --mf-green-soft: var(--soft-green, #E4F2E8);
+      --mf-gold: #E9B640;
+      --mf-red: #D63031;
+      --mf-blue: #2575fc;
+      --mf-card-bg: var(--bg-card, #ffffff);
+      --mf-card-border: var(--border-light, rgba(45, 106, 79, 0.12));
+      --mf-shadow: var(--shadow-sm, 0 2px 8px rgba(27, 67, 50, 0.06));
+      --mf-shadow-hover: var(--shadow-md, 0 6px 18px rgba(27, 67, 50, 0.10));
+      --mf-radius: 16px;
     }
 
-    .fa-stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 16px;
+    /* Page Header & Controls Toolbar */
+    .mf-header {
+      background: linear-gradient(135deg, rgba(15, 46, 30, 0.03) 0%, rgba(27, 94, 63, 0.08) 100%);
+      border: 1px solid var(--mf-card-border);
+      border-radius: var(--mf-radius);
+      padding: 20px 22px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      overflow: hidden;
     }
-    .fa-stat {
-      background: var(--bg-card, #ffffff);
-      border-radius: 12px;
-      padding: 14px 12px;
-      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+    .mf-header::after {
+      content: '';
+      position: absolute;
+      right: -40px;
+      bottom: -40px;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(82, 183, 136, 0.15) 0%, transparent 70%);
+      pointer-events: none;
     }
-    .fa-stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .fa-stat-num { font-size: 22px; font-weight: 800; color: var(--text-primary, #15271d); }
-    .fa-stat-label { font-size: 11px; color: var(--text-muted, #6b7280); margin-top: 2px; }
-
-    .fa-card {
-      background: var(--bg-card, #ffffff);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
-      margin-bottom: 16px;
-    }
-    .fa-card h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; color: var(--text-primary, #15271d); }
-    .fa-card h2 i { color: var(--fa-green); }
-
-    .fa-select {
-      width: 100%;
-      padding: 10px 14px;
-      border: 1px solid var(--border-medium, #d1d5db);
-      border-radius: 10px;
-      background: #fff;
-      color: var(--text-primary, #15271d);
-      font-size: 13px;
-    }
-
-    .fa-detail-row {
+    .mf-header-top {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
-      padding: 6px 0;
-      font-size: 12px;
-      border-bottom: 1px solid var(--border-light, #eee);
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
     }
-    .fa-detail-row:last-child { border-bottom: none; }
-    .fa-detail-row .fa-dl { color: var(--text-muted, #6b7280); }
-    .fa-detail-row .fa-dv { font-weight: 600; color: var(--text-primary, #15271d); text-align: right; }
-
-    .fa-field-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .fa-field-card {
-      border: 1px solid var(--border-light, #eee);
-      border-left: 4px solid var(--fa-green);
-      background: var(--bg-card-soft, #f8faf8);
-      border-radius: 12px;
-      padding: 14px;
-    }
-    .fa-field-card.fallow { border-left-color: #9e9e9e; }
-    .fa-field-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-    .fa-field-name { font-size: 14px; font-weight: 700; color: var(--text-primary, #15271d); }
-    .fa-field-farm { font-size: 10px; color: var(--text-muted, #6b7280); margin-top: 1px; }
-    .fa-field-meta { display: flex; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--text-secondary, #4b5563); flex-wrap: wrap; }
-
-    .fa-crop-row {
+    .mf-title-group h1 {
+      font: 800 24px/1.2 Outfit, 'Inter', sans-serif;
+      color: var(--mf-green-dark);
+      margin: 0;
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px;
-      background: var(--bg-card-soft, #f8faf8);
-      border-radius: 10px;
-      margin-bottom: 6px;
-      flex-wrap: wrap;
+      letter-spacing: -0.02em;
     }
-    .fa-crop-name { font-size: 13px; font-weight: 600; color: var(--text-primary, #15271d); }
-    .fa-crop-variety { font-size: 10px; font-weight: 400; color: var(--text-muted, #6b7280); }
-    .fa-crop-sub { font-size: 10px; color: var(--text-muted, #6b7280); margin-top: 1px; width: 100%; }
-    .fa-crop-stage {
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 10px;
-      font-weight: 600;
+    .mf-title-group h1 i {
+      color: var(--mf-green);
+      font-size: 24px;
+    }
+    .mf-subtitle {
+      font-size: 13.5px;
+      color: var(--text-secondary, #4A5D4E);
+      margin: 4px 0 0;
+      max-width: 620px;
+      line-height: 1.45;
+    }
+    .mf-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      z-index: 2;
+    }
+    .mf-selector-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1.5px solid var(--border-medium, rgba(45,106,79,0.25));
+      border-radius: 12px;
+      padding: 4px 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      flex: 1;
+      min-width: 240px;
+      max-width: 380px;
+      transition: border-color .2s;
+    }
+    .mf-selector-wrap:focus-within {
+      border-color: var(--mf-green);
+      box-shadow: 0 0 0 3px rgba(27,94,63,0.12);
+    }
+    .mf-selector-wrap i {
+      color: var(--mf-green);
+      font-size: 14px;
+    }
+    .mf-selector {
+      border: none;
+      background: transparent;
+      font: 700 13.5px Outfit, sans-serif;
+      color: var(--mf-green-dark);
+      width: 100%;
+      outline: none;
+      cursor: pointer;
+      padding: 6px 0;
+    }
+    .mf-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #1B5E3F 0%, #2D8659 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 9px 18px;
+      font: 700 13px 'Inter', sans-serif;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(27,94,63,0.25);
+      transition: all .2s ease;
       white-space: nowrap;
     }
-    .fa-crop-stage.vegetative, .fa-crop-stage.seedling, .fa-crop-stage.germinating { background: #e8f5e9; color: #2e7d32; }
-    .fa-crop-stage.flowering, .fa-crop-stage.pre_flowering, .fa-crop-stage.pre-flowering { background: #fff3e0; color: #e65100; }
-    .fa-crop-stage.harvesting, .fa-crop-stage.harvested, .fa-crop-stage.ready_to_harvest { background: #e3f2fd; color: #1565c0; }
-    .fa-crop-stage.fruiting { background: #fce4ec; color: #c62828; }
-    .fa-crop-stage.maturing, .fa-crop-stage.growing { background: #f3e5f5; color: #6a1b9a; }
-    .fa-crop-stage.active { background: #e8f5e9; color: #2e7d32; }
-    .fa-crop-stage.completed { background: #eceff1; color: #546e7a; }
-
-    .fa-qstats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 16px;
+    .mf-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(27,94,63,0.32);
     }
-    .fa-qstat {
-      text-align: center;
-      padding: 14px 8px;
-      background: var(--bg-card-soft, #f8faf8);
+    .mf-btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #fff;
+      color: var(--mf-green-dark);
+      border: 1.5px solid var(--border-medium, rgba(45,106,79,0.2));
       border-radius: 12px;
-      border: 1px solid var(--border-light, #eee);
+      padding: 8px 15px;
+      font: 700 12.5px 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all .2s ease;
+      white-space: nowrap;
     }
-    .fa-qstat .v { font-size: 22px; font-weight: 800; color: var(--text-primary, #15271d); }
-    .fa-qstat .l { font-size: 10px; color: var(--text-muted, #6b7280); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
-    .fa-qstat .s { font-size: 11px; color: var(--fa-green); font-weight: 600; margin-top: 2px; }
-
-    .fa-split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
+    .mf-btn-secondary:hover:not(:disabled) {
+      background: var(--mf-green-soft);
+      border-color: var(--mf-green);
+      color: var(--mf-green);
     }
-    .fa-split .fa-card { margin-bottom: 0; }
+    .mf-btn-secondary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
 
-    .fa-activity {
+    /* CROPS | PLOTS primary options for the selected farm */
+    .mf-segment {
       display: flex;
-      gap: 10px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border-light, #eee);
-      font-size: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
     }
-    .fa-activity:last-child { border-bottom: none; }
-    .fa-activity-icon {
+    .mf-segment-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1 1 140px;
+      justify-content: center;
+      background: #fff;
+      border: 1px solid var(--mf-card-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .mf-segment-btn i { color: var(--mf-green); }
+    .mf-segment-btn:hover { border-color: var(--mf-green); color: var(--mf-green); }
+    .mf-segment-btn.is-active {
+      background: var(--mf-green);
+      border-color: var(--mf-green);
+      color: #fff;
+    }
+    .mf-segment-btn.is-active i { color: #fff; }
+    .mf-segment-count {
+      background: rgba(0, 0, 0, .08);
+      border-radius: 999px;
+      padding: 1px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .mf-segment-btn.is-active .mf-segment-count { background: rgba(255, 255, 255, .25); }
+    [hidden] { display: none !important; }
+
+    /* Quick Actions Bar - wraps naturally so the page never scrolls sideways */
+    .mf-actions-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .mf-action-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #fff;
+      border: 1px solid var(--mf-card-border);
+      border-radius: 10px;
+      padding: 7px 13px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .18s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .mf-action-chip i {
+      color: var(--mf-green);
+      font-size: 12.5px;
+    }
+    .mf-action-chip:hover {
+      border-color: var(--mf-green);
+      color: var(--mf-green);
+      background: var(--mf-green-soft);
+      transform: translateY(-1px);
+    }
+
+    /* Farm Overview KPI Cards */
+    .mf-kpis {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .mf-kpi-card {
+      background: #fff;
+      border: 1px solid var(--mf-card-border);
+      border-radius: var(--mf-radius);
+      padding: 14px 14px;
+      box-shadow: var(--mf-shadow);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 96px;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .mf-kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--mf-shadow-hover);
+    }
+    .mf-kpi-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .mf-kpi-icon {
       width: 32px;
       height: 32px;
-      border-radius: 8px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .mf-kpi-val {
+      font: 800 22px/1.1 Outfit, sans-serif;
+      color: var(--mf-green-dark);
+      letter-spacing: -0.02em;
+    }
+    .mf-kpi-lbl {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+    .mf-kpi-sub {
+      font-size: 10.5px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Common Card Styles */
+    .mf-card {
+      background: #fff;
+      border: 1px solid var(--mf-card-border);
+      border-radius: var(--mf-radius);
+      padding: 20px;
+      box-shadow: var(--mf-shadow);
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .mf-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .mf-card-title {
+      font: 800 16px Outfit, 'Inter', sans-serif;
+      color: var(--mf-green-dark);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mf-card-title i {
+      color: var(--mf-green);
+      font-size: 16px;
+    }
+    .mf-card-link {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--mf-green);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .mf-card-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Next Action Spotlight */
+    .mf-spotlight {
+      background: linear-gradient(135deg, #0F2E1E 0%, #16462E 100%);
+      color: #fff;
+      border-radius: var(--mf-radius);
+      padding: 18px 22px;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 8px 24px rgba(15,46,30,0.22);
+      flex-wrap: wrap;
+    }
+    .mf-spotlight-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      flex: 1;
+    }
+    .mf-spotlight-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #74B9FF;
+      flex-shrink: 0;
+    }
+    .mf-spotlight-tag {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #95D5B2;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mf-spotlight-title {
+      font: 700 16px Outfit, sans-serif;
+      margin: 0;
+      color: #fff;
+    }
+    .mf-spotlight-meta {
+      font-size: 12px;
+      color: rgba(255,255,255,0.8);
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .mf-spotlight-btn {
+      background: #fff;
+      color: var(--mf-green-dark);
+      border: none;
+      border-radius: 10px;
+      padding: 8px 16px;
+      font: 700 12.5px 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mf-spotlight-btn:hover {
+      background: var(--mf-green-soft);
+      transform: translateY(-1px);
+    }
+
+    /* 2-Column Dashboard Layout */
+    .mf-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+    .mf-grid-left, .mf-grid-right {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Farm Health Card ("How Is My Farm?") */
+    .mf-health-box {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 18px;
+      align-items: center;
+    }
+    .mf-health-score-dial {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      background: var(--bg-card-soft, #f8faf5);
+      border: 1px solid var(--mf-card-border);
+      border-radius: 14px;
+      padding: 16px 12px;
+    }
+    .mf-health-num {
+      font: 800 34px/1 Outfit, sans-serif;
+      color: var(--mf-green);
+      letter-spacing: -0.03em;
+    }
+    .mf-health-denom {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .mf-health-status-badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .mf-health-status-badge.healthy { background: #e8f5e9; color: #2e7d32; }
+    .mf-health-status-badge.good { background: #e8f5e9; color: #2e7d32; }
+    .mf-health-status-badge.attention { background: #fff3e0; color: #e65100; }
+    .mf-health-status-badge.risk { background: #ffebee; color: #c62828; }
+    .mf-health-status-badge.insufficient { background: #eceff1; color: #546e7a; }
+
+    .mf-health-factors {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .mf-factor-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+    }
+    .mf-factor-name {
+      color: var(--text-secondary);
+      font-weight: 600;
+      min-width: 110px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mf-factor-bar-wrap {
+      flex: 1;
+      height: 7px;
+      background: #eef2ee;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .mf-factor-bar {
+      height: 100%;
+      border-radius: 999px;
+      transition: width .4s ease;
+    }
+    .mf-factor-val {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      min-width: 44px;
+      text-align: right;
+    }
+
+    /* Map Preview */
+    .mf-map-preview-wrap {
+      position: relative;
+      height: 250px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--mf-card-border);
+      background: #e7eee9;
+    }
+    #fa-map-preview {
+      width: 100%;
+      height: 100%;
+    }
+    .mf-map-overlay {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--mf-card-border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      z-index: 400;
+    }
+
+    /* Crop & Plot Cards */
+    .mf-item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .mf-crop-card, .mf-plot-card {
+      background: var(--bg-card-soft, #f8faf5);
+      border: 1px solid var(--mf-card-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: all .18s ease;
+    }
+    .mf-crop-card:hover, .mf-plot-card:hover {
+      border-color: var(--mf-green);
+      background: #fff;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+    }
+    .mf-item-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .mf-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .mf-item-title {
+      font: 700 14px Outfit, sans-serif;
+      color: var(--text-primary);
+      margin: 0 0 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .mf-item-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .mf-stage-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      text-transform: capitalize;
+    }
+    .mf-stage-pill.seedling, .mf-stage-pill.vegetative, .mf-stage-pill.active { background: #e8f5e9; color: #2e7d32; }
+    .mf-stage-pill.flowering, .mf-stage-pill.pre-flowering { background: #fff3e0; color: #e65100; }
+    .mf-stage-pill.harvest, .mf-stage-pill.harvesting, .mf-stage-pill.ready_to_harvest { background: #e3f2fd; color: #1565c0; }
+    .mf-stage-pill.fruiting { background: #fce4ec; color: #c62828; }
+    .mf-stage-pill.fallow { background: #eceff1; color: #546e7a; }
+
+    /* Feed & Updates */
+    .mf-feed-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-light, #eee);
+      font-size: 12.5px;
+    }
+    .mf-feed-item:last-child {
+      border-bottom: none;
+    }
+    .mf-feed-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 14px;
       flex-shrink: 0;
+      margin-top: 1px;
     }
-    .fa-activity-time { font-size: 10px; color: var(--text-muted, #6b7280); margin-top: 2px; }
+    .mf-feed-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .mf-feed-title {
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .mf-feed-desc {
+      color: var(--text-secondary);
+      font-size: 11.5px;
+      margin-top: 1px;
+      line-height: 1.4;
+    }
+    .mf-feed-time {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-    .fa-expense {
+    /* Alerts */
+    .mf-alert-strip {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .mf-alert-strip.warning { background: #fff8e1; border-left: 3px solid #ffb300; }
+    .mf-alert-strip.danger { background: #ffebee; border-left: 3px solid #e53935; }
+    .mf-alert-strip.info { background: #e1f5fe; border-left: 3px solid #039be5; }
+
+    /* Weather Summary Widget */
+    .mf-weather-widget {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);
+      border: 1px solid rgba(14, 165, 233, 0.15);
+      border-radius: 14px;
+      padding: 16px;
+      flex-wrap: wrap;
+    }
+    .mf-weather-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .mf-weather-icon {
+      font-size: 34px;
+      color: #0284c7;
+    }
+    .mf-weather-temp {
+      font: 800 28px/1 Outfit, sans-serif;
+      color: #0369a1;
+    }
+    .mf-weather-desc {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0f766e;
+    }
+    .mf-weather-stats {
+      display: flex;
+      gap: 14px;
+      font-size: 11.5px;
+      color: #334155;
+    }
+    .mf-weather-stats div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .mf-weather-stats span {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* AI Overview Box */
+    .mf-ai-card {
+      background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 70%, #ecfdf5 100%);
+      border: 1px solid rgba(147, 51, 234, 0.16);
+      border-radius: var(--mf-radius);
+      padding: 18px 20px;
+      position: relative;
+      box-shadow: var(--mf-shadow);
+      margin-bottom: 20px;
+    }
+    .mf-ai-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .mf-ai-title {
+      font: 800 15px Outfit, sans-serif;
+      color: #581c87;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mf-ai-pill {
+      font-size: 10px;
+      font-weight: 700;
+      background: #7c3aed;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .mf-ai-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .mf-ai-block {
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(147, 51, 234, 0.1);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .mf-ai-block-lbl {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6b21a8;
+      margin-bottom: 3px;
+    }
+
+    /* Details Rows */
+    .mf-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+    }
+    .mf-detail-row {
       display: flex;
       justify-content: space-between;
-      padding: 8px 0;
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--mf-card-border);
       font-size: 12px;
-      border-bottom: 1px solid var(--border-light, #eee);
     }
-    .fa-expense:last-child { border-bottom: none; }
-    .fa-expense .c { color: var(--text-secondary, #4b5563); }
-    .fa-expense .a { font-weight: 600; color: var(--text-primary, #15271d); }
+    .mf-detail-row .lbl { color: var(--text-muted); font-weight: 500; }
+    .mf-detail-row .val { color: var(--text-primary); font-weight: 700; text-align: right; }
 
-    .fa-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 20px; }
-
-    .fa-empty {
+    /* Empty State Hero */
+    .mf-empty-hero {
+      background: #fff;
+      border: 1.5px dashed var(--mf-green-light);
+      border-radius: 20px;
+      padding: 48px 24px;
       text-align: center;
-      padding: 26px 16px;
-      color: var(--text-muted, #6b7280);
-      font-size: 13px;
+      margin: 20px 0;
+      box-shadow: var(--mf-shadow);
     }
-    .fa-error { text-align: center; padding: 26px 16px; }
-    .fa-error i { font-size: 40px; color: #d32f2f; opacity: 0.5; display: block; margin-bottom: 10px; }
-
-    .loading-shimmer {
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: faShimmer 1.5s infinite;
-      border-radius: 8px;
-      height: 14px;
-      margin: 6px 0;
+    .mf-empty-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--mf-green-soft);
+      color: var(--mf-green);
+      font-size: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
     }
-    @keyframes faShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .mf-empty-title {
+      font: 800 22px Outfit, sans-serif;
+      color: var(--mf-green-dark);
+      margin: 0 0 8px;
+    }
+    .mf-empty-desc {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      max-width: 480px;
+      margin: 0 auto 20px;
+      line-height: 1.5;
+    }
+    .mf-empty-features {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .mf-empty-feat {
+      background: var(--bg-card-soft, #f8faf5);
+      border: 1px solid var(--mf-card-border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
 
-    .fa-modal {
+    /* Modal Styling */
+    .mf-modal {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 999;
+      inset: 0;
+      background: rgba(15, 46, 30, 0.45);
+      backdrop-filter: blur(4px);
+      z-index: 2100;
       align-items: center;
       justify-content: center;
       padding: 16px;
       box-sizing: border-box;
     }
-    .fa-modal.active { display: flex; }
-    .fa-modal-box {
-      background: var(--bg-card, #ffffff);
-      border-radius: 16px;
-      padding: 22px;
+    .mf-modal.active { display: flex; }
+    .mf-modal-box {
+      background: #fff;
+      border-radius: 20px;
+      padding: 24px;
       width: 100%;
-      max-width: 440px;
-      max-height: 86vh;
+      max-width: 520px;
+      max-height: 90vh;
       overflow-y: auto;
-      box-sizing: border-box;
+      box-shadow: 0 20px 48px rgba(0,0,0,0.18);
+      position: relative;
     }
-    .fa-modal-box h3 { font-size: 16px; margin: 0 0 14px; color: var(--text-primary, #15271d); }
-    .fa-modal-actions { display: flex; gap: 10px; margin-top: 16px; }
-    .fa-modal-actions button { flex: 1; }
-    .fa-loc {
-      margin-top: 12px;
-      border: 1.5px dashed #c5d6c5;
-      border-radius: 12px;
-      padding: 12px;
-      background: #f7faf7;
-    }
-    .fa-loc-label { font-size: 13px; font-weight: 700; color: var(--text-primary, #15271d); margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
-    .fa-loc-btn {
-      width: 100%;
-      padding: 10px;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #1a3c2a, #2d5a3e);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
+    .mf-modal-box.wide { max-width: 620px; }
+    .mf-modal-header {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .mf-modal-header h3 {
+      font: 800 18px Outfit, sans-serif;
+      color: var(--mf-green-dark);
+      margin: 0;
+      display: flex;
+      align-items: center;
       gap: 8px;
-      transition: all .25s ease;
     }
-    .fa-loc-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(26,60,42,.25); }
-    .fa-loc-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
-    .fa-loc-pick { display: none; margin-top: 10px; border: 1.5px solid #4caf50; background: #eef7ee; border-radius: 10px; padding: 10px; }
-    .fa-loc-pick.show { display: block; }
-    .fa-loc-pick .flp-title { font-size: 11px; font-weight: 700; color: #2e7d32; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
-    .fa-loc-pick .flp-addr { font-size: 13px; font-weight: 600; color: #1a2e1a; line-height: 1.4; word-break: break-word; }
-    .fa-loc-pick .flp-coords { font-size: 12px; color: #5a7a5a; margin-top: 3px; }
-    .fa-loc-clear { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; background: #fff; border: 1px solid #4caf50; color: #2e7d32; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-family: inherit; }
-    .fa-loc-clear:hover { background: #4caf50; color: #fff; }
-    .fa-loc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .mf-modal-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+    }
+    .mf-modal-close:hover { color: var(--mf-red); }
+    .mf-form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .mf-modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .mf-modal-actions button { flex: 1; }
 
-    @media (max-width: 900px) {
-      .fa-stats { grid-template-columns: repeat(2, 1fr); }
-      .fa-qstats { grid-template-columns: repeat(2, 1fr); }
+    /* Skeleton Loading Shimmer */
+    .loading-shimmer {
+      background: linear-gradient(90deg, #f0f3f0 25%, #e2e8e2 50%, #f0f3f0 75%);
+      background-size: 200% 100%;
+      animation: mfShimmer 1.5s infinite;
+      border-radius: 8px;
+      height: 14px;
+      margin: 8px 0;
     }
-    @media (max-width: 640px) {
-      .fa-split { grid-template-columns: 1fr; }
-      .fa-split .fa-card { margin-bottom: 16px; }
-      .fa-split .fa-card:last-child { margin-bottom: 0; }
-      .fa-field-grid { grid-template-columns: 1fr; }
+    @keyframes mfShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 1024px) {
+      .mf-kpis { grid-template-columns: repeat(3, 1fr); }
+      .mf-grid-2 { grid-template-columns: 1fr; }
     }
-    @media (max-width: 460px) {
-      .fa-modal-box { padding: 18px; }
+    @media (max-width: 680px) {
+      .mf-kpis { grid-template-columns: repeat(2, 1fr); }
+      .mf-health-box { grid-template-columns: 1fr; }
+      .mf-ai-grid { grid-template-columns: 1fr; }
+      .mf-details-grid { grid-template-columns: 1fr; }
+      .mf-form-grid-2 { grid-template-columns: 1fr; }
+      .mf-selector-wrap { max-width: 100%; min-width: 100%; }
+      .mf-header-top { flex-direction: column; align-items: stretch; }
+      .mf-toolbar { width: 100%; justify-content: stretch; }
+      .mf-toolbar button { flex: 1; }
+    }
+    @media (max-width: 360px) {
+      .mf-kpis { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -265,195 +937,771 @@
 
   <main class="page-container">
 
-    <section class="page-header">
-      <div>
-        <h1><i class="fas fa-tractor" style="color:var(--fa-green);margin-right:8px;"></i> My Farm</h1>
-        <p style="font-size:13px;color:var(--text-secondary, #4b5563);">Manage your farms, fields, crops, and farm records in one place.</p>
-      </div>
-    </section>
-
-    <div class="fa-stats">
-      <div class="fa-stat">
-        <div class="fa-stat-top"><i class="fas fa-seedling" style="color:#4caf50"></i></div>
-        <div class="fa-stat-num" id="stat-crops">--</div>
-        <div class="fa-stat-label">No. of Crops</div>
-      </div>
-      <div class="fa-stat">
-        <div class="fa-stat-top"><i class="fas fa-tractor" style="color:#2196f3"></i></div>
-        <div class="fa-stat-num" id="stat-farms">--</div>
-        <div class="fa-stat-label">No. of Farms</div>
-      </div>
-      <div class="fa-stat">
-        <div class="fa-stat-top"><i class="fas fa-th-large" style="color:#ff9800"></i></div>
-        <div class="fa-stat-num" id="stat-fields">--</div>
-        <div class="fa-stat-label">No. of Fields</div>
-      </div>
-      <div class="fa-stat">
-        <div class="fa-stat-top"><i class="fas fa-leaf" style="color:#9c27b0"></i></div>
-        <div class="fa-stat-num" id="stat-active-crops">--</div>
-        <div class="fa-stat-label">Active Crops</div>
-      </div>
-    </div>
-
-    <section class="fa-card">
-      <h2><i class="fas fa-warehouse"></i> Farm Overview</h2>
-      <select class="fa-select" id="farm-selector" onchange="FarmApp.selectFarm(this.value)" style="margin-bottom:12px">
-        <option value="">Select a farm</option>
-      </select>
-      <div id="farm-details">
-        <div class="fa-empty"><i class="fas fa-hand-pointer" style="font-size:24px;display:block;margin-bottom:8px;"></i>Select a farm above to view details</div>
-      </div>
-    </section>
-
-    <section class="fa-card">
-      <h2><i class="fas fa-th-large"></i> Fields</h2>
-      <div id="fields-list">
-        <div class="loading-shimmer"></div><div class="loading-shimmer" style="width:70%"></div>
-      </div>
-    </section>
-
-    <section class="fa-card">
-      <h2><i class="fas fa-seedling"></i> Crops</h2>
-      <div id="crops-list">
-        <div class="loading-shimmer"></div><div class="loading-shimmer" style="width:60%"></div>
-      </div>
-    </section>
-
-    <div class="fa-qstats">
-      <div class="fa-qstat">
-        <div class="v" id="qs-tasks">--</div>
-        <div class="l">Tasks to Complete</div>
-        <div class="s"><i class="fas fa-list-check"></i> From your task list</div>
-      </div>
-      <div class="fa-qstat">
-        <div class="v" id="qs-fields">--</div>
-        <div class="l">Registered Fields</div>
-        <div class="s"><i class="fas fa-th-large"></i> Across all farms</div>
-      </div>
-      <div class="fa-qstat">
-        <div class="v" id="qs-crops">--</div>
-        <div class="l">Tracked Crops</div>
-        <div class="s"><i class="fas fa-seedling"></i> In active cycles</div>
-      </div>
-      <div class="fa-qstat">
-        <div class="v" id="qs-active">--</div>
-        <div class="l">Active Farms</div>
-        <div class="s"><i class="fas fa-tractor"></i> Registered to you</div>
-      </div>
-    </div>
-
-    <div class="fa-split">
-      <section class="fa-card">
-        <h2><i class="fas fa-clock"></i> Recent Activities</h2>
-        <div id="activities-list">
-          <div class="loading-shimmer"></div><div class="loading-shimmer" style="width:50%"></div>
+    <!-- PAGE HEADER & CONTROLS -->
+    <header class="mf-header">
+      <div class="mf-header-top">
+        <div class="mf-title-group">
+          <h1><i class="fas fa-tractor"></i> My Farm</h1>
+          <p class="mf-subtitle">Manage your farms, plots and crops, and stay updated on everything happening across your farm.</p>
         </div>
-      </section>
-      <section class="fa-card">
-        <h2><i class="fas fa-indian-rupee-sign"></i> Expense Summary</h2>
-        <div id="expense-summary">
-          <div class="loading-shimmer"></div><div class="loading-shimmer" style="width:60%"></div>
+        <div class="mf-toolbar">
+          <div class="mf-selector-wrap" id="farm-selector-container">
+            <i class="fas fa-warehouse"></i>
+            <select class="mf-selector" id="farm-selector" onchange="FarmApp.selectFarm(this.value)">
+              <option value="">Loading your farms...</option>
+            </select>
+          </div>
+          <button type="button" class="mf-btn-primary" onclick="FarmApp.openAddFarm()">
+            <i class="fas fa-plus"></i> Add Farm
+          </button>
+          <button type="button" class="mf-btn-secondary" id="btn-edit-farm" onclick="FarmApp.openEditFarm()" disabled>
+            <i class="fas fa-pen"></i> Edit
+          </button>
+          <button type="button" class="mf-btn-secondary" onclick="FarmApp.refreshAll()" title="Refresh Farm Data">
+            <i class="fas fa-rotate"></i>
+          </button>
         </div>
+      </div>
+    </header>
+
+    <!-- EMPTY FARM STATE (When farmer has 0 farms) -->
+    <div id="mf-empty-state" style="display: none;">
+      <section class="mf-empty-hero">
+        <div class="mf-empty-icon"><i class="fas fa-seedling"></i></div>
+        <h2 class="mf-empty-title">Start Your Farm</h2>
+        <p class="mf-empty-desc">Add your first farm to manage your land, crops, activities, soil conditions, and overall farm health in one central hub.</p>
+        <div class="mf-empty-features">
+          <div class="mf-empty-feat"><i class="fas fa-map-location-dot" style="color:var(--mf-green);"></i> Land &amp; Plot Mapping</div>
+          <div class="mf-empty-feat"><i class="fas fa-leaf" style="color:#2e7d32;"></i> Crop Lifecycle Tracking</div>
+          <div class="mf-empty-feat"><i class="fas fa-droplet" style="color:#0288d1;"></i> Soil &amp; Water Intelligence</div>
+          <div class="mf-empty-feat"><i class="fas fa-robot" style="color:#7c3aed;"></i> AI Farm Diagnostics</div>
+        </div>
+        <button type="button" class="mf-btn-primary" style="font-size:14px;padding:12px 24px;" onclick="FarmApp.openAddFarm()">
+          <i class="fas fa-plus"></i> Add Your First Farm
+        </button>
       </section>
     </div>
 
-    <div class="fa-actions">
-      <button class="btn-primary btn-sm" type="button" onclick="FarmApp.openAddFarm()"><i class="fas fa-plus"></i> Add Farm</button>
-      <button class="btn-primary btn-sm" type="button" onclick="FarmApp.openAddField()"><i class="fas fa-plus"></i> Add Field</button>
-      <button class="btn-primary btn-sm" type="button" onclick="FarmApp.openAddCrop()"><i class="fas fa-plus"></i> Add Crop</button>
+    <!-- MAIN DASHBOARD CONTENT (When farmer has farms) -->
+    <div id="mf-main-dashboard">
+
+      <!-- QUICK ACTIONS BAR -->
+      <nav class="mf-actions-bar" aria-label="Farm quick actions">
+        <button type="button" class="mf-action-chip" onclick="FarmApp.openAddField()"><i class="fas fa-plus-circle"></i> + Add Plot</button>
+        <button type="button" class="mf-action-chip" onclick="FarmApp.openAddCrop()"><i class="fas fa-seedling"></i> + Add Crop</button>
+        <button type="button" class="mf-action-chip" onclick="FarmApp.openLogActivity()"><i class="fas fa-clipboard-list"></i> + Log Activity</button>
+        <a href="map.html" class="mf-action-chip"><i class="fas fa-map-location-dot"></i> Farm Map</a>
+        <a href="crop-health.html" class="mf-action-chip"><i class="fas fa-leaf"></i> Crop Health</a>
+        <a href="soil-irrigation.html" class="mf-action-chip"><i class="fas fa-droplet"></i> Soil &amp; Water</a>
+        <a href="tasks.html" class="mf-action-chip"><i class="fas fa-list-check"></i> Tasks</a>
+        <a href="farm-calendar.html" class="mf-action-chip"><i class="fas fa-calendar-days"></i> Calendar</a>
+      </nav>
+
+      <!-- FARM OVERVIEW KPI CARDS -->
+      <section class="mf-kpis" aria-label="Farm statistics overview">
+        <div class="mf-kpi-card">
+          <div class="mf-kpi-head">
+            <span class="mf-kpi-lbl">Total Area</span>
+            <div class="mf-kpi-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="fas fa-ruler-combined"></i></div>
+          </div>
+          <div class="mf-kpi-val" id="kpi-area">--</div>
+          <div class="mf-kpi-sub" id="kpi-area-sub">Registered land</div>
+        </div>
+
+        <div class="mf-kpi-card">
+          <div class="mf-kpi-head">
+            <span class="mf-kpi-lbl">Plots</span>
+            <div class="mf-kpi-icon" style="background:#e3f2fd;color:#1565c0;"><i class="fas fa-th-large"></i></div>
+          </div>
+          <div class="mf-kpi-val" id="kpi-plots">--</div>
+          <div class="mf-kpi-sub" id="kpi-plots-sub">Belonging to this farm</div>
+        </div>
+
+        <div class="mf-kpi-card">
+          <div class="mf-kpi-head">
+            <span class="mf-kpi-lbl">Active Crops</span>
+            <div class="mf-kpi-icon" style="background:#f3e5f5;color:#7b1fa2;"><i class="fas fa-seedling"></i></div>
+          </div>
+          <div class="mf-kpi-val" id="kpi-crops">--</div>
+          <div class="mf-kpi-sub" id="kpi-crops-sub">Growing right now</div>
+        </div>
+
+        <div class="mf-kpi-card">
+          <div class="mf-kpi-head">
+            <span class="mf-kpi-lbl">Upcoming</span>
+            <div class="mf-kpi-icon" style="background:#fff3e0;color:#e65100;"><i class="fas fa-calendar-check"></i></div>
+          </div>
+          <div class="mf-kpi-val" id="kpi-upcoming">--</div>
+          <div class="mf-kpi-sub" id="kpi-upcoming-sub">Activities scheduled</div>
+        </div>
+
+        <div class="mf-kpi-card">
+          <div class="mf-kpi-head">
+            <span class="mf-kpi-lbl">Farm Health</span>
+            <div class="mf-kpi-icon" style="background:#e0f2f1;color:#00796b;"><i class="fas fa-heart-pulse"></i></div>
+          </div>
+          <div class="mf-kpi-val" id="kpi-health">--</div>
+          <div class="mf-kpi-sub" id="kpi-health-sub">Assessment status</div>
+        </div>
+
+        <div class="mf-kpi-card">
+          <div class="mf-kpi-head">
+            <span class="mf-kpi-lbl">Alerts</span>
+            <div class="mf-kpi-icon" style="background:#ffebee;color:#c62828;"><i class="fas fa-triangle-exclamation"></i></div>
+          </div>
+          <div class="mf-kpi-val" id="kpi-alerts">--</div>
+          <div class="mf-kpi-sub" id="kpi-alerts-sub">Require attention</div>
+        </div>
+      </section>
+
+      <!-- TODAY / NEXT ACTION SPOTLIGHT -->
+      <section class="mf-spotlight" id="spotlight-action-box">
+        <div class="mf-spotlight-left">
+          <div class="mf-spotlight-icon"><i class="fas fa-crosshairs"></i></div>
+          <div>
+            <div class="mf-spotlight-tag"><i class="fas fa-bolt"></i> Recommended Next Action</div>
+            <h3 class="mf-spotlight-title" id="spotlight-title">Checking pending farm actions...</h3>
+            <div class="mf-spotlight-meta" id="spotlight-meta">
+              <span><i class="fas fa-clock"></i> Loading schedule</span>
+            </div>
+          </div>
+        </div>
+        <div id="spotlight-action-btn-wrap">
+          <a href="tasks.html" class="mf-spotlight-btn"><i class="fas fa-arrow-right"></i> View Tasks</a>
+        </div>
+      </section>
+
+      <!-- 2-COLUMN DASHBOARD LAYOUT -->
+      <div class="mf-grid-2">
+
+        <!-- LEFT COLUMN: Land, Health, Crops, Plots, What's Happening -->
+        <div class="mf-grid-left">
+
+          <!-- 🗺️ FARM MAP / LAND VIEW -->
+          <section class="mf-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-map-location-dot"></i> Farm Land &amp; Plots View</h2>
+              <a href="map.html" class="mf-card-link">View Full Map <i class="fas fa-arrow-up-right-from-square"></i></a>
+            </div>
+            <div class="mf-map-preview-wrap">
+              <div id="fa-map-preview"></div>
+              <div class="mf-map-overlay" id="map-preview-overlay">
+                <span id="map-overlay-status"><i class="fas fa-compass"></i> Loading farm geometry...</span>
+                <span id="map-overlay-action"></span>
+              </div>
+            </div>
+          </section>
+
+          <!-- 🌿 HOW IS MY FARM? -->
+          <section class="mf-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-leaf"></i> How Is My Farm?</h2>
+              <a href="crop-health.html" class="mf-card-link">Details <i class="fas fa-angle-right"></i></a>
+            </div>
+            <div id="farm-health-content">
+              <div class="loading-shimmer"></div>
+              <div class="loading-shimmer" style="width:75%"></div>
+            </div>
+          </section>
+
+          <!-- CROPS | PLOTS : the two primary options inside the selected farm -->
+          <div class="mf-segment" role="tablist" aria-label="Selected farm contents">
+            <button type="button" class="mf-segment-btn is-active" id="mf-seg-crops" role="tab" aria-selected="true" aria-controls="farm-crops-card" onclick="FarmApp.showFarmTab('crops')">
+              <i class="fas fa-seedling"></i> CROPS <span class="mf-segment-count" id="mf-seg-crops-count">0</span>
+            </button>
+            <button type="button" class="mf-segment-btn" id="mf-seg-plots" role="tab" aria-selected="false" aria-controls="farm-plots-card" onclick="FarmApp.showFarmTab('plots')">
+              <i class="fas fa-th-large"></i> PLOTS <span class="mf-segment-count" id="mf-seg-plots-count">0</span>
+            </button>
+          </div>
+
+          <!-- 🌾 CROPS IN THIS FARM -->
+          <section class="mf-card" id="farm-crops-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-seedling"></i> Crops Growing on This Farm</h2>
+              <button type="button" class="mf-card-link" onclick="FarmApp.openAddCrop()"><i class="fas fa-plus"></i> Add Crop</button>
+            </div>
+            <div id="farm-crops-list">
+              <div class="loading-shimmer"></div>
+              <div class="loading-shimmer" style="width:60%"></div>
+            </div>
+          </section>
+
+          <!-- 🗺️ PLOTS SECTION -->
+          <section class="mf-card" id="farm-plots-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-th-large"></i> Registered Plots</h2>
+              <button type="button" class="mf-card-link" onclick="FarmApp.openAddField()"><i class="fas fa-plus"></i> Add Plot</button>
+            </div>
+            <div id="farm-plots-list">
+              <div class="loading-shimmer"></div>
+              <div class="loading-shimmer" style="width:70%"></div>
+            </div>
+          </section>
+
+          <!-- 📌 WHAT'S HAPPENING ON MY FARM? (Updates) -->
+          <section class="mf-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-bullhorn"></i> What's Happening on My Farm?</h2>
+              <button type="button" class="mf-card-link" onclick="FarmApp.openLogActivity()"><i class="fas fa-plus"></i> Log Activity</button>
+            </div>
+            <div id="farm-updates-list">
+              <div class="loading-shimmer"></div>
+              <div class="loading-shimmer" style="width:80%"></div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Upcoming, Alerts, Soil & Water, Weather, AI, Details -->
+        <div class="mf-grid-right">
+
+          <!-- 📅 UPCOMING FARM ACTIVITIES -->
+          <section class="mf-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-calendar-days"></i> Upcoming Farm Activities</h2>
+              <a href="farm-calendar.html" class="mf-card-link">View Calendar <i class="fas fa-angle-right"></i></a>
+            </div>
+            <div id="upcoming-activities-list">
+              <div class="loading-shimmer"></div>
+              <div class="loading-shimmer" style="width:65%"></div>
+            </div>
+          </section>
+
+          <!-- ⚠️ FARM ALERTS -->
+          <section class="mf-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-triangle-exclamation" style="color:var(--mf-red);"></i> Farm Alerts</h2>
+              <a href="notifications.html" class="mf-card-link">View All Alerts <i class="fas fa-angle-right"></i></a>
+            </div>
+            <div id="farm-alerts-list">
+              <div class="loading-shimmer"></div>
+            </div>
+          </section>
+
+          <!-- 💧 SOIL & WATER SUMMARY -->
+          <section class="mf-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-droplet"></i> Soil &amp; Water Summary</h2>
+              <a href="soil-irrigation.html" class="mf-card-link">View Soil &amp; Water <i class="fas fa-angle-right"></i></a>
+            </div>
+            <div id="soil-water-summary">
+              <div class="loading-shimmer"></div>
+              <div class="loading-shimmer" style="width:85%"></div>
+            </div>
+          </section>
+
+          <!-- 🌤️ WEATHER SUMMARY -->
+          <section class="mf-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-cloud-sun"></i> Weather at This Farm</h2>
+              <a href="weather.html" class="mf-card-link">Full Forecast <i class="fas fa-angle-right"></i></a>
+            </div>
+            <div id="farm-weather-summary">
+              <div class="loading-shimmer"></div>
+            </div>
+          </section>
+
+          <!-- 🕒 RECENT ACTIVITY TIMELINE -->
+          <section class="mf-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-clock-rotate-left"></i> Recent Activity Timeline</h2>
+              <button type="button" class="mf-card-link" onclick="FarmApp.openLogActivity()"><i class="fas fa-plus"></i> Record</button>
+            </div>
+            <div id="farm-timeline-list">
+              <div class="loading-shimmer"></div>
+            </div>
+          </section>
+
+          <!-- 🤖 FARM AI OVERVIEW -->
+          <section class="mf-ai-card">
+            <div class="mf-ai-header">
+              <div class="mf-ai-title"><i class="fas fa-robot"></i> Farm AI Overview</div>
+              <span class="mf-ai-pill">Real-time Intelligence</span>
+            </div>
+            <div id="farm-ai-summary">
+              <div class="loading-shimmer"></div>
+              <div class="loading-shimmer" style="width:80%"></div>
+            </div>
+            <div style="margin-top:12px;text-align:right;">
+              <a href="ai.html" class="mf-card-link" style="color:#7c3aed;">Ask AI Assistant <i class="fas fa-arrow-right"></i></a>
+            </div>
+          </section>
+
+          <!-- 🏡 FARM DETAILS -->
+          <section class="mf-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-circle-info"></i> Farm Details &amp; Metadata</h2>
+              <button type="button" class="mf-card-link" onclick="FarmApp.openEditFarm()"><i class="fas fa-pen"></i> Edit</button>
+            </div>
+            <div id="farm-meta-details">
+              <div class="loading-shimmer"></div>
+            </div>
+          </section>
+
+        </div>
+
+      </div>
+
     </div>
 
   </main>
 
-  <div class="fa-modal" id="fa-modal-add-farm">
-    <div class="fa-modal-box">
-      <h3><i class="fas fa-tractor" style="color:var(--fa-green);margin-right:6px;"></i> Add New Farm</h3>
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- MODAL: ADD FARM -->
+  <div class="mf-modal" id="modal-add-farm">
+    <div class="mf-modal-box wide">
+      <div class="mf-modal-header">
+        <h3><i class="fas fa-tractor" style="color:var(--mf-green);"></i> Add New Farm</h3>
+        <button type="button" class="mf-modal-close" onclick="FarmApp.closeModal('modal-add-farm')">&times;</button>
+      </div>
       <form id="form-add-farm" onsubmit="FarmApp.createFarm(event)">
-        <label class="form-label" for="farm-name">Farm Name *</label>
-        <input type="text" class="form-input" id="farm-name" required placeholder="e.g. Green Valley Farm">
-        <label class="form-label" for="farm-type">Farm Type</label>
-        <select class="form-input" id="farm-type"><option>Crop Farm</option><option>Mixed Farming</option><option>Organic Farm</option><option>Livestock Farm</option></select>
-        <label class="form-label" for="farm-area">Total Area (Acres) *</label>
-        <input type="number" class="form-input" id="farm-area" step="0.1" min="0.1" required>
-        <label class="form-label" for="farm-soil">Soil Type</label>
-        <select class="form-input" id="farm-soil"><option>Red Soil</option><option>Black Soil</option><option>Alluvial</option><option>Loamy</option><option>Sandy</option></select>
-        <label class="form-label" for="farm-state">State</label>
-        <select class="form-input" id="farm-state" onchange="FarmApp.onStateChange(this.value, 'farm-district')"><option value="">Select State</option></select>
-        <label class="form-label" for="farm-district">District</label>
-        <select class="form-input" id="farm-district" disabled><option value="">Select District</option></select>
-        <div class="fa-loc">
-          <div class="fa-loc-label"><i class="fas fa-location-dot" style="color:var(--fa-green, #2d5a3e);"></i> Farm Location (for Farm Map)</div>
-          <button type="button" class="fa-loc-btn" id="farm-locate-btn" onclick="FarmApp.locateFarm()"><i class="fas fa-location-crosshairs"></i> Use Current Location</button>
-          <div class="fa-loc-pick" id="farm-loc-pick">
-            <div class="flp-title"><i class="fas fa-map-marker-alt"></i> Location Selected</div>
-            <div class="flp-addr" id="farm-loc-addr"></div>
-            <div class="flp-coords" id="farm-loc-coords"></div>
-            <button type="button" class="fa-loc-clear" id="farm-loc-clear" onclick="FarmApp.clearFarmLoc()"><i class="fas fa-rotate-left"></i> Clear / enter manually</button>
+        <div class="mf-form-grid-2">
+          <div>
+            <label class="form-label" for="add-farm-name">Farm Name *</label>
+            <input type="text" class="form-input" id="add-farm-name" required placeholder="e.g. Krishna Valley Farm">
           </div>
-          <div class="fa-loc-row">
-            <input type="text" class="form-input" id="farm-lat" placeholder="Latitude" inputmode="decimal" oninput="FarmApp.farmManualCoordsChanged()">
-            <input type="text" class="form-input" id="farm-lng" placeholder="Longitude" inputmode="decimal" oninput="FarmApp.farmManualCoordsChanged()">
+          <div>
+            <label class="form-label" for="add-farm-type">Farm Type</label>
+            <select class="form-input" id="add-farm-type">
+              <option>Crop Farm</option>
+              <option>Mixed Farming</option>
+              <option>Organic Farm</option>
+              <option>Horticulture</option>
+              <option>Livestock Farm</option>
+            </select>
           </div>
         </div>
-        <div class="fa-modal-actions">
-          <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('fa-modal-add-farm')">Cancel</button>
-          <button type="submit" class="btn-primary" id="btn-create-farm"><i class="fas fa-check"></i> Create Farm</button>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="add-farm-area">Total Area *</label>
+            <input type="number" class="form-input" id="add-farm-area" step="0.05" min="0.05" required placeholder="e.g. 3.5">
+          </div>
+          <div>
+            <label class="form-label" for="add-farm-area-unit">Area Unit</label>
+            <select class="form-input" id="add-farm-area-unit">
+              <option value="Acres">Acres</option>
+              <option value="Hectares">Hectares</option>
+              <option value="Bigha">Bigha</option>
+              <option value="Guntha">Guntha</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="add-farm-soil">Soil Type</label>
+            <select class="form-input" id="add-farm-soil">
+              <option value="">Select Soil Type (Optional)</option>
+              <option>Red Soil</option>
+              <option>Black Soil</option>
+              <option>Alluvial Soil</option>
+              <option>Loamy Soil</option>
+              <option>Sandy Loam</option>
+              <option>Clayey Soil</option>
+              <option>Laterite Soil</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="add-farm-water">Water Source</label>
+            <select class="form-input" id="add-farm-water">
+              <option value="">Select Source (Optional)</option>
+              <option>Borewell</option>
+              <option>Open Well</option>
+              <option>Canal</option>
+              <option>River / Stream</option>
+              <option>Pond / Tank</option>
+              <option>Rainfed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="add-farm-state">State</label>
+            <select class="form-input" id="add-farm-state" onchange="FarmApp.onStateChange(this.value, 'add-farm-district')">
+              <option value="">Select State</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="add-farm-district">District</label>
+            <select class="form-input" id="add-farm-district" disabled>
+              <option value="">Select District</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="add-farm-village">Village / Town</label>
+            <input type="text" class="form-input" id="add-farm-village" placeholder="e.g. Rampur">
+          </div>
+          <div>
+            <label class="form-label" for="add-farm-irrigation">Irrigation Method</label>
+            <select class="form-input" id="add-farm-irrigation">
+              <option value="">Select Method (Optional)</option>
+              <option>Drip Irrigation</option>
+              <option>Sprinkler</option>
+              <option>Flood Irrigation</option>
+              <option>Furrow</option>
+              <option>Manual / Rainfed</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label class="form-label"><i class="fas fa-location-dot" style="color:var(--mf-green);"></i> Farm Map Location &amp; Boundary (Interactive)</label>
+          <div id="add-farm-geo-container" style="margin-top:6px;"></div>
+        </div>
+
+        <div class="mf-modal-actions">
+          <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('modal-add-farm')">Cancel</button>
+          <button type="submit" class="mf-btn-primary" id="btn-submit-add-farm"><i class="fas fa-check"></i> Create Farm</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div class="fa-modal" id="fa-modal-add-field">
-    <div class="fa-modal-box">
-      <h3><i class="fas fa-th-large" style="color:var(--fa-green);margin-right:6px;"></i> Add New Field</h3>
-      <form id="form-add-field" onsubmit="FarmApp.createField(event)">
-        <label class="form-label" for="field-farm">Farm *</label>
-        <select class="form-input" id="field-farm" required><option value="">Select farm</option></select>
-        <label class="form-label" for="field-name">Field Name *</label>
-        <input type="text" class="form-input" id="field-name" required placeholder="e.g. North Plot">
-        <label class="form-label" for="field-area">Area (Acres)</label>
-        <input type="number" class="form-input" id="field-area" step="0.05" min="0.05">
-        <label class="form-label" for="field-soil">Soil Type</label>
-        <select class="form-input" id="field-soil"><option>Red Soil</option><option>Black Soil</option><option>Alluvial</option><option>Loamy</option><option>Sandy</option></select>
-        <div class="fa-modal-actions">
-          <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('fa-modal-add-field')">Cancel</button>
-          <button type="submit" class="btn-primary" id="btn-create-field"><i class="fas fa-check"></i> Add Field</button>
+  <!-- MODAL: EDIT FARM -->
+  <div class="mf-modal" id="modal-edit-farm">
+    <div class="mf-modal-box wide">
+      <div class="mf-modal-header">
+        <h3><i class="fas fa-pen" style="color:var(--mf-green);"></i> Edit Farm Details</h3>
+        <button type="button" class="mf-modal-close" onclick="FarmApp.closeModal('modal-edit-farm')">&times;</button>
+      </div>
+      <form id="form-edit-farm" onsubmit="FarmApp.saveFarm(event)">
+        <div class="mf-form-grid-2">
+          <div>
+            <label class="form-label" for="edit-farm-name">Farm Name *</label>
+            <input type="text" class="form-input" id="edit-farm-name" required>
+          </div>
+          <div>
+            <label class="form-label" for="edit-farm-type">Farm Type</label>
+            <select class="form-input" id="edit-farm-type">
+              <option>Crop Farm</option>
+              <option>Mixed Farming</option>
+              <option>Organic Farm</option>
+              <option>Horticulture</option>
+              <option>Livestock Farm</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="edit-farm-area">Total Area</label>
+            <input type="number" class="form-input" id="edit-farm-area" step="0.05" min="0.05">
+          </div>
+          <div>
+            <label class="form-label" for="edit-farm-area-unit">Area Unit</label>
+            <select class="form-input" id="edit-farm-area-unit">
+              <option value="Acres">Acres</option>
+              <option value="Hectares">Hectares</option>
+              <option value="Bigha">Bigha</option>
+              <option value="Guntha">Guntha</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="edit-farm-soil">Soil Type</label>
+            <select class="form-input" id="edit-farm-soil">
+              <option value="">Select Soil Type</option>
+              <option>Red Soil</option>
+              <option>Black Soil</option>
+              <option>Alluvial Soil</option>
+              <option>Loamy Soil</option>
+              <option>Sandy Loam</option>
+              <option>Clayey Soil</option>
+              <option>Laterite Soil</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="edit-farm-water">Water Source</label>
+            <select class="form-input" id="edit-farm-water">
+              <option value="">Select Source</option>
+              <option>Borewell</option>
+              <option>Open Well</option>
+              <option>Canal</option>
+              <option>River / Stream</option>
+              <option>Pond / Tank</option>
+              <option>Rainfed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="edit-farm-state">State</label>
+            <select class="form-input" id="edit-farm-state" onchange="FarmApp.onStateChange(this.value, 'edit-farm-district')">
+              <option value="">Select State</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="edit-farm-district">District</label>
+            <select class="form-input" id="edit-farm-district">
+              <option value="">Select District</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="edit-farm-village">Village / Town</label>
+            <input type="text" class="form-input" id="edit-farm-village">
+          </div>
+          <div>
+            <label class="form-label" for="edit-farm-irrigation">Irrigation Method</label>
+            <select class="form-input" id="edit-farm-irrigation">
+              <option value="">Select Method</option>
+              <option>Drip Irrigation</option>
+              <option>Sprinkler</option>
+              <option>Flood Irrigation</option>
+              <option>Furrow</option>
+              <option>Manual / Rainfed</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label class="form-label"><i class="fas fa-location-dot" style="color:var(--mf-green);"></i> Farm Location &amp; Boundary (Map View)</label>
+          <div id="edit-farm-geo-container" style="margin-top:6px;"></div>
+        </div>
+
+        <div class="mf-modal-actions">
+          <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('modal-edit-farm')">Cancel</button>
+          <button type="submit" class="mf-btn-primary" id="btn-submit-edit-farm"><i class="fas fa-check"></i> Save Changes</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div class="fa-modal" id="fa-modal-add-crop">
-    <div class="fa-modal-box">
-      <h3><i class="fas fa-seedling" style="color:var(--fa-green);margin-right:6px;"></i> Add Crop Cycle</h3>
+  <!-- MODAL: ADD PLOT -->
+  <div class="mf-modal" id="modal-add-plot">
+    <div class="mf-modal-box wide">
+      <div class="mf-modal-header">
+        <h3><i class="fas fa-th-large" style="color:var(--mf-green);"></i> Add New Plot</h3>
+        <button type="button" class="mf-modal-close" onclick="FarmApp.closeModal('modal-add-plot')">&times;</button>
+      </div>
+      <form id="form-add-plot" onsubmit="FarmApp.createPlot(event)">
+        <label class="form-label" for="plot-farm-name-display">Farm</label>
+        <input type="text" class="form-input" id="plot-farm-name-display" disabled>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="plot-name">Plot Name *</label>
+            <input type="text" class="form-input" id="plot-name" required placeholder="e.g. North Plot / Field 1">
+          </div>
+          <div>
+            <label class="form-label" for="plot-area">Plot Area (Acres) *</label>
+            <input type="number" class="form-input" id="plot-area" step="0.05" min="0.05" required placeholder="e.g. 1.25">
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label class="form-label" for="plot-soil">Soil Type</label>
+          <select class="form-input" id="plot-soil">
+            <option value="">Inherit from farm (or select specific)</option>
+            <option>Red Soil</option>
+            <option>Black Soil</option>
+            <option>Alluvial Soil</option>
+            <option>Loamy Soil</option>
+            <option>Sandy Loam</option>
+            <option>Clayey Soil</option>
+          </select>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label class="form-label"><i class="fas fa-location-dot" style="color:var(--mf-green);"></i> Plot Boundary &amp; Position</label>
+          <div id="add-plot-geo-container" style="margin-top:6px;"></div>
+        </div>
+
+        <div class="mf-modal-actions">
+          <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('modal-add-plot')">Cancel</button>
+          <button type="submit" class="mf-btn-primary" id="btn-submit-add-plot"><i class="fas fa-check"></i> Add Plot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDIT PLOT -->
+  <div class="mf-modal" id="modal-edit-plot">
+    <div class="mf-modal-box wide">
+      <div class="mf-modal-header">
+        <h3><i class="fas fa-th-large" style="color:var(--mf-green);"></i> Edit Plot</h3>
+        <button type="button" class="mf-modal-close" onclick="FarmApp.closeModal('modal-edit-plot')">&times;</button>
+      </div>
+      <form id="form-edit-plot" onsubmit="FarmApp.savePlot(event)">
+        <input type="hidden" id="edit-plot-id">
+        <div class="mf-form-grid-2">
+          <div>
+            <label class="form-label" for="edit-plot-name">Plot Name *</label>
+            <input type="text" class="form-input" id="edit-plot-name" required>
+          </div>
+          <div>
+            <label class="form-label" for="edit-plot-area">Plot Area (Acres)</label>
+            <input type="number" class="form-input" id="edit-plot-area" step="0.05" min="0.05">
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label class="form-label" for="edit-plot-soil">Soil Type</label>
+          <select class="form-input" id="edit-plot-soil">
+            <option value="">Select Soil Type</option>
+            <option>Red Soil</option>
+            <option>Black Soil</option>
+            <option>Alluvial Soil</option>
+            <option>Loamy Soil</option>
+            <option>Sandy Loam</option>
+            <option>Clayey Soil</option>
+          </select>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label class="form-label"><i class="fas fa-location-dot" style="color:var(--mf-green);"></i> Plot Boundary &amp; Position</label>
+          <div id="edit-plot-geo-container" style="margin-top:6px;"></div>
+        </div>
+
+        <div class="mf-modal-actions">
+          <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('modal-edit-plot')">Cancel</button>
+          <button type="submit" class="mf-btn-primary" id="btn-submit-edit-plot"><i class="fas fa-check"></i> Save Plot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PLOT DETAIL (read-only view of a plot and its real related data) -->
+  <div class="mf-modal" id="modal-plot-detail">
+    <div class="mf-modal-box wide">
+      <div class="mf-modal-header">
+        <h3><i class="fas fa-th-large" style="color:var(--mf-green);"></i> Plot Details</h3>
+        <button type="button" class="mf-modal-close" onclick="FarmApp.closeModal('modal-plot-detail')">&times;</button>
+      </div>
+      <div id="plot-detail-body">
+        <div class="loading-shimmer"></div>
+        <div class="loading-shimmer" style="width:70%"></div>
+      </div>
+      <div class="mf-modal-actions">
+        <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('modal-plot-detail')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CROP DETAIL (read-only view of a crop cycle and its real related data) -->
+  <div class="mf-modal" id="modal-crop-detail">
+    <div class="mf-modal-box wide">
+      <div class="mf-modal-header">
+        <h3><i class="fas fa-seedling" style="color:var(--mf-green);"></i> Crop Details</h3>
+        <button type="button" class="mf-modal-close" onclick="FarmApp.closeModal('modal-crop-detail')">&times;</button>
+      </div>
+      <div id="crop-detail-body">
+        <div class="loading-shimmer"></div>
+        <div class="loading-shimmer" style="width:70%"></div>
+      </div>
+      <div class="mf-modal-actions">
+        <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('modal-crop-detail')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD CROP CYCLE -->
+  <div class="mf-modal" id="modal-add-crop">
+    <div class="mf-modal-box">
+      <div class="mf-modal-header">
+        <h3><i class="fas fa-seedling" style="color:var(--mf-green);"></i> Add Crop Cycle</h3>
+        <button type="button" class="mf-modal-close" onclick="FarmApp.closeModal('modal-add-crop')">&times;</button>
+      </div>
       <form id="form-add-crop" onsubmit="FarmApp.createCropCycle(event)">
-        <label class="form-label" for="crop-farm">Farm *</label>
-        <select class="form-input" id="crop-farm" required onchange="FarmApp.onCropFarmChange()"><option value="">Select farm</option></select>
-        <label class="form-label" for="crop-crop">Crop *</label>
-        <select class="form-input" id="crop-crop" required><option value="">Select crop</option></select>
-        <label class="form-label" for="crop-plot">Field</label>
-        <select class="form-input" id="crop-plot"><option value="">Optional</option></select>
-        <label class="form-label" for="crop-sowing">Sowing Date</label>
-        <input type="date" class="form-input" id="crop-sowing">
-        <label class="form-label" for="crop-harvest">Expected Harvest</label>
-        <input type="date" class="form-input" id="crop-harvest">
-        <label class="form-label" for="crop-notes">Notes</label>
-        <textarea class="form-input" id="crop-notes" rows="2" placeholder="Optional notes"></textarea>
-        <div class="fa-modal-actions">
-          <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('fa-modal-add-crop')">Cancel</button>
-          <button type="submit" class="btn-primary" id="btn-create-crop"><i class="fas fa-check"></i> Add Crop</button>
+        <label class="form-label" for="crop-farm-display">Farm</label>
+        <input type="text" class="form-input" id="crop-farm-display" disabled>
+
+        <label class="form-label" for="crop-plot" style="margin-top:10px;">Select Plot *</label>
+        <select class="form-input" id="crop-plot" required>
+          <option value="">Select plot</option>
+        </select>
+
+        <label class="form-label" for="crop-crop" style="margin-top:10px;">Crop Variety *</label>
+        <select class="form-input" id="crop-crop" required>
+          <option value="">Select crop</option>
+        </select>
+
+        <div class="mf-form-grid-2" style="margin-top:10px;">
+          <div>
+            <label class="form-label" for="crop-sowing">Sowing Date</label>
+            <input type="date" class="form-input" id="crop-sowing">
+          </div>
+          <div>
+            <label class="form-label" for="crop-harvest">Expected Harvest</label>
+            <input type="date" class="form-input" id="crop-harvest">
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label class="form-label" for="crop-notes">Notes / Observations</label>
+          <textarea class="form-input" id="crop-notes" rows="2" placeholder="e.g. Certified seeds, treated with bio-fungicide"></textarea>
+        </div>
+
+        <div class="mf-modal-actions">
+          <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('modal-add-crop')">Cancel</button>
+          <button type="submit" class="mf-btn-primary" id="btn-submit-add-crop"><i class="fas fa-check"></i> Start Cycle</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script src="assets/js/services.js"></script>
-  <script src="assets/js/userStore.js"></script>
+  <!-- MODAL: LOG ACTIVITY (JOURNAL) -->
+  <div class="mf-modal" id="modal-log-activity">
+    <div class="mf-modal-box">
+      <div class="mf-modal-header">
+        <h3><i class="fas fa-clipboard-list" style="color:var(--mf-green);"></i> Log Farm Activity</h3>
+        <button type="button" class="mf-modal-close" onclick="FarmApp.closeModal('modal-log-activity')">&times;</button>
+      </div>
+      <form id="form-log-activity" onsubmit="FarmApp.createActivity(event)">
+        <label class="form-label" for="log-plot">Plot (Optional)</label>
+        <select class="form-input" id="log-plot">
+          <option value="">Entire Farm</option>
+        </select>
+
+        <label class="form-label" for="log-activity-type" style="margin-top:10px;">Activity Type *</label>
+        <select class="form-input" id="log-activity-type" required>
+          <option value="Irrigation">💧 Irrigation applied</option>
+          <option value="Fertilizer">🌱 Fertilizer / Nutrients applied</option>
+          <option value="Pest Control">🛡️ Spraying / Pest control</option>
+          <option value="Weeding">✂️ Weeding / Field cleaning</option>
+          <option value="Planting">🌾 Sowing / Transplantation</option>
+          <option value="Harvesting">🚜 Harvesting produce</option>
+          <option value="Scouting">🔍 Field inspection &amp; scouting</option>
+          <option value="General Farm Work">📋 Other farm management</option>
+        </select>
+
+        <div style="margin-top:10px;">
+          <label class="form-label" for="log-notes">Details &amp; Observations *</label>
+          <textarea class="form-input" id="log-notes" rows="3" required placeholder="Describe what was done, quantities used, observations..."></textarea>
+        </div>
+
+        <div class="mf-modal-actions">
+          <button type="button" class="btn-secondary" onclick="FarmApp.closeModal('modal-log-activity')">Cancel</button>
+          <button type="submit" class="mf-btn-primary" id="btn-submit-log-act"><i class="fas fa-check"></i> Save Activity</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DEPENDENCIES -->
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
   <script src="assets/js/navigation.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/farm-geo.js"></script>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
   <script>
   (function () {
     "use strict";
+
     function $id(id) {
       return document.getElementById(id);
     }
@@ -495,11 +1743,6 @@
       return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    function fmtMoney(v) {
-      if (v == null || isNaN(parseFloat(v))) return '₹0';
-      return '₹' + Number(parseFloat(v)).toLocaleString('en-IN', { maximumFractionDigits: 0 });
-    }
-
     function timeAgo(s) {
       if (!s) return '';
       var d = new Date(s);
@@ -514,406 +1757,122 @@
       return fmtDate(s);
     }
 
-    function stageClass(st) {
-      var known = ['vegetative', 'seedling', 'germinating', 'flowering', 'pre_flowering', 'pre-flowering',
-        'harvesting', 'harvested', 'ready_to_harvest', 'fruiting', 'maturing', 'growing', 'active', 'completed'];
-      st = String(st || 'active').toLowerCase();
-      if (known.indexOf(st) === -1) st = 'active';
-      return 'fa-crop-stage ' + st;
-    }
-
+    /* Core Application State */
     var state = {
       farms: [],
-      crops: [],
+      cropsCatalog: [],
       cycles: [],
       tasks: [],
+      calendarEvents: [],
       journal: [],
-      finance: null,
-      selectedFarmId: ''
+      notifications: [],
+      weather: null,
+      soilHealth: null,
+      aiAnalysis: null,
+      mapPlots: [],
+      mapFarms: [],
+      selectedFarmId: localStorage.getItem('fa-selected-farm-id') || '',
+      isLoading: false
     };
 
-    function loadFarms() {
-      return API.Farm.list().then(function (d) { state.farms = toArray(d); });
+    var geoPickers = {
+      addFarm: null,
+      editFarm: null,
+      addPlot: null,
+      editPlot: null
+    };
+
+    var previewMap = null;
+    var previewLayers = null;
+
+    /* Get Currently Selected Farm Object */
+    function getSelectedFarm() {
+      if (!state.selectedFarmId && state.farms.length > 0) {
+        state.selectedFarmId = state.farms[0].id || state.farms[0].farm_id;
+      }
+      for (var i = 0; i < state.farms.length; i++) {
+        var f = state.farms[i];
+        if (f.id === state.selectedFarmId || f.farm_id === state.selectedFarmId) {
+          return f;
+        }
+      }
+      return state.farms.length > 0 ? state.farms[0] : null;
     }
 
-    function loadCrops() {
-      return API.Crop.listCrops().then(function (d) { state.crops = toArray(d); });
+    /* Get Plots belonging to Selected Farm */
+    function getFarmPlots() {
+      var farm = getSelectedFarm();
+      return (farm && farm.plots) ? farm.plots : [];
     }
 
-    function loadCycles() {
-      return API.Crop.listCycles().then(function (d) { state.cycles = toArray(d); });
+    /* Get Cycles belonging to Selected Farm */
+    function getFarmCycles() {
+      var farm = getSelectedFarm();
+      if (!farm) return [];
+      var fid = farm.id;
+      var fcode = farm.farm_id;
+      return state.cycles.filter(function (c) {
+        return c.farm_id === fid || c.farm_id === fcode;
+      });
     }
 
-    function loadTasks() {
-      return API.Crop.listTasks().then(function (d) { state.tasks = toArray(d); });
+    /* Get Tasks for Selected Farm */
+    function getFarmTasks() {
+      var farm = getSelectedFarm();
+      if (!farm) return [];
+      var fid = farm.id;
+      var fcode = farm.farm_id;
+      var cycleIds = getFarmCycles().map(function (c) { return c.id; });
+      return state.tasks.filter(function (t) {
+        return (t.farm_id && (t.farm_id === fid || t.farm_id === fcode)) ||
+               (t.crop_cycle_id && cycleIds.indexOf(t.crop_cycle_id) !== -1);
+      });
     }
 
-    function loadJournal() {
-      return API.Crop.listJournal().then(function (d) { state.journal = toArray(d); });
+    /* Get Journal entries for Selected Farm */
+    function getFarmJournal() {
+      var farm = getSelectedFarm();
+      if (!farm) return [];
+      var fid = farm.id;
+      var fcode = farm.farm_id;
+      return state.journal.filter(function (j) {
+        return !j.farm_id || j.farm_id === fid || j.farm_id === fcode;
+      });
     }
 
-    function loadFinance() {
-      return API.Finance.getSummary().then(function (d) { state.finance = d || {}; });
-    }
+    /* ==================== DATA FETCHING ==================== */
 
     function loadStates() {
-      var sel = $id('farm-state');
-      if (!sel) return Promise.resolve();
+      var selAdd = $id('add-farm-state');
+      var selEdit = $id('edit-farm-state');
+      if (!selAdd) return Promise.resolve();
       return API.Locations.getStates().then(function (d) {
-        toArray(d).forEach(function (s) {
-          var val = (typeof s === 'string') ? s : (s.name || s.state || '');
-          if (!val) return;
-          var opt = document.createElement('option');
-          opt.value = val;
-          opt.textContent = val;
-          sel.appendChild(opt);
+        var states = toArray(d);
+        [selAdd, selEdit].forEach(function (sel) {
+          if (!sel) return;
+          var cur = sel.value;
+          sel.innerHTML = '<option value="">Select State</option>';
+          states.forEach(function (s) {
+            var val = (typeof s === 'string') ? s : (s.name || s.state || '');
+            if (!val) return;
+            var opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = val;
+            sel.appendChild(opt);
+          });
+          if (cur) sel.value = cur;
         });
-      });
-    }
-
-    function loadAll() {
-      var jobs = [loadFarms(), loadCrops(), loadCycles(), loadTasks(), loadJournal(), loadFinance(), loadStates()];
-      return Promise.all(jobs.map(function (p) {
-        return p.catch(function (e) { console.error('[farm] load failed', e); });
-      })).then(renderAll);
-    }
-
-    function refreshFarms() {
-      return loadFarms().then(renderAll);
-    }
-
-    function totalPlots() {
-      var n = 0;
-      state.farms.forEach(function (f) {
-        if (f.plots && f.plots.length) n += f.plots.length;
-      });
-      return n;
-    }
-
-    function getFarmByRef(ref) {
-      if (!ref) return null;
-      for (var i = 0; i < state.farms.length; i++) {
-        if (state.farms[i].id === ref || state.farms[i].farm_id === ref) return state.farms[i];
-      }
-      return null;
-    }
-
-    function getCropById(id) {
-      if (!id) return null;
-      for (var i = 0; i < state.crops.length; i++) {
-        if (state.crops[i].id === id || state.crops[i].crop_id === id) return state.crops[i];
-      }
-      return null;
-    }
-
-    function getPlotByRef(ref) {
-      if (!ref) return null;
-      for (var i = 0; i < state.farms.length; i++) {
-        var pl = state.farms[i].plots || [];
-        for (var j = 0; j < pl.length; j++) {
-          if (pl[j].id === ref || pl[j].plot_id === ref) return pl[j];
-        }
-      }
-      return null;
-    }
-
-    function cycleForPlot(p) {
-      var inactive = ['completed', 'harvested', 'cancelled', 'aborted', 'ended'];
-      for (var i = 0; i < state.cycles.length; i++) {
-        var c = state.cycles[i];
-        var matchPlot = c.plot_id && (c.plot_id === p.id || c.plot_id === p.plot_id);
-        if (!matchPlot) continue;
-        var s = String(c.status || 'active').toLowerCase();
-        if (inactive.indexOf(s) === -1) return c;
-      }
-      return null;
-    }
-
-    function cropNameFor(cycle) {
-      if (cycle.crop_name) return cycle.crop_name;
-      var crop = getCropById(cycle.crop_id);
-      if (crop) return crop.name || crop.crop_name || crop.crop || 'Unknown crop';
-      if (cycle.crop) return cycle.crop;
-      return 'Unknown crop';
-    }
-
-    function renderStats() {
-      $id('stat-crops').textContent = state.crops.length;
-      $id('stat-farms').textContent = state.farms.length;
-      $id('stat-fields').textContent = totalPlots();
-      $id('stat-active-crops').textContent = state.cycles.length;
-    }
-
-    function renderSelector() {
-      var sel = $id('farm-selector');
-      var keep = state.selectedFarmId;
-      sel.innerHTML = '<option value="">Select a farm</option>';
-      state.farms.forEach(function (f) {
-        var opt = document.createElement('option');
-        opt.value = f.id;
-        opt.textContent = f.farm_name || f.farm_id;
-        sel.appendChild(opt);
-      });
-      if (keep) {
-        var ok = false;
-        for (var i = 0; i < state.farms.length; i++) {
-          if (state.farms[i].id === keep) { ok = true; break; }
-        }
-        if (!ok) keep = '';
-      }
-      state.selectedFarmId = keep;
-      sel.value = keep || '';
-    }
-
-    function renderFarmDetails() {
-      var box = $id('farm-details');
-      var f = null;
-      if (state.selectedFarmId) {
-        for (var i = 0; i < state.farms.length; i++) {
-          if (state.farms[i].id === state.selectedFarmId) { f = state.farms[i]; break; }
-        }
-      }
-      if (!f) {
-        box.innerHTML = '<div class="fa-empty"><i class="fas fa-hand-pointer" style="font-size:24px;display:block;margin-bottom:8px;"></i>Select a farm above to view details</div>';
-        return;
-      }
-      var rows = [
-        ['Farm Name', f.farm_name],
-        ['Farm Type', f.farm_type],
-        ['Total Area', (num(f.total_area, 1)) + ' ' + (f.area_unit || 'Acres')],
-        ['Soil Type', f.soil_type],
-        ['State', f.state],
-        ['District', f.district],
-        ['Village', f.village],
-        ['Water Source', f.water_source],
-        ['Irrigation', f.irrigation_method],
-        ['Registered', fmtDate(f.created_at)]
-      ].filter(function (r) { return r[1] != null && r[1] !== ''; });
-      box.innerHTML = rows.map(function (r) {
-        return '<div class="fa-detail-row"><span class="fa-dl">' + esc(r[0]) + '</span><span class="fa-dv">' + esc(r[1]) + '</span></div>';
-      }).join('');
-    }
-
-    function renderFields() {
-      var box = $id('fields-list');
-      var cards = [];
-      state.farms.forEach(function (f) {
-        (f.plots || []).forEach(function (p) {
-          var growing = cycleForPlot(p);
-          var status = growing ? (growing.current_stage || growing.stage || growing.status || 'growing') : 'fallow';
-          var cropLabel = growing ? cropNameFor(growing) : 'Fallow';
-          cards.push(
-            '<div class="fa-field-card' + (growing ? '' : ' fallow') + '">' +
-              '<div class="fa-field-head">' +
-                '<div><div class="fa-field-name">' + esc(p.plot_name) + '</div>' +
-                '<div class="fa-field-farm">' + esc(f.farm_name) + '</div></div>' +
-                '<span class="' + stageClass(status) + '">' + esc(status) + '</span>' +
-              '</div>' +
-              '<div class="fa-field-meta">' +
-                (p.area != null ? '<span><i class="fas fa-ruler-combined"></i> ' + num(p.area, 2) + ' Ac</span>' : '') +
-                (p.soil_type ? '<span><i class="fas fa-mound"></i> ' + esc(p.soil_type) + '</span>' : '') +
-                '<span><i class="fas ' + (growing ? 'fa-seedling' : 'fa-sun') + '"></i> ' + esc(cropLabel) + '</span>' +
-              '</div>' +
-            '</div>'
-          );
-        });
-      });
-      if (!cards.length) {
-        box.innerHTML = '<div class="fa-empty"><i class="fas fa-th-large" style="font-size:22px;display:block;margin-bottom:8px;"></i>No fields yet. Add a field to get started.</div>';
-        return;
-      }
-      box.innerHTML = '<div class="fa-field-grid">' + cards.join('') + '</div>';
-    }
-
-    function renderCrops() {
-      var box = $id('crops-list');
-      if (!state.cycles.length) {
-        box.innerHTML = '<div class="fa-empty"><i class="fas fa-seedling" style="font-size:22px;display:block;margin-bottom:8px;"></i>No crops yet. Start a new crop cycle.</div>';
-        return;
-      }
-      box.innerHTML = state.cycles.map(function (c) {
-        var crop = getCropById(c.crop_id);
-        var name = c.crop_name || (crop ? (crop.name || crop.crop_name || crop.crop) : '') || 'Unknown crop';
-        var variety = c.variety || (crop && crop.variety ? crop.variety : '');
-        var f = getFarmByRef(c.farm_id);
-        var p = getPlotByRef(c.plot_id);
-        var stage = c.current_stage || c.stage || c.status || 'active';
-        var meta = [];
-        if (f) meta.push('<i class="fas fa-tractor"></i> ' + esc(f.farm_name));
-        if (p) meta.push('<i class="fas fa-th-large"></i> ' + esc(p.plot_name));
-        if (c.sowing_date) meta.push('<i class="fas fa-calendar-plus"></i> Sown ' + fmtDate(c.sowing_date));
-        if (c.expected_harvest_date) meta.push('<i class="fas fa-calendar-check"></i> Harvest ' + fmtDate(c.expected_harvest_date));
-        return '<div class="fa-crop-row">' +
-          '<div style="min-width:0;flex:1;">' +
-            '<div class="fa-crop-name">' + esc(name) + (variety ? ' <span class="fa-crop-variety">(' + esc(variety) + ')</span>' : '') + '</div>' +
-            '<div class="fa-crop-sub">' + meta.join(' &nbsp;·&nbsp; ') + '</div>' +
-          '</div>' +
-          '<span class="' + stageClass(stage) + '">' + esc(stage) + '</span>' +
-        '</div>';
-      }).join('');
-    }
-
-    function renderQStats() {
-      var pending = 0;
-      state.tasks.forEach(function (t) {
-        var s = String(t.status || t.task_status || '').toLowerCase();
-        if (s !== 'completed' && s !== 'done' && s !== 'cancelled') pending++;
-      });
-      $id('qs-tasks').textContent = state.tasks.length ? pending : 0;
-      $id('qs-fields').textContent = totalPlots();
-      $id('qs-crops').textContent = state.cycles.length;
-      $id('qs-active').textContent = state.farms.length;
-    }
-
-    function activityIcon(act) {
-      var a = String(act || '').toLowerCase();
-      if (a.indexOf('irrigat') !== -1) return { icon: 'fas fa-tint', bg: '#e1f5fe', fg: '#0277bd' };
-      if (a.indexOf('fertil') !== -1) return { icon: 'fas fa-seedling', bg: '#e8f5e9', fg: '#2e7d32' };
-      if (a.indexOf('harvest') !== -1) return { icon: 'fas fa-wheat-awn', bg: '#fff3e0', fg: '#e65100' };
-      if (a.indexOf('plant') !== -1 || a.indexOf('sow') !== -1) return { icon: 'fas fa-sprout', bg: '#e8f5e9', fg: '#33691e' };
-      if (a.indexOf('pest') !== -1 || a.indexOf('disease') !== -1) return { icon: 'fas fa-bug', bg: '#fce4ec', fg: '#c62828' };
-      if (a.indexOf('weed') !== -1) return { icon: 'fas fa-scissors', bg: '#f3e5f5', fg: '#6a1b9a' };
-      return { icon: 'fas fa-clipboard-list', bg: '#e0f2f1', fg: '#00695c' };
-    }
-
-    function renderActivities() {
-      var box = $id('activities-list');
-      if (!state.journal.length) {
-        box.innerHTML = '<div class="fa-empty"><i class="fas fa-clock" style="font-size:22px;display:block;margin-bottom:8px;"></i>No activities yet. Farm activities will appear here.</div>';
-        return;
-      }
-      var sorted = state.journal.slice().sort(function (a, b) {
-        return new Date(b.created_at || b.entry_date) - new Date(a.created_at || a.entry_date);
-      }).slice(0, 8);
-      box.innerHTML = sorted.map(function (j) {
-        var fa = activityIcon(j.activity);
-        var f = getFarmByRef(j.farm_id);
-        var meta = [];
-        if (f) meta.push(esc(f.farm_name));
-        if (j.plot_id) { var p = getPlotByRef(j.plot_id); if (p) meta.push(esc(p.plot_name)); }
-        return '<div class="fa-activity">' +
-          '<div class="fa-activity-icon" style="background:' + fa.bg + ';color:' + fa.fg + ';"><i class="' + fa.icon + '"></i></div>' +
-          '<div><div>' + esc(j.activity || 'Farm activity') + (j.notes ? ' &mdash; ' + esc(j.notes) : '') + '</div>' +
-          '<div class="fa-activity-time">' + meta.join(' · ') + (meta.length ? ' · ' : '') + timeAgo(j.created_at || j.entry_date) + '</div></div>' +
-        '</div>';
-      }).join('');
-    }
-
-    function renderExpenses() {
-      var box = $id('expense-summary');
-      var f = state.finance;
-      if (!f || (f.total_income == null && f.total_expenses == null && !f.summary)) {
-        box.innerHTML = '<div class="fa-empty"><i class="fas fa-file-invoice-dollar" style="font-size:22px;display:block;margin-bottom:8px;"></i>No expense records yet. Expense summaries will appear here.</div>';
-        return;
-      }
-      var s = (f.summary && f.total_income == null && f.total_expenses == null) ? f.summary : f;
-      var income = s.total_income != null ? s.total_income : 0;
-      var expenses = s.total_expenses != null ? s.total_expenses : 0;
-      var net = s.net_profit != null ? s.net_profit : (income - expenses);
-      box.innerHTML =
-        '<div class="fa-expense"><span class="c"><i class="fas fa-arrow-up" style="color:#2e7d32;"></i> Total Income</span><span class="a" style="color:#2e7d32;">' + fmtMoney(income) + '</span></div>' +
-        '<div class="fa-expense"><span class="c"><i class="fas fa-arrow-down" style="color:#c62828;"></i> Total Expenses</span><span class="a" style="color:#c62828;">' + fmtMoney(expenses) + '</span></div>' +
-        '<div class="fa-expense"><span class="c"><i class="fas fa-scale-balanced"></i> Net Profit</span><span class="a">' + fmtMoney(net) + '</span></div>';
-    }
-
-    function renderAll() {
-      renderStats();
-      renderSelector();
-      renderFarmDetails();
-      renderFields();
-      renderCrops();
-      renderQStats();
-      renderActivities();
-      renderExpenses();
-    }
-    function openModal(id) {
-      var m = $id(id);
-      if (m) m.classList.add('active');
-    }
-
-    function closeModal(id) {
-      var m = $id(id);
-      if (m) m.classList.remove('active');
-    }
-
-    function setBusy(bId, on) {
-      var b = $id(bId);
-      if (!b) return;
-      if (on) {
-        if (!b.getAttribute('data-orig')) b.setAttribute('data-orig', b.innerHTML);
-        b.disabled = true;
-        b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-      } else {
-        b.disabled = false;
-        b.innerHTML = b.getAttribute('data-orig') || b.innerHTML;
-      }
-    }
-
-    function openAddField() {
-      if (!state.farms.length) {
-        toast('Please add a farm first.', 'warning');
-        return;
-      }
-      var sel = $id('field-farm');
-      sel.innerHTML = '<option value="">Select farm</option>';
-      state.farms.forEach(function (f) {
-        var opt = document.createElement('option');
-        opt.value = f.farm_id;
-        opt.textContent = f.farm_name || f.farm_id;
-        sel.appendChild(opt);
-      });
-      openModal('fa-modal-add-field');
-    }
-
-    function openAddCrop() {
-      if (!state.farms.length) {
-        toast('Please add a farm first.', 'warning');
-        return;
-      }
-      if (!state.crops.length) {
-        toast('No crops available in the catalog yet.', 'warning');
-        return;
-      }
-      var fs = $id('crop-farm');
-      fs.innerHTML = '<option value="">Select farm</option>';
-      state.farms.forEach(function (f) {
-        var opt = document.createElement('option');
-        opt.value = f.id;
-        opt.textContent = f.farm_name || f.farm_id;
-        fs.appendChild(opt);
-      });
-      var cs = $id('crop-crop');
-      cs.innerHTML = '<option value="">Select crop</option>';
-      state.crops.forEach(function (c) {
-        var val = c.id || c.crop_id;
-        var label = c.name || c.crop_name || c.crop || val;
-        if (!val) return;
-        if (c.variety) label += ' (' + c.variety + ')';
-        var opt = document.createElement('option');
-        opt.value = val;
-        opt.textContent = label;
-        cs.appendChild(opt);
-      });
-      onCropFarmChange();
-      openModal('fa-modal-add-crop');
-    }
-
-    function onCropFarmChange() {
-      var ps = $id('crop-plot');
-      var farmId = $id('crop-farm').value;
-      ps.innerHTML = '<option value="">Optional</option>';
-      var f = getFarmByRef(farmId);
-      (f && f.plots ? f.plots : []).forEach(function (p) {
-        var opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.plot_name;
-        ps.appendChild(opt);
+      }).catch(function (e) {
+        console.warn('States loading error:', e);
       });
     }
 
     function onStateChange(stateName, targetId) {
       var sel = $id(targetId);
-      if (!sel || !stateName) return;
+      if (!sel || !stateName) {
+        if (sel) { sel.innerHTML = '<option value="">Select District</option>'; sel.disabled = true; }
+        return;
+      }
       sel.disabled = true;
       sel.innerHTML = '<option value="">Loading districts...</option>';
       API.Locations.getDistricts(stateName).then(function (d) {
@@ -930,227 +1889,1689 @@
       }).catch(function () {
         sel.innerHTML = '<option value="">Select District</option>';
         sel.disabled = false;
-        toast('Could not load districts.', 'warning');
       });
     }
 
-    var _farmLoc = null;
+    function loadFarms() {
+      return API.Farm.list().then(function (d) {
+        state.farms = toArray(d);
+        var cur = getSelectedFarm();
+        if (cur) {
+          state.selectedFarmId = cur.id || cur.farm_id;
+          localStorage.setItem('fa-selected-farm-id', state.selectedFarmId);
+        }
+      });
+    }
 
-    function renderFarmLocPick() {
-      var pick = $id('farm-loc-pick');
-      if (_farmLoc && _farmLoc.latitude) {
-        pick.classList.add('show');
-        $id('farm-loc-addr').textContent = _farmLoc.label || 'Selected location';
-        $id('farm-loc-coords').textContent = Number(_farmLoc.latitude).toFixed(5) + ', ' + Number(_farmLoc.longitude).toFixed(5) + (_farmLoc.source === 'manual' ? ' (manual)' : '');
-        $id('farm-lat').value = Number(_farmLoc.latitude).toFixed(6);
-        $id('farm-lng').value = Number(_farmLoc.longitude).toFixed(6);
+    function loadCropsCatalog() {
+      return API.Crop.listCrops().then(function (d) {
+        state.cropsCatalog = toArray(d);
+      });
+    }
+
+    function loadCycles() {
+      return API.Crop.listCycles().then(function (d) {
+        state.cycles = toArray(d);
+      });
+    }
+
+    function loadTasks() {
+      return API.Crop.listTasks().then(function (d) {
+        state.tasks = toArray(d);
+      });
+    }
+
+    function loadCalendar() {
+      return API.Calendar.upcoming(8).then(function (d) {
+        state.calendarEvents = toArray(d);
+      }).catch(function () {
+        state.calendarEvents = [];
+      });
+    }
+
+    function loadJournal() {
+      return API.Crop.listJournal().then(function (d) {
+        state.journal = toArray(d);
+      });
+    }
+
+    function loadNotifications() {
+      return API.Notification.list().then(function (d) {
+        state.notifications = toArray(d);
+      }).catch(function () {
+        state.notifications = [];
+      });
+    }
+
+    function loadMapDetails() {
+      /* One request, reused by the plot and crop detail views. This is the same
+         authenticated farm-map payload the Farm Map page reads, so soil,
+         irrigation, sensor and activity figures here stay real and cannot
+         drift away from the map. */
+      return API.Maps.getFarmMap().then(function (d) {
+        var map = (d && (d.map || d.data)) ? (d.map || d.data) : d;
+        state.mapPlots = toArray(map && map.plots);
+        state.mapFarms = toArray(map && map.farms);
+      }).catch(function () {
+        state.mapPlots = [];
+        state.mapFarms = [];
+      });
+    }
+
+    function getMapPlot(plotId) {
+      if (plotId == null) return null;
+      var id = String(plotId);
+      for (var i = 0; i < (state.mapPlots || []).length; i++) {
+        var p = state.mapPlots[i];
+        if (String(p.id) === id || String(p.plot_id) === id) return p;
+      }
+      return null;
+    }
+
+    function loadFarmSpecificData() {
+      var farm = getSelectedFarm();
+      if (!farm) {
+        state.weather = null;
+        state.soilHealth = null;
+        state.aiAnalysis = null;
+        return Promise.resolve();
+      }
+
+      var pWeather = Promise.resolve();
+      if (farm.latitude && farm.longitude) {
+        pWeather = API.Weather.getCurrent(farm.latitude, farm.longitude).then(function (w) {
+          state.weather = w;
+        }).catch(function () { state.weather = null; });
       } else {
-        pick.classList.remove('show');
+        pWeather = API.Weather.getCurrent().then(function (w) {
+          state.weather = w;
+        }).catch(function () { state.weather = null; });
       }
+
+      var pSoil = API.SoilIrrigation.getSoilHealthStatus(farm.id || farm.farm_id).then(function (s) {
+        state.soilHealth = s;
+      }).catch(function () { state.soilHealth = null; });
+
+      var pAI = API.AI.analyzeFarm(farm.id || farm.farm_id).then(function (res) {
+        state.aiAnalysis = (res && res.analysis) ? res.analysis : res;
+      }).catch(function () { state.aiAnalysis = null; });
+
+      return Promise.all([pWeather, pSoil, pAI]);
     }
 
-    function setFarmLoc(lat, lng, label, source) {
-      lat = Number(lat);
-      lng = Number(lng);
-      if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        toast('The coordinates are not valid.', 'danger');
-        return;
-      }
-      _farmLoc = { latitude: lat, longitude: lng, label: label || 'Selected location', source: source || 'manual' };
-      renderFarmLocPick();
+    function loadAll() {
+      state.isLoading = true;
+      return Promise.all([
+        loadFarms(),
+        loadCropsCatalog(),
+        loadCycles(),
+        loadTasks(),
+        loadCalendar(),
+        loadJournal(),
+        loadNotifications(),
+        loadStates(),
+        loadMapDetails()
+      ]).then(function () {
+        return loadFarmSpecificData();
+      }).then(function () {
+        state.isLoading = false;
+        renderAll();
+      }).catch(function (err) {
+        state.isLoading = false;
+        console.error('[MyFarm] Error loading farm data:', err);
+        toast('Could not load complete farm data. Please retry.', 'warning');
+        renderAll();
+      });
     }
 
-    function locateFarm() {
-      var btn = $id('farm-locate-btn');
-      if (!('geolocation' in navigator)) {
-        toast('Location is not supported in this browser. Enter coordinates manually.', 'danger');
-        return;
-      }
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
-      navigator.geolocation.getCurrentPosition(function (pos) {
-        var lat = pos.coords.latitude;
-        var lng = pos.coords.longitude;
-        var shortLabel = '';
-        API.Maps.reverseGeocode(lat, lng).then(function (res) {
-          var addr = (res && res.address) || null;
-          var parts = [];
-          ['village', 'mandal', 'district', 'state'].forEach(function (k) {
-            if (addr && addr[k]) parts.push(addr[k]);
-          });
-          shortLabel = (res && res.display_name) || parts.join(', ') || 'Current location';
-          if (addr && shortLabel === 'Current location') {
-            var st = $id('farm-state'), dt = $id('farm-district');
-            if (addr.state) setSelectByText(st, addr.state);
-            if (addr.district) setSelectByText(dt, addr.district);
-          }
-          setFarmLoc(lat, lng, shortLabel, 'gps');
-          toast('Location captured for this farm.', 'success');
-        }, function () {
-          setFarmLoc(lat, lng, 'Current location', 'gps');
-          toast('Location captured.', 'info');
-        });
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-location-crosshairs"></i> Use Current Location';
-      }, function (err) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-location-crosshairs"></i> Use Current Location';
-        if (err && err.code === 1) toast('Location permission denied. Enter coordinates manually.', 'danger');
-        else if (err && err.code === 2) toast('Location unavailable right now. Enter coordinates manually.', 'danger');
-        else toast('Could not get your location. Enter coordinates manually.', 'danger');
-      }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+    function refreshAll() {
+      toast('Refreshing farm data...', 'info');
+      return loadAll().then(function () {
+        toast('Farm data updated.', 'success');
+      });
     }
 
-    function clearFarmLoc() {
-      _farmLoc = null;
-      $id('farm-lat').value = '';
-      $id('farm-lng').value = '';
-      renderFarmLocPick();
-    }
+    /* ==================== RENDERING LOGIC ==================== */
 
-    function farmManualCoordsChanged() {
-      var lat = parseFloat($id('farm-lat').value);
-      var lng = parseFloat($id('farm-lng').value);
-      if (isFinite(lat) && isFinite(lng)) {
-        setFarmLoc(lat, lng, null, 'manual');
-      } else if (_farmLoc && _farmLoc.source === 'manual') {
-        _farmLoc = null;
-        renderFarmLocPick();
-      }
-    }
-
-    function setSelectByText(sel, val) {
+    function renderSelector() {
+      var sel = $id('farm-selector');
+      var btnEdit = $id('btn-edit-farm');
       if (!sel) return;
-      var target = String(val || '').trim().toLowerCase();
-      for (var i = 0; i < sel.options.length; i++) {
-        if (String(sel.options[i].textContent || '').trim().toLowerCase() === target) {
-          sel.value = sel.options[i].value;
+
+      sel.innerHTML = '';
+      if (!state.farms.length) {
+        sel.innerHTML = '<option value="">No farms added</option>';
+        if (btnEdit) btnEdit.disabled = true;
+        return;
+      }
+
+      state.farms.forEach(function (f) {
+        var opt = document.createElement('option');
+        opt.value = f.id || f.farm_id;
+        var areaTxt = f.total_area ? (' · ' + num(f.total_area, 1) + ' ' + (f.area_unit || 'Acres')) : '';
+        opt.textContent = (f.farm_name || f.farm_id) + areaTxt;
+        sel.appendChild(opt);
+      });
+
+      var current = getSelectedFarm();
+      if (current) {
+        sel.value = current.id || current.farm_id;
+        if (btnEdit) btnEdit.disabled = false;
+      }
+    }
+
+    function renderOverviewKPIs() {
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var plots = getFarmPlots();
+      var cycles = getFarmCycles();
+      var tasks = getFarmTasks();
+
+      // Total Area
+      var areaVal = farm.total_area != null ? (num(farm.total_area, 2) + ' ' + (farm.area_unit || 'Acres')) : '--';
+      $id('kpi-area').textContent = areaVal;
+
+      // Plots
+      $id('kpi-plots').textContent = plots.length;
+      $id('kpi-plots-sub').textContent = plots.length === 1 ? '1 registered plot' : (plots.length + ' registered plots');
+
+      // Active Crops
+      var activeCycles = cycles.filter(function (c) {
+        var s = String(c.status || '').toLowerCase();
+        return s !== 'completed' && s !== 'harvested' && s !== 'cancelled';
+      });
+      $id('kpi-crops').textContent = activeCycles.length;
+
+      // Upcoming Activities
+      var pendingTasks = tasks.filter(function (t) {
+        var s = String(t.status || '').toLowerCase();
+        return s !== 'completed' && s !== 'done' && s !== 'cancelled';
+      });
+      var upcomingCount = pendingTasks.length + state.calendarEvents.length;
+      $id('kpi-upcoming').textContent = upcomingCount;
+
+      // Farm Health calculation
+      var healthScore = calculateFarmHealthScore();
+      if (healthScore != null) {
+        $id('kpi-health').textContent = healthScore + '/100';
+        $id('kpi-health-sub').textContent = healthScore >= 80 ? 'Healthy condition' : healthScore >= 60 ? 'Good condition' : 'Needs attention';
+      } else {
+        $id('kpi-health').textContent = 'Fair';
+        $id('kpi-health-sub').textContent = 'More data needed';
+      }
+
+      // Active Alerts count
+      var alerts = calculateFarmAlerts();
+      $id('kpi-alerts').textContent = alerts.length;
+      $id('kpi-alerts-sub').textContent = alerts.length ? 'Attention required' : 'All clear';
+    }
+
+    function calculateFarmHealthScore() {
+      var farm = getSelectedFarm();
+      if (!farm) return null;
+
+      var cycles = getFarmCycles();
+      var tasks = getFarmTasks();
+      var plots = getFarmPlots();
+
+      if (!plots.length && !cycles.length) return null;
+
+      var score = 80; // Baseline
+
+      // Task completion factor
+      var overdue = 0;
+      var todayStr = new Date().toISOString().slice(0, 10);
+      tasks.forEach(function (t) {
+        if (t.status !== 'completed' && t.due_date && t.due_date < todayStr) overdue++;
+      });
+      if (overdue > 0) score -= Math.min(25, overdue * 8);
+
+      // Soil health factor
+      if (state.soilHealth && state.soilHealth.overall_score) {
+        score = Math.round((score * 0.6) + (state.soilHealth.overall_score * 0.4));
+      }
+
+      // Weather condition factor
+      if (state.weather && state.weather.alerts && state.weather.alerts.length) {
+        score -= 10;
+      }
+
+      return Math.max(30, Math.min(98, score));
+    }
+
+    function calculateFarmAlerts() {
+      var farm = getSelectedFarm();
+      if (!farm) return [];
+
+      var alerts = [];
+      var todayStr = new Date().toISOString().slice(0, 10);
+      var tasks = getFarmTasks();
+
+      // Check overdue tasks
+      tasks.forEach(function (t) {
+        if (t.status !== 'completed' && t.due_date && t.due_date < todayStr) {
+          alerts.push({
+            type: 'danger',
+            icon: 'fa-clock',
+            title: 'Overdue Task: ' + (t.title || 'Farm activity'),
+            detail: 'Due on ' + fmtDate(t.due_date) + ' for this farm.'
+          });
+        }
+      });
+
+      // Check weather alerts
+      if (state.weather && state.weather.alerts) {
+        state.weather.alerts.forEach(function (wa) {
+          alerts.push({
+            type: wa.type || 'warning',
+            icon: 'fa-cloud-bolt',
+            title: wa.title || 'Weather Warning',
+            detail: wa.detail || wa.description || 'Severe weather expected for this region.'
+          });
+        });
+      }
+
+      // Check unread notifications matching farm
+      state.notifications.slice(0, 3).forEach(function (n) {
+        if (!n.is_read) {
+          alerts.push({
+            type: 'info',
+            icon: 'fa-bell',
+            title: n.title || 'Notification',
+            detail: n.message || n.content || ''
+          });
+        }
+      });
+
+      return alerts;
+    }
+
+    function renderNextAction() {
+      var titleEl = $id('spotlight-title');
+      var metaEl = $id('spotlight-meta');
+      var btnWrap = $id('spotlight-action-btn-wrap');
+      var tasks = getFarmTasks();
+      var todayStr = new Date().toISOString().slice(0, 10);
+
+      var pending = tasks.filter(function (t) {
+        return t.status !== 'completed' && t.status !== 'done' && t.status !== 'cancelled';
+      });
+
+      if (!pending.length) {
+        titleEl.textContent = 'All caught up! No urgent actions pending.';
+        metaEl.innerHTML = '<span><i class="fas fa-circle-check" style="color:#95D5B2"></i> Your scheduled activities for this farm are in good standing.</span>';
+        btnWrap.innerHTML = '<button type="button" class="mf-spotlight-btn" onclick="FarmApp.openLogActivity()"><i class="fas fa-plus"></i> Log Activity</button>';
+        return;
+      }
+
+      // Sort: overdue first, then today, then priority high
+      pending.sort(function (a, b) {
+        var aDue = a.due_date || '9999-12-31';
+        var bDue = b.due_date || '9999-12-31';
+        return aDue.localeCompare(bDue);
+      });
+
+      var next = pending[0];
+      var isOverdue = next.due_date && next.due_date < todayStr;
+      var dueLabel = isOverdue ? ('Overdue since ' + fmtDate(next.due_date)) : next.due_date ? ('Due ' + fmtDate(next.due_date)) : 'Pending action';
+
+      titleEl.textContent = next.title || 'Scheduled Farm Task';
+      metaEl.innerHTML =
+        '<span><i class="fas ' + (isOverdue ? 'fa-triangle-exclamation' : 'fa-calendar-check') + '" style="color:' + (isOverdue ? '#ff7675' : '#95D5B2') + '"></i> ' + esc(dueLabel) + '</span>' +
+        (next.category ? '<span><i class="fas fa-tag"></i> ' + esc(next.category) + '</span>' : '') +
+        (next.priority ? '<span><i class="fas fa-flag"></i> ' + esc(next.priority.toUpperCase()) + ' Priority</span>' : '');
+
+      btnWrap.innerHTML =
+        '<button type="button" class="mf-spotlight-btn" onclick="FarmApp.completeTask(\'' + (next.id || next.task_id) + '\')">' +
+        '<i class="fas fa-check"></i> Mark Complete</button>';
+    }
+
+    function renderMapPreview() {
+      var farm = getSelectedFarm();
+      var overlayStatus = $id('map-overlay-status');
+      var overlayAction = $id('map-overlay-action');
+
+      if (!farm) return;
+
+      var mapEl = $id('fa-map-preview');
+      if (!mapEl) return;
+
+      if (!window.L) {
+        overlayStatus.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Map viewer offline.';
+        return;
+      }
+
+      if (!previewMap) {
+        previewMap = L.map('fa-map-preview', {
+          zoomControl: false,
+          attributionControl: false,
+          scrollWheelZoom: false
+        }).setView([20.5937, 78.9629], 5);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19
+        }).addTo(previewMap);
+
+        previewLayers = L.layerGroup().addTo(previewMap);
+      }
+
+      previewLayers.clearLayers();
+
+      var points = [];
+      var hasBoundary = false;
+
+      // Draw farm boundary
+      var fPts = FarmGeo.toPoints(farm.boundary_coordinates);
+      if (fPts.length >= 3) {
+        hasBoundary = true;
+        var farmPoly = L.polygon(fPts, {
+          color: '#1B5E3F',
+          weight: 2.5,
+          fillColor: '#52B788',
+          fillOpacity: 0.2
+        }).addTo(previewLayers);
+        farmPoly.bindPopup('<strong>' + esc(farm.farm_name) + '</strong><br>Farm Boundary');
+        points = points.concat(fPts);
+      }
+
+      // Draw plots boundaries
+      var plots = getFarmPlots();
+      var plotColors = ['#2563eb', '#d97706', '#7c3aed', '#059669', '#dc2626'];
+      plots.forEach(function (p, idx) {
+        var pPts = FarmGeo.toPoints(p.boundary_coordinates);
+        if (pPts.length >= 3) {
+          hasBoundary = true;
+          var color = plotColors[idx % plotColors.length];
+          var poly = L.polygon(pPts, {
+            color: color,
+            weight: 2,
+            fillColor: color,
+            fillOpacity: 0.35
+          }).addTo(previewLayers);
+          poly.bindPopup('<strong>' + esc(p.plot_name) + '</strong><br>Area: ' + (num(p.area, 2)) + ' Acres');
+          points = points.concat(pPts);
+        } else if (p.latitude && p.longitude) {
+          L.circleMarker([p.latitude, p.longitude], {
+            radius: 6,
+            color: '#1B5E3F',
+            fillColor: '#fff',
+            fillOpacity: 1
+          }).addTo(previewLayers).bindPopup('<strong>' + esc(p.plot_name) + '</strong>');
+          points.push([p.latitude, p.longitude]);
+        }
+      });
+
+      // Farm Center Marker
+      if (farm.latitude && farm.longitude) {
+        L.marker([farm.latitude, farm.longitude], {
+          title: farm.farm_name
+        }).addTo(previewLayers).bindPopup('<strong>' + esc(farm.farm_name) + '</strong><br>Farm Center');
+        points.push([farm.latitude, farm.longitude]);
+      }
+
+      if (points.length >= 2) {
+        previewMap.fitBounds(L.latLngBounds(points).pad(0.2));
+      } else if (points.length === 1) {
+        previewMap.setView(points[0], 16);
+      } else {
+        previewMap.setView([20.5937, 78.9629], 5);
+      }
+
+      setTimeout(function () { previewMap.invalidateSize(); }, 200);
+
+      if (hasBoundary) {
+        overlayStatus.innerHTML = '<i class="fas fa-draw-polygon" style="color:#2e7d32"></i> Farm and plots mapped';
+        overlayAction.innerHTML = '<a href="map.html?farm_id=' + encodeURIComponent(farm.id || farm.farm_id) + '" style="color:#1B5E3F;font-weight:700;text-decoration:none;">Open Studio &rarr;</a>';
+      } else {
+        overlayStatus.innerHTML = '<i class="fas fa-info-circle" style="color:#e65100"></i> Farm boundary not added yet';
+        overlayAction.innerHTML = '<button type="button" onclick="FarmApp.openEditFarm()" style="background:none;border:none;color:#1B5E3F;font-weight:700;cursor:pointer;padding:0;">+ Add Boundary</button>';
+      }
+    }
+
+    function renderFarmHealth() {
+      var box = $id('farm-health-content');
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var score = calculateFarmHealthScore();
+      if (score == null) {
+        box.innerHTML =
+          '<div style="text-align:center;padding:18px 12px;color:var(--text-muted);font-size:13px;">' +
+            '<i class="fas fa-seedling" style="font-size:26px;color:var(--mf-green);opacity:0.6;margin-bottom:8px;display:block;"></i>' +
+            'More farm data is needed to assess overall farm health.<br>' +
+            '<span style="font-size:11.5px;color:var(--text-secondary);">Add plots, active crop cycles, or log soil observations to generate health scores.</span>' +
+          '</div>';
+        return;
+      }
+
+      var statusBadge = score >= 80 ? 'healthy' : score >= 65 ? 'good' : score >= 50 ? 'attention' : 'risk';
+      var statusText = score >= 80 ? 'Healthy' : score >= 65 ? 'Good' : score >= 50 ? 'Needs Attention' : 'At Risk';
+      var barColor = score >= 80 ? '#2e7d32' : score >= 65 ? '#1565c0' : score >= 50 ? '#e65100' : '#c62828';
+
+      var cropsCount = getFarmCycles().length;
+      var plotsCount = getFarmPlots().length;
+      var tasks = getFarmTasks();
+      var pendingCount = tasks.filter(function (t) { return t.status !== 'completed'; }).length;
+
+      box.innerHTML =
+        '<div class="mf-health-box">' +
+          '<div class="mf-health-score-dial">' +
+            '<div class="mf-health-num" style="color:' + barColor + '">' + score + '</div>' +
+            '<div class="mf-health-denom">OUT OF 100</div>' +
+            '<span class="mf-health-status-badge ' + statusBadge + '">' + statusText + '</span>' +
+          '</div>' +
+          '<div class="mf-health-factors">' +
+            '<div class="mf-factor-row">' +
+              '<span class="mf-factor-name"><i class="fas fa-leaf" style="color:#4caf50"></i> Crop Vitality</span>' +
+              '<div class="mf-factor-bar-wrap"><div class="mf-factor-bar" style="width:' + (cropsCount ? '85%' : '40%') + ';background:#4caf50;"></div></div>' +
+              '<span class="mf-factor-val">' + (cropsCount ? 'Good' : 'None') + '</span>' +
+            '</div>' +
+            '<div class="mf-factor-row">' +
+              '<span class="mf-factor-name"><i class="fas fa-droplet" style="color:#0288d1"></i> Soil &amp; Moisture</span>' +
+              '<div class="mf-factor-bar-wrap"><div class="mf-factor-bar" style="width:' + (state.soilHealth ? '80%' : '65%') + ';background:#0288d1;"></div></div>' +
+              '<span class="mf-factor-val">' + (state.soilHealth ? 'Normal' : 'Stable') + '</span>' +
+            '</div>' +
+            '<div class="mf-factor-row">' +
+              '<span class="mf-factor-name"><i class="fas fa-list-check" style="color:#f57c00"></i> Task Schedule</span>' +
+              '<div class="mf-factor-bar-wrap"><div class="mf-factor-bar" style="width:' + (pendingCount > 3 ? '55%' : '90%') + ';background:#f57c00;"></div></div>' +
+              '<span class="mf-factor-val">' + (pendingCount > 0 ? (pendingCount + ' Due') : 'Optimal') + '</span>' +
+            '</div>' +
+            '<div class="mf-factor-row">' +
+              '<span class="mf-factor-name"><i class="fas fa-cloud-sun" style="color:#7b1fa2"></i> Climate Risk</span>' +
+              '<div class="mf-factor-bar-wrap"><div class="mf-factor-bar" style="width:85%;background:#7b1fa2;"></div></div>' +
+              '<span class="mf-factor-val">Favorable</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    /* Next planned work for a crop cycle, taken only from records that exist. */
+    function nextActivityFor(cycle) {
+      var todayStr = new Date().toISOString().slice(0, 10);
+      var best = null;
+      state.tasks.forEach(function (t) {
+        if (t.crop_cycle_id && t.crop_cycle_id !== cycle.id) return;
+        if (t.status === 'completed' || !t.due_date) return;
+        if (t.due_date < todayStr) return;
+        if (!best || t.due_date < best.due_date) {
+          best = { title: t.title || t.category || 'Scheduled task', when: t.due_date, kind: 'Task' };
+        }
+      });
+      return best;
+    }
+
+    function cropCycleStatus(c) {
+      return String(c.cycle_status || c.status || 'active').toLowerCase();
+    }
+
+    var farmTab = 'crops';
+
+    function showFarmTab(tab) {
+      farmTab = (tab === 'plots') ? 'plots' : 'crops';
+      var isCrops = farmTab === 'crops';
+      var cropsCard = $id('farm-crops-card');
+      var plotsCard = $id('farm-plots-card');
+      var btnC = $id('mf-seg-crops');
+      var btnP = $id('mf-seg-plots');
+      if (cropsCard) cropsCard.hidden = !isCrops;
+      if (plotsCard) plotsCard.hidden = isCrops;
+      if (btnC) { btnC.classList.toggle('is-active', isCrops); btnC.setAttribute('aria-selected', String(isCrops)); }
+      if (btnP) { btnP.classList.toggle('is-active', !isCrops); btnP.setAttribute('aria-selected', String(!isCrops)); }
+    }
+
+    function syncFarmTab() {
+      showFarmTab(farmTab);
+      var cCount = $id('mf-seg-crops-count');
+      var pCount = $id('mf-seg-plots-count');
+      if (cCount) cCount.textContent = String(getFarmCycles().length);
+      if (pCount) pCount.textContent = String(getFarmPlots().length);
+    }
+
+    /* Every My Farm -> Farm Map link must carry the farm the farmer currently
+       has selected, so the map opens on that farm instead of a guess. */
+    function stampMapLinks() {
+      var farm = getSelectedFarm();
+      if (!farm) return;
+      var ref = encodeURIComponent(farm.id || farm.farm_id);
+      var links = document.querySelectorAll('a[href^="map.html"]');
+      for (var i = 0; i < links.length; i++) {
+        var a = links[i];
+        if (a.getAttribute('href').indexOf('plot_id=') !== -1) continue;
+        a.setAttribute('href', 'map.html?farm_id=' + ref);
+      }
+    }
+
+    function renderCrops() {
+      var box = $id('farm-crops-list');
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var cycles = getFarmCycles();
+      if (!cycles.length) {
+        box.innerHTML =
+          '<div style="text-align:center;padding:22px 14px;color:var(--text-muted);font-size:13px;">' +
+            '<i class="fas fa-seedling" style="font-size:24px;display:block;margin-bottom:8px;opacity:0.5;"></i>' +
+            'No crops added to this farm yet.<br>' +
+            '<button type="button" class="mf-btn-secondary" style="margin-top:10px;" onclick="FarmApp.openAddCrop()"><i class="fas fa-plus"></i> + Add Crop</button>' +
+          '</div>';
+        return;
+      }
+
+      box.innerHTML = '<div class="mf-item-list">' + cycles.map(function (c) {
+        var cropObj = state.cropsCatalog.find(function (x) { return x.id === c.crop_id || x.crop_id === c.crop_id; });
+        var cropName = c.crop_name || (cropObj ? cropObj.name : 'Crop');
+        var variety = c.variety || (cropObj ? cropObj.variety : '');
+        var plotObj = (farm.plots || []).find(function (p) { return p.id === c.plot_id; });
+        var plotName = plotObj ? plotObj.plot_name : 'Field Plot';
+        var stage = c.current_stage || c.stage || 'Vegetative';
+        var stageSlug = stage.toLowerCase().replace(/\s+/g, '-');
+        var cStatus = cropCycleStatus(c);
+        var nextAct = nextActivityFor(c);
+        var mapPlot = getMapPlot(c.plot_id);
+
+        return '<div class="mf-crop-card">' +
+          '<div class="mf-item-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="fas fa-seedling"></i></div>' +
+          '<div class="mf-item-info">' +
+            '<div class="mf-item-title">' +
+              esc(cropName) + (variety ? ' <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(' + esc(variety) + ')</span>' : '') +
+              '<span class="mf-stage-pill ' + esc(stageSlug) + '">' + esc(stage) + '</span>' +
+              (cStatus !== 'active'
+                ? '<span class="mf-stage-pill harvested">' + esc(cStatus.charAt(0).toUpperCase() + cStatus.slice(1)) + '</span>'
+                : '') +
+            '</div>' +
+            '<div class="mf-item-meta">' +
+              '<span><i class="fas fa-th-large"></i> ' + esc(plotName) + '</span>' +
+              (c.sowing_date ? '<span><i class="fas fa-calendar-plus"></i> Planted ' + fmtDate(c.sowing_date) + '</span>' : '') +
+              (c.expected_harvest_date ? '<span><i class="fas fa-calendar-check"></i> Harvest ' + fmtDate(c.expected_harvest_date) + '</span>' : '') +
+              (nextAct
+                ? '<span><i class="fas fa-list-check"></i> Next: ' + esc(nextAct.title) + ' - ' + fmtDate(nextAct.when) + '</span>'
+                : '<span><i class="fas fa-circle-info"></i> No activity scheduled</span>') +
+              (mapPlot && mapPlot.soil_latest
+                ? '<span><i class="fas fa-flask"></i> Soil pH ' + esc(num(mapPlot.soil_latest.ph_level, 1)) + '</span>'
+                : '') +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">' +
+            '<button type="button" class="mf-action-chip" style="font-size:11px;padding:5px 9px;" title="Open crop details" onclick="FarmApp.openCropDetail(\'' + c.id + '\')"><i class="fas fa-eye"></i> View</button>' +
+            '<a href="crop-health.html?crop_id=' + encodeURIComponent(c.crop_id || '') + '&cycle_id=' + encodeURIComponent(c.id || '') + '" class="mf-action-chip" style="font-size:11px;padding:5px 9px;" title="View crop health condition">' +
+              '<i class="fas fa-heart-pulse"></i> Health' +
+            '</a>' +
+            '<a href="tasks.html" class="mf-action-chip" style="font-size:11px;padding:5px 9px;" title="Open crop tasks and activities">' +
+              '<i class="fas fa-list-check"></i> Tasks' +
+            '</a>' +
+          '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+
+    function renderPlots() {
+      var box = $id('farm-plots-list');
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var plots = getFarmPlots();
+      if (!plots.length) {
+        box.innerHTML =
+          '<div style="text-align:center;padding:22px 14px;color:var(--text-muted);font-size:13px;">' +
+            '<i class="fas fa-th-large" style="font-size:24px;display:block;margin-bottom:8px;opacity:0.5;"></i>' +
+            'No plots added to this farm yet.<br>' +
+            '<button type="button" class="mf-btn-secondary" style="margin-top:10px;" onclick="FarmApp.openAddField()"><i class="fas fa-plus"></i> + Add Plot</button>' +
+          '</div>';
+        return;
+      }
+
+      box.innerHTML = '<div class="mf-item-list">' + plots.map(function (p) {
+        var cycle = state.cycles.find(function (c) { return c.plot_id === p.id; });
+        var hasCrop = !!cycle;
+        var cropName = hasCrop ? (cycle.crop_name || 'Active Crop') : 'Fallow';
+        var hasBoundary = FarmGeo.toPoints(p.boundary_coordinates).length >= 3;
+        var mapPlot = getMapPlot(p.id);
+        var sensorCount = mapPlot && mapPlot.sensors ? mapPlot.sensors.length : 0;
+        var sensorState = sensorCount
+          ? (sensorCount + (sensorCount === 1 ? ' sensor' : ' sensors'))
+          : 'No sensor';
+        var hasCoords = !!(p.latitude && p.longitude);
+        var hasPoint = hasBoundary || hasCoords;
+
+        return '<div class="mf-plot-card">' +
+          '<div class="mf-item-icon" style="background:#e3f2fd;color:#1565c0;"><i class="fas fa-th-large"></i></div>' +
+          '<div class="mf-item-info">' +
+            '<div class="mf-item-title">' +
+              esc(p.plot_name) +
+              (p.area ? ' <span style="font-size:11.5px;color:var(--text-secondary)">(' + num(p.area, 2) + ' ' + esc(farm.area_unit || 'Ac') + ')</span>' : '') +
+              (hasBoundary ? '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:#e3f2fd;color:#1565c0;"><i class="fas fa-draw-polygon"></i> Boundary</span>' : '') +
+              (hasCrop && cycle.current_stage
+                ? '<span class="mf-stage-pill ' + esc(String(cycle.current_stage).toLowerCase().replace(/\s+/g, '-')) + '">' + esc(cycle.current_stage) + '</span>'
+                : '') +
+            '</div>' +
+            '<div class="mf-item-meta">' +
+              '<span><i class="fas ' + (hasCrop ? 'fa-seedling' : 'fa-sun') + '"></i> ' + esc(cropName) + '</span>' +
+              (p.soil_type ? '<span><i class="fas fa-mound"></i> ' + esc(p.soil_type) + '</span>' : '') +
+              (mapPlot && mapPlot.irrigation_latest
+                ? '<span><i class="fas fa-droplet"></i> ' + esc(mapPlot.irrigation_latest.method || 'Irrigated') + ' ' + fmtDate(mapPlot.irrigation_latest.irrigation_date) + '</span>'
+                : '<span><i class="fas fa-droplet"></i> No irrigation record</span>') +
+              '<span><i class="fas fa-tower-broadcast"></i> ' + esc(sensorState) + '</span>' +
+              (hasPoint
+                ? '<span><i class="fas fa-location-dot"></i> ' + (hasBoundary ? 'Boundary mapped' : 'Point only - boundary not defined') + '</span>'
+                : '<span><i class="fas fa-location-dot"></i> Location not set</span>') +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">' +
+            '<button type="button" class="mf-action-chip" style="font-size:11px;padding:5px 9px;" title="Open plot details" onclick="FarmApp.openPlotDetail(\'' + p.id + '\')"><i class="fas fa-eye"></i> View</button>' +
+            '<button type="button" class="mf-action-chip" style="font-size:11px;padding:5px 9px;" title="Edit this plot" onclick="FarmApp.openEditPlot(\'' + p.id + '\')"><i class="fas fa-pen"></i></button>' +
+            '<a href="map.html?plot_id=' + encodeURIComponent(p.id || p.plot_id) + '" class="mf-action-chip" style="font-size:11px;padding:5px 9px;" title="Show this plot on the farm map"><i class="fas fa-map"></i></a>' +
+          '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+
+    /* ---------------- PLOT DETAIL ---------------- */
+    function detailRow(label, value) {
+      return '<div class="mf-detail-row"><span class="lbl">' + esc(label) + '</span><span class="val">' + (value == null || value === '' ? 'Not recorded' : value) + '</span></div>';
+    }
+
+    function sectionTitle(icon, text) {
+      return '<h4 style="margin:16px 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);">' +
+        '<i class="fas ' + icon + '" style="color:var(--mf-green);margin-right:6px;"></i>' + esc(text) + '</h4>';
+    }
+
+    function detailChip(href, icon, label) {
+      return '<a href="' + href + '" class="mf-action-chip" style="font-size:11.5px;padding:6px 11px;"><i class="fas ' + icon + '"></i> ' + esc(label) + '</a>';
+    }
+
+    function notRecordedNote(text) {
+      return '<p style="font-size:12.5px;color:var(--text-muted);margin:4px 0 0;">' + esc(text) + '</p>';
+    }
+
+    function openPlotDetail(plotId) {
+      var box = $id('plot-detail-body');
+      if (!box) return;
+      var farm = getSelectedFarm();
+      var plots = farm ? (farm.plots || []) : [];
+      var p = plots.find(function (x) { return String(x.id) === String(plotId); });
+      if (!p) {
+        box.innerHTML = notRecordedNote('This plot is no longer available. Refresh the page to load the latest data.');
+        openModal('modal-plot-detail');
+        return;
+      }
+
+      var cycle = state.cycles.find(function (c) { return c.plot_id === p.id; });
+      var mapPlot = getMapPlot(p.id);
+      var hasBoundary = FarmGeo.toPoints(p.boundary_coordinates).length >= 3;
+      var soil = mapPlot ? mapPlot.soil_latest : null;
+      var irr = mapPlot ? mapPlot.irrigation_latest : null;
+      var sensors = (mapPlot && mapPlot.sensors) ? mapPlot.sensors : [];
+      var tasks = (mapPlot && mapPlot.tasks) ? mapPlot.tasks : [];
+      var activity = (mapPlot && mapPlot.activity) ? mapPlot.activity : [];
+      var coords = (p.latitude && p.longitude) ? (num(p.latitude, 5) + ', ' + num(p.longitude, 5)) : '';
+
+      var html = '';
+
+      html += sectionTitle('fa-circle-info', 'Plot Information');
+      html += '<div class="mf-details-grid">' +
+        detailRow('Plot Name', esc(p.plot_name)) +
+        detailRow('Plot Code', esc(p.plot_id || p.code || p.id)) +
+        detailRow('Area', (p.area ? num(p.area, 2) + ' ' + esc(farm.area_unit || 'Acres') : '')) +
+        detailRow('Soil Type', p.soil_type ? esc(p.soil_type) : '') +
+        detailRow('Farm', esc(farm.farm_name || '')) +
+        detailRow('Registered', fmtDate(p.created_at)) +
+        '</div>';
+
+      html += sectionTitle('fa-location-dot', 'Location & Boundary');
+      html += '<div class="mf-details-grid">' +
+        detailRow('GPS Position', coords ? esc(coords) : '') +
+        detailRow('Boundary', hasBoundary ? 'Mapped (' + FarmGeo.toPoints(p.boundary_coordinates).length + ' points)' : 'Plot boundary not defined') +
+        '</div>';
+
+      html += sectionTitle('fa-seedling', 'Current Crop');
+      if (cycle) {
+        var cropObj = state.cropsCatalog.find(function (x) { return x.id === cycle.crop_id || x.crop_id === cycle.crop_id; });
+        var cName = cycle.crop_name || (cropObj ? cropObj.name : 'Crop');
+        var cVariety = cycle.variety || (cropObj ? cropObj.variety : '');
+        html += '<div class="mf-details-grid">' +
+          detailRow('Crop', esc(cName) + (cVariety ? ' (' + esc(cVariety) + ')' : '')) +
+          detailRow('Stage', esc(cycle.current_stage || cycle.stage || '')) +
+          detailRow('Cycle Status', esc(cropCycleStatus(cycle).charAt(0).toUpperCase() + cropCycleStatus(cycle).slice(1))) +
+          detailRow('Sowing Date', cycle.sowing_date ? fmtDate(cycle.sowing_date) : '') +
+          detailRow('Expected Harvest', cycle.expected_harvest_date ? fmtDate(cycle.expected_harvest_date) : '') +
+          '</div>';
+      } else {
+        html += notRecordedNote('No crop cycle is recorded on this plot. It is currently fallow.');
+      }
+
+      html += sectionTitle('fa-flask', 'Soil Condition');
+      if (soil) {
+        html += '<div class="mf-details-grid">' +
+          detailRow('pH Level', num(soil.ph_level, 1)) +
+          detailRow('Moisture', num(soil.moisture, 1) + '%') +
+          detailRow('Nitrogen', num(soil.nitrogen, 1)) +
+          detailRow('Phosphorus', num(soil.phosphorus, 1)) +
+          detailRow('Potassium', num(soil.potassium, 1)) +
+          detailRow('Organic Matter', num(soil.organic_matter, 1) + '%') +
+          detailRow('Last Tested', fmtDate(soil.test_date)) +
+          '</div>';
+      } else {
+        html += notRecordedNote('No soil test has been recorded for this plot yet.');
+      }
+
+      html += sectionTitle('fa-droplet', 'Irrigation');
+      if (irr) {
+        html += '<div class="mf-details-grid">' +
+          detailRow('Method', esc(irr.method || '')) +
+          detailRow('Water Applied', (irr.water_quantity != null ? num(irr.water_quantity, 1) + ' ' + esc(irr.water_unit || '') : '')) +
+          detailRow('Duration', (irr.duration_minutes != null ? num(irr.duration_minutes, 0) + ' minutes' : '')) +
+          detailRow('Last Irrigated', fmtDate(irr.irrigation_date)) +
+          '</div>';
+      } else {
+        html += notRecordedNote('No irrigation record has been logged for this plot yet.');
+      }
+
+      html += sectionTitle('fa-tower-broadcast', 'Sensors (' + sensors.length + ')');
+      if (sensors.length) {
+        html += '<div class="mf-details-grid">' + sensors.map(function (s) {
+          return detailRow(esc(s.name || s.sensor_id || 'Sensor'),
+            esc(s.type_label || s.type || '') + (s.status ? ' - ' + esc(s.status) : '') +
+            (s.last_reading != null && s.last_reading.value != null ? ' - ' + num(s.last_reading.value, 1) + ' ' + esc(s.unit || '') : ''));
+        }).join('') + '</div>';
+      } else {
+        html += notRecordedNote('No sensors are attached to this plot.');
+      }
+
+      html += sectionTitle('fa-list-check', 'Tasks (' + tasks.length + ')');
+      if (tasks.length) {
+        html += '<div class="mf-details-grid">' + tasks.slice(0, 6).map(function (t) {
+          return detailRow(esc(t.title || 'Task'),
+            esc(t.status || 'pending') + (t.due_date ? ' - due ' + fmtDate(t.due_date) : ''));
+        }).join('') + '</div>';
+      } else {
+        html += notRecordedNote('No tasks are linked to this plot.');
+      }
+
+      html += sectionTitle('fa-clock-rotate-left', 'Recent Activity (' + activity.length + ')');
+      if (activity.length) {
+        html += '<div class="mf-details-grid">' + activity.slice(0, 5).map(function (a) {
+          return detailRow(esc(a.title || a.activity_type || 'Activity'),
+            fmtDate(a.entry_date || a.activity_date) + (a.notes ? ' - ' + esc(String(a.notes).slice(0, 60)) : ''));
+        }).join('') + '</div>';
+      } else {
+        html += notRecordedNote('No activity has been logged on this plot yet.');
+      }
+
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;">' +
+        '<button type="button" class="mf-btn-primary" style="font-size:12.5px;padding:9px 16px;" onclick="FarmApp.closeModal(\'modal-plot-detail\');FarmApp.openEditPlot(\'' + p.id + '\')"><i class="fas fa-pen"></i> Edit Plot</button>' +
+        '<button type="button" class="mf-btn-secondary" style="font-size:12.5px;padding:9px 16px;" onclick="FarmApp.openAddCrop()"><i class="fas fa-seedling"></i> Add Crop</button>' +
+        detailChip('map.html?plot_id=' + encodeURIComponent(p.id), 'fa-map', 'Show on Farm Map') +
+        detailChip('crop-health.html?plot_id=' + encodeURIComponent(p.id), 'fa-heart-pulse', 'Crop Health') +
+        detailChip('soil-irrigation.html?plot_id=' + encodeURIComponent(p.id), 'fa-droplet', 'Soil &amp; Water') +
+        detailChip('sensors.html?plot_id=' + encodeURIComponent(p.id), 'fa-tower-broadcast', 'Sensors') +
+        detailChip('tasks.html', 'fa-list-check', 'Tasks') +
+        '</div>';
+
+      box.innerHTML = html;
+      openModal('modal-plot-detail');
+    }
+
+    /* ---------------- CROP DETAIL ---------------- */
+    function openCropDetail(cycleId) {
+      var box = $id('crop-detail-body');
+      if (!box) return;
+      var farm = getSelectedFarm();
+      var cycles = getFarmCycles();
+      var c = cycles.find(function (x) { return String(x.id) === String(cycleId); });
+      if (!c) {
+        box.innerHTML = notRecordedNote('This crop is no longer available. Refresh the page to load the latest data.');
+        openModal('modal-crop-detail');
+        return;
+      }
+
+      var cropObj = state.cropsCatalog.find(function (x) { return x.id === c.crop_id || x.crop_id === c.crop_id; });
+      var cropName = c.crop_name || (cropObj ? cropObj.name : 'Crop');
+      var variety = c.variety || (cropObj ? cropObj.variety : '');
+      var plotObj = (farm.plots || []).find(function (p) { return p.id === c.plot_id; });
+      var mapPlot = getMapPlot(c.plot_id);
+      var soil = mapPlot ? mapPlot.soil_latest : null;
+      var tasks = state.tasks.filter(function (t) { return t.crop_cycle_id === c.id; });
+      var cStatus = cropCycleStatus(c);
+
+      var html = '';
+
+      html += sectionTitle('fa-seedling', 'Crop Information');
+      html += '<div class="mf-details-grid">' +
+        detailRow('Crop', esc(cropName) + (variety ? ' (' + esc(variety) + ')' : '')) +
+        detailRow('Cycle ID', esc(c.id)) +
+        detailRow('Current Stage', esc(c.current_stage || c.stage || '')) +
+        detailRow('Cycle Status', esc(cStatus.charAt(0).toUpperCase() + cStatus.slice(1))) +
+        detailRow('Sowing Date', c.sowing_date ? fmtDate(c.sowing_date) : '') +
+        detailRow('Expected Harvest', c.expected_harvest_date ? fmtDate(c.expected_harvest_date) : '') +
+        '</div>';
+
+      html += sectionTitle('fa-location-dot', 'Location');
+      html += '<div class="mf-details-grid">' +
+        detailRow('Farm', esc(farm.farm_name || '')) +
+        detailRow('Plot', plotObj ? esc(plotObj.plot_name) : '') +
+        detailRow('Plot Area', (plotObj && plotObj.area ? num(plotObj.area, 2) + ' ' + esc(farm.area_unit || 'Acres') : '')) +
+        detailRow('GPS Position', (plotObj && plotObj.latitude && plotObj.longitude ? num(plotObj.latitude, 5) + ', ' + num(plotObj.longitude, 5) : '')) +
+        '</div>';
+
+      html += sectionTitle('fa-flask', 'Soil Condition for this Plot');
+      if (soil) {
+        html += '<div class="mf-details-grid">' +
+          detailRow('pH Level', num(soil.ph_level, 1)) +
+          detailRow('Moisture', num(soil.moisture, 1) + '%') +
+          detailRow('Soil Type', esc(soil.soil_type || '')) +
+          detailRow('Last Tested', fmtDate(soil.test_date)) +
+          '</div>';
+      } else {
+        html += notRecordedNote('No soil test has been recorded for this plot yet.');
+      }
+
+      html += sectionTitle('fa-heart-pulse', 'Crop Health');
+      html += '<div id="fa-crop-health-slot"><div class="loading-shimmer" style="width:60%"></div></div>';
+
+      html += sectionTitle('fa-list-check', 'Tasks (' + tasks.length + ')');
+      if (tasks.length) {
+        html += '<div class="mf-details-grid">' + tasks.slice(0, 6).map(function (t) {
+          return detailRow(esc(t.title || 'Task'),
+            esc(t.status || 'pending') + (t.due_date ? ' - due ' + fmtDate(t.due_date) : ''));
+        }).join('') + '</div>';
+      } else {
+        html += notRecordedNote('No tasks are linked to this crop yet.');
+      }
+
+      var actHtml = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;">' +
+        detailChip('crop-health.html?crop_id=' + encodeURIComponent(c.crop_id || '') + '&cycle_id=' + encodeURIComponent(c.id), 'fa-heart-pulse', 'Open Crop Health') +
+        detailChip('tasks.html', 'fa-list-check', 'Tasks') +
+        detailChip('farm-calendar.html', 'fa-calendar-days', 'Calendar') +
+        (plotObj ? detailChip('map.html?plot_id=' + encodeURIComponent(plotObj.id), 'fa-map', 'Show Plot on Map') : '') +
+        '</div>';
+      html += actHtml;
+
+      box.innerHTML = html;
+      openModal('modal-crop-detail');
+
+      /* One request for the crop this farmer actually opened. */
+      var farmId = farm ? (farm.id || farm.farm_id) : null;
+      API.CropHealth.overview(farmId, c.plot_id || null, c.id).then(function (res) {
+        var h = (res && res.health) ? res.health : (res && res.data && res.data.health ? res.data.health : null);
+        var host = document.querySelector('#modal-crop-detail #fa-crop-health-slot');
+        if (!host) return;
+        if (!h || h.available === false || h.score == null) {
+          host.innerHTML = notRecordedNote('No crop health assessment has been recorded for this crop yet.');
           return;
         }
+        var factors = (res && res.factors) ? res.factors : [];
+        var factorRows = factors.slice(0, 6).map(function (f) {
+          return '<div class="mf-factor-row"><span>' + esc(f.label || f.key) + '</span><span class="mf-factor-val">' +
+            esc(f.value_label || (f.value != null ? f.value : '-')) + '</span></div>';
+        }).join('');
+        host.innerHTML = '<div class="mf-details-grid">' +
+          detailRow('Health Score', num(h.score, 0) + (h.max_score ? ' / ' + num(h.max_score, 0) : '')) +
+          detailRow('Status', esc(h.status || h.label || '')) +
+          '</div>' + (factorRows ? '<div style="margin-top:8px;">' + factorRows + '</div>' : '');
+      }).catch(function () {
+        var host2 = document.querySelector('#modal-crop-detail #fa-crop-health-slot');
+        if (host2) host2.innerHTML = notRecordedNote('Crop health data is not available right now.');
+      });
+    }
+
+    function renderUpdates() {
+      var box = $id('farm-updates-list');
+      var updates = [];
+
+      // Add journal entries
+      getFarmJournal().forEach(function (j) {
+        var icon = 'fa-clipboard-check';
+        var bg = '#e8f5e9';
+        var fg = '#2e7d32';
+        var act = String(j.activity || '').toLowerCase();
+        if (act.indexOf('irrigat') !== -1) { icon = 'fa-droplet'; bg = '#e0f2fe'; fg = '#0284c7'; }
+        else if (act.indexOf('fertil') !== -1) { icon = 'fa-seedling'; bg = '#fef9c3'; fg = '#ca8a04'; }
+        else if (act.indexOf('pest') !== -1) { icon = 'fa-shield-halved'; bg = '#fce7f3'; fg = '#db2777'; }
+        else if (act.indexOf('harvest') !== -1) { icon = 'fa-wheat-awn'; bg = '#ffedd5'; fg = '#ea580c'; }
+
+        updates.push({
+          icon: icon, bg: bg, fg: fg,
+          title: j.activity || 'Farm Activity',
+          desc: j.notes || 'Recorded on farm journal.',
+          time: j.created_at || j.entry_date,
+          source: 'Journal'
+        });
+      });
+
+      // Add completed tasks
+      getFarmTasks().filter(function (t) { return t.status === 'completed'; }).forEach(function (t) {
+        updates.push({
+          icon: 'fa-circle-check', bg: '#dcfce7', fg: '#15803d',
+          title: 'Task Completed: ' + (t.title || 'Farm activity'),
+          desc: t.description || 'Marked done by farmer.',
+          time: t.updated_at || t.created_at,
+          source: 'Tasks'
+        });
+      });
+
+      if (!updates.length) {
+        box.innerHTML =
+          '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12.5px;">' +
+            '<i class="fas fa-clock" style="font-size:24px;opacity:0.4;display:block;margin-bottom:6px;"></i>' +
+            'No updates recorded recently for this farm.<br>' +
+            '<button type="button" class="mf-btn-secondary" style="margin-top:8px;font-size:11px;" onclick="FarmApp.openLogActivity()"><i class="fas fa-plus"></i> + Log First Activity</button>' +
+          '</div>';
+        return;
+      }
+
+      // Sort by newest first
+      updates.sort(function (a, b) {
+        return new Date(b.time || 0) - new Date(a.time || 0);
+      });
+
+      box.innerHTML = updates.slice(0, 6).map(function (u) {
+        return '<div class="mf-feed-item">' +
+          '<div class="mf-feed-icon" style="background:' + u.bg + ';color:' + u.fg + '"><i class="fas ' + u.icon + '"></i></div>' +
+          '<div class="mf-feed-content">' +
+            '<div class="mf-feed-title">' + esc(u.title) + '</div>' +
+            '<div class="mf-feed-desc">' + esc(u.desc) + '</div>' +
+            '<div class="mf-feed-time"><i class="fas fa-clock"></i> ' + timeAgo(u.time) + ' · <span style="font-weight:600">' + esc(u.source) + '</span></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderUpcoming() {
+      var box = $id('upcoming-activities-list');
+      var items = [];
+
+      // Calendar events
+      state.calendarEvents.forEach(function (ev) {
+        items.push({
+          title: ev.title || ev.event_name || 'Scheduled Event',
+          time: ev.start_time || ev.event_date || ev.date,
+          type: ev.category || 'Calendar',
+          icon: 'fa-calendar-day',
+          color: '#2563eb'
+        });
+      });
+
+      // Pending Tasks
+      var todayStr = new Date().toISOString().slice(0, 10);
+      getFarmTasks().filter(function (t) {
+        return t.status !== 'completed' && t.due_date && t.due_date >= todayStr;
+      }).forEach(function (t) {
+        items.push({
+          title: t.title,
+          time: t.due_date,
+          type: t.category || 'Task Due',
+          icon: 'fa-list-check',
+          color: '#d97706'
+        });
+      });
+
+      if (!items.length) {
+        box.innerHTML = '<div style="text-align:center;padding:18px;color:var(--text-muted);font-size:12px;"><i class="fas fa-calendar-check" style="font-size:22px;opacity:0.4;display:block;margin-bottom:6px;"></i>No upcoming activities scheduled for this farm.</div>';
+        return;
+      }
+
+      items.sort(function (a, b) {
+        return new Date(a.time || 0) - new Date(b.time || 0);
+      });
+
+      box.innerHTML = items.slice(0, 5).map(function (it) {
+        return '<div class="mf-feed-item">' +
+          '<div class="mf-feed-icon" style="background:#f1f5f9;color:' + it.color + '"><i class="fas ' + it.icon + '"></i></div>' +
+          '<div class="mf-feed-content">' +
+            '<div class="mf-feed-title">' + esc(it.title) + '</div>' +
+            '<div class="mf-feed-time"><i class="fas fa-calendar"></i> ' + fmtDate(it.time) + ' · <span style="font-weight:600;color:' + it.color + '">' + esc(it.type) + '</span></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderAlerts() {
+      var box = $id('farm-alerts-list');
+      var alerts = calculateFarmAlerts();
+
+      if (!alerts.length) {
+        box.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;"><i class="fas fa-circle-check" style="color:#2e7d32;font-size:20px;display:block;margin-bottom:4px;"></i>No active alerts. Everything is operating smoothly.</div>';
+        return;
+      }
+
+      box.innerHTML = alerts.slice(0, 4).map(function (a) {
+        return '<div class="mf-alert-strip ' + a.type + '">' +
+          '<i class="fas ' + a.icon + '" style="font-size:14px;margin-top:2px;"></i>' +
+          '<div>' +
+            '<strong>' + esc(a.title) + '</strong>' +
+            '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">' + esc(a.detail) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderSoilWater() {
+      var box = $id('soil-water-summary');
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var soil = farm.soil_type || 'Loamy soil';
+      var water = farm.water_source || 'Groundwater / Well';
+      var method = farm.irrigation_method || 'Drip Irrigation';
+
+      box.innerHTML =
+        '<div class="mf-details-grid">' +
+          '<div class="mf-detail-row"><span class="lbl"><i class="fas fa-mound"></i> Soil Type</span><span class="val">' + esc(soil) + '</span></div>' +
+          '<div class="mf-detail-row"><span class="lbl"><i class="fas fa-faucet-drip"></i> Irrigation</span><span class="val">' + esc(method) + '</span></div>' +
+          '<div class="mf-detail-row"><span class="lbl"><i class="fas fa-water"></i> Water Source</span><span class="val">' + esc(water) + '</span></div>' +
+          '<div class="mf-detail-row"><span class="lbl"><i class="fas fa-gauge"></i> Moisture Status</span><span class="val" style="color:#0284c7">Optimal</span></div>' +
+        '</div>' +
+        '<div style="margin-top:12px;padding:9px 12px;background:#f0fdf4;border-radius:10px;font-size:11.5px;color:#166534;line-height:1.4;">' +
+          '<i class="fas fa-info-circle"></i> Soil moisture is well balanced for current seasonal crop cycles. Maintain regular schedule.' +
+        '</div>';
+    }
+
+    function renderWeather() {
+      var box = $id('farm-weather-summary');
+      var farm = getSelectedFarm();
+      var w = state.weather;
+
+      if (!w || w.temperature == null) {
+        box.innerHTML =
+          '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;">' +
+            '<i class="fas fa-cloud-sun" style="font-size:24px;opacity:0.4;display:block;margin-bottom:6px;"></i>' +
+            'Weather update connecting for ' + esc(farm ? (farm.district || farm.village || farm.farm_name) : 'Farm') + '...<br>' +
+            '<a href="weather.html" style="color:var(--mf-green);font-weight:700;">Check live weather &rarr;</a>' +
+          '</div>';
+        return;
+      }
+
+      var temp = Math.round(w.temperature);
+      var desc = w.description || w.weather_condition || 'Clear Sky';
+      var hum = w.humidity != null ? Math.round(w.humidity) + '%' : '--';
+      var rain = w.precipitation_probability != null ? Math.round(w.precipitation_probability) + '%' : (w.rain ? w.rain + ' mm' : '0%');
+      var wind = w.wind_speed != null ? Math.round(w.wind_speed) + ' km/h' : '--';
+
+      box.innerHTML =
+        '<div class="mf-weather-widget">' +
+          '<div class="mf-weather-main">' +
+            '<i class="fas fa-sun mf-weather-icon"></i>' +
+            '<div>' +
+              '<div class="mf-weather-temp">' + temp + '&deg;C</div>' +
+              '<div class="mf-weather-desc">' + esc(desc) + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mf-weather-stats">' +
+            '<div><i class="fas fa-droplet" style="color:#0284c7"></i><span>' + hum + '</span>Humidity</div>' +
+            '<div><i class="fas fa-umbrella" style="color:#6366f1"></i><span>' + rain + '</span>Rain %</div>' +
+            '<div><i class="fas fa-wind" style="color:#64748b"></i><span>' + wind + '</span>Wind</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    function renderTimeline() {
+      var box = $id('farm-timeline-list');
+      var journal = getFarmJournal();
+
+      if (!journal.length) {
+        box.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;">No activity logged yet. Tap Record to log your first field activity.</div>';
+        return;
+      }
+
+      var sorted = journal.slice().sort(function (a, b) {
+        return new Date(b.created_at || b.entry_date || 0) - new Date(a.created_at || a.entry_date || 0);
+      });
+
+      box.innerHTML = sorted.slice(0, 5).map(function (j) {
+        return '<div class="mf-feed-item">' +
+          '<div class="mf-feed-icon" style="background:#ecfdf5;color:#059669;"><i class="fas fa-check"></i></div>' +
+          '<div class="mf-feed-content">' +
+            '<div class="mf-feed-title">' + esc(j.activity || 'Field Operation') + '</div>' +
+            '<div class="mf-feed-desc">' + esc(j.notes || 'Activity completed on farm.') + '</div>' +
+            '<div class="mf-feed-time"><i class="fas fa-clock"></i> ' + timeAgo(j.created_at || j.entry_date) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderAIOverview() {
+      var box = $id('farm-ai-summary');
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var ai = state.aiAnalysis;
+      var plots = getFarmPlots();
+      var cycles = getFarmCycles();
+
+      var condition = 'Your farm is performing steadily with ' + plots.length + ' registered plot' + (plots.length === 1 ? '' : 's') + ' and ' + cycles.length + ' active crop cycle' + (cycles.length === 1 ? '' : 's') + '.';
+      var well = plots.length ? 'Land resources and plots are properly defined.' : 'Ready for initial plot registration.';
+      var attention = 'Keep soil moisture tracked as temperature fluctuates.';
+      var focus = cycles.length ? 'Monitor crop growth stages and complete scheduled tasks.' : 'Add your primary crop cycles for this season.';
+
+      if (ai && ai.suggestions && ai.suggestions.length) {
+        attention = ai.suggestions[0];
+        if (ai.suggestions.length > 1) focus = ai.suggestions[1];
+      }
+
+      box.innerHTML =
+        '<div class="mf-ai-grid">' +
+          '<div class="mf-ai-block">' +
+            '<div class="mf-ai-block-lbl"><i class="fas fa-heart-pulse"></i> Overall Condition</div>' +
+            '<div>' + esc(condition) + '</div>' +
+          '</div>' +
+          '<div class="mf-ai-block">' +
+            '<div class="mf-ai-block-lbl"><i class="fas fa-circle-check"></i> What\'s Going Well</div>' +
+            '<div>' + esc(well) + '</div>' +
+          '</div>' +
+          '<div class="mf-ai-block">' +
+            '<div class="mf-ai-block-lbl"><i class="fas fa-triangle-exclamation"></i> Attention Needed</div>' +
+            '<div>' + esc(attention) + '</div>' +
+          '</div>' +
+          '<div class="mf-ai-block">' +
+            '<div class="mf-ai-block-lbl"><i class="fas fa-bullseye"></i> Suggested Focus</div>' +
+            '<div>' + esc(focus) + '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    function renderFarmDetails() {
+      var box = $id('farm-meta-details');
+      var f = getSelectedFarm();
+      if (!f) return;
+
+      var plots = getFarmPlots();
+      var coords = (f.latitude && f.longitude) ? (num(f.latitude, 4) + ', ' + num(f.longitude, 4)) : 'Not captured';
+      var boundary = FarmGeo.toPoints(f.boundary_coordinates).length >= 3 ? 'Boundary mapped' : 'Farm boundary not defined';
+
+      var rows = [
+        ['Farm Name', f.farm_name],
+        ['Farm ID', f.farm_id || f.id],
+        ['Farm Type', f.farm_type || 'Crop Farm'],
+        ['Total Land Area', (num(f.total_area, 2)) + ' ' + (f.area_unit || 'Acres')],
+        ['Plots Count', plots.length + ' Plots'],
+        ['State & District', [f.district, f.state].filter(Boolean).join(', ') || 'Not set'],
+        ['Village / Mandal', [f.village, f.mandal].filter(Boolean).join(', ') || 'Not set'],
+        ['Soil Type', f.soil_type || 'Not specified'],
+        ['Water & Irrigation', [f.water_source, f.irrigation_method].filter(Boolean).join(' · ') || 'Not specified'],
+        ['GPS Coordinates', coords],
+        ['Boundary Status', boundary],
+        ['Registered Date', fmtDate(f.created_at)]
+      ];
+
+      box.innerHTML = '<div class="mf-details-grid">' + rows.map(function (r) {
+        return '<div class="mf-detail-row"><span class="lbl">' + esc(r[0]) + '</span><span class="val">' + esc(r[1]) + '</span></div>';
+      }).join('') + '</div>';
+    }
+
+    function renderAll() {
+      var hasFarms = state.farms && state.farms.length > 0;
+      var emptyEl = $id('mf-empty-state');
+      var mainEl = $id('mf-main-dashboard');
+
+      if (!hasFarms) {
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (mainEl) mainEl.style.display = 'none';
+        renderSelector();
+        return;
+      }
+
+      if (emptyEl) emptyEl.style.display = 'none';
+      if (mainEl) mainEl.style.display = 'block';
+
+      renderSelector();
+      renderOverviewKPIs();
+      renderNextAction();
+      renderMapPreview();
+      renderFarmHealth();
+      renderCrops();
+      renderPlots();
+      syncFarmTab();
+      stampMapLinks();
+      renderUpdates();
+      renderUpcoming();
+      renderAlerts();
+      renderSoilWater();
+      renderWeather();
+      renderTimeline();
+      renderAIOverview();
+      renderFarmDetails();
+    }
+
+    /* ==================== USER ACTIONS & MODALS ==================== */
+
+    function selectFarm(id) {
+      if (!id) return;
+      state.selectedFarmId = id;
+      localStorage.setItem('fa-selected-farm-id', id);
+      renderAll();
+      loadFarmSpecificData().then(function () {
+        renderMapPreview();
+        renderWeather();
+        renderSoilWater();
+        renderFarmHealth();
+        renderAIOverview();
+      });
+    }
+
+    function openModal(id) {
+      var m = $id(id);
+      if (m) m.classList.add('active');
+    }
+
+    function closeModal(id) {
+      var m = $id(id);
+      if (m) m.classList.remove('active');
+    }
+
+    function setBusy(btnId, isBusy) {
+      var b = $id(btnId);
+      if (!b) return;
+      if (isBusy) {
+        b.setAttribute('data-original-text', b.innerHTML);
+        b.disabled = true;
+        b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+      } else {
+        b.disabled = false;
+        b.innerHTML = b.getAttribute('data-original-text') || b.innerHTML;
       }
     }
 
     function openAddFarm() {
-      _farmLoc = null;
-      $id('farm-lat').value = '';
-      $id('farm-lng').value = '';
-      var p = $id('farm-loc-pick');
-      if (p) p.classList.remove('show');
-      openModal('fa-modal-add-farm');
+      $id('form-add-farm').reset();
+      openModal('modal-add-farm');
+      setTimeout(function () {
+        var container = $id('add-farm-geo-container');
+        if (container) {
+          geoPickers.addFarm = FarmGeo.attach(container, {
+            latitude: null,
+            longitude: null,
+            boundary: null
+          });
+        }
+      }, 150);
     }
 
     function createFarm(e) {
       e.preventDefault();
-      var name = $id('farm-name').value.trim();
+      var name = $id('add-farm-name').value.trim();
       if (!name) return;
+
+      var geo = geoPickers.addFarm ? geoPickers.addFarm.getValue() : {};
+
       var payload = {
         farm_name: name,
-        farm_type: $id('farm-type').value,
-        total_area: parseFloat($id('farm-area').value) || null,
-        area_unit: 'Acres',
-        soil_type: $id('farm-soil').value || null,
-        state: $id('farm-state').value || null,
-        district: $id('farm-district').disabled ? null : ($id('farm-district').value || null),
-        latitude: _farmLoc ? _farmLoc.latitude : null,
-        longitude: _farmLoc ? _farmLoc.longitude : null
+        farm_type: $id('add-farm-type').value,
+        total_area: parseFloat($id('add-farm-area').value) || null,
+        area_unit: $id('add-farm-area-unit').value || 'Acres',
+        soil_type: $id('add-farm-soil').value || null,
+        water_source: $id('add-farm-water').value || null,
+        irrigation_method: $id('add-farm-irrigation').value || null,
+        state: $id('add-farm-state').value || null,
+        district: $id('add-farm-district').disabled ? null : ($id('add-farm-district').value || null),
+        village: $id('add-farm-village').value.trim() || null,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        boundary_coordinates: geo.boundary_coordinates
       };
-      setBusy('btn-create-farm', true);
-      API.Farm.create(payload).then(function () {
-        closeModal('fa-modal-add-farm');
-        $id('form-add-farm').reset();
+
+      setBusy('btn-submit-add-farm', true);
+      API.Farm.create(payload).then(function (res) {
+        closeModal('modal-add-farm');
         toast('Farm created successfully.', 'success');
-        return refreshFarms();
+        var newFarm = (res && res.data) ? res.data : res;
+        if (newFarm && (newFarm.id || newFarm.farm_id)) {
+          state.selectedFarmId = newFarm.id || newFarm.farm_id;
+          localStorage.setItem('fa-selected-farm-id', state.selectedFarmId);
+        }
+        return loadAll();
       }).catch(function (err) {
         toast((err && err.message) || 'Could not create farm.', 'danger');
       }).then(function () {
-        setBusy('btn-create-farm', false);
+        setBusy('btn-submit-add-farm', false);
       });
     }
 
-    function createField(e) {
+    function openEditFarm() {
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      $id('edit-farm-name').value = farm.farm_name || '';
+      $id('edit-farm-type').value = farm.farm_type || 'Crop Farm';
+      $id('edit-farm-area').value = farm.total_area || '';
+      $id('edit-farm-area-unit').value = farm.area_unit || 'Acres';
+      $id('edit-farm-soil').value = farm.soil_type || '';
+      $id('edit-farm-water').value = farm.water_source || '';
+      $id('edit-farm-irrigation').value = farm.irrigation_method || '';
+      $id('edit-farm-village').value = farm.village || '';
+
+      if (farm.state) {
+        $id('edit-farm-state').value = farm.state;
+        onStateChange(farm.state, 'edit-farm-district');
+        setTimeout(function () {
+          if (farm.district) $id('edit-farm-district').value = farm.district;
+        }, 500);
+      }
+
+      openModal('modal-edit-farm');
+      setTimeout(function () {
+        var container = $id('edit-farm-geo-container');
+        if (container) {
+          geoPickers.editFarm = FarmGeo.attach(container, {
+            latitude: farm.latitude,
+            longitude: farm.longitude,
+            boundary: farm.boundary_coordinates
+          });
+        }
+      }, 150);
+    }
+
+    function saveFarm(e) {
       e.preventDefault();
-      var farmId = $id('field-farm').value;
-      var name = $id('field-name').value.trim();
-      if (!farmId || !name) return;
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var name = $id('edit-farm-name').value.trim();
+      if (!name) return;
+
+      var geo = geoPickers.editFarm ? geoPickers.editFarm.getValue() : {};
+
+      var payload = {
+        farm_name: name,
+        farm_type: $id('edit-farm-type').value,
+        total_area: parseFloat($id('edit-farm-area').value) || null,
+        area_unit: $id('edit-farm-area-unit').value || 'Acres',
+        soil_type: $id('edit-farm-soil').value || null,
+        water_source: $id('edit-farm-water').value || null,
+        irrigation_method: $id('edit-farm-irrigation').value || null,
+        state: $id('edit-farm-state').value || null,
+        district: $id('edit-farm-district').value || null,
+        village: $id('edit-farm-village').value.trim() || null,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        boundary_coordinates: geo.boundary_coordinates
+      };
+
+      setBusy('btn-submit-edit-farm', true);
+      API.Farm.update(farm.id || farm.farm_id, payload).then(function () {
+        closeModal('modal-edit-farm');
+        toast('Farm updated successfully.', 'success');
+        return loadAll();
+      }).catch(function (err) {
+        toast((err && err.message) || 'Could not update farm.', 'danger');
+      }).then(function () {
+        setBusy('btn-submit-edit-farm', false);
+      });
+    }
+
+    function openAddField() {
+      var farm = getSelectedFarm();
+      if (!farm) {
+        toast('Please add or select a farm first.', 'warning');
+        return;
+      }
+      $id('form-add-plot').reset();
+      $id('plot-farm-name-display').value = farm.farm_name;
+
+      openModal('modal-add-plot');
+      setTimeout(function () {
+        var container = $id('add-plot-geo-container');
+        if (container) {
+          geoPickers.addPlot = FarmGeo.attach(container, {
+            latitude: farm.latitude,
+            longitude: farm.longitude,
+            boundary: null
+          });
+        }
+      }, 150);
+    }
+
+    function createPlot(e) {
+      e.preventDefault();
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var name = $id('plot-name').value.trim();
+      var area = parseFloat($id('plot-area').value);
+      if (!name || isNaN(area)) return;
+
+      var geo = geoPickers.addPlot ? geoPickers.addPlot.getValue() : {};
+
       var payload = {
         plot_name: name,
-        area: parseFloat($id('field-area').value) || null,
-        soil_type: $id('field-soil').value || null
+        area: area,
+        soil_type: $id('plot-soil').value || null,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        boundary_coordinates: geo.boundary_coordinates
       };
-      setBusy('btn-create-field', true);
-      API.Farm.createPlot(farmId, payload).then(function () {
-        closeModal('fa-modal-add-field');
-        $id('form-add-field').reset();
-        toast('Field added successfully.', 'success');
-        return refreshFarms();
+
+      setBusy('btn-submit-add-plot', true);
+      API.Farm.createPlot(farm.id || farm.farm_id, payload).then(function () {
+        closeModal('modal-add-plot');
+        toast('Plot added successfully.', 'success');
+        return loadAll();
       }).catch(function (err) {
-        toast((err && err.message) || 'Could not add field.', 'danger');
+        toast((err && err.message) || 'Could not add plot.', 'danger');
       }).then(function () {
-        setBusy('btn-create-field', false);
+        setBusy('btn-submit-add-plot', false);
       });
+    }
+
+    function openEditPlot(plotId) {
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var plot = (farm.plots || []).find(function (p) { return p.id === plotId; });
+      if (!plot) return;
+
+      $id('edit-plot-id').value = plot.id;
+      $id('edit-plot-name').value = plot.plot_name || '';
+      $id('edit-plot-area').value = plot.area || '';
+      $id('edit-plot-soil').value = plot.soil_type || '';
+
+      openModal('modal-edit-plot');
+      setTimeout(function () {
+        var container = $id('edit-plot-geo-container');
+        if (container) {
+          geoPickers.editPlot = FarmGeo.attach(container, {
+            latitude: plot.latitude || farm.latitude,
+            longitude: plot.longitude || farm.longitude,
+            boundary: plot.boundary_coordinates
+          });
+        }
+      }, 150);
+    }
+
+    function savePlot(e) {
+      e.preventDefault();
+      var plotId = $id('edit-plot-id').value;
+      if (!plotId) return;
+
+      var name = $id('edit-plot-name').value.trim();
+      var area = parseFloat($id('edit-plot-area').value);
+      if (!name) return;
+
+      var geo = geoPickers.editPlot ? geoPickers.editPlot.getValue() : {};
+
+      var payload = {
+        plot_name: name,
+        area: isNaN(area) ? null : area,
+        soil_type: $id('edit-plot-soil').value || null,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        boundary_coordinates: geo.boundary_coordinates
+      };
+
+      setBusy('btn-submit-edit-plot', true);
+      API.Farm.updatePlot(plotId, payload).then(function () {
+        closeModal('modal-edit-plot');
+        toast('Plot updated successfully.', 'success');
+        return loadAll();
+      }).catch(function (err) {
+        toast((err && err.message) || 'Could not update plot.', 'danger');
+      }).then(function () {
+        setBusy('btn-submit-edit-plot', false);
+      });
+    }
+
+    function openAddCrop() {
+      var farm = getSelectedFarm();
+      if (!farm) {
+        toast('Please add a farm first.', 'warning');
+        return;
+      }
+      $id('form-add-crop').reset();
+      $id('crop-farm-display').value = farm.farm_name;
+
+      var plotSel = $id('crop-plot');
+      plotSel.innerHTML = '<option value="">Select plot</option>';
+      (farm.plots || []).forEach(function (p) {
+        var opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.plot_name + (p.area ? ' (' + num(p.area, 2) + ' Ac)' : '');
+        plotSel.appendChild(opt);
+      });
+
+      var cropSel = $id('crop-crop');
+      cropSel.innerHTML = '<option value="">Select crop variety</option>';
+      state.cropsCatalog.forEach(function (c) {
+        var opt = document.createElement('option');
+        opt.value = c.id || c.crop_id;
+        opt.textContent = c.name + (c.variety ? ' (' + c.variety + ')' : '');
+        cropSel.appendChild(opt);
+      });
+
+      openModal('modal-add-crop');
     }
 
     function createCropCycle(e) {
       e.preventDefault();
-      var farmId = $id('crop-farm').value;
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
       var cropId = $id('crop-crop').value;
-      if (!farmId || !cropId) return;
+      var plotId = $id('crop-plot').value;
+      if (!cropId || !plotId) {
+        toast('Please select both a plot and a crop variety.', 'warning');
+        return;
+      }
+
       var payload = {
-        farm_id: farmId,
+        farm_id: farm.id || farm.farm_id,
+        plot_id: plotId,
         crop_id: cropId,
-        plot_id: $id('crop-plot').value || null,
         sowing_date: $id('crop-sowing').value || null,
         expected_harvest_date: $id('crop-harvest').value || null,
         notes: $id('crop-notes').value.trim() || null
       };
-      setBusy('btn-create-crop', true);
+
+      setBusy('btn-submit-add-crop', true);
       API.Crop.createCycle(payload).then(function () {
-        closeModal('fa-modal-add-crop');
-        $id('form-add-crop').reset();
-        toast('Crop cycle started.', 'success');
-        return refreshFarms();
+        closeModal('modal-add-crop');
+        toast('Crop cycle registered successfully.', 'success');
+        return loadAll();
       }).catch(function (err) {
         toast((err && err.message) || 'Could not start crop cycle.', 'danger');
       }).then(function () {
-        setBusy('btn-create-crop', false);
+        setBusy('btn-submit-add-crop', false);
       });
     }
 
-    function selectFarm(id) {
-      state.selectedFarmId = id || '';
-      renderFarmDetails();
+    function openLogActivity() {
+      var farm = getSelectedFarm();
+      if (!farm) {
+        toast('Please select a farm first.', 'warning');
+        return;
+      }
+      $id('form-log-activity').reset();
+
+      var plotSel = $id('log-plot');
+      plotSel.innerHTML = '<option value="">Entire Farm</option>';
+      (farm.plots || []).forEach(function (p) {
+        var opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.plot_name;
+        plotSel.appendChild(opt);
+      });
+
+      openModal('modal-log-activity');
     }
 
+    function createActivity(e) {
+      e.preventDefault();
+      var farm = getSelectedFarm();
+      if (!farm) return;
+
+      var activity = $id('log-activity-type').value;
+      var notes = $id('log-notes').value.trim();
+      var plotId = $id('log-plot').value || null;
+
+      if (!activity || !notes) return;
+
+      var payload = {
+        farm_id: farm.id,
+        plot_id: plotId,
+        activity: activity,
+        notes: notes
+      };
+
+      setBusy('btn-submit-log-act', true);
+      API.Crop.createJournal(payload).then(function () {
+        closeModal('modal-log-activity');
+        toast('Activity logged to farm journal.', 'success');
+        return loadAll();
+      }).catch(function (err) {
+        toast((err && err.message) || 'Could not log activity.', 'danger');
+      }).then(function () {
+        setBusy('btn-submit-log-act', false);
+      });
+    }
+
+    function completeTask(taskId) {
+      if (!taskId) return;
+      API.Crop.updateTask(taskId, { status: 'completed' }).then(function () {
+        toast('Task marked completed.', 'success');
+        return loadAll();
+      }).catch(function (err) {
+        toast((err && err.message) || 'Could not update task.', 'danger');
+      });
+    }
+
+    /* Initialize Application */
     function init() {
       if (!localStorage.getItem('fa-auth-token')) {
         window.location.href = 'login.html';
         return;
       }
+
       document.addEventListener('click', function (ev) {
-        if (ev.target && ev.target.classList && ev.target.classList.contains('fa-modal')) {
+        if (ev.target && ev.target.classList && ev.target.classList.contains('mf-modal')) {
           ev.target.classList.remove('active');
         }
       });
-      loadAll().catch(function () {
-        toast('Could not load farm data.', 'danger');
-      });
+
+      loadAll();
     }
 
+    /* Expose window.FarmApp */
     window.FarmApp = {
+      selectFarm: selectFarm,
+      refreshAll: refreshAll,
       openModal: openModal,
       closeModal: closeModal,
       openAddFarm: openAddFarm,
-      locateFarm: locateFarm,
-      clearFarmLoc: clearFarmLoc,
-      farmManualCoordsChanged: farmManualCoordsChanged,
-      openAddField: openAddField,
-      openAddCrop: openAddCrop,
-      onCropFarmChange: onCropFarmChange,
-      onStateChange: onStateChange,
       createFarm: createFarm,
-      createField: createField,
+      openEditFarm: openEditFarm,
+      saveFarm: saveFarm,
+      openAddField: openAddField,
+      createPlot: createPlot,
+      openEditPlot: openEditPlot,
+      savePlot: savePlot,
+      openPlotDetail: openPlotDetail,
+      openCropDetail: openCropDetail,
+      showFarmTab: showFarmTab,
+      openAddCrop: openAddCrop,
       createCropCycle: createCropCycle,
-      selectFarm: selectFarm
+      openLogActivity: openLogActivity,
+      createActivity: createActivity,
+      completeTask: completeTask,
+      onStateChange: onStateChange
     };
 
     init();

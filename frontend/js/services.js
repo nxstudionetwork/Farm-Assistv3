@@ -1337,6 +1337,9 @@ Backend: FastAPI served from the same origin (port 8000).
     },
     reverseGeocode: function (lat, lon) {
       return http('GET', '/maps/reverse-geocode?latitude=' + lat + '&longitude=' + lon).then(unwrap);
+    },
+    getFarmMap: function () {
+      return http('GET', '/maps/farm-map').then(unwrap);
     }
   };
 
@@ -2247,7 +2250,7 @@ Backend: FastAPI served from the same origin (port 8000).
         parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
       }
     }
-    return parts.join('&');
+    return parts.length ? '?' + parts.join('&') : '';
   }
 
   /* =========================================================================

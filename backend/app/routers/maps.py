@@ -122,7 +122,49 @@ def _stamp(dt):
     return dt.isoformat()
 
 
+def _boundary_points(boundary) -> list:
+    """Return a boundary as a list of ``[lat, lng]`` pairs, or an empty list.
+
+    Understands the normalised ``{"points": [...]}`` shape written by
+    ``app.routers.farms`` plus legacy raw list / GeoJSON-ish payloads, so old
+    records keep rendering without any data being invented.
+    """
+    if not boundary:
+        return []
+    points = None
+    if isinstance(boundary, dict):
+        if isinstance(boundary.get("points"), list):
+            points = boundary["points"]
+        elif isinstance(boundary.get("coordinates"), list):
+            coordinates = boundary["coordinates"]
+            if (
+                coordinates
+                and isinstance(coordinates[0], list)
+                and coordinates[0]
+                and isinstance(coordinates[0][0], list)
+            ):
+                points = coordinates[0]
+            else:
+                points = coordinates
+    elif isinstance(boundary, list):
+        points = boundary
+
+    cleaned = []
+    for point in points or []:
+        if not isinstance(point, (list, tuple)) or len(point) < 2:
+            continue
+        try:
+            lat = float(point[0])
+            lng = float(point[1])
+        except (TypeError, ValueError):
+            continue
+        if -90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0:
+            cleaned.append([lat, lng])
+    return cleaned
+
+
 def _farm_payload(f: Farm) -> dict:
+    boundary = _boundary_points(f.boundary_coordinates)
     return {
         "id": f.id,
         "farm_id": f.farm_id,
@@ -136,6 +178,8 @@ def _farm_payload(f: Farm) -> dict:
         "latitude": f.latitude,
         "longitude": f.longitude,
         "has_location": f.latitude is not None and f.longitude is not None,
+        "boundary_coordinates": {"points": boundary} if boundary else None,
+        "has_boundary": len(boundary) >= 3,
         "total_area": f.total_area,
         "area_unit": f.area_unit or "Acres",
         "soil_type": f.soil_type,
@@ -358,6 +402,7 @@ def get_farm_map_data(
     for p in plots:
         cycle = cycle_by_plot.get(p.id)
         crop = crop_id_by_cycle.get(cycle.id) if cycle else None
+        plot_boundary = _boundary_points(p.boundary_coordinates)
         plot_out.append(
             {
                 "id": p.id,
@@ -369,13 +414,8 @@ def get_farm_map_data(
                 "latitude": p.latitude,
                 "longitude": p.longitude,
                 "has_location": p.latitude is not None and p.longitude is not None,
-                "boundary_coordinates": p.boundary_coordinates,
-                "has_boundary": bool(
-                    p.boundary_coordinates
-                    and (isinstance(p.boundary_coordinates, dict) or (
-                        isinstance(p.boundary_coordinates, list) and len(p.boundary_coordinates) >= 3
-                    ))
-                ),
+                "boundary_coordinates": {"points": plot_boundary} if plot_boundary else None,
+                "has_boundary": len(plot_boundary) >= 3,
                 "soil_type": p.soil_type,
                 "is_active": bool(p.is_active),
                 "created_at": _stamp(p.created_at),

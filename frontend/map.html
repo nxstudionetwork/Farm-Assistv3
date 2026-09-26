@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en" data-theme="light" data-page="map">
 <head>
   <meta charset="utf-8">
@@ -62,9 +62,9 @@
     .message-card p{margin:0 0 4px;color:#60736a;font-size:13px;line-height:1.55}
     .message-card a,.message-card button.msg-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin-top:14px;padding:10px 14px;background:var(--premium-green,#176b45);color:#fff;border:0;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none}
     .message-card .msg-btn.secondary{background:#fff;color:var(--premium-green,#176b45);border:1px solid var(--border-light,var(--line,#dbe6df));margin-left:8px}
-    .map-banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:40;max-width:92%;background:rgba(255,248,220,.96);border:1px solid #ecd98a;color:#6b5700;border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(16,61,43,.08)}
-    .map-banner a{color:#6b5700;font-weight:800;text-decoration:underline}
-    .map-banner button{border:0;background:transparent;color:#6b5700;cursor:pointer;font-size:14px;margin-left:auto}
+    .map-banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:40;max-width:92%;background:rgba(255,248,220,.96);border:1px solid #ecd98a;color:#6b5700;border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(16,61,43,.08);pointer-events:none}
+    .map-banner a{color:#6b5700;font-weight:800;text-decoration:underline;pointer-events:auto}
+    .map-banner button{border:0;background:transparent;color:#6b5700;cursor:pointer;font-size:14px;margin-left:auto;pointer-events:auto}
     .map-legend{position:absolute;left:12px;bottom:12px;z-index:500;background:rgba(255,255,255,.96);border:1px solid var(--border-light,var(--line,#dbe6df));border-radius:12px;padding:8px 11px;box-shadow:0 4px 16px rgba(16,61,43,.10);font-size:11.5px;color:#3c4f47;display:flex;flex-direction:column;gap:4px;max-width:190px}
     .map-legend .lg-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#7a8a82;margin-bottom:1px}
     .map-legend .lg-item{display:flex;align-items:center;gap:7px}
@@ -166,6 +166,13 @@
     .task-msg.ok{color:#1b5e3f}
     .task-msg.err{color:#b32727}
     .leaflet-container{font-family:'Inter',sans-serif}
+    .fa-farm-name{background:rgba(16,61,43,.9);border:0;border-radius:7px;box-shadow:0 2px 8px rgba(0,0,0,.22);color:#fff;font-size:11.5px;font-weight:700;padding:2px 8px;white-space:nowrap}
+    .fa-farm-name:before{display:none}
+    .fa-farm-label{background:transparent;border:0;box-shadow:none;color:var(--primary-dark-green,#103d2b);font-size:12.5px;font-weight:800;text-shadow:0 1px 3px #fff,0 0 6px #fff;white-space:nowrap}
+    .fa-farm-label:before{display:none}
+    .fa-field-tip{font-size:11.5px;font-weight:700}
+    .mlc-weather{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#4f6359}
+    .mlc-weather i{color:var(--premium-green,#176b45)}
     @media (max-width:560px){.map-header{padding:10px 12px}.map-title h1{font-size:16px}.map-title p{font-size:11px}.farm-select{max-width:160px}}
   </style>
 </head>
@@ -318,7 +325,8 @@
     function token() { try { return localStorage.getItem('fa-auth-token') || ''; } catch (e) { return ''; } }
 
     function apiBase() {
-      return (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL) || 'http://localhost:8000/api/v1';
+      if (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL) return window.APP_CONFIG.API_BASE_URL;
+      return 'http://localhost:8000/api/v1';
     }
 
     function apiGet(path) {
@@ -387,28 +395,78 @@
     }
 
     function findFarm(id) {
-      if (!id) return null;
-      for (var i = 0; i < data.farms.length; i++) if (String(data.farms[i].id) === String(id)) return data.farms[i];
+      if (id == null || id === '') return null;
+      for (var i = 0; i < data.farms.length; i++) {
+        if (String(data.farms[i].id) === String(id) || String(data.farms[i].farm_id) === String(id)) return data.farms[i];
+      }
       return null;
     }
 
-    function focusBounds() {
-      var f = activeFarmId ? findFarm(activeFarmId) : null;
-      if (!f) return null;
-      var lat = Number(f.latitude);
-      var lng = Number(f.longitude);
-      if (!validPoint(lat, lng)) return null;
-      var km = 3;
-      var dLat = km / 111;
-      var dLng = km / (111 * Math.max(0.3, Math.cos(lat * Math.PI / 180)));
-      return L.latLngBounds(L.latLng(lat - dLat, lng - dLng), L.latLng(lat + dLat, lng + dLng));
+    /* Frames the map on the geometry that actually exists: real farm and field
+       boundaries when they are stored, otherwise real saved coordinates.
+       There is no synthetic fallback box, so the view never implies a farm
+       size the farmer never recorded. */
+    function geometryBounds() {
+      var b = L.latLngBounds([]);
+      var any = false;
+      visibleFarms().forEach(function (f) {
+        var fb = boundaryPoints(f.boundary_coordinates);
+        if (fb.length >= 3) {
+          fb.forEach(function (c) { b.extend([c.lat, c.lng]); });
+          any = true;
+        }
+        if (validPoint(f.latitude, f.longitude)) {
+          b.extend([Number(f.latitude), Number(f.longitude)]);
+          any = true;
+        }
+      });
+      visiblePlots().forEach(function (p) {
+        var pb = boundaryPoints(p.boundary_coordinates);
+        if (pb.length >= 3) {
+          pb.forEach(function (c) { b.extend([c.lat, c.lng]); });
+          any = true;
+        } else if (p.has_location && validPoint(p.latitude, p.longitude)) {
+          b.extend([Number(p.latitude), Number(p.longitude)]);
+          any = true;
+        }
+      });
+      return any ? b : null;
+    }
+
+    function activeFarm() {
+      return findFarm(activeFarmId) || (data.farms.length === 1 ? data.farms[0] : null);
+    }
+
+    /* Loaded once per farm and cached; failure is cached too so the summary
+       stays quiet instead of retrying on every repaint. */
+    function primeWeather() {
+      var f = activeFarm();
+      if (!f || !f.has_location || !validPoint(f.latitude, f.longitude)) return;
+      if (Object.prototype.hasOwnProperty.call(weatherByFarm, f.id)) return;
+      weatherByFarm[f.id] = null;
+      API.Weather.getCurrent(Number(f.latitude), Number(f.longitude)).then(function (w) {
+        weatherByFarm[f.id] = w;
+        renderLocationCard();
+      }).catch(function () {
+        weatherByFarm[f.id] = false;
+        renderLocationCard();
+      });
+    }
+
+    function weatherSummaryHtml(f) {
+      var w = weatherByFarm[f.id];
+      if (!w) return '';
+      var cond = w.weather_condition || w.description || '';
+      return '<div class="mlc-row mlc-weather"><span>Weather</span><b>' +
+        weatherIcon(w.weather_code, w.description) + ' ' +
+        (w.temperature != null ? num(w.temperature, 1) + '&deg;C' : 'â€”') +
+        (cond ? ' ' + esc(cond) : '') + '</b></div>';
     }
 
     function renderLocationCard() {
       var card = $('map-loc-card');
       if (!card) return;
-      var f = activeFarmId ? findFarm(activeFarmId) : null;
-      if (!f && data.farms.length === 1) f = data.farms[0];
+      var f = activeFarm();
       if (!f) {
         var located = data.farms.filter(function (x) { return x.has_location; }).length;
         card.hidden = data.farms.length === 0;
@@ -416,15 +474,19 @@
         card.innerHTML = '<div class="mlc-title"><i class="fa-solid fa-landmark"></i> All Farms</div>' +
           '<div class="mlc-row"><span>Farms</span><b>' + data.farms.length + '</b></div>' +
           '<div class="mlc-row"><span>With location</span><b>' + located + '</b></div>' +
+          '<div class="mlc-row"><span>With boundary</span><b>' + data.farms.filter(function (x) { return x.has_boundary; }).length + '</b></div>' +
           (located < data.farms.length ? '<a class="mlc-add" href="farm.html"><i class="fa-solid fa-plus"></i> Add Farm Location</a>' : '');
         return;
       }
       var gps = validPoint(f.latitude, f.longitude);
+      var hasBoundary = !!f.has_boundary;
       card.hidden = false;
       card.innerHTML = '<div class="mlc-title"><i class="fa-solid fa-map-pin"></i> ' + esc(f.name) + '</div>' +
         '<div class="mlc-row"><span>Location</span><b>' + esc(farmLocation(f)) + '</b></div>' +
         (gps ? '<div class="mlc-row"><span>GPS</span><b style="font-family:Consolas,monospace">' + num(f.latitude, 5) + ', ' + num(f.longitude, 5) + '</b></div>' : '') +
         '<div class="mlc-row"><span>Fields</span><b>' + ((f.plots || []).length) + '</b></div>' +
+        '<div class="mlc-row"><span>Boundary</span><b>' + (hasBoundary ? boundaryPoints(f.boundary_coordinates).length + ' points' : 'Not added yet') + '</b></div>' +
+        weatherSummaryHtml(f) +
         '<div class="mlc-row"><span>Updated</span><b>' + timeAgo(f.updated_at) + '</b></div>' +
         (gps ? '' : '<a class="mlc-add" href="farm.html"><i class="fa-solid fa-plus"></i> Add Farm Location</a>');
     }
@@ -454,11 +516,6 @@
     function healthLabel(code) {
       var m = { excellent: 'Excellent', healthy: 'Healthy', good: 'Good', needs_attention: 'Needs Attention', critical: 'Critical', insufficient: 'Insufficient data' };
       return m[code] || 'Unknown';
-    }
-
-    function findFarm(id) {
-      for (var i = 0; i < data.farms.length; i++) if (data.farms[i].id === id) return data.farms[i];
-      return null;
     }
 
     function findPlot(id) {
@@ -514,6 +571,10 @@
 
     /* ------------------------- map setup ------------------------- */
 
+    /* Layer groups are each pinned to a dedicated pane. Leaflet renders every
+       divIcon marker in one shared markerPane, so a farm pin painted over a
+       field used to swallow the field's click. Separate panes give a real
+       stacking order: farm below field below sensor. */
     function initMap() {
       if (!window.L) {
         showMessage('<i class="fa-solid fa-triangle-exclamation msg-icon" style="color:#D63031"></i><h2>Map unavailable</h2><p>The map service could not be loaded. Please check your connection and try again.</p><button class="msg-btn" id="retry-btn">Retry</button>');
@@ -532,6 +593,17 @@
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
       });
 
+      [{ name: 'faBoundary', z: 380, click: 'none' },
+       { name: 'faFarm', z: 400 },
+       { name: 'faField', z: 420 },
+       { name: 'faSensor', z: 460 }].forEach(function (spec) {
+        map.createPane(spec.name);
+        var pane = map.getPane(spec.name);
+        pane.style.zIndex = spec.z;
+        if (spec.click) pane.style.pointerEvents = spec.click;
+      });
+
+      layerState.farmBoundaryGroup = L.layerGroup().addTo(map);
       layerState.fieldGroup = L.layerGroup().addTo(map);
       layerState.sensorGroup = L.layerGroup().addTo(map);
       layerState.markerGroup = L.layerGroup().addTo(map);
@@ -595,7 +667,7 @@
         data.farms = data.farms || [];
         data.plots = data.plots || [];
         plotById = {};
-        data.plots.forEach(function (p) { plotById[p.id] = p; });
+        data.plots.forEach(function (p) { plotById[p.id] = p; if (p.plot_id != null) plotById[p.plot_id] = p; });
         populateFarmSelect();
         buildFilters();
         showLoading(false);
@@ -606,11 +678,12 @@
         }
         var anyLocation = data.farms.some(function (f) { return f.has_location; }) ||
           data.plots.some(function (p) { return p.has_location; });
-        renderAll();
+        applyDeepLink();
         if (!anyLocation) {
           showMessage('<i class="fa-solid fa-triangle-exclamation msg-icon" style="color:#E9B640"></i><h2>Farm location has not been added yet.</h2><p>Add your farm location in My Farm so your farm appears on the map.</p><a href="farm.html"><i class="fa-solid fa-tractor"></i> Add Farm Location</a>');
         }
         fetchHealth();
+        primeWeather();
         invalidate();
       }).catch(function (err) {
         if (err && err.message === 'auth') return;
@@ -639,6 +712,7 @@
           fitDirty = true;
           renderAll();
           recenter();
+          primeWeather();
         };
         sel.value = activeFarmId ? String(activeFarmId) : '';
       } else if (data.farms.length === 1) {
@@ -739,10 +813,11 @@
 
     function renderAll() {
       if (!map) return;
+      layerState.farmBoundaryGroup.clearLayers();
       layerState.fieldGroup.clearLayers();
       layerState.sensorGroup.clearLayers();
       layerState.markerGroup.clearLayers();
-      if (focusBounds()) hideMessage();
+      if (geometryBounds()) hideMessage();
 
       var plots = visiblePlots();
       var farms = visibleFarms();
@@ -750,9 +825,35 @@
       var placed = false;
 
       farms.forEach(function (f) {
+        var fb = boundaryPoints(f.boundary_coordinates);
+        if (fb.length >= 3) {
+          var outline = L.polygon(fb, {
+            pane: 'faBoundary',
+            color: '#176b45',
+            weight: 3,
+            dashArray: '7 5',
+            fillColor: '#176b45',
+            fillOpacity: 0.05,
+            interactive: false
+          });
+          outline.bindTooltip(f.name || 'Farm', { permanent: true, direction: 'center', className: 'fa-farm-label' });
+          outline.addTo(layerState.farmBoundaryGroup);
+          fb.forEach(function (c) { bounds.extend([c.lat, c.lng]); });
+          placed = true;
+        }
         if (validPoint(f.latitude, f.longitude)) {
-          var mk = L.marker([f.latitude, f.longitude], { icon: buildFarmIcon() });
+          /* The pin lives in the faFarm pane, below faField, so it can never
+             intercept a click meant for a field shape underneath it. */
+          var mk = L.marker([f.latitude, f.longitude], {
+            icon: buildFarmIcon(),
+            pane: 'faFarm',
+            keyboard: true,
+            riseOnHover: true,
+            title: f.name || 'Farm'
+          });
+          mk.bindTooltip(f.name || 'Farm', { permanent: true, direction: 'right', offset: [20, 0], className: 'fa-farm-name' });
           mk.bindPopup(buildFarmPopup(f));
+          mk.on('click', function () { hideMessage(); });
           mk.addTo(layerState.markerGroup);
           bounds.extend([f.latitude, f.longitude]);
           placed = true;
@@ -765,12 +866,13 @@
         var hb = healthColor((healthByPlot[p.id] || {}).status_code);
         if (coords.length >= 3) {
           var poly = L.polygon(coords, {
+            pane: 'faField',
             color: hb || color,
             weight: 2,
             fillColor: color,
             fillOpacity: 0.22
           });
-          poly.bindTooltip(p.name, { sticky: true });
+          poly.bindTooltip(p.name, { sticky: true, className: 'fa-field-tip' });
           poly.on('click', function (e) {
             if (e && e.originalEvent && e.originalEvent.stopPropagation) e.originalEvent.stopPropagation();
             selectPlot(p.id);
@@ -778,15 +880,16 @@
           poly.addTo(layerState.fieldGroup);
           coords.forEach(function (c) { bounds.extend(c); });
           placed = true;
-        } else if (p.has_location) {
+        } else if (p.has_location && validPoint(p.latitude, p.longitude)) {
           var cm = L.circleMarker([p.latitude, p.longitude], {
+            pane: 'faField',
             radius: 9,
             color: '#fff',
             weight: 2,
             fillColor: hb || color,
             fillOpacity: 0.95
           });
-          cm.bindTooltip(p.name, { sticky: true });
+          cm.bindTooltip(p.name, { sticky: true, className: 'fa-field-tip' });
           cm.on('click', function (e) {
             if (e && e.originalEvent && e.originalEvent.stopPropagation) e.originalEvent.stopPropagation();
             selectPlot(p.id);
@@ -799,6 +902,7 @@
           (p.sensors || []).forEach(function (s) {
             if (!s.has_location) return;
             var sm = L.circleMarker([s.latitude, s.longitude], {
+              pane: 'faSensor',
               radius: 7, color: '#fff', weight: 2,
               fillColor: s.type_color || '#FF7043', fillOpacity: 0.95
             });
@@ -814,6 +918,7 @@
           (f.sensors || []).forEach(function (s) {
             if (!s.has_location) return;
             var sm = L.circleMarker([s.latitude, s.longitude], {
+              pane: 'faSensor',
               radius: 7, color: '#fff', weight: 2,
               fillColor: s.type_color || '#FF7043', fillOpacity: 0.95
             });
@@ -827,8 +932,8 @@
       if (farms.length && placed) {
         setStatus(plots.length + ' field' + (plots.length === 1 ? '' : 's') + ' on map');
         if (fitDirty) {
-          var fb = focusBounds();
-          if (fb) map.fitBounds(fb.pad(0.15));
+          var gb = geometryBounds();
+          if (gb) map.fitBounds(gb.pad(0.15));
           else map.fitBounds(bounds.pad(0.2));
           fitDirty = false;
         }
@@ -840,13 +945,17 @@
       refreshLegend();
     }
 
+    /* Setup guidance only appears while boundary data is genuinely missing, and
+       only once there is a located farm to hang it off. */
     function showBoundaryBanner(plots) {
       var banner = $('boundary-banner');
-      var anyFarmLoc = visibleFarms().some(function (f) { return f.has_location; });
-      var anyBoundary = plots.some(function (p) { return p.has_boundary; });
-      if (anyFarmLoc && !anyBoundary && plots.length) {
+      var farms = visibleFarms();
+      var anyFarmLoc = farms.some(function (f) { return f.has_location; });
+      var anyBoundary = farms.some(function (f) { return f.has_boundary; }) ||
+        plots.some(function (p) { return p.has_boundary; });
+      if (anyFarmLoc && !anyBoundary) {
         banner.hidden = false;
-        banner.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>' +
+        banner.innerHTML = '<i class="fa-solid fa-draw-polygon"></i>' +
           '<span>No farm boundary has been added yet. <a href="farm.html">Add it in My Farm</a></span>' +
           '<button type="button" aria-label="Dismiss">&times;</button>';
         var bbtn = banner.querySelector('button');
@@ -856,6 +965,8 @@
       }
     }
 
+    /* The legend only advertises layers that are actually on screen, and names
+       the real crops and health bands in view instead of one generic swatch. */
     function refreshLegend() {
       var items = [];
       var farms = visibleFarms();
@@ -863,12 +974,39 @@
       if (farms.some(function (f) { return f.has_location; })) {
         items.push({ cls: 'round', style: 'background:#176b45', label: 'Farm' });
       }
-      if (plots.some(function (p) { return p.has_boundary; })) {
+      if (farms.some(function (f) { return f.has_boundary; })) {
         items.push({ cls: 'boundary', label: 'Farm boundary' });
       }
-      if (plots.length) {
-        items.push({ cls: 'round', style: 'background:' + plotColor(plots[0]), label: 'Field / plot' });
-      }
+      var crops = [];
+      plots.forEach(function (p) {
+        var c = plotCrop(p);
+        var name = (c && c.name) ? c.name : 'Fallow';
+        if (crops.some(function (x) { return x.label === name; })) return;
+        crops.push({ label: name, color: plotColor(p), bound: p.has_boundary });
+      });
+      crops.slice(0, 4).forEach(function (cr) {
+        items.push({
+          cls: cr.bound ? 'boundary' : 'round',
+          style: cr.bound ? 'border-color:' + cr.color + ';background:' + cr.color + '33' : 'background:' + cr.color,
+          label: cr.label
+        });
+      });
+      if (crops.length > 4) items.push({ cls: '', style: 'background:transparent;border-style:dashed', label: '+' + (crops.length - 4) + ' more crops' });
+
+      var bands = {};
+      plots.forEach(function (p) {
+        var b = healthBand((healthByPlot[p.id] || {}).status_code);
+        if (b) bands[b] = 1;
+      });
+      var bandMeta = [
+        ['healthy', '#1B5E3F', 'Crop health: healthy'],
+        ['needs_attention', '#E9B640', 'Crop health: needs attention'],
+        ['critical', '#D63031', 'Crop health: critical']
+      ];
+      bandMeta.forEach(function (m) {
+        if (bands[m[0]]) items.push({ cls: 'round', style: 'background:' + m[1], label: m[2] });
+      });
+
       var anySensor = false;
       plots.forEach(function (p) {
         if ((p.sensors || []).some(function (s) { return s.has_location; })) anySensor = true;
@@ -1046,6 +1184,37 @@
       return html;
     }
 
+    function boundaryHtml(p) {
+      var pts = boundaryPoints(p.boundary_coordinates);
+      var rows = '';
+      if (pts.length >= 3) {
+        rows += kv('Boundary', pts.length + ' points recorded');
+        rows += kv('Boundary area', esc(areaText(pts)));
+      } else if (p.has_location) {
+        rows += '<p class="fp-empty"><i class="fa-solid fa-circle-info"></i> This field has a point location only. Its outline has not been drawn yet.</p>';
+      } else {
+        return '<p class="fp-empty"><i class="fa-solid fa-location-dot"></i> No location has been saved for this field yet.</p>';
+      }
+      return rows;
+    }
+
+    function areaText(pts) {
+      /* Planar approximation in m2 -> acres, adequate for a farmer-facing
+         readout and derived only from stored coordinates. */
+      if (pts.length < 3) return '';
+      var lat0 = pts.reduce(function (s, p) { return s + p.lat; }, 0) / pts.length;
+      var mPerDegLat = 111132;
+      var mPerDegLng = 111320 * Math.cos(lat0 * Math.PI / 180);
+      var xy = pts.map(function (p) { return [(p.lng * mPerDegLng), (p.lat * mPerDegLat)]; });
+      var sum = 0;
+      for (var i = 0; i < xy.length; i++) {
+        var a = xy[i], b = xy[(i + 1) % xy.length];
+        sum += a[0] * b[1] - b[0] * a[1];
+      }
+      var m2 = Math.abs(sum) / 2;
+      return (m2 / 4046.8564224).toFixed(2) + ' acres';
+    }
+
     function renderPanelBody(p, farm) {
       var crop = p.crop || null;
       var c = plotCrop(p);
@@ -1066,6 +1235,7 @@
         (loc ? kv('GPS location', loc) : '') +
         '</div></div>';
 
+      html += '<div class="fp-section"><h3><i class="fa-solid fa-draw-polygon"></i> Field boundary</h3>' + boundaryHtml(p) + '</div>';
       html += '<div class="fp-section"><h3><i class="fa-solid fa-cloud-sun"></i> Weather</h3><div id="fp-weather"></div></div>';
       html += '<div class="fp-section"><h3><i class="fa-solid fa-heart-pulse"></i> Crop health</h3><div id="fp-health"></div></div>';
       html += '<div class="fp-section"><h3><i class="fa-solid fa-mound"></i> Soil</h3>' + soilHtml(p) + '</div>';
@@ -1080,13 +1250,15 @@
 
     function renderPanelActions(p) {
       var hasCycle = !!(p.crop && p.crop.id);
-      var html = '<a class="primary" href="farm.html"><i class="fa-solid fa-tractor"></i> View Farm</a>';
+      var farmRef = p.farm_id ? ('farm=' + encodeURIComponent(p.farm_id)) : '';
+      var fieldRef = 'field=' + encodeURIComponent(p.id);
+      var deep = farmRef ? farmRef + '&' + fieldRef : fieldRef;
+      var html = '<a class="primary" href="farm.html?' + deep + '"><i class="fa-solid fa-tractor"></i> Open in My Farm</a>';
       html += '<button type="button" id="action-add-task"' + (hasCycle ? '' : ' disabled title="Add a crop cycle first in My Farm"') + '><i class="fa-solid fa-plus"></i> Add Task</button>';
       html += '<a href="tasks.html"><i class="fa-solid fa-list-check"></i> Tasks</a>';
       html += '<a href="sensors.html"><i class="fa-solid fa-microchip"></i> Sensors</a>';
       html += '<a href="crop-health.html"><i class="fa-solid fa-heart-pulse"></i> Crop Health</a>';
       html += '<a href="weather.html"><i class="fa-solid fa-cloud-sun"></i> Weather</a>';
-      html += '<a href="analytics.html"><i class="fa-solid fa-chart-line"></i> Analytics</a>';
       return html;
     }
 
@@ -1110,7 +1282,9 @@
       bd.hidden = false;
       bd.classList.add('visible');
       loadWeatherFor(farm, p);
-      if (p.crop && p.crop.id) fetchPlotHealth(p);
+      /* Reuse health already fetched on load instead of re-requesting the same
+         plot, so the section is populated immediately. */
+      if (p.crop && p.crop.id && !healthByPlot[p.id]) fetchPlotHealth(p);
       else fillHealth(p);
       invalidate();
     }
@@ -1189,6 +1363,7 @@
     }
 
     function fetchPlotHealth(p) {
+      if (healthLoading[p.id]) return;
       healthLoading[p.id] = true;
       var farm = findFarm(p.farm_id);
       API.CropHealth.overview(farm ? farm.id : null, p.id, p.crop.id).then(function (res) {
@@ -1205,11 +1380,19 @@
       });
     }
 
+    /* Health arrives one response at a time. Rebuilding every layer per
+       response made the map churn once per field, so repaints are coalesced
+       into a single pass. */
+    var healthPaintTimer = null;
+
     function refreshHealthVisuals() {
-      var fp = $('filter-panel');
-      if (fp && fp.hidden) return;
-      buildFilters();
-      renderAll();
+      if (healthPaintTimer) clearTimeout(healthPaintTimer);
+      healthPaintTimer = setTimeout(function () {
+        healthPaintTimer = null;
+        var fp = $('filter-panel');
+        if (fp && !fp.hidden) buildFilters();
+        renderAll();
+      }, 220);
     }
 
     function fillHealth(p) {
@@ -1307,7 +1490,7 @@
         data.farms = nd.farms || [];
         data.plots = nd.plots || [];
         plotById = {};
-        data.plots.forEach(function (p) { plotById[p.id] = p; });
+        data.plots.forEach(function (p) { plotById[p.id] = p; if (p.plot_id != null) plotById[p.plot_id] = p; });
         buildFilters();
         renderAll();
         if (selectedPlotId) openPanel(selectedPlotId);
@@ -1318,23 +1501,12 @@
 
     function recenter() {
       if (!map) return;
-      var fb = focusBounds();
-      if (fb) {
-        map.fitBounds(fb.pad(0.15));
+      var gb = geometryBounds();
+      if (gb) {
+        map.fitBounds(gb.pad(0.15));
         return;
       }
-      var bounds = L.latLngBounds([]);
-      var any = false;
-      visibleFarms().forEach(function (f) {
-        if (validPoint(f.latitude, f.longitude)) { bounds.extend([f.latitude, f.longitude]); any = true; }
-      });
-      visiblePlots().forEach(function (p) {
-        var c = boundaryPoints(p.boundary_coordinates);
-        if (c.length) { c.forEach(function (pt) { bounds.extend(pt); }); any = true; }
-        else if (p.has_location) { bounds.extend([p.latitude, p.longitude]); any = true; }
-      });
-      if (any) map.fitBounds(bounds.pad(0.2));
-      else map.setView([20.5937, 78.9629], 5);
+      map.setView([20.5937, 78.9629], 5);
     }
 
     function locate() {
@@ -1431,6 +1603,33 @@
           if (changed) invalidate();
         }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
       }
+    }
+
+    /* My Farm links here with ?farm=&field= so a farmer lands on the exact
+       record they came from. */
+    function applyDeepLink() {
+      var params;
+      try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
+      var farmRef = params.get('farm') || params.get('farm_id');
+      var fieldRef = params.get('field') || params.get('plot_id');
+      if (!farmRef && !fieldRef) return;
+
+      var farm = findFarm(farmRef);
+      if (farm) {
+        activeFarmId = farm.id;
+        var sel = $('farm-select');
+        if (sel && !sel.hidden) sel.value = String(farm.id);
+        fitDirty = true;
+      }
+      var target = fieldRef ? findPlot(fieldRef) : null;
+      if (target) {
+        renderAll();
+        openPanel(target.id);
+        var pt = plotFocusPoint(target);
+        if (pt) map.panTo(pt, { animate: false });
+        return;
+      }
+      renderAll();
     }
 
     function init() {

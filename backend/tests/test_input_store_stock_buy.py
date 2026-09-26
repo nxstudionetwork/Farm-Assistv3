@@ -128,6 +128,36 @@ def test_buy_now_creates_sale_notifies_seller_and_buyer():
     assert "pending" in seller_msg.lower()
 
 
+def test_enquiry_creates_seller_notification_and_conversation():
+    with SessionLocal() as session:
+        seller_id = make_user(session, 70)
+        buyer_id = make_user(session, 71)
+    listing_id = make_listing(seller_id, title="Basmati Rice")
+
+    res = client.post(
+        f"/api/v1/marketplace/browse/listings/{listing_id}/enquire",
+        json={"message": "Is this rice organic?"},
+        headers=auth(buyer_id),
+    )
+    assert res.status_code == 201, res.text
+    data = res.json()["data"]
+    assert data["listing_id"] == listing_id
+    assert data["conversation_id"]
+
+    seller_notes = notifications_for(seller_id)
+    enquiry_notes = [m for t, m in seller_notes if t == "New buyer enquiry"]
+    assert enquiry_notes, seller_notes
+    assert "Basmati Rice" in enquiry_notes[0]
+    assert "organic" in enquiry_notes[0]
+
+    # The enquiry lands in a shared Messages conversation too.
+    convs = client.get("/api/v1/messages/conversations", headers=auth(seller_id))
+    assert convs.status_code == 200, convs.text
+    conv_data = convs.json().get("data", {})
+    assert conv_data.get("total", 0) >= 1
+    assert conv_data.get("conversations")
+
+
 def test_buyer_cannot_buy_own_listing():
     with SessionLocal() as session:
         owner_id = make_user(session, 3)

@@ -37,7 +37,7 @@ def _resolve_scope(db: Session, user: User, farm_id: Optional[str] = None, plot_
     """
     farms_q = db.query(Farm).filter(Farm.user_id == user.id, Farm.is_active == True)
     if farm_id:
-        farm = farms_q.filter(Farm.id == farm_id).first()
+        farm = farms_q.filter(or_(Farm.id == farm_id, Farm.farm_id == farm_id)).first()
         if not farm:
             raise HTTPException(status_code=404, detail="Farm not found")
         farm_objs = [farm]
@@ -48,7 +48,7 @@ def _resolve_scope(db: Session, user: User, farm_id: Optional[str] = None, plot_
     for f in farm_objs:
         p_q = db.query(FarmPlot).filter(FarmPlot.farm_id == f.id)
         if plot_id:
-            p = p_q.filter(FarmPlot.id == plot_id).first()
+            p = p_q.filter(or_(FarmPlot.id == plot_id, FarmPlot.plot_id == plot_id)).first()
             if not p:
                 raise HTTPException(status_code=404, detail="Plot not found")
             plots.append(p)

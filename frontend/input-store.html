@@ -308,6 +308,9 @@
     .pin-row.on{display:block}
     .s-msg{background:transparent;color:var(--is-green);border-color:var(--border-light)}
     .s-msg:not(:disabled):hover{background:rgba(46,125,50,.08)}
+    .sd-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    .sd-actions .is-btn{flex:1 1 140px;justify-content:center;display:inline-flex;align-items:center;gap:7px}
+    .sd-enquiry{margin-top:8px}
     .store-empty{grid-column:1/-1;text-align:center;padding:48px 24px}
     .pur-row{display:flex;gap:12px;align-items:flex-start;padding:14px 4px;border-bottom:1px solid var(--border-light)}
     .pur-thumb{width:46px;height:46px;border-radius:10px;background:var(--bg-card-soft);display:flex;align-items:center;justify-content:center;color:var(--is-green);font-size:17px;flex-shrink:0}
@@ -319,6 +322,12 @@
     .pur-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;margin-top:4px;background:rgba(46,125,50,.1);color:var(--is-green)}
     .pur-badge.cancelled{background:rgba(198,40,40,.1);color:#c62828}
     .pur-badge.completed{background:rgba(46,125,50,.14);color:#1b5e20}
+    .pur-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .pur-btn{border:1px solid var(--border-light);background:var(--bg-card-soft);color:var(--is-green);font-size:11px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
+    .pur-btn:hover{border-color:var(--is-green)}
+    .pur-btn.danger{color:#c62828}
+    .pur-btn.danger:hover{border-color:#c62828;background:rgba(198,40,40,.06)}
+    .pur-btn:disabled{opacity:.5;cursor:not-allowed}
     .store-empty i{font-size:42px;opacity:.35;margin-bottom:10px;display:block}
     .store-empty p{font-size:13px;color:var(--text-muted)}
     @media(max-width:780px){.s-img{height:130px}}
@@ -984,18 +993,42 @@ function loadPurchases(){
     if(!body)return;
     if(!rows.length){body.innerHTML='<div class="store-empty"><i class="fas fa-box-open"></i><p>No purchases yet. Buy a farmer listing to see it here.</p></div>';return;}
     body.innerHTML=rows.map(function(r){
+      var canCancel=r.can_cancel!==false&&r.status!=='cancelled'&&r.status!=='completed';
       return '<div class="pur-row">'
         +'<div class="pur-thumb"><i class="fas fa-leaf"></i></div>'
-        +'<div class="pur-info"><div class="pur-name">'+esc(r.item_name||'Item')+'</div>'
-        +'<div class="pur-meta">'+esc(r.sale_id||'')+' &middot; '+Number(r.quantity||0)+' '+esc(r.unit||'')+' &middot; '+esc(r.created_at||'')+'</div>'
-        +'<div class="pur-meta">'+(r.delivery_status_label||'')+'</div></div>'
+        +'<div class="pur-info"><div class="pur-name">'+esc(r.item_name||r.title||'Item')+'</div>'
+        +'<div class="pur-meta">'+esc(r.sale_id||'')+' &middot; '+Number(r.quantity||0)+' '+esc(r.unit||'')+'</div>'
+        +'<div class="pur-meta">'+esc(r.delivery_status_label||'')+(r.created_at?' &middot; '+esc(shortDate(r.created_at)):'')+'</div>'
+        +'<div class="pur-actions">'
+        +'<button type="button" class="pur-btn" data-view="'+esc(r.listing_id||'')+'"><i class="fas fa-circle-info"></i> View</button>'
+        +(canCancel?'<button type="button" class="pur-btn danger" data-cancel="'+esc(r.sale_id||'')+'"><i class="fas fa-ban"></i> Cancel</button>':'')
+        +'</div></div>'
         +'<div class="pur-right"><div class="pur-amt">'+fmtPrice(r.total_amount)+'</div>'
         +'<span class="pur-badge '+esc(r.status||'')+'">'+esc(r.status_label||r.status||'')+'</span></div>'
         +'</div>';
     }).join('');
+    body.onclick=function(e){
+      var v=e.target.closest('[data-view]');
+      if(v){var lid=v.getAttribute('data-view');closePurchases();if(lid)openBrowseListing(lid);return;}
+      var c=e.target.closest('[data-cancel]');
+      if(c){cancelPurchase(c.getAttribute('data-cancel'),c);}
+    };
   }).catch(function(){});
 }
+function cancelPurchase(saleId,btn){
+  if(!saleId)return;
+  if(!window.confirm('Cancel this order? Stock will be released and the seller notified.'))return;
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';}
+  isReq('POST','/marketplace/browse/purchases/'+encodeURIComponent(saleId)+'/cancel',{}).then(function(){
+    toast('Order cancelled','success');loadPurchases();loadStockListings();
+  }).catch(function(err){
+    toast(err.message||'Could not cancel order','error');
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-ban"></i> Cancel';}
+  });
+}
+function closePurchases(){if(typeof hideSheet==='function')hideSheet();else document.getElementById('purchases-sheet').classList.remove('open');}
 window.loadPurchases=loadPurchases;
+window.cancelPurchase=cancelPurchase;
 
 /* ─── STOCK CART (farmer listings; kept apart from the New/Product cart) ─── */
 var _stockCart={data:null,pm:'cod',key:null};
@@ -1007,7 +1040,11 @@ function stockAddToCart(btn){
   if(!requireAuth())return;
   var id=btn&&btn.getAttribute?btn.getAttribute('data-lid'):'';
   if(!id)return;
-  btn.disabled=true;
+  stockAddToCartById(id,btn);
+}
+function stockAddToCartById(id,btn){
+  if(!requireAuth()||!id)return;
+  if(btn){btn.disabled=true;}
   isReq('POST',stockCartPath()+'/listings/'+encodeURIComponent(id)+'/cart',{quantity:1})
     .then(function(res){
       toast((unwrap(res)||{}).message||'Added to cart','success');
@@ -1015,7 +1052,7 @@ function stockAddToCart(btn){
       loadStockListings();
     })
     .catch(function(err){toast(err.message||'Could not add to cart','error');})
-    .then(function(){btn.disabled=false;});
+    .then(function(){if(btn){btn.disabled=false;}});
 }
 function loadStockCart(){
   if(!isAuthed())return Promise.resolve();
@@ -1121,6 +1158,7 @@ function closeStockCart(){
   loadStockCart();
 }
 window.stockAddToCart=stockAddToCart;
+window.stockAddToCartById=stockAddToCartById;
 window.loadStockCart=loadStockCart;
 window.stockCartQty=stockCartQty;
 window.stockCartRemove=stockCartRemove;
@@ -1308,9 +1346,18 @@ function openBrowseListing(id){
     if(l.harvest_date)specs.push(['Harvest Date',shortDate(l.harvest_date)]);
     if(l.condition_type)specs.push(['Condition',l.condition_type==='used'?('Used'+(l.age_year?' · '+l.age_year+' yr':'')):l.condition_type]);
     var ownNote=(l.is_owner)?'<div class="wk-note ok"><i class="fas fa-circle-check"></i> This is your own listing.</div>':'';
+    var remaining=Number(l.remaining_quantity!=null?l.remaining_quantity:(l.quantity||0))||0;
+    var out=st.cls==='out'||remaining<=0;
+    var buyHTML='';
+    if(!l.is_owner){
+      buyHTML='<div class="sd-actions">'
+        +'<button class="is-btn gold" id="sd-buy"'+(out?' disabled':'')+'><i class="fas fa-bolt"></i> '+(out?'Sold Out':'Buy Now')+'</button>'
+        +'<button class="is-btn primary" id="sd-cart"'+(out?' disabled':'')+'><i class="fas fa-cart-plus"></i> Add to Cart</button>'
+        +'</div>';
+    }
     var actionHTML='';
     if(l.can_enquire!==false&&!l.is_owner){
-      actionHTML='<div class="ck-pay" style="margin-top:4px"><label class="ck-lbl">Contact the seller</label>'
+      actionHTML='<div class="ck-pay sd-enquiry"><label class="ck-lbl"><i class="fas fa-paper-plane"></i> Send an enquiry to the seller</label>'
         +'<textarea id="bk-message" rows="3" style="width:100%;padding:10px 14px;border:1px solid var(--border-light);border-radius:var(--is-radius-sm);background:var(--bg-card-soft);color:var(--text-primary);font-size:13px;resize:vertical;margin-bottom:8px;font-family:inherit" placeholder="Tell the seller what you need..."></textarea>'
         +'<button class="is-btn primary" id="bk-sendq"><i class="fas fa-paper-plane"></i> Send Enquiry</button></div>';
     }
@@ -1321,13 +1368,18 @@ function openBrowseListing(id){
       +'<h2>'+esc(l.title||'Listing')+'</h2>'
       +'<div class="is-card-stock" style="margin:8px 0"><span class="stock-chip '+st.cls+'"><i class="fas fa-circle" style="font-size:6px"></i> '+st.label+'</span></div>'
       +'<div class="prod-price-row"><span class="price">'+fmtPrice(l.price)+'</span>'+(l.unit?'<span class="mrp" style="text-decoration:none;font-weight:600">/ '+esc(l.unit)+'</span>':'')+'</div>'
+      +((!l.is_owner&&!out)?'<div class="s-avail" style="margin:2px 0 8px">Available: <b>'+remaining+'</b>'+(l.unit?' '+esc(l.unit):'')+'</div>':'')
       +((seller&&seller.full_name&&seller.id)?'<div class="prod-seller"><i class="fas fa-store"></i><div class="prod-seller-info"><strong>'+esc(seller.full_name)+'</strong><span>'+(l.location?'Location: '+esc(l.location):'Farmer listing')+'</span></div></div>':'')
       +(l.location?'<div class="prod-delivery"><i class="fas fa-location-dot"></i><span>'+esc(l.location)+'</span></div>':'')
       +'<div class="prod-desc">'+esc(desc)+'</div>'
       +(specs.length?'<div class="prod-specs"><h4>Listing Details</h4><dl class="spec-grid">'+specs.map(function(s){return'<dt>'+esc(s[0])+'</dt><dd>'+esc(s[1])+'</dd>'}).join('')+'</dl></div>':'')
-      +ownNote+actionHTML
+      +buyHTML+ownNote+actionHTML
       +'</div></div>';
     document.getElementById('prod-modal').classList.add('open');
+    var buyBtn=document.getElementById('sd-buy');
+    if(buyBtn)buyBtn.addEventListener('click',function(){closeProdModal();openStockBuy(l.id||id);});
+    var cartBtn=document.getElementById('sd-cart');
+    if(cartBtn)cartBtn.addEventListener('click',function(){stockAddToCartById(l.id||id,cartBtn);});
     var sb=document.getElementById('bk-sendq');
     if(sb)sb.addEventListener('click',function(){
       var msg=(document.getElementById('bk-message').value||'').trim();

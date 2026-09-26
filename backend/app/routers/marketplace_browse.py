@@ -353,6 +353,22 @@ def create_enquiry(
     conversation = _find_or_create_conversation(db, current_user.id, listing.user_id)
     enquiry.conversation_id = conversation.id
     enquiry.updated_at = datetime.utcnow()
+
+    create_notification(
+        db=db,
+        user_id=listing.user_id,
+        title="New buyer enquiry",
+        message=(
+            f"{current_user.full_name or 'A buyer'} sent an enquiry about "
+            f"{listing.title}: \"{payload.message.strip()[:140]}\""
+        ),
+        notification_type="message",
+        reference_id=enquiry.id,
+        reference_type="marketplace_enquiry",
+        icon="fa-envelope-open-text",
+        action_url="messages.html",
+    )
+
     db.commit()
     db.refresh(enquiry)
 

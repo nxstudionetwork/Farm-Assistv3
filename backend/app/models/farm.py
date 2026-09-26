@@ -26,6 +26,7 @@ class Farm(Base):
     pincode = Column(String(10), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    boundary_coordinates = Column(JSON, nullable=True)
     total_area = Column(Float, nullable=True)
     area_unit = Column(String(20), default="Acres")
     soil_type = Column(String(50), nullable=True)

@@ -13,6 +13,9 @@ logger = logging.getLogger("app.migrations")
 
 #: table -> list of (column_name, sqlite_column_declaration)
 ADDITIVE_COLUMNS = {
+    "farms": [
+        ("boundary_coordinates", "JSON"),
+    ],
     "farmer_profiles": [
         ("aadhaar_number", "VARCHAR(12)"),
         ("pan_number", "VARCHAR(10)"),
@@ -240,6 +243,66 @@ def run_additive_migrations(database_url: str) -> None:
         _migrate_postgres(database_url)
 
 
+#: Indexes that accelerate case-insensitive filters. The API filters with a
+#: pre-lowered value (``lower(column) == value``); a plain index cannot serve
+#: that predicate, but an index on the lowercase expression can.
+MARKET_PRICE_LC_INDEXES = {
+    "market_prices": [
+        "ix_market_prices_lc_commodity",
+        "ix_market_prices_lc_market",
+        "ix_market_prices_lc_state",
+        "ix_market_prices_lc_district",
+        "ix_market_prices_lc_region",
+        "ix_market_prices_lc_category",
+    ],
+    "market_price_latest": [
+        "ix_mkt_latest_lc_commodity",
+        "ix_mkt_latest_lc_market",
+        "ix_mkt_latest_lc_state",
+        "ix_mkt_latest_lc_district",
+        "ix_mkt_latest_lc_region",
+        "ix_mkt_latest_lc_category",
+    ],
+}
+
+MARKET_PRICE_LATEST_SQLITE_DDL = """
+CREATE TABLE IF NOT EXISTS market_price_latest (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    price_id VARCHAR(20),
+    variety_key VARCHAR(120),
+    commodity VARCHAR(120) NOT NULL,
+    variety VARCHAR(120),
+    grade VARCHAR(80),
+    category VARCHAR(60),
+    market VARCHAR(200) NOT NULL,
+    district VARCHAR(120),
+    state VARCHAR(120),
+    region VARCHAR(120),
+    min_price FLOAT,
+    max_price FLOAT,
+    modal_price FLOAT,
+    unit VARCHAR(40),
+    price_date VARCHAR(10) NOT NULL,
+    arrival_date VARCHAR(10),
+    arrival_quantity FLOAT,
+    source VARCHAR(160) NOT NULL,
+    source_url VARCHAR(500),
+    source_timestamp VARCHAR(60),
+    fetched_at DATETIME,
+    created_at DATETIME
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mkt_latest_key ON market_price_latest (market, commodity, variety_key);
+CREATE INDEX IF NOT EXISTS ix_mkt_latest_lookup ON market_price_latest (market, commodity, variety_key, price_date);
+CREATE INDEX IF NOT EXISTS ix_mkt_latest_geo ON market_price_latest (state, district, region, market);
+CREATE INDEX IF NOT EXISTS ix_mkt_latest_commodity ON market_price_latest (commodity);
+CREATE INDEX IF NOT EXISTS ix_mkt_latest_market ON market_price_latest (market);
+CREATE INDEX IF NOT EXISTS ix_mkt_latest_category ON market_price_latest (category);
+CREATE INDEX IF NOT EXISTS ix_mkt_latest_price_date ON market_price_latest (price_date);
+CREATE INDEX IF NOT EXISTS ix_mkt_latest_price_id ON market_price_latest (price_id);
+CREATE INDEX IF NOT EXISTS ix_mkt_latest_fetched_at ON market_price_latest (fetched_at);
+"""
+
+
 def _migrate_sqlite(database_url: str) -> None:
     db_path = database_url.replace("sqlite:///", "", 1)
     try:
@@ -255,6 +318,22 @@ def _migrate_sqlite(database_url: str) -> None:
                             f"ALTER TABLE {table} ADD COLUMN {column} {declaration}"
                         )
                         logger.info("Added column %s.%s", table, column)
+            conn.executescript(MARKET_PRICE_LATEST_SQLITE_DDL)
+            for table, index_names in MARKET_PRICE_LC_INDEXES.items():
+                lc_cols = {
+                    "commodity": "commodity",
+                    "market": "market",
+                    "state": "state",
+                    "district": "district",
+                    "region": "region",
+                    "category": "category",
+                }
+                for index_name in index_names:
+                    marker = index_name.rsplit("_", 1)[-1]
+                    conn.execute(
+                        f"CREATE INDEX IF NOT EXISTS {index_name} "
+                        f"ON {table} (lower({lc_cols[marker]}))"
+                    )
             conn.commit()
         finally:
             conn.close()
@@ -292,6 +371,56 @@ def _migrate_postgres(database_url: str) -> None:
                             f"ALTER TABLE {table} ADD COLUMN {column} {pg_type}"
                         )
                         logger.info("Added column %s.%s (postgres)", table, column)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS market_price_latest (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    price_id VARCHAR(20),
+                    variety_key VARCHAR(120),
+                    commodity VARCHAR(120) NOT NULL,
+                    variety VARCHAR(120),
+                    grade VARCHAR(80),
+                    category VARCHAR(60),
+                    market VARCHAR(200) NOT NULL,
+                    district VARCHAR(120),
+                    state VARCHAR(120),
+                    region VARCHAR(120),
+                    min_price FLOAT,
+                    max_price FLOAT,
+                    modal_price FLOAT,
+                    unit VARCHAR(40),
+                    price_date VARCHAR(10) NOT NULL,
+                    arrival_date VARCHAR(10),
+                    arrival_quantity FLOAT,
+                    source VARCHAR(160) NOT NULL,
+                    source_url VARCHAR(500),
+                    source_timestamp VARCHAR(60),
+                    fetched_at TIMESTAMP,
+                    created_at TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_mkt_latest_key
+                ON market_price_latest (market, commodity, variety_key)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS ix_mkt_latest_lookup
+                ON market_price_latest (market, commodity, variety_key, price_date)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS ix_mkt_latest_geo
+                ON market_price_latest (state, district, region, market)
+            """)
+            for table, index_names in MARKET_PRICE_LC_INDEXES.items():
+                cols = {
+                    "commodity": "commodity", "market": "market", "state": "state",
+                    "district": "district", "region": "region", "category": "category",
+                }
+                for index_name in index_names:
+                    marker = index_name.rsplit("_", 1)[-1]
+                    cur.execute(
+                        f"CREATE INDEX IF NOT EXISTS {index_name} "
+                        f"ON {table} (lower({cols[marker]}))"
+                    )
             conn.commit()
         finally:
             conn.close()
