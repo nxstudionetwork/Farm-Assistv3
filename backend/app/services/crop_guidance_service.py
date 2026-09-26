@@ -68,6 +68,21 @@ STAGE_ICONS = {
     "post_harvest": "fa-warehouse",
 }
 
+# General-reference meaning for each stage (labelled "general" in the UI,
+# never presented as crop-specific knowledge).
+STAGE_MEANINGS: Dict[str, str] = {
+    "land_prep": "Field is being prepared for sowing - levelling, ploughing, bed and channel setup.",
+    "seed_selection": "Choosing seed quantity, variety and treatment before planting.",
+    "sowing": "Seed or planting material goes into the prepared beds. Set up the moisture needed for even emergence.",
+    "germination": "Seed sprouts and the first true leaves appear. Keep the soil moist and check for even emergence.",
+    "vegetative": "The plant builds leaves, stems and roots. Growth, moisture and nutrition need steady monitoring.",
+    "flowering": "The crop flowers and pollination-sensitive, avoid stress and do not over-water or over-fertilise.",
+    "fruiting": "Fruits, pods or grain begin forming and filling. Watch nutrient balance and pest pressure closely.",
+    "maturity": "The crop reaches full size and starts to ripen or dry down. Prepare harvesting in the coming days.",
+    "harvest": "Crop is ready - harvesting, threshing and field drying need to be managed in good weather.",
+    "post_harvest": "Produce is dried, cleaned, stored or marketed. Check storage conditions to avoid losses.",
+}
+
 # Fraction of total growth duration at which each stage ends.
 GENERIC_STAGE_BOUNDS: Dict[str, float] = {
     "land_prep": 0.02,
@@ -1603,10 +1618,16 @@ def build_cycle(
 
     overall = round(current_pct * 100)
     next_stage = None
+    previous_stage = None
     if current_idx < len(STAGE_KEYS) - 1:
         next_stage = {
             "key": STAGE_KEYS[current_idx + 1],
             "label": labels[STAGE_KEYS[current_idx + 1]],
+        }
+    if current_idx > 0:
+        previous_stage = {
+            "key": STAGE_KEYS[current_idx - 1],
+            "label": labels[STAGE_KEYS[current_idx - 1]],
         }
 
     return {
@@ -1619,6 +1640,7 @@ def build_cycle(
         "current_label": labels.get(effective_state, STAGE_LABELS.get(effective_state, effective_state)),
         "current_icon": STAGE_ICONS.get(effective_state, "fa-leaf"),
         "next_stage": next_stage,
+        "previous_stage": previous_stage,
         "overall_pct": overall,
         "stages": stages,
     }

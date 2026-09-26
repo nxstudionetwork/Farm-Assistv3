@@ -1562,6 +1562,9 @@ def _companion_sections(db: Session, ctx: dict) -> dict:
         stage_details[key] = {
             "label": guidance.STAGE_LABELS.get(key, key),
             "icon": guidance.STAGE_ICONS.get(key, "fa-leaf"),
+            "meaning": (
+                guidance.STAGE_MEANINGS.get(key, "General reference for this crop stage.")
+            ),
             "activities": guidance._activity_items(profile, key)[:4],
             "watch": guidance.build_watch(crop_name, key),
         }

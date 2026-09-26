@@ -64,6 +64,14 @@
     .ch-hero-copy p { font-size: 13px; line-height: 1.65; color: var(--text-secondary); margin-bottom: 10px; }
     .ch-hero-meta { display: flex; flex-wrap: wrap; gap: 8px; }
 
+    .ch-hero-strip { margin-top: 18px; border-top: 1px solid var(--border-light); padding-top: 14px; display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 14px; }
+    .ch-hero-col h5 { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .ch-hero-col h5 i { color: var(--primary-green); }
+    .ch-hero-col p { font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); margin: 0; }
+    .ch-hero-col ul { list-style: none; padding: 0; margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+    .ch-hero-col li { padding: 2px 0 2px 16px; position: relative; }
+    .ch-hero-col li::before { content: '\2713'; position: absolute; left: 0; color: var(--primary-green); font-weight: 800; }
+
     .ch-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
     .ch-good { background: var(--soft-green); color: var(--primary-green); }
     .ch-warn { background: #FFF6E0; color: #A67C00; }
@@ -261,6 +269,7 @@
     @media (max-width: 720px) {
       .ch-selectors { grid-template-columns: 1fr; }
       .ch-hero { grid-template-columns: 1fr; gap: 14px; }
+      .ch-hero-strip { grid-template-columns: 1fr; }
       .ch-condition-grid { grid-template-columns: 1fr 1fr; }
       .ch-check-form { grid-template-columns: 1fr; }
       .ch-links { grid-template-columns: 1fr; }
@@ -285,7 +294,7 @@
     <div class="page-header">
       <div>
         <h1><i class="fas fa-leaf" style="color:var(--primary-green);margin-right:8px;"></i>Crop Health</h1>
-        <p>Monitor your crop, understand its current growth stage, and follow the right actions throughout the crop cycle.</p>
+        <p>Monitor crop condition, follow the current growth stage, and know what actions to take throughout the crop cycle.</p>
       </div>
       <button class="btn-secondary" id="ch-refresh"><i class="fas fa-rotate"></i> Refresh</button>
     </div>
@@ -340,8 +349,8 @@
             <div id="ch-stage-detail" class="ch-stage-detail u-hidden"></div>
           </div>
 
-          <!-- Your Crop Health Plan -->
-          <div class="ch-lbl"><i class="fas fa-clipboard-check"></i> Your Crop Health Plan</div>
+          <!-- Recommended Actions -->
+          <div class="ch-lbl"><i class="fas fa-clipboard-check"></i> Recommended Actions</div>
           <div class="card-premium">
             <div class="ch-plan-tabs" id="ch-plan-tabs"></div>
             <div id="ch-plan-body"></div>
@@ -361,9 +370,13 @@
 
           <!-- Check Crop Health -->
           <div class="ch-lbl"><i class="fas fa-stethoscope"></i> Check Crop Health</div>
-          <div class="card-premium">
+          <div class="card-premium" id="ch-check-sec">
             <div class="ch-check-form">
               <div>
+                <div class="ch-field-txt" style="margin-bottom:12px;">
+                  <label>Growth stage</label>
+                  <div class="ch-narrative" style="font-size:12px;color:var(--text-secondary);line-height:1.6;" id="ch-check-stage">The current crop stage will be used for this check.</div>
+                </div>
                 <div class="ch-field-txt" style="margin-bottom:12px;">
                   <label>What did you observe? (tap any that apply)</label>
                   <div class="ch-sym-grid" id="ch-symptoms"></div>
@@ -590,26 +603,65 @@
       if (g.days_since_sowing !== null && g.days_since_sowing !== undefined) {
         meta.push('<span class="ch-chip"><i class="fas fa-calendar-days"></i>Day ' + g.days_since_sowing + '</span>');
       }
+      if (g.sowing_date) {
+        meta.push('<span class="ch-chip"><i class="fas fa-sow"></i>Sown ' + esc(fmtDate(g.sowing_date)) + '</span>');
+      }
+      if (g.expected_harvest_date) {
+        meta.push('<span class="ch-chip"><i class="fas fa-basket-shopping"></i>Harvest by ' + esc(fmtDate(g.expected_harvest_date)) + '</span>');
+      }
+      if (cycle.previous_stage) {
+        meta.push('<span class="ch-chip"><i class="fas fa-check"></i>Previous: ' + esc(cycle.previous_stage.label) + '</span>');
+      }
       if (cycle.next_stage) {
         meta.push('<span class="ch-chip"><i class="fas fa-forward"></i>Next: ' + esc(cycle.next_stage.label) + '</span>');
       }
       if (crop.season) meta.push('<span class="ch-chip"><i class="fas fa-cloud-sun"></i>' + esc(crop.season) + '</span>');
 
+      var currentKey = cycle.current_stage || g.current_stage || '';
+      var detail = (data.stage_details || {})[currentKey] || {};
+      var meaning = detail.meaning || '';
+      var monitor = (detail.watch || []).slice(0, 3);
+      var todo = (detail.activities || []).slice(0, 4);
+
+      var strip = '';
+      if (currentKey && (meaning || monitor.length || todo.length)) {
+        strip = '<div class="ch-hero-strip">';
+        if (meaning) {
+          strip += '<div class="ch-hero-col"><h5><i class="fas fa-circle-info"></i> What is happening</h5><p>' + esc(meaning) + '</p></div>';
+        }
+        if (monitor.length) {
+          strip += '<div class="ch-hero-col"><h5><i class="fas fa-eye"></i> What to monitor</h5><ul>' + monitor.map(function (w) {
+            return '<li>' + esc(w.title) + '</li>';
+          }).join('') + '</ul></div>';
+        }
+        if (todo.length) {
+          strip += '<div class="ch-hero-col"><h5><i class="fas fa-list-check"></i> What to do</h5><ul>' + todo.map(function (a) {
+            return '<li>' + esc(a.action || a) + '</li>';
+          }).join('') + '</ul></div>';
+        }
+        strip += '</div>';
+      }
+
       var heroRight = '<div class="ch-hero-copy">' +
         '<h2>' + esc(stageName) + ' ' + healthBadge + '</h2>' +
-        '<p>' + esc(h.explanation || g.expected_stage ? 'The crop is being tracked against its expected lifecycle.' : '') + '</p>' +
+        (meaning || h.explanation ? '<p>' + esc(meaning || h.explanation) + '</p>' : '') +
         '<div class="ch-hero-meta">' + meta.join('') + '</div>' +
         '</div>';
 
       box.innerHTML =
-        '<div class="ch-hero-stage">' +
-          '<div class="ch-hero-icon"><i class="fas ' + esc(icon) + '"></i></div>' +
-          '<div class="ch-hero-stage-name">' + esc(cycle.current_label || stageName) + '</div>' +
-          (pct !== null && pct !== undefined ?
-            '<div class="ch-hero-progress"><span style="width:' + pct + '%"></span></div>' +
-            '<div style="font-size:11px;color:var(--text-muted);font-weight:700;">' + pct + '% of crop cycle</div>' : '') +
-        '</div>' +
-        heroRight;
+        '<div>' +
+          '<div class="ch-hero">' +
+            '<div class="ch-hero-stage">' +
+              '<div class="ch-hero-icon"><i class="fas ' + esc(icon) + '"></i></div>' +
+              '<div class="ch-hero-stage-name">' + esc(stageName) + '</div>' +
+              (pct !== null && pct !== undefined ?
+                '<div class="ch-hero-progress"><span style="width:' + pct + '%"></span></div>' +
+                '<div style="font-size:11px;color:var(--text-muted);font-weight:700;">' + pct + '% of crop cycle</div>' : '') +
+            '</div>' +
+            heroRight +
+          '</div>' +
+          strip +
+        '</div>';
     }
 
     /* ------------------------------------------------------------------ */
@@ -687,8 +739,8 @@
       var body = el('ch-plan-body');
       var defs = [
         { key: 'now', icon: 'fa-bolt', label: 'Now' },
-        { key: 'this_week', icon: 'fa-calendar-week', label: 'This Week' },
-        { key: 'coming_up', icon: 'fa-calendar-plus', label: 'Coming Up' }
+        { key: 'this_week', icon: 'fa-calendar-week', label: 'Next' },
+        { key: 'coming_up', icon: 'fa-calendar-plus', label: 'Later' }
       ];
       tabs.innerHTML = defs.map(function (d) {
         var items = plan[d.key] || [];
@@ -715,10 +767,10 @@
         var srcTag = it.source === 'data' ? '<span class="ch-src data">From your data</span>' : '<span class="ch-src">Stage guidance</span>';
         var stageTag = it.stage_label ? '<span class="ch-src">' + esc(it.stage_label) + '</span>' : '';
         var addBtn = '';
-        if (it.can_track) {
+        if (it.existing_task_id) {
+          addBtn = '<button class="btn-primary ch-add-task" data-done="' + i + '" style="padding:6px 10px;font-size:11px;border-radius:10px;"><i class="fas fa-check"></i> Mark Complete</button>';
+        } else if (it.can_track) {
           addBtn = '<button class="btn-secondary ch-add-task" data-add="' + i + '" style="padding:6px 10px;font-size:11px;border-radius:10px;"><i class="fas fa-plus"></i> Add to Tasks</button>';
-        } else if (it.existing_task_id) {
-          addBtn = '<span class="ch-src" title="Already scheduled in Tasks">Already in Tasks</span>';
         }
         return '<div class="ch-item">' +
           '<div class="lvl"><i class="fas ' + icon + '"></i></div>' +
@@ -738,6 +790,25 @@
         btn.addEventListener('click', function () {
           var idx = parseInt(btn.getAttribute('data-add'), 10);
           addPlanItemToTasks(data, items[idx], btn);
+        });
+      });
+      body.querySelectorAll('[data-done]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var idx = parseInt(btn.getAttribute('data-done'), 10);
+          var item = items[idx];
+          if (!item || !item.existing_task_id) return;
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner ch-spin"></i> Updating...';
+          API.Crop.updateTask(item.existing_task_id, { status: 'completed' }).then(function () {
+            btn.innerHTML = '<i class="fas fa-check"></i> Done';
+            showToast('Task completed', 'success');
+            state.data = null;
+            refresh();
+          }).catch(function () {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Mark Complete';
+            showToast('Could not update task. Try again.', 'error');
+          });
         });
       });
     }
@@ -834,11 +905,11 @@
         '<button id="ch-modal-x" style="position:absolute;top:12px;right:12px;border:none;background:var(--bg-card-soft);width:32px;height:32px;border-radius:50%;cursor:pointer;color:var(--text-secondary);"><i class="fas fa-times"></i></button>' +
         '<h3 style="font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:14px;padding-right:30px;"><i class="fas fa-eye" style="color:var(--primary-green);margin-right:8px;"></i>' + esc(w.title) + '</h3>' +
         '<div class="ch-result-body" style="padding:0;">' +
-          '<div class="ch-result-row"><div class="c">What you may observe</div><div class="o">' + esc(w.observe) + '</div></div>' +
+          '<div class="ch-result-row"><div class="c">What to look for</div><div class="o">' + esc(w.observe) + '</div></div>' +
           '<div class="ch-result-row concern"><div class="c">Why it matters</div><div class="o">' + esc(w.why) + '</div></div>' +
-          '<div class="ch-result-row follow"><div class="c">What would help confirm it</div><div class="o">' + esc(w.confirm) + '</div></div>' +
+          '<div class="ch-result-row follow"><div class="c">What to do</div><div class="o">' + esc(w.confirm) + '</div></div>' +
           '<div class="ch-result-row action"><div class="c">Recommended next step</div><div class="o">' + esc(w.next) + '</div></div>' +
-          (w.expert ? '<div class="ch-result-row concern"><div class="c">When to contact an expert</div><div class="o">' + esc(w.expert) + '</div></div>' : '') +
+          (w.expert ? '<div class="ch-result-row concern"><div class="c">When to seek expert help</div><div class="o">' + esc(w.expert) + '</div></div>' : '') +
         '</div>' +
         '</div>';
       document.body.appendChild(modal);
@@ -1029,7 +1100,10 @@
       points.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
 
       if (!points.length) {
-        box.innerHTML = '<div class="ch-narrative">' + esc(hist.message || 'No health checks have been recorded yet. Run a Crop Health Check above to start the history.') + '</div>';
+        box.innerHTML = '<div class="ch-narrative">' + esc(hist.message || 'No health checks have been recorded yet. Run a Crop Health Check to start the history.') + '</div>' +
+          '<div style="margin-top:14px;"><button class="btn-primary" id="ch-first-check"><i class="fas fa-stethoscope"></i> Run the first Crop Health Check</button></div>';
+        var fb = el('ch-first-check');
+        if (fb) fb.addEventListener('click', goCheck);
         return;
       }
       box.innerHTML = trendHtml + '<div class="ch-timeline">' + points.slice(0, 12).map(function (p) {
@@ -1078,6 +1152,13 @@
     /* ------------------------------------------------------------------ */
     /* Render + load                                                       */
     /* ------------------------------------------------------------------ */
+    function goCheck() {
+      var sec = el('ch-check-sec');
+      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var obs = el('ch-observations');
+      if (obs) setTimeout(function () { obs.focus(); }, 350);
+    }
+
     function render(data) {
       state.data = data;
       renderSelectors(data);
@@ -1088,6 +1169,10 @@
       renderCondition(data);
       renderWatch(data);
       renderSymptoms(data);
+      var chk = el('ch-check-stage');
+      if (chk && data.cycle && data.cycle.current_label) {
+        chk.innerHTML = 'The <strong>' + esc(data.cycle.current_label) + '</strong> stage will be used for this check.';
+      }
       el('ch-check-result').innerHTML = '';
       renderHistory(data);
       el('ch-loading').classList.add('u-hidden');

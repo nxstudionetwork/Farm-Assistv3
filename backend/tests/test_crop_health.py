@@ -254,6 +254,8 @@ def test_crop_health_companion_sections(db):
     assert any(s["state"] == "current" for s in cyc["stages"])
     assert any(s["state"] == "completed" for s in cyc["stages"])
     assert any(s["state"] == "upcoming" for s in cyc["stages"])
+    assert cyc["previous_stage"] and cyc["previous_stage"]["key"] == "germination"
+    assert cyc["next_stage"] and cyc["next_stage"]["key"] == "flowering"
 
     # per-stage clickable detail is present for every stage
     assert "stage_details" in d
@@ -262,6 +264,7 @@ def test_crop_health_companion_sections(db):
     assert sd["label"]
     assert isinstance(sd["activities"], list) and len(sd["activities"]) > 0
     assert isinstance(sd["watch"], list)
+    assert sd["meaning"]  # general-reference stage description
 
     # Plan grouped into now / this_week / coming_up
     plan = d["plan"]
