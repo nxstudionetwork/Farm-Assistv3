@@ -25,6 +25,7 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -222,7 +223,14 @@ def _resolve_scope(
     """Resolve the authorised Farm -> Plot -> Crop cycle scope for the caller."""
     farms = (
         db.query(Farm)
-        .filter(Farm.user_id == user.id, Farm.is_active == True)  # noqa: E712
+        .filter(
+            Farm.user_id == user.id,
+            # A Farm record is recognised as long as it has not been explicitly
+            # deactivated. Legacy rows (is_active NULL) were never set and must
+            # not be hidden, otherwise a farmer with a registered Farm would see
+            # the misleading "Add Farm" empty state instead of their crop.
+            or_(Farm.is_active.is_(None), Farm.is_active == True),  # noqa: E712
+        )
         .order_by(Farm.created_at.asc())
         .all()
     )

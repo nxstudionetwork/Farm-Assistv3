@@ -429,3 +429,43 @@ def test_crop_health_check_isolation(db):
     assert r_b_over.json()["data"]["health_checks"] == []
     r_a_over = client.get("/api/v1/crop-health/overview", headers=headers_a)
     assert len(r_a_over.json()["data"]["health_checks"]) == 1
+
+
+def test_crop_health_recognises_legacy_farm_with_null_is_active(db):
+    """A registered Farm whose is_active is NULL (legacy row) must never be
+    hidden, otherwise Crop Health would wrongly show the "Add Farm" empty
+    state even though the farmer owns a Farm."""
+    user = create_user(db, "FA-CH-00000007", "Farmer Legacy", "9676543210", "legacy@farm.com")
+    headers = {"Authorization": f"Bearer {get_token(user)}"}
+
+    farm = Farm(
+        farm_id="FA-CHF-0007",
+        user_id=user.id,
+        farm_name="Legacy Farm",
+        is_active=None,
+    )
+    db.add(farm)
+    db.commit()
+
+    r = client.get("/api/v1/crop-health/overview", headers=headers)
+    assert r.status_code == 200
+    d = r.json()["data"]
+    assert len(d["farms"]) == 1
+    assert d["farms"][0]["farm_name"] == "Legacy Farm"
+    assert d["has_crop"] is False
+
+    # Explicitly deactivated farms stay hidden - that is a deliberate state.
+    farm2 = Farm(
+        farm_id="FA-CHF-0008",
+        user_id=user.id,
+        farm_name="Closed Farm",
+        is_active=False,
+    )
+    db.add(farm2)
+    db.commit()
+
+    r2 = client.get("/api/v1/crop-health/overview", headers=headers)
+    assert r2.status_code == 200
+    d2 = r2.json()["data"]
+    assert len(d2["farms"]) == 1
+    assert d2["farms"][0]["farm_name"] == "Legacy Farm"
