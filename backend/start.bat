@@ -51,4 +51,4 @@ echo  LAN Access:   http://192.168.16.56:8000  (same Wi-Fi)
 echo ========================================
 echo.
 
-%PYTHON% -u "%~dp0_run_server.py"
+%PYTHON% -m uvicorn app.main:app --app-dir "%~dp0" --host 0.0.0.0 --port 8000
