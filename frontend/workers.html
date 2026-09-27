@@ -1028,7 +1028,7 @@
     function timeOpts(sel) {
       var html = '';
       for (var h = 6; h <= 18; h++) {
-        var label = (h > 12 ? (h - 12) + ':00 PM' : h + ':00 AM');
+        var label = (h < 12 ? h + ':00 AM' : (h === 12 ? '12:00 PM' : (h - 12) + ':00 PM'));
         var v = (h < 10 ? '0' + h : h) + ':00';
         html += '<option value="' + v + '"' + (sel === v ? ' selected' : '') + '>' + label + '</option>';
       }
@@ -1192,6 +1192,11 @@
 
     API.Worker.book(payload).then(function (res) {
       closeBooking();
+      var draft = {
+        work_type: booking.work_type || '',
+        booking_date: booking.booking_date || '',
+        worker_name: currentWorker ? currentWorker.full_name : ''
+      };
       resetBookingDraft();
       var bId = res && res.booking_id;
       toast('Booking created! ' + (res && res.status === 'confirmed' ? 'Worker booked and payment processed.' : 'Your booking is pending.') + ' Ref: ' + bId, 'success');
@@ -1199,7 +1204,7 @@
       refreshBookingCount();
       switchTab('bookings');
       refreshNotifBadge();
-      addTaskSuggestion(res);
+      addTaskSuggestion(res, draft);
     }).catch(function (err) {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Booking'; }
       var msg = errMsg(err, 'Unable to complete the booking right now.');
@@ -1208,20 +1213,23 @@
     });
   }
 
-  function addTaskSuggestion(res) {
+  function addTaskSuggestion(res, draft) {
     // Optional: offer to add to crop tasks if the farmer has an active crop cycle.
     if (!res || !res.booking_id) return;
+    if (!draft || !draft.booking_date) return;
     if (!window.API || !API.Crop || !API.Crop.listCycles || !API.Crop.createTask) return;
+    var workType = draft.work_type || 'General Farm Work';
+    var workerName = draft.worker_name || '';
     API.Crop.listCycles().then(function (cycles) {
       var rows = Array.isArray(cycles) ? cycles : (cycles && Array.isArray(cycles.items) ? cycles.items : []);
       var active = rows.filter(function (c) { return c && (c.status === 'active' || c.status === 'ongoing'); })[0] || rows[0];
       if (!active) return;
-      var title = 'Worker: ' + (currentWorker ? currentWorker.full_name : '') + ' — ' + (booking.work_type || 'Farm Work');
+      var title = 'Worker: ' + workerName + ' \u2014 ' + workType;
       API.Crop.createTask({
         crop_cycle_id: active.id,
         title: title,
-        category: booking.work_type || 'General',
-        due_date: booking.booking_date,
+        category: workType,
+        due_date: draft.booking_date,
         status: 'pending',
         priority: 'medium'
       }).then(function () {
@@ -1231,9 +1239,13 @@
   }
 
   function bookingBack() {
-    if (BSTEP === 2) renderBookingStep1();
-    else if (BSTEP === 3) renderBookingStep2();
-    else if (BSTEP === 4) renderBookingStep3();
+    var prev = BSTEP - 1;
+    if (prev < 1) prev = 1;
+    if (prev < booking.maxStep) booking.maxStep = prev;
+    BSTEP = prev;
+    if (prev === 3) renderBookingStep3();
+    else if (prev === 2) renderBookingStep2();
+    else renderBookingStep1();
   }
 
   // ---------- Bookings ----------
@@ -1456,7 +1468,7 @@
       actions += '<button class="wrk-btn wrk-btn-ghost" style="flex:1;background:var(--wrk-bg);color:var(--wrk-dark);border:none;" onclick="WorkersApp.rebookWorker(\'' + esc(b.worker_id) + '\')"><i class="fas fa-redo"></i> Book Again</button>';
     }
     if (b.worker_phone) {
-      actions += '<button class="wrk-btn wrk-btn-subtle" style="flex:1;" onclick="WorkersApp.contactWorker(\'' + esc(b.booking_id) + '\')"><i class="fas fa-phone"></i> Contact</button>';
+      actions += '<button class="wrk-btn wrk-btn-subtle" style="flex:1;" onclick="WorkersApp.contactWorker(\'' + esc(b.worker_phone) + '\')"><i class="fas fa-phone"></i> Contact</button>';
     }
 
     var flagHtml = '';
@@ -1580,10 +1592,9 @@
     startBooking(workerId);
   }
 
-  function contactWorker(bookingId) {
-    var b = (bookings.items || []).filter(function (x) { return x.booking_id === bookingId; })[0];
-    if (!b || !b.worker_phone) { toast('No phone number available for this worker.', 'error'); return; }
-    window.location.href = 'tel:' + encodeURIComponent(String(b.worker_phone));
+  function contactWorker(phone) {
+    if (!phone) { toast('No phone number available for this worker.', 'error'); return; }
+    window.location.href = 'tel:' + encodeURIComponent(String(phone));
   }
 
   // ---------- Review ----------

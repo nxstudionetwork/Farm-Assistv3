@@ -188,6 +188,11 @@ class TestCreateDefaults:
         ).all()
         assert history, "expected an initial pending status-history row"
         assert any(h.new_status == "pending" for h in history)
+        initial = [h for h in history if h.new_status == "pending"][0]
+        assert initial.previous_status is None, (
+            "the first history row must have no previous status, got "
+            f"{initial.previous_status!r}"
+        )
 
         notif = db.query(Notification).filter(
             Notification.reference_id == booking.id,
@@ -224,6 +229,31 @@ class TestLifecycle:
         bid = _create_booking(headers, farm.id, worker.id, plot.id).json()["data"]["booking_id"]
         resp = _update_status(headers, bid, "completed")
         assert resp.status_code == 400
+
+    def test_start_pending_booking_records_confirmed_step_in_history(
+        self, farmer, farm, plot, worker
+    ):
+        headers = _headers(farmer)
+        bid = _create_booking(
+            headers, farm.id, worker.id, plot.id, _today(), "00:00"
+        ).json()["data"]["booking_id"]
+
+        resp = _update_status(headers, bid, "in_progress")
+        assert resp.status_code == 200, resp.text
+
+        detail = _get_booking(headers, bid).json()["data"]
+        assert detail["status"] == "in_progress"
+
+        history = detail.get("status_history", [])
+        assert [h["new_status"] for h in history] == [
+            "pending",
+            "confirmed",
+            "in_progress",
+        ]
+        # The audit trail must be a chain: each row's previous status is the
+        # previous row's new status, so the implicit confirmation is visible.
+        chain = [h.get("previous_status") for h in history]
+        assert chain == [None, "pending", "confirmed"]
 
     def test_terminal_status_is_final(self, farmer, farm, plot, worker):
         headers = _headers(farmer)

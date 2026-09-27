@@ -131,7 +131,7 @@ def record_status_history(
     entry = WorkerBookingStatusHistory(
         id=gen_uuid(),
         booking_id=booking.id,
-        previous_status=previous_status if previous_status is not None else booking.status,
+        previous_status=previous_status,
         new_status=new_status,
         note=note,
         changed_by=changed_by,
@@ -274,6 +274,7 @@ def apply_status_transition(
                 note="Booking accepted by the farmer.",
                 changed_by=changed_by,
             )
+            previous = "confirmed"
         booking.status = "in_progress"
         booking.started_at = now
         booking.updated_at = now
@@ -281,7 +282,7 @@ def apply_status_transition(
             db,
             booking,
             new_status="in_progress",
-            previous_status=booking.status if booking.status != "in_progress" else previous,
+            previous_status=previous,
             note=note or "Work on the job has started.",
             changed_by=changed_by,
         )
