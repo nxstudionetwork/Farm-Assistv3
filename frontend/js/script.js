@@ -1720,7 +1720,7 @@ const SUS = {
       this.formsHtml(d) +
       this.guidanceHtml(d) +
       this.calcHtml(d) +
-      this.reportsHtml();
+      '<section class="sus-section" id="sus-reports">' + this.reportsHtml() + '</section>';
   },
 
   headerHtml: function (d) {
@@ -2220,8 +2220,15 @@ const SUS = {
           '</div></div>';
       }).join('') + '</div>'
       : this.emptyBlock('fa-file-circle-question', 'No sustainability report yet', 'Generate a report to export these figures as HTML or CSV. The report contains the same real data shown on this page.');
-    return '<section class="sus-section"><h3><i class="fas fa-file-lines"></i> Reports</h3>' +
-      '<p class="sus-hint">Farm Assist report generation is connected: the report is stored on the server with your real sustainability data.</p>' + body + '</section>';
+    return '<h3><i class="fas fa-file-lines"></i> Reports</h3>' +
+      '<p class="sus-hint">Farm Assist report generation is connected: the report is stored on the server with your real sustainability data.</p>' + body;
+  },
+
+  /* The report list arrives after the dashboard is already on screen, so
+     refresh only the reports block instead of re-rendering the whole page. */
+  renderReports: function () {
+    var host = document.getElementById('sus-reports');
+    if (host) host.innerHTML = this.reportsHtml();
   }
 };
 window.SustainabilityPage = SUS;

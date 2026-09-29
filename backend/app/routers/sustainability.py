@@ -858,7 +858,7 @@ def sustainability_dashboard(
                 {
                     "key": "water_per_acre", "label": "Water per acre", "unit": "L",
                     "value": water_per_acre, "available": water_per_acre is not None,
-                    "basis": "Total water %s over %s of farm area" % (
+                    "basis": "Total water %s over %s" % (
                         _period_label(period).lower(),
                         _area_text(total_area, area_unit),
                     ),
@@ -866,7 +866,7 @@ def sustainability_dashboard(
                 {
                     "key": "energy_per_acre", "label": "Energy per acre", "unit": primary_unit or "kWh",
                     "value": energy_per_acre, "available": energy_per_acre is not None,
-                    "basis": "Total energy %s over %s of farm area" % (
+                    "basis": "Total energy %s over %s" % (
                         _period_label(period).lower(),
                         _area_text(total_area, area_unit),
                     ),
