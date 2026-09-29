@@ -24,6 +24,7 @@ from app.models import (
     Notification,
 )
 from app.utils.auth import hash_password, create_access_token
+from app.services.worker_booking_service import GST_RATE
 
 client = TestClient(app)
 
@@ -181,7 +182,13 @@ class TestCreateDefaults:
         ).first()
         assert booking is not None
         assert booking.status == "pending"
-        assert booking.total_cost == 1400.0  # 2 days x 700
+        # total_cost is the authoritative wallet charge, so it is GST-inclusive:
+        # 2 days x 700 = 1400 subtotal, plus GST_RATE on top.
+        subtotal = 2 * worker.daily_rate
+        assert booking.total_cost == pytest.approx(
+            subtotal + subtotal * GST_RATE
+        )
+        assert booking.total_cost == pytest.approx(1540.0)
 
         history = db.query(WorkerBookingStatusHistory).filter(
             WorkerBookingStatusHistory.booking_id == booking.id
