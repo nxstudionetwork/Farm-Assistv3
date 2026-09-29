@@ -17,6 +17,29 @@
 (function (global) {
   'use strict';
 
+  /* The widget ships with its own layout. Leaflet needs an explicit height on
+     its container, and without this rule the map collapses to zero height and
+     the farmer cannot tap a location or trace a boundary. Keeping the styles
+     here means the picker works on any page that attaches it. */
+  if (!document.getElementById('fa-geo-styles')) {
+    var styleEl = document.createElement('style');
+    styleEl.id = 'fa-geo-styles';
+    styleEl.textContent = [
+      '.fa-geo-wrap{display:flex;flex-direction:column;gap:8px;}',
+      '.fa-geo-map{height:240px;width:100%;min-height:240px;border-radius:10px;overflow:hidden;z-index:0;}',
+      '.fa-geo-map .leaflet-container{height:100%;width:100%;}',
+      '.fa-geo-bar{display:flex;flex-wrap:wrap;gap:6px;}',
+      '.fa-geo-btn{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #d8e3da;',
+      'border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:600;color:#1B5E3F;cursor:pointer;}',
+      '.fa-geo-btn:hover:not(:disabled){border-color:#1B5E3F;background:#f1f8f2;}',
+      '.fa-geo-btn:disabled{opacity:.5;cursor:not-allowed;}',
+      '.fa-geo-btn.active{background:#1B5E3F;color:#fff;border-color:#1B5E3F;}',
+      '.fa-geo-hint{font-size:11.5px;color:#5a6b5f;line-height:1.45;}',
+      '.fa-geo-coords{font-size:11px;color:#41584a;font-variant-numeric:tabular-nums;word-break:break-word;}'
+    ].join('');
+    (document.head || document.documentElement).appendChild(styleEl);
+  }
+
   var OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
   var SAT_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 

@@ -303,6 +303,48 @@ CREATE INDEX IF NOT EXISTS ix_mkt_latest_fetched_at ON market_price_latest (fetc
 """
 
 
+def _backfill_cycle_farms_sqlite(conn) -> None:
+    """Make every crop cycle agree with the farm that owns its plot.
+
+    ``crop_cycles.farm_id`` is required by the model, but rows written by older
+    builds either left it empty or pointed it at a different farm than the one
+    that owns the plot the crop is planted in. A crop is planted *in* a plot and
+    a plot belongs to exactly one farm, so the plot is the authoritative link
+    and the cycle is aligned to it here.
+
+    Without this, farm-scoped readers (crop health, calendar, My Farm) filter
+    cycles by farm, then by the requested plot, find nothing and answer 404 for
+    a crop that plainly exists. Only cycles that actually have a plot are
+    touched, and cycles with no plot keep whatever farm they already record.
+    """
+    try:
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        if not {"crop_cycles", "farm_plots"} <= tables:
+            return
+        cur = conn.execute(
+            """
+            UPDATE crop_cycles
+               SET farm_id = (
+                   SELECT p.farm_id FROM farm_plots p WHERE p.id = crop_cycles.plot_id
+               )
+             WHERE plot_id IS NOT NULL
+               AND plot_id IN (SELECT id FROM farm_plots WHERE farm_id IS NOT NULL)
+               AND farm_id IS NOT (
+                   SELECT p.farm_id FROM farm_plots p WHERE p.id = crop_cycles.plot_id
+               )
+            """
+        )
+        if cur.rowcount and cur.rowcount > 0:
+            logger.info("Aligned farm_id on %s crop cycle(s) with their plot", cur.rowcount)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("Crop cycle farm backfill failed: %s", exc)
+
+
 def _migrate_sqlite(database_url: str) -> None:
     db_path = database_url.replace("sqlite:///", "", 1)
     try:
@@ -334,6 +376,7 @@ def _migrate_sqlite(database_url: str) -> None:
                         f"CREATE INDEX IF NOT EXISTS {index_name} "
                         f"ON {table} (lower({lc_cols[marker]}))"
                     )
+            _backfill_cycle_farms_sqlite(conn)
             conn.commit()
         finally:
             conn.close()

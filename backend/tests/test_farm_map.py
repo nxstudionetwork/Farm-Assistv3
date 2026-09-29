@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import inspect
 from app.main import app
 from app.database.connection import engine, Base, SessionLocal
 from app.models.user import User
@@ -19,12 +20,47 @@ from app.utils.auth import hash_password, create_access_token
 
 client = TestClient(app)
 
+# The schema is built exactly once, at import time, rather than per test.
+#
+# Several seeder modules call ``Base.metadata.create_all`` at module level, and
+# some of them are imported lazily while a test session is already running. If
+# a fixture also created tables, those two independent ``create_all`` calls race
+# and the loser reports ``table ... already exists``; the resulting failed
+# transaction then leaves later statements seeing ``no such table``. Creating
+# the schema once here, before any test can trigger a lazy import, removes the
+# race and makes runs repeatable. ``checkfirst`` keeps it safe if a previous
+# run left the file in place.
+Base.metadata.create_all(bind=engine)
+
+
+def _wipe_rows() -> None:
+    """Empty every existing table without touching the schema.
+
+    Rebuilding ~160 tables around every test is slow and, on a single-file
+    SQLite database, intermittently trips the same create/drop races described
+    above. Clearing rows instead keeps the schema stable for the whole session.
+
+    Only tables that are actually present are cleared. ``Base.metadata`` grows
+    as lazily imported models register themselves, so it can name tables (for
+    example ``worker_payments``) that this database was never asked to create;
+    deleting those would fail with "no such table".
+    """
+    existing = set(inspect(engine).get_table_names())
+    if not existing:
+        return
+    with engine.begin() as conn:
+        conn.exec_driver_sql("PRAGMA foreign_keys = OFF")
+        for table in reversed(Base.metadata.sorted_tables):
+            if table.name in existing:
+                conn.execute(table.delete())
+        conn.exec_driver_sql("PRAGMA foreign_keys = ON")
+
 
 @pytest.fixture(autouse=True)
 def setup_db():
-    Base.metadata.create_all(bind=engine)
+    _wipe_rows()
     yield
-    Base.metadata.drop_all(bind=engine)
+    _wipe_rows()
 
 
 @pytest.fixture

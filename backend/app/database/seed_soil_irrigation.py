@@ -252,7 +252,6 @@ def seed_soil_irrigation_demo(db: Session) -> dict:
             water_quantity=2500.0,
             water_unit="Liters",
             irrigation_date=datetime.utcnow() - timedelta(days=12),
-            notes="Morning drip cycle.",
         )
         i2 = IrrigationRecord(
             plot_id=p1.id,
@@ -261,7 +260,6 @@ def seed_soil_irrigation_demo(db: Session) -> dict:
             water_quantity=3000.0,
             water_unit="Liters",
             irrigation_date=datetime.utcnow() - timedelta(days=6),
-            notes="Full plot drip watering.",
         )
         i3 = IrrigationRecord(
             plot_id=p1.id,
@@ -270,7 +268,6 @@ def seed_soil_irrigation_demo(db: Session) -> dict:
             water_quantity=2500.0,
             water_unit="Liters",
             irrigation_date=datetime.utcnow() - timedelta(days=2),
-            notes="Regular scheduled drip irrigation.",
         )
         db.add_all([i1, i2, i3])
 
@@ -283,7 +280,6 @@ def seed_soil_irrigation_demo(db: Session) -> dict:
             water_quantity=2000.0,
             water_unit="Liters",
             irrigation_date=datetime.utcnow() - timedelta(days=10),
-            notes="Sprinkler session for Cotton field.",
         )
         i5 = IrrigationRecord(
             plot_id=p2.id,
@@ -292,7 +288,6 @@ def seed_soil_irrigation_demo(db: Session) -> dict:
             water_quantity=2000.0,
             water_unit="Liters",
             irrigation_date=datetime.utcnow() - timedelta(days=3),
-            notes="Routine sprinkler watering.",
         )
         db.add_all([i4, i5])
     db.commit()
