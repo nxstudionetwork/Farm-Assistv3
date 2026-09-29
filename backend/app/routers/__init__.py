@@ -9,4 +9,5 @@ from app.routers import tools_equipment
 from app.routers import soil_irrigation
 from app.routers import crop_health
 from app.routers import sustainability
+from app.routers import marketplace_rentals
 

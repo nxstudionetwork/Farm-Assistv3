@@ -1647,9 +1647,13 @@
         <i class="fas fa-shopping-cart"></i> <span class="te-chip-label">Cart</span>
         <span class="te-badge-count" id="quickCartCount" style="display:none;">0</span>
       </button>
-      <button class="te-quick-chip" id="btnQuickBooked" title="Rental bookings">
-        <i class="fas fa-calendar-check"></i> <span class="te-chip-label">Booked</span>
+      <button class="te-quick-chip" id="btnQuickBooked" title="Your rental requests">
+        <i class="fas fa-calendar-check"></i> <span class="te-chip-label">My Requests</span>
         <span class="te-badge-count" id="quickBookedCount" style="display:none;">0</span>
+      </button>
+      <button class="te-quick-chip" id="btnQuickIncoming" title="Rental requests for your equipment">
+        <i class="fas fa-inbox"></i> <span class="te-chip-label">Requests Received</span>
+        <span class="te-badge-count" id="quickIncomingCount" style="display:none;">0</span>
       </button>
       <button class="te-quick-chip" id="btnQuickOrders" title="Orders history">
         <i class="fas fa-box"></i> <span class="te-chip-label">Orders</span>
@@ -1660,10 +1664,6 @@
       </button>
       <button class="te-quick-chip" id="btnQuickActivity" title="Recent activity">
         <i class="fas fa-clock-rotate-left"></i> <span class="te-chip-label">Activity</span>
-      </button>
-      <button class="te-quick-chip" id="btnQuickMyListings" title="My Listings">
-        <i class="fas fa-store"></i> <span class="te-chip-label">My Listings</span>
-        <span class="te-badge-count" id="quickListingsCount" style="display:none;">0</span>
       </button>
     </div>
   </section>
@@ -1697,11 +1697,7 @@
   </div>
 
   <!-- HORIZONTAL CATEGORY NAVIGATION -->
-  <nav class="te-categories-bar" id="categoryBar" aria-label="Equipment Categories">
-    <button class="te-cat-pill active" data-cat="all">
-      <i class="fas fa-layer-group"></i> All Equipment
-    </button>
-  </nav>
+  <nav class="te-categories-bar" id="categoryBar" aria-label="Equipment Categories"></nav>
 
   <!-- RECOMMENDED FOR YOUR FARM SECTION (Buy Mode only) -->
   <section id="recommendationsSection" style="display:none;">
@@ -1975,11 +1971,11 @@
   <div class="te-drawer-body" id="wishDrawerBody"></div>
 </div>
 
-<!-- BOOKED (RENTAL BOOKINGS) DRAWER -->
+<!-- MY RENTAL REQUESTS DRAWER (Marketplace) -->
 <div class="te-drawer-backdrop" id="bookedBackdrop"></div>
 <div class="te-drawer" id="bookedDrawer">
   <div class="te-drawer-header">
-    <h3><i class="fas fa-calendar-check" style="color:var(--te-primary-green);"></i> Booked Rentals</h3>
+    <h3><i class="fas fa-calendar-check" style="color:var(--te-primary-green);"></i> My Rental Requests</h3>
     <button style="background:none;border:none;font-size:18px;color:#557260;cursor:pointer;" id="btnCloseBookedDrawer">
       <i class="fas fa-times"></i>
     </button>
@@ -1987,8 +1983,26 @@
   <div class="te-drawer-body" id="bookedDrawerBody">
     <div class="te-empty-state">
       <i class="fas fa-calendar-check"></i>
-      <h3>No rental bookings yet</h3>
-      <p>Bookings you make for farm machinery will appear here.</p>
+      <h3>No rental requests yet</h3>
+      <p>Requests you send for renting machinery will appear here.</p>
+    </div>
+  </div>
+</div>
+
+<!-- INCOMING RENTAL REQUESTS DRAWER (Marketplace, owner side) -->
+<div class="te-drawer-backdrop" id="incomingBackdrop"></div>
+<div class="te-drawer" id="incomingDrawer">
+  <div class="te-drawer-header">
+    <h3><i class="fas fa-inbox" style="color:var(--te-primary-green);"></i> Requests Received</h3>
+    <button style="background:none;border:none;font-size:18px;color:#557260;cursor:pointer;" id="btnCloseIncomingDrawer">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="te-drawer-body" id="incomingDrawerBody">
+    <div class="te-empty-state">
+      <i class="fas fa-inbox"></i>
+      <h3>No requests received</h3>
+      <p>Rental requests for your Marketplace equipment will appear here.</p>
     </div>
   </div>
 </div>
@@ -2214,37 +2228,45 @@
   </div>
 </div>
 
-<!-- RENTAL BOOKING MODAL (Rent Mode) -->
-<div class="te-modal" id="rentalBookingModal">
+<!-- RENTAL REQUEST MODAL (Rent Mode — Marketplace Listings) -->
+<div class="te-modal" id="rentRequestModal">
   <div class="te-dialog" style="max-width:520px;">
-    <button class="te-dialog-close" id="btnCloseRentalModal"><i class="fas fa-times"></i></button>
+    <button class="te-dialog-close" id="btnCloseRentRequestModal"><i class="fas fa-times"></i></button>
     <h2 style="font-size:20px;font-weight:800;color:var(--te-dark-green);margin:0 0 8px 0;">
-      <i class="fas fa-calendar-alt" style="color:var(--te-primary-green);margin-right:8px;"></i> Book Farm Machinery
+      <i class="fas fa-calendar-alt" style="color:var(--te-primary-green);margin-right:8px;"></i> Request To Rent
     </h2>
-    <div id="rentalModalInfo" style="margin-bottom:16px;"></div>
-    <div id="rentalModalAvail" style="margin-bottom:14px;"></div>
-    <form id="rentalBookingForm">
-      <input type="hidden" id="rbEquipId">
+    <div id="rentRequestInfo" style="margin-bottom:16px;"></div>
+    <div id="rentRequestAvail" style="margin-bottom:14px;"></div>
+    <form id="rentRequestForm">
+      <input type="hidden" id="rrListingId">
       <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">Start Date</label>
-        <input type="date" class="te-filter-input" id="rbDate" required>
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">Start Date *</label>
+        <input type="date" class="te-filter-input" id="rrStart" required>
       </div>
       <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">Duration (Days)</label>
-        <input type="number" class="te-filter-input" id="rbDays" min="1" max="90" value="1" required>
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">End Date *</label>
+        <input type="date" class="te-filter-input" id="rrEnd" required>
       </div>
-      <div style="font-size:12px;color:var(--te-muted);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;" id="rbPeriodLabel">
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">Quantity (units)</label>
+        <input type="number" class="te-filter-input" id="rrQty" min="1" max="999" step="1" value="1">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#2c4533;">Message to the owner (optional)</label>
+        <textarea class="te-filter-input" id="rrMessage" rows="3" maxlength="2000" placeholder="e.g. Need the tractor for land preparation on our 5-acre plot."></textarea>
+      </div>
+      <div style="font-size:12px;color:var(--te-muted);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;" id="rrPeriodLabel">
         <i class="fas fa-calendar-day"></i> <span></span>
       </div>
       <div style="background:#eef7ef;padding:12px;border-radius:10px;margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;color:var(--te-dark-green);">
-          <span>Estimated Rental Total:</span>
-          <span id="rbTotalLabel">₹0</span>
+          <span>Estimated Rental Cost:</span>
+          <span id="rrTotalLabel">₹0</span>
         </div>
-        <div id="rbDepositLabel" style="font-size:11px;color:var(--te-muted);font-weight:700;margin-top:6px;"></div>
+        <div id="rrDepositLabel" style="font-size:11px;color:var(--te-muted);font-weight:700;margin-top:6px;"></div>
       </div>
-      <button type="submit" class="te-btn-cart" style="width:100%;padding:12px;font-size:14px;" id="btnConfirmRental">
-        <i class="fas fa-calendar-check"></i> Confirm Rental Booking
+      <button type="submit" class="te-btn-cart" style="width:100%;padding:12px;font-size:14px;" id="btnSubmitRentalRequest">
+        <i class="fas fa-paper-plane"></i> Send Rental Request
       </button>
     </form>
   </div>
@@ -2326,6 +2348,7 @@
     sortOrder: 'asc',
     items: [],
     categories: [],
+    marketplaceCategories: [],
     recommended: [],
     recent: [],
     wishlist: [],
@@ -2370,6 +2393,15 @@
     if (!el) return;
     el.textContent = count;
     el.style.display = count > 0 ? 'flex' : 'none';
+  }
+
+  function absImg(url) {
+    if (!url) return url;
+    if (/^https?:\/\//i.test(url) || url.indexOf('data:') === 0 || url.indexOf('blob:') === 0) return url;
+    var host = (window.APP_CONFIG && window.APP_CONFIG.API_HOST) || '';
+    if (url.indexOf('//') === 0) return (host || '') + url;
+    if (url.indexOf('/api/') === 0 && host) return host + url;
+    return url;
   }
 
   function fmtDate(ts) {
@@ -2495,12 +2527,7 @@
   function renderCategories(cats) {
     var bar = document.getElementById('categoryBar');
     if (!bar) return;
-    var allActive = state.category === 'all' ? 'active' : '';
-    var totalCount = cats.reduce(function (sum, c) { return sum + (c.count || 0); }, 0);
-    var html = '<button class="te-cat-pill ' + allActive + '" data-cat="all">' +
-      '<i class="fas fa-layer-group"></i> All Equipment <span class="te-cat-count">' + totalCount + '</span>' +
-    '</button>';
-
+    var html = '';
     cats.forEach(function (c) {
       var active = state.category === c.slug ? 'active' : '';
       html += '<button class="te-cat-pill ' + active + '" data-cat="' + esc(c.slug) + '">' +
@@ -2669,6 +2696,49 @@
     '</article>';
   }
 
+  // --- RENDER MARKETPLACE RENT CARDS (RENT MODE) ---
+  function renderMktRentalCard(m) {
+    var img = (m.images && m.images.length) ? m.images[0].url : null;
+    var imgHtml = img
+      ? '<img src="' + esc(absImg(img)) + '" class="te-card-img" alt="' + esc(m.title || '') + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'te-card-fallback\\\'><i class=\\\'fas fa-tractor\\\'></i></div>\'">'
+      : '<div class="te-card-fallback"><i class="fas fa-tractor"></i></div>';
+    var loc = m.location || m.service_area || 'Local Area';
+    var rateUnit = (m.rental_period === 'hour') ? ' / hour' : ((m.rental_period === 'week' || m.rental_period === 'month') ? ' / ' + esc(m.rental_period) : ' / day');
+    var sellerName = (m.seller && m.seller.full_name) ? m.seller.full_name : (m.provider || '');
+    return '<article class="te-card" data-id="' + esc(m.id) + '">' +
+      '<div class="te-card-img-wrap">' +
+        imgHtml +
+        '<span class="te-avail-tag avail-available"><i class="fas fa-circle"></i> Available for Rent</span>' +
+      '</div>' +
+      '<div class="te-card-body">' +
+        '<div class="te-card-brand-cat">' +
+          '<span class="te-mode-chip rent">Rent</span>' +
+          (m.brand ? '<span>' + esc(m.brand) + '</span>' : '<span>Machinery</span>') +
+          '<span><i class="fas fa-map-marker-alt"></i> ' + esc(loc) + '</span>' +
+        '</div>' +
+        '<h3 class="te-card-title">' + esc(m.title || 'Equipment for Rent') + '</h3>' +
+        '<div style="display:flex;align-items:center;flex-wrap:wrap;margin:2px 0 4px;">' +
+          (m.condition_type ? '<span class="te-cond-chip"><i class="fas fa-gear"></i> ' + esc(m.condition_type) + '</span>' : '') +
+          (m.model ? '<span class="te-cond-chip" style="background:#eef2e6;color:#586b2d;"><i class="fas fa-cube"></i> ' + esc(m.model) + '</span>' : '') +
+          (sellerName ? '<span class="te-verified-badge" style="margin-left:4px;"><i class="fas fa-user-check"></i> ' + esc(sellerName) + '</span>' : '') +
+        '</div>' +
+        '<div class="te-card-price-row">' +
+          '<span class="te-price">' + rupees(m.price) + '<small style="font-size:11px;color:var(--te-muted);">' + rateUnit + '</small></span>' +
+          '<span class="te-discount" style="background:transparent;font-size:11px;font-weight:700;color:#557260;">Deposit ' + rupees(m.security_deposit || 0) + '</span>' +
+        '</div>' +
+        '<p style="font-size:12px;color:var(--te-muted);line-height:1.4;margin:4px 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
+          esc(m.description || 'Rent quality farming equipment directly from local farmers.') +
+        '</p>' +
+        '<div class="te-card-actions" style="margin-top:10px;">' +
+          '<button class="te-btn-view" style="flex:1;" data-rentdetail="' + esc(m.id) + '"><i class="fas fa-eye"></i> Details</button>' +
+          '<button class="te-btn-cart" style="flex:1;" data-rent="' + esc(m.id) + '">' +
+            '<i class="fas fa-calendar-check"></i> Rent' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+    '</article>';
+  }
+
   // --- RENDER GRID ---
   function renderProducts(items, reset) {
     var grid = document.getElementById('equipmentGrid');
@@ -2698,7 +2768,7 @@
     }
 
     var html = items.map(function (item) {
-      if (state.mode === 'rent') return renderRentalCard(item);
+      if (state.mode === 'rent') return renderMktRentalCard(item);
       if (state.mode === 'buy') return renderCard(item);
       return (item.mode === 'rent') ? renderRentalCard(item) : renderCard(item);
     }).join('');
@@ -2979,204 +3049,187 @@
     }
   };
 
-  // --- RENTAL BOOKING MODAL ---
+  // --- RENTAL REQUEST MODAL (Marketplace Rent Listings) ---
+  function findMktListing(id) {
+    return state.items.find(function (x) { return String(x.id) === String(id) || String(x.listing_id) === String(id); });
+  }
+
+  function rentalRateUnit(l) {
+    var p = l && l.rental_period;
+    return p === 'hour' ? ' / hour' : (p === 'week' || p === 'month' ? ' / ' + esc(p) : ' / day');
+  }
+
+  function rentalDayCount() {
+    var s = document.getElementById('rrStart') ? document.getElementById('rrStart').value : '';
+    var e = document.getElementById('rrEnd') ? document.getElementById('rrEnd').value : '';
+    if (!s || !e) return 0;
+    var d1 = new Date(s + 'T00:00:00').getTime();
+    var d2 = new Date(e + 'T00:00:00').getTime();
+    if (isNaN(d1) || isNaN(d2) || d2 < d1) return 0;
+    return Math.round((d2 - d1) / 86400000) + 1;
+  }
+
   function openRentalModal(id) {
-    var equip = state.items.find(function (x) { return x.id === id; });
-    if (!equip || !isLoggedIn()) {
-      if (!equip) return;
+    var listing = findMktListing(id);
+    if (!listing || !isLoggedIn()) {
+      if (!listing) return;
       requireLogin();
       return;
     }
 
-    var infoEl = document.getElementById('rentalModalInfo');
-    var availEl = document.getElementById('rentalModalAvail');
-    document.getElementById('rbEquipId').value = equip.id;
-    var today = new Date().toISOString().split('T')[0];
-    var minDays = equip.min_duration_days || 1;
-    document.getElementById('rbDate').value = today;
-    document.getElementById('rbDate').min = today;
-    document.getElementById('rbDays').value = minDays;
-    document.getElementById('rbDays').min = minDays;
+    var infoEl = document.getElementById('rentRequestInfo');
+    var availEl = document.getElementById('rentRequestAvail');
+    document.getElementById('rrListingId').value = listing.id;
+
+    var img = (listing.images && listing.images.length) ? listing.images[0].url : null;
+    var imgHtml = img
+      ? '<img src="' + esc(absImg(img)) + '" style="width:70px;height:60px;object-fit:cover;border-radius:8px;">'
+      : '<div class="te-listing-thumb" style="width:70px;height:60px;"><i class="fas fa-tractor"></i></div>';
 
     infoEl.innerHTML = '<div style="background:#f4faf5;padding:12px;border-radius:12px;display:flex;gap:12px;align-items:center;">' +
-      '<img src="' + esc(equip.image_url) + '" style="width:70px;height:60px;object-fit:cover;border-radius:8px;">' +
+      imgHtml +
       '<div>' +
-        '<div style="font-size:14px;font-weight:800;color:var(--te-dark-green);">' + esc(equip.name) + '</div>' +
-        '<div style="font-size:12px;color:var(--te-muted);">' + esc(equip.type) + ' · ' + esc(equip.location) + '</div>' +
-        '<div style="font-size:14px;font-weight:800;color:var(--te-primary-green);margin-top:2px;">' + rupees(equip.daily_rate) + ' / day' +
-          (minDays > 1 ? '<small style="font-size:11px;color:var(--te-muted);"> · Min ' + minDays + ' days</small>' : '') +
+        '<div style="font-size:14px;font-weight:800;color:var(--te-dark-green);">' + esc(listing.title) + '</div>' +
+        '<div style="font-size:12px;color:var(--te-muted);">' + esc(listing.brand || 'Machinery') +
+          (listing.model ? ' · ' + esc(listing.model) : '') +
+          (listing.location ? ' · ' + esc(listing.location) : '') + '</div>' +
+        '<div style="font-size:14px;font-weight:800;color:var(--te-primary-green);margin-top:2px;">' + rupees(listing.price) + rentalRateUnit(listing) +
+          (listing.min_rental_duration ? '<small style="font-size:11px;color:var(--te-muted);"> · Min ' + esc(listing.min_rental_duration) + '</small>' : '') +
         '</div>' +
       '</div>' +
     '</div>';
 
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('rrStart').value = '';
+    document.getElementById('rrEnd').value = '';
+    document.getElementById('rrStart').min = listing.available_from || today;
+    document.getElementById('rrEnd').min = listing.available_from || today;
+    document.getElementById('rrQty').value = 1;
+    document.getElementById('rrMessage').value = '';
+
     availEl.innerHTML = '<div class="te-rent-desc"><i class="fas fa-circle-info"></i>&nbsp; ' +
-      (equip.next_available_date
-        ? 'Currently booked.<br>Available again from <b>' + esc(equip.next_available_date) + '</b>.'
-        : 'This item shows live availability. Dates already booked by other farmers are blocked automatically.') +
-      '</div>';
+      'Listed by <b>' + esc((listing.seller && listing.seller.full_name) || 'a local farmer') + '</b>.' +
+      (listing.available_from ? '<br>Available from <b>' + esc(listing.available_from) + '</b>' : '') +
+      (listing.available_until ? ' until <b>' + esc(listing.available_until) + '</b>.' : '') +
+      (listing.delivery_option ? '<br>Delivery: <b>' + esc(listing.delivery_option) + '</b>.' : '') +
+      '<br>The owner will approve or decline your request from their end.</div>';
 
-    refreshRentalAvailability();
     updateRentalTotal();
-    toggleModal('rentalBookingModal', true);
-  }
-
-  function refreshRentalAvailability() {
-    var id = document.getElementById('rbEquipId').value;
-    if (!id) return;
-    var days = parseInt(document.getElementById('rbDays').value, 10) || 1;
-    var dateEl = document.getElementById('rbDate');
-    var startDate = dateEl ? dateEl.value : '';
-    if (!startDate) return;
-
-    var availBox = document.getElementById('rentalModalAvail');
-    var confirmBtn = document.getElementById('btnConfirmRental');
-    if (availBox) {
-      availBox.innerHTML = '<div class="te-rent-desc"><i class="fas fa-spinner fa-spin"></i>&nbsp; Checking live availability…</div>';
-    }
-    if (confirmBtn) confirmBtn.disabled = true;
-
-    API.Equipment.getRentalAvailability(id, { start_date: startDate, days: days }).then(function (res) {
-      var data = (res && res.data) || res;
-      var perDay = (data && data.per_day) || [];
-      if (!perDay.length || !availBox) {
-        if (confirmBtn) confirmBtn.disabled = false;
-        return;
-      }
-      var blocked = perDay.filter(function (d) { return !d.available; });
-      var chips = perDay.map(function (d) {
-        var can = d.available;
-        var label = new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        return '<span class="te-day-chip ' + (can ? 'te-day-ok' : 'te-day-no') + '" title="' + esc(d.date) + '">' +
-          label + ' <i class="fas fa-' + (can ? 'check-circle' : 'times-circle') + '"></i></span>';
-      }).join('');
-      availBox.innerHTML =
-        '<div style="font-size:11px;font-weight:800;color:var(--te-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Live Availability</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>' +
-        (blocked.length
-          ? '<div class="te-rent-desc" style="margin-top:8px;"><i class="fas fa-circle-info"></i>&nbsp; ' + blocked.length + ' of ' + perDay.length + ' selected day(s) are already booked.</div>'
-          : '');
-      if (confirmBtn) confirmBtn.disabled = blocked.length > 0;
-    }).catch(function (err) {
-      if (availBox) {
-        availBox.innerHTML = '<div class="te-rent-desc" style="color:#b3261e;"><i class="fas fa-circle-exclamation"></i>&nbsp; ' +
-          esc((err && err.message) || 'Could not check availability.') +
-          ' <span style="color:#3d5644;">(You can still try booking — the server will reject conflicts.)</span></div>';
-      }
-      if (confirmBtn) confirmBtn.disabled = false;
-    });
+    toggleModal('rentRequestModal', true);
   }
 
   function updateRentalTotal() {
-    var id = document.getElementById('rbEquipId').value;
-    var days = parseInt(document.getElementById('rbDays').value, 10) || 1;
-    var equip = state.items.find(function (x) { return x.id === id; });
-    var rate = equip ? equip.daily_rate : 0;
-    document.getElementById('rbTotalLabel').textContent = rupees(rate * days);
+    var listing = findMktListing(document.getElementById('rrListingId') ? document.getElementById('rrListingId').value : '');
+    var days = rentalDayCount();
+    var qty = Math.max(parseInt((document.getElementById('rrQty') || {}).value, 10) || 1, 1);
+    var rate = listing ? (parseFloat(listing.price) || 0) : 0;
+    var total = 0;
+    if (listing) {
+      var p = listing.rental_period;
+      var periods = days;
+      if (p === 'hour') periods = days * 8;
+      if (p === 'week') periods = Math.ceil(days / 7);
+      if (p === 'month') periods = Math.ceil(days / 30);
+      if (periods > 0) total = rate * periods * qty;
+    }
+    var totalEl = document.getElementById('rrTotalLabel');
+    if (totalEl) totalEl.textContent = rupees(total);
 
-    var startStr = document.getElementById('rbDate').value;
-    var start = startStr ? new Date(startStr + 'T00:00:00') : null;
-    var endEl = document.getElementById('rbPeriodLabel');
-    if (endEl && start && !isNaN(start.getTime())) {
-      var end = new Date(start.getTime() + days * 86400000);
-      var opts = { day: 'numeric', month: 'short' };
-      endEl.innerHTML = '<i class="fas fa-calendar-day"></i> <span>Rent period: ' +
-        start.toLocaleDateString('en-IN', opts) + ' – ' + end.toLocaleDateString('en-IN', opts) +
-        ' (' + days + ' day' + (days > 1 ? 's' : '') + ')</span>';
-    } else if (endEl && startStr) {
-      endEl.innerHTML = '<i class="fas fa-calendar-day"></i> <span>Rent period: ' + days + ' day(s)</span>';
+    var depEl = document.getElementById('rrDepositLabel');
+    if (depEl) {
+      var dep = listing ? (listing.security_deposit || 0) : 0;
+      depEl.innerHTML = dep > 0
+        ? 'Plus refundable security deposit of ' + rupees(dep) + ' (returned after inspection, if required by the owner).'
+        : 'No security deposit mentioned by the owner.';
     }
 
-    var depEl = document.getElementById('rbDepositLabel');
-    if (depEl) {
-      var dep = equip ? (equip.deposit_amount || 0) : 0;
-      depEl.innerHTML = dep > 0
-        ? 'Includes refundable security deposit of ' + rupees(dep) + ' (returned after inspection).'
-        : 'No security deposit required for this item.';
+    var startStr = document.getElementById('rrStart') ? document.getElementById('rrStart').value : '';
+    var endStr = document.getElementById('rrEnd') ? document.getElementById('rrEnd').value : '';
+    var periodEl = document.getElementById('rrPeriodLabel');
+    if (!periodEl) return;
+    if (startStr && endStr) {
+      var opts = { day: 'numeric', month: 'short' };
+      var start = new Date(startStr + 'T00:00:00');
+      var end = new Date(endStr + 'T00:00:00');
+      periodEl.innerHTML = '<i class="fas fa-calendar-day"></i> <span>Rent period: ' +
+        start.toLocaleDateString('en-IN', opts) + ' – ' + end.toLocaleDateString('en-IN', opts) +
+        ' (' + days + ' day' + (days > 1 ? 's' : '') + ')</span>';
+    } else if (startStr || endStr) {
+      periodEl.innerHTML = '<i class="fas fa-calendar-day"></i> <span>Rent period: ' + (startStr ? 'from ' + esc(startStr) : 'until ' + esc(endStr)) + '</span>';
+    } else {
+      periodEl.innerHTML = '<i class="fas fa-calendar-day"></i> <span>Choose your rental dates</span>';
     }
   }
 
-  // --- RENTAL DETAILS MODAL ---
+  // --- RENTAL DETAILS MODAL (Marketplace Rent Listings) ---
   function openRentDetailModal(id) {
-    API.Equipment.getRentalDetail(id).then(function (res) {
-      var r = (res && res.data) || res;
-      if (!r) return;
+    API.MarketplaceRental.detail(id).then(function (res) {
+      var m = (res && res.data) || res;
+      if (!m) return;
 
-      var isAvail = r.is_available;
-      var status = r.availability_status || (isAvail ? 'available' : 'booked');
-      var statusLabel = r.availability_label || (isAvail ? 'Available for Rent' : 'Booked');
-      var statusClass = status === 'available' ? 'avail-available'
-        : status === 'unavailable' ? 'avail-unavailable' : 'avail-booked';
-
-      var imgHtml = r.image_url
-        ? '<img src="' + esc(r.image_url) + '" class="te-gallery-main" style="width:100%;height:auto;" alt="' + esc(r.name) + '">'
+      var img = (m.images && m.images.length) ? m.images[0].url : null;
+      var imgHtml = img
+        ? '<img src="' + esc(absImg(img)) + '" class="te-gallery-main" style="width:100%;height:auto;" alt="' + esc(m.title || '') + '">'
         : '<div class="te-card-fallback" style="height:200px;"><i class="fas fa-tractor"></i></div>';
+      var sellerName = (m.seller && m.seller.full_name) ? m.seller.full_name : 'a local farmer';
 
-      var providerTag = (r.listing_status && r.listing_status.toLowerCase() === 'active' && (r.owner_name || r.provider))
-        ? '<span class="te-verified-badge"><i class="fas fa-user-check"></i> Lended by ' + esc(r.owner_name || r.provider) + '</span>'
-        : '<span class="te-verified-badge" style="background:#eef2e6;color:#586b2d;"><i class="fas fa-warehouse"></i> Farm Assist Catalogue</span>';
-
-      var availabilityNote = !isAvail
-        ? '<div class="te-rent-desc" style="margin-top:10px;"><i class="fas fa-circle-info"></i> Currently booked' +
-          (r.next_available_date ? ' — free again from <b>' + esc(r.next_available_date) + '</b>.' : '.') + '</div>'
-        : '<div class="te-rent-desc" style="margin-top:10px;"><i class="fas fa-check-circle"></i> Available for new bookings.</div>';
-
-      var minDays = r.min_duration_days || 1;
       var html = '<div class="te-detail-grid">' +
         '<div>' + imgHtml + '</div>' +
         '<div>' +
           '<div style="font-size:12px;font-weight:700;color:var(--te-muted);margin-bottom:4px;">' +
-            esc(r.brand || 'Machinery') + ' · ' + esc(r.type || 'Tractor') +
+            esc(m.brand || 'Machinery') + (m.model ? ' · ' + esc(m.model) : '') +
           '</div>' +
-          '<h2 style="font-size:22px;font-weight:800;color:var(--te-dark-green);margin:0 0 8px 0;">' + esc(r.name) + '</h2>' +
+          '<h2 style="font-size:22px;font-weight:800;color:var(--te-dark-green);margin:0 0 8px 0;">' + esc(m.title) + '</h2>' +
           '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
-            '<span class="te-avail-tag ' + statusClass + '" style="position:static;">' + esc(statusLabel) + '</span>' +
-            providerTag +
+            '<span class="te-avail-tag avail-available" style="position:static;">Available for Rent</span>' +
+            '<span class="te-verified-badge"><i class="fas fa-user-check"></i> By ' + esc(sellerName) + '</span>' +
           '</div>' +
           '<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px;">' +
-            '<span style="font-size:24px;font-weight:900;color:var(--te-primary-green);">' + rupees(r.daily_rate) + '/day</span>' +
-            (r.deposit_amount ? '<span style="font-size:12px;color:var(--te-muted);font-weight:700;">+ ' + rupees(r.deposit_amount) + ' deposit</span>' : '') +
+            '<span style="font-size:24px;font-weight:900;color:var(--te-primary-green);">' + rupees(m.price) + rentalRateUnit(m) + '</span>' +
+            (m.security_deposit ? '<span style="font-size:12px;color:var(--te-muted);font-weight:700;">+ ' + rupees(m.security_deposit) + ' deposit</span>' : '') +
           '</div>' +
-          (r.description ? '<p style="font-size:13px;color:#3d5644;line-height:1.6;margin-bottom:10px;">' + esc(r.description) + '</p>' : '') +
+          (m.description ? '<p style="font-size:13px;color:#3d5644;line-height:1.6;margin-bottom:10px;">' + esc(m.description) + '</p>' : '') +
           '<table class="te-specs-table">' +
             '<tbody>' +
-              '<tr><td>Location</td><td>' + esc(r.location || '-') + '</td></tr>' +
-              '<tr><td>Type</td><td>' + esc(r.type || '-') + '</td></tr>' +
-              '<tr><td>Model</td><td>' + esc(r.model || '-') + '</td></tr>' +
-              '<tr><td>Power Source</td><td>' + esc(r.power_source || '-') + '</td></tr>' +
-              '<tr><td>Operating Width</td><td>' + esc(r.operating_width || '-') + '</td></tr>' +
-              '<tr><td>Min Rental Period</td><td>' + minDays + ' day(s)</td></tr>' +
-              '<tr><td>Bookings Made</td><td>' + (r.booking_count || 0) + '</td></tr>' +
+              '<tr><td>Location</td><td>' + esc(m.location || m.service_area || '-') + '</td></tr>' +
+              '<tr><td>Condition</td><td>' + esc(m.condition_type || '-') + '</td></tr>' +
+              '<tr><td>Brand / Model</td><td>' + esc(m.brand || '-') + (m.model ? ' / ' + esc(m.model) : '') + '</td></tr>' +
+              '<tr><td>Rental Period</td><td>' + esc(m.rental_period || 'day') + '</td></tr>' +
+              '<tr><td>Min Rental Duration</td><td>' + esc(m.min_rental_duration || '-') + '</td></tr>' +
+              '<tr><td>Available From</td><td>' + esc(m.available_from || '-') + '</td></tr>' +
+              '<tr><td>Available Until</td><td>' + esc(m.available_until || '-') + '</td></tr>' +
+              '<tr><td>Delivery</td><td>' + esc(m.delivery_option || '-') + '</td></tr>' +
+              (m.rental_terms ? '<tr><td>Rental Terms</td><td>' + esc(m.rental_terms) + '</td></tr>' : '') +
             '</tbody>' +
           '</table>' +
-          availabilityNote +
+          '<div class="te-rent-desc" style="margin-top:10px;"><i class="fas fa-circle-info"></i>&nbsp; Your request goes directly to the owner for approval.</div>' +
           '<div style="display:flex;gap:10px;margin-top:16px;">' +
-            '<button class="te-btn-cart" style="flex:1;padding:12px;" data-rent="' + esc(r.id) + '" ' + (isAvail ? '' : 'disabled') + '>' +
-              '<i class="fas fa-calendar-check"></i> Book for Rent' +
+            '<button class="te-btn-cart" style="flex:1;padding:12px;" data-rent="' + esc(m.id) + '">' +
+              '<i class="fas fa-calendar-check"></i> Request To Rent' +
             '</button>' +
-            '<button class="te-wish-btn te-share-btn" onclick="window.shareThis(\'' + esc(r.name) + '\', \'' + esc(r.id) + '\')" style="position:static;width:44px;height:44px;border-radius:10px;" aria-label="Share equipment" title="Share">' +
+            '<button class="te-wish-btn te-share-btn" onclick="window.shareThis(\'' + esc(m.title) + '\', \'' + esc(m.id) + '\')" style="position:static;width:44px;height:44px;border-radius:10px;" aria-label="Share equipment" title="Share">' +
               '<i class="fas fa-share-nodes"></i>' +
             '</button>' +
           '</div>' +
-          '<div style="margin-top:10px;">' +
-            '<button class="te-report-link" data-report="' + esc(r.id) + '" data-report-type="rent" title="Report listing">' +
-              '<i class="fas fa-flag"></i> Report this listing' +
-            '</button>' +
-          '</div>' +
         '</div>' +
-      '</div>' +
-      '<div id="relatedEquipmentBox" style="display:none;margin-top:20px;"></div>';
+      '</div>';
 
       document.getElementById('rentDetailContent').innerHTML = html;
-      appendRelated('rent', r.category_slug, r.id, 'rentDetailContent');
       toggleModal('rentDetailModal', true);
-      API.Equipment.recordView(r.id).catch(function () {});
 
-      var b = document.querySelector('#rentDetailContent [data-rent="' + r.id + '"]');
+      var b = document.querySelector('#rentDetailContent [data-rent="' + m.id + '"]');
       if (b) {
         b.addEventListener('click', function () {
-          state.items = [r];
+          var existing = findMktListing(m.id);
+          if (existing) {
+            state.items = state.items.map(function (x) {
+              return (String(x.id) === String(m.id) || String(x.listing_id) === String(m.id)) ? m : x;
+            });
+          } else {
+            state.items = [m];
+          }
           toggleModal('rentDetailModal', false);
-          openRentalModal(r.id);
+          openRentalModal(m.id);
         });
       }
     }).catch(function () {
@@ -3184,51 +3237,126 @@
     });
   }
 
-  // --- BOOKED (RENTAL BOOKINGS) DRAWER ---
+  // --- MY RENTAL REQUESTS DRAWER (Marketplace) ---
+  function requestStatusMeta(status) {
+    var s = (status || 'pending').toLowerCase();
+    var map = {
+      pending: ['Pending', 'ok'],
+      approved: ['Approved', 'ok'],
+      rejected: ['Declined', 'off'],
+      cancelled: ['Cancelled', 'off'],
+      completed: ['Completed', 'ok']
+    };
+    var m = map[s] || [s, 'off'];
+    return { label: m[0], cls: m[1] };
+  }
+
+  function listingTitle(listing) {
+    return (listing && listing.title) || 'Equipment';
+  }
+
+  function renderRequestItem(req, actionsHtml) {
+    var listing = req.listing || {};
+    var img = (listing.images && listing.images.length) ? listing.images[0].url : null;
+    var imgHtml = img
+      ? '<img src="' + esc(absImg(img)) + '" class="te-listing-thumb" style="width:56px;height:52px;">'
+      : '<div class="te-listing-thumb"><i class="fas fa-tractor"></i></div>';
+    var sm = requestStatusMeta(req.status);
+    return '<div class="te-listing-item">' +
+      imgHtml +
+      '<div class="te-listing-info">' +
+        '<div class="te-listing-name">' + esc(listingTitle(listing)) + '</div>' +
+        '<div class="te-listing-meta"><i class="fas fa-calendar"></i> ' +
+          esc(req.start_date || '') + ' → ' + esc(req.end_date || '') +
+          (req.requested_quantity ? ' · Qty ' + req.requested_quantity : '') +
+        '</div>' +
+        '<div class="te-listing-actions">' +
+          '<span class="te-listing-status ' + sm.cls + '">' + esc(sm.label) + '</span>' +
+          (req.decline_reason ? '<div style="font-size:11px;color:#b3261e;font-weight:700;margin-top:4px;">Reason: ' + esc(req.decline_reason) + '</div>' : '') +
+          (actionsHtml || '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
   function loadBooked() {
     var body = document.getElementById('bookedDrawerBody');
     if (!body) return;
 
     if (!isLoggedIn()) {
-      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-lock"></i><h3>Sign in to see bookings</h3><p>View your rental bookings after signing in.</p></div>';
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-lock"></i><h3>Sign in to see requests</h3><p>View the rental requests you have sent after signing in.</p></div>';
       return;
     }
 
     body.innerHTML = '<div class="te-skeleton" style="height:80px;margin-bottom:10px;"></div>'.repeat(3);
 
-    API.Equipment.getMyRentals().then(function (res) {
-      var bookings = (res && res.data && res.data.items) || (res && res.items) || [];
-      setBadge('quickBookedCount', bookings.length);
+    API.MarketplaceRental.myRequests({ limit: 50 }).then(function (res) {
+      var items = (res && res.data && res.data.items) || (res && res.items) || [];
+      setBadge('quickBookedCount', items.length);
 
-      if (!bookings.length) {
-        body.innerHTML = '<div class="te-empty-state"><i class="fas fa-calendar-check"></i><h3>No rental bookings yet</h3><p>Bookings you make for farm machinery will appear here.</p></div>';
+      if (!items.length) {
+        body.innerHTML = '<div class="te-empty-state"><i class="fas fa-calendar-check"></i><h3>No rental requests yet</h3><p>Send a rent request from any equipment card in the Rent tab above.</p></div>';
         return;
       }
 
-      body.innerHTML = bookings.map(function (b) {
-        var equipName = b.equipment_name || b.name || 'Equipment';
-        var imgUrl = b.image_url;
-        var cancelled = b.status === 'cancelled';
-        var statusLabel = (b.status || 'requested').toUpperCase();
-        var statusClass = cancelled ? 'off' : 'ok';
-        var dateStr = b.booking_date ? new Date(b.booking_date).toLocaleDateString('en-IN') : '—';
-        var img = imgUrl
-          ? '<img src="' + esc(imgUrl) + '" class="te-listing-thumb" style="width:56px;height:52px;">'
-          : '<div class="te-listing-thumb"><i class="fas fa-tractor"></i></div>';
+      body.innerHTML = items.map(function (req) {
+        var act = '';
+        if (req.status === 'pending' || req.status === 'approved') {
+          act = '<button class="te-icon-btn danger" data-cancelrequest="' + esc(req.request_id) + '" title="Cancel request"><i class="fas fa-times"></i></button>';
+        }
+        return renderRequestItem(req, act);
+      }).join('');
+    }).catch(function () {
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Failed to load requests</h3></div>';
+    });
+  }
+
+  // --- INCOMING RENTAL REQUESTS DRAWER (Marketplace, owner side) ---
+  function loadIncomingRequests() {
+    var body = document.getElementById('incomingDrawerBody');
+    if (!body) return;
+
+    if (!isLoggedIn()) {
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-lock"></i><h3>Sign in to see requests</h3><p>Approve or decline rental requests for the equipment you listed on the Marketplace.</p></div>';
+      return;
+    }
+
+    body.innerHTML = '<div class="te-skeleton" style="height:80px;margin-bottom:10px;"></div>'.repeat(3);
+
+    API.MarketplaceRental.incomingRequests({ limit: 50 }).then(function (res) {
+      var items = (res && res.data && res.data.items) || (res && res.items) || [];
+      setBadge('quickIncomingCount', items.filter(function (r) { return r.status === 'pending'; }).length);
+
+      if (!items.length) {
+        body.innerHTML = '<div class="te-empty-state"><i class="fas fa-inbox"></i><h3>No requests received</h3><p>Farmers who want to rent your Marketplace listings will appear here for approval.</p></div>';
+        return;
+      }
+
+      body.innerHTML = items.map(function (req) {
+        var reqName = (req.requester && req.requester.full_name) || 'a farmer';
+        var reqPhone = (req.requester && req.requester.phone_number) ? ' · ' + esc(req.requester.phone_number) : '';
+        var act = req.status === 'pending'
+          ? '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">' +
+              '<button class="te-btn-cart" style="padding:6px 10px;font-size:12px;" data-approverequest="' + esc(req.request_id) + '"><i class="fas fa-check"></i> Approve</button>' +
+              '<button class="te-btn-view" style="padding:6px 10px;font-size:12px;" data-rejectrequest="' + esc(req.request_id) + '"><i class="fas fa-xmark"></i> Decline</button>' +
+            '</div>'
+          : '';
         return '<div class="te-listing-item">' +
-          img +
           '<div class="te-listing-info">' +
-            '<div class="te-listing-name">' + esc(equipName) + '</div>' +
-            '<div class="te-listing-meta"><i class="fas fa-calendar"></i> ' + dateStr + ' · ' + (b.duration_days || 0) + ' day(s) · ' + rupees(b.total_cost) + '</div>' +
+            '<div class="te-listing-name">' + esc(listingTitle(req.listing)) + '</div>' +
+            '<div class="te-listing-meta"><i class="fas fa-user"></i> ' + esc(reqName) + reqPhone + '<br>' +
+              '<i class="fas fa-calendar"></i> ' + esc(req.start_date || '') + ' → ' + esc(req.end_date || '') +
+              (req.requested_quantity ? ' · Qty ' + req.requested_quantity : '') + '</div>' +
+            (req.message ? '<div style="font-size:12px;color:var(--te-muted);margin:4px 0 0 0;">“' + esc(req.message) + '”</div>' : '') +
             '<div class="te-listing-actions">' +
-              '<span class="te-listing-status ' + statusClass + '">' + esc(statusLabel) + '</span>' +
-              (cancelled ? '' : '<button class="te-icon-btn danger" data-cancelbooking="' + esc(b.booking_id || b.id) + '" title="Cancel booking"><i class="fas fa-times"></i></button>') +
+              '<span class="te-listing-status ' + requestStatusMeta(req.status).cls + '">' + esc(requestStatusMeta(req.status).label) + '</span>' +
+              act +
             '</div>' +
           '</div>' +
         '</div>';
       }).join('');
     }).catch(function () {
-      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Failed to load bookings</h3></div>';
+      body.innerHTML = '<div class="te-empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Failed to load requests</h3></div>';
     });
   }
 
@@ -3711,6 +3839,14 @@
       if (rMax !== null && rMax > 0 && (priceMax === null || priceMax > rMax)) priceMax = rMax;
     }
 
+    // Rent subform now lists rental listings posted on the Marketplace, so it
+    // is served by the marketplace browse endpoint (only other farmers' active
+    // rent listings appear).
+    if (state.mode === 'rent') {
+      fetchRentListings(reset, priceMin, priceMax);
+      return;
+    }
+
     var params = {
       page: state.page,
       limit: state.limit,
@@ -3749,13 +3885,41 @@
     });
   }
 
+  function fetchRentListings(reset, priceMin, priceMax) {
+    var params = {
+      page: state.page,
+      limit: state.limit,
+      search: state.search,
+      group: 'items',
+      listing_type: 'rent',
+      category_id: state.category !== 'all' ? state.category : null,
+      location: state.location !== 'all' ? state.location : null,
+      min_price: priceMin,
+      max_price: priceMax,
+      sort: state.sortBy === 'price' ? (state.sortOrder === 'asc' ? 'price_asc' : 'price_desc') : 'newest'
+    };
+
+    API.MarketplaceRental.browse(params).then(function (res) {
+      var data = (res && res.data) || res || {};
+      var items = data.items || [];
+      state.fetchError = false;
+      state.totalPages = data.total_pages || 1;
+      state.totalCount = data.total || items.length;
+      state.items = reset ? items : state.items.concat(items);
+      renderProducts(state.items, reset);
+    }).catch(function () {
+      state.fetchError = true;
+      renderProducts([], true);
+    });
+  }
+
   function refreshDrawerBadges() {
-    if (isLoggedIn()) {
-      API.Equipment.getMyRentals().then(function (res) {
-        var bookings = (res && res.data && res.data.items) || (res && res.items) || [];
-        setBadge('quickBookedCount', bookings.length);
-      }).catch(function () {});
-    }
+    if (!isLoggedIn()) return;
+    API.MarketplaceRental.counts().then(function (res) {
+      var c = (res && res.data) || res || {};
+      setBadge('quickBookedCount', c.outgoing || 0);
+      setBadge('quickIncomingCount', c.incoming || 0);
+    }).catch(function () {});
   }
 
   // --- FILTER HELPERS ---
@@ -3893,7 +4057,7 @@
   // --- EVENT LISTENERS ---
   document.addEventListener('click', function (e) {
     var target = e.target;
-    var btn = target.closest('button, a, [data-cat], [data-detail], [data-add], [data-wish], [data-rent], [data-rentdetail], [data-cartqty], [data-cartremove], [data-cancelorder], [data-uncompare], [data-cancelbooking], [data-listingedit], [data-listingdel], [data-listingtoggle], [data-action], [data-report]');
+    var btn = target.closest('button, a, [data-cat], [data-detail], [data-add], [data-wish], [data-rent], [data-rentdetail], [data-cartqty], [data-cartremove], [data-cancelorder], [data-uncompare], [data-cancelbooking], [data-cancelrequest], [data-approverequest], [data-rejectrequest], [data-action], [data-report]');
     if (!btn) return;
 
     // Empty-state / error-state actions
@@ -3912,9 +4076,9 @@
       return;
     }
 
-    // Category Pill Click
+    // Category Pill Click (click again to clear back to all)
     if (btn.dataset.cat !== undefined) {
-      state.category = btn.dataset.cat;
+      state.category = (state.category === btn.dataset.cat) ? 'all' : btn.dataset.cat;
       document.querySelectorAll('.te-cat-pill').forEach(function (p) {
         p.classList.toggle('active', p.dataset.cat === state.category);
       });
@@ -4040,6 +4204,48 @@
       return;
     }
 
+    // Cancel My Rental Request
+    if (btn.dataset.cancelrequest) {
+      var reqId = btn.dataset.cancelrequest;
+      if (!confirm('Cancel this rental request?')) return;
+      API.MarketplaceRental.cancel(reqId).then(function () {
+        toast('Rental request cancelled.');
+        loadBooked();
+        refreshDrawerBadges();
+      }).catch(function (err) {
+        toast(err && err.message ? err.message : 'Could not cancel this request.');
+      });
+      return;
+    }
+
+    // Approve Rental Request (owner)
+    if (btn.dataset.approverequest) {
+      var apId = btn.dataset.approverequest;
+      API.MarketplaceRental.decide(apId, { decision: 'approved' }).then(function () {
+        toast('Request approved. The requester has been notified.');
+        loadIncomingRequests();
+        refreshDrawerBadges();
+      }).catch(function (err) {
+        toast(err && err.message ? err.message : 'Could not approve this request.');
+      });
+      return;
+    }
+
+    // Reject Rental Request (owner, asks for a reason)
+    if (btn.dataset.rejectrequest) {
+      var rjId = btn.dataset.rejectrequest;
+      var reason = prompt('Why are you declining this rental request? (optional)');
+      if (reason === null) return;
+      API.MarketplaceRental.decide(rjId, { decision: 'rejected', reason: reason || '' }).then(function () {
+        toast('Request declined. The requester has been notified.');
+        loadIncomingRequests();
+        refreshDrawerBadges();
+      }).catch(function (err) {
+        toast(err && err.message ? err.message : 'Could not decline this request.');
+      });
+      return;
+    }
+
     // Listing Edit
     if (btn.dataset.listingedit) {
       var parts = btn.dataset.listingedit.split(':');
@@ -4099,12 +4305,24 @@
 
   function setMode(mode) {
     state.mode = mode;
+    state.category = 'all';
     Object.keys(modeBtns).forEach(function (m) {
       if (modeBtns[m]) modeBtns[m].classList.toggle('active', m === mode);
     });
     var isRentOnly = mode === 'rent';
     document.getElementById('recommendationsSection').style.display = isRentOnly ? 'none' : 'block';
     document.getElementById('recentSection').style.display = isRentOnly ? 'none' : 'block';
+    if (mode === 'rent') {
+      API.MarketplaceRental.categories({ group: 'items' }).then(function (res) {
+        var items = (res && res.data && res.data.items) || (res && res.items) || [];
+        state.marketplaceCategories = items;
+        renderCategories(items);
+      }).catch(function () {
+        renderCategories([]);
+      });
+    } else {
+      renderCategories(state.categories || []);
+    }
     fetchProducts(true);
   }
 
@@ -4225,30 +4443,14 @@
     drawerClose('activity');
   });
 
-  // My Listings Drawer
-  document.getElementById('btnQuickMyListings').addEventListener('click', function () {
-    if (!requireLogin()) return;
-    loadMyListings();
-    drawerOpen('listings');
+  // Incoming Requests Drawer
+  document.getElementById('btnCloseIncomingDrawer').addEventListener('click', function () {
+    drawerClose('incoming');
   });
 
-  document.getElementById('btnCloseListingsDrawer').addEventListener('click', function () {
-    drawerClose('listings');
+  document.getElementById('incomingBackdrop').addEventListener('click', function () {
+    drawerClose('incoming');
   });
-
-  document.getElementById('listingsBackdrop').addEventListener('click', function () {
-    drawerClose('listings');
-  });
-
-  document.getElementById('btnOpenListingModal').addEventListener('click', function () {
-    openListingEditor('buy', null);
-  });
-
-  // Listing Modal: type tabs + close + submit
-  document.getElementById('ltypeRent').addEventListener('click', function () { setListingTypeTab('rent'); });
-  document.getElementById('ltypeBuy').addEventListener('click', function () { setListingTypeTab('buy'); });
-  document.getElementById('btnCloseListingModal').addEventListener('click', function () { toggleModal('listingModal', false); });
-  document.getElementById('listingForm').addEventListener('submit', submitListing);
 
   // Quick action chips
   document.getElementById('btnQuickCart').addEventListener('click', function () {
@@ -4261,6 +4463,12 @@
     if (!requireLogin()) return;
     loadBooked();
     drawerOpen('booked');
+  });
+
+  document.getElementById('btnQuickIncoming').addEventListener('click', function () {
+    if (!requireLogin()) return;
+    loadIncomingRequests();
+    drawerOpen('incoming');
   });
 
   document.getElementById('btnQuickOrders').addEventListener('click', function () {
@@ -4285,27 +4493,17 @@
   document.getElementById('btnCloseDetailModal').addEventListener('click', function () { toggleModal('detailModal', false); });
   document.getElementById('btnCloseCompareModal').addEventListener('click', function () { toggleModal('compareModal', false); });
   document.getElementById('btnCloseCheckoutModal').addEventListener('click', function () { toggleModal('checkoutModal', false); });
-  document.getElementById('btnCloseRentalModal').addEventListener('click', function () { toggleModal('rentalBookingModal', false); });
+  document.getElementById('btnCloseRentRequestModal').addEventListener('click', function () { toggleModal('rentRequestModal', false); });
   document.getElementById('btnCloseRentDetailModal').addEventListener('click', function () { toggleModal('rentDetailModal', false); });
   document.getElementById('btnCloseReportModal').addEventListener('click', function () { toggleModal('reportModal', false); });
   document.getElementById('reportForm').addEventListener('submit', submitReport);
 
-  // Listing photo upload bindings
-  document.getElementById('btnPickListingPhoto').addEventListener('click', function () {
-    if (!isLoggedIn()) { requireLogin(); return; }
-    document.getElementById('lsfPhotoInput').click();
-  });
-  document.getElementById('lsfPhotoInput').addEventListener('change', handleListingPhotoSelect);
-  document.getElementById('btnRemoveListingPhoto').addEventListener('click', function () {
-    setListingPhotoPreview('');
-    document.getElementById('lsfPhotoInput').value = '';
-  });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-      ['detailModal', 'compareModal', 'checkoutModal', 'rentalBookingModal', 'rentDetailModal', 'listingModal', 'reportModal'].forEach(function (id) {
+      ['detailModal', 'compareModal', 'checkoutModal', 'rentRequestModal', 'rentDetailModal', 'reportModal'].forEach(function (id) {
         toggleModal(id, false);
       });
-      ['cart', 'orders', 'wish', 'booked', 'activity', 'listings'].forEach(drawerClose);
+      ['cart', 'orders', 'wish', 'booked', 'incoming', 'activity'].forEach(drawerClose);
       var sidebar = document.getElementById('filterSidebar');
       if (sidebar) sidebar.classList.remove('mobile-open');
     }
@@ -4411,34 +4609,55 @@
     });
   });
 
-  // Rental Duration Input Change
-  document.getElementById('rbDays').addEventListener('input', function () {
-    updateRentalTotal();
-    refreshRentalAvailability();
-  });
-  document.getElementById('rbDate').addEventListener('input', function () {
-    updateRentalTotal();
-    refreshRentalAvailability();
+  // Rental Request Input Change
+  ['rrStart', 'rrEnd', 'rrQty'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateRentalTotal);
   });
 
-  // Submit Rental Booking Form
-  document.getElementById('rentalBookingForm').addEventListener('submit', function (e) {
+  // Submit Rental Request Form
+  document.getElementById('rentRequestForm').addEventListener('submit', function (e) {
     e.preventDefault();
-    var equipId = document.getElementById('rbEquipId').value;
-    var bDate = document.getElementById('rbDate').value;
-    var days = parseInt(document.getElementById('rbDays').value, 10) || 1;
+    var listingId = document.getElementById('rrListingId').value;
+    var sDate = document.getElementById('rrStart').value;
+    var eDate = document.getElementById('rrEnd').value;
+    var qty = parseInt(document.getElementById('rrQty').value, 10) || 1;
+    var msg = document.getElementById('rrMessage').value.trim();
 
-    API.Equipment.bookRental({
-      equipment_id: equipId,
-      booking_date: bDate,
-      duration_days: days
+    if (!sDate || !eDate) {
+      toast('Please pick your start and end dates.');
+      return;
+    }
+    if (eDate < sDate) {
+      toast('End date must be on or after the start date.');
+      return;
+    }
+
+    var submitBtn = document.getElementById('btnSubmitRentalRequest');
+    function restoreSubmit() {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Rental Request';
+      }
+    }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+    }
+
+    API.MarketplaceRental.createRequest(listingId, {
+      start_date: sDate,
+      end_date: eDate,
+      requested_quantity: qty,
+      message: msg
     }).then(function (res) {
-      toggleModal('rentalBookingModal', false);
-      toast('Machinery successfully booked for ' + days + ' day(s)!');
+      toggleModal('rentRequestModal', false);
+      toast((res && res.message) || 'Rental request sent to the owner for approval.');
       refreshDrawerBadges();
-      fetchProducts(true);
+      restoreSubmit();
     }).catch(function (err) {
-      toast(err.message || 'Could not book rental equipment.');
+      toast((err && err.message) || 'Could not send your rental request.');
+      restoreSubmit();
     });
   });
 
@@ -4468,9 +4687,19 @@
     // 5. Initial Product Load
     fetchProducts(true);
 
-    // 6. Open shared item (#item=<id>) if present
+    // 6. Open shared item (#item=<id>) or rental requests hash if present
     var hash = window.location.hash || '';
-    if (hash.indexOf('#item=') === 0) {
+    if (hash === '#incoming-rental-requests') {
+      if (requireLogin()) {
+        loadIncomingRequests();
+        drawerOpen('incoming');
+      }
+    } else if (hash === '#my-rental-requests') {
+      if (requireLogin()) {
+        loadBooked();
+        drawerOpen('booked');
+      }
+    } else if (hash.indexOf('#item=') === 0) {
       var sharedId = decodeURIComponent(hash.slice(6));
       if (sharedId) {
         API.Equipment.getProduct(sharedId).then(function () {

@@ -353,6 +353,7 @@ class MarketplaceListing(Base):
     )
     enquiries = relationship("MarketplaceEnquiry", back_populates="listing", cascade="all, delete-orphan")
     sales = relationship("MarketplaceSale", back_populates="listing", cascade="all, delete-orphan")
+    rental_requests = relationship("MarketplaceRentalRequest", back_populates="listing", cascade="all, delete-orphan")
 
 
 class MarketplaceListingImage(Base):
@@ -440,6 +441,44 @@ class MarketplaceSale(Base):
 
     listing = relationship("MarketplaceListing", back_populates="sales")
     buyer = relationship("User", foreign_keys=[buyer_user_id])
+
+
+class MarketplaceRentalRequest(Base):
+    """A farmer's request to rent equipment listed by another farmer.
+
+    The flow: a renter opens an equipment-listed ``MarketplaceListing`` on the
+    Tools & Equipment page and sends a request; the listing owner then approves
+    or rejects it. The requester is always the authenticated JWT user and the
+    owner is snapshotted from the listing - never trusted from the frontend.
+
+    Statuses: pending | approved | rejected | cancelled | completed
+    """
+
+    __tablename__ = "marketplace_rental_requests"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    request_id = Column(String(20), unique=True, index=True)
+    listing_id = Column(String(36), ForeignKey("marketplace_listings.id"), nullable=False, index=True)
+    requester_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    owner_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+
+    start_date = Column(String(20), nullable=False)  # ISO date (YYYY-MM-DD)
+    end_date = Column(String(20), nullable=False)    # ISO date (YYYY-MM-DD), inclusive
+    requested_quantity = Column(Float, default=1)
+    message = Column(Text, nullable=True)
+
+    status = Column(String(20), default="pending", index=True)  # pending | approved | rejected | cancelled | completed
+    decline_reason = Column(Text, nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    listing = relationship("MarketplaceListing", back_populates="rental_requests")
+    requester = relationship("User", foreign_keys=[requester_user_id])
+    owner = relationship("User", foreign_keys=[owner_user_id])
 
 
 class MarketplaceSellerSettings(Base):

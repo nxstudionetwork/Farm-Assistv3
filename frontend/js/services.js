@@ -968,6 +968,39 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  // Marketplace - Equipment RENTAL requests (the Tools & Equipment Rent subform).
+  // Rent listings come from the marketplace; requests are approved/rejected by
+  // the listing owner and the requester is notified through the app's bell.
+  var MarketplaceRentalService = {
+    browse: function (params) {
+      return http('GET', '/marketplace/browse/listings' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    detail: function (listingId) {
+      return http('GET', '/marketplace/browse/listings/' + enc(listingId)).then(unwrap);
+    },
+    categories: function (params) {
+      return http('GET', '/marketplace/browse/categories' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    createRequest: function (listingId, data) {
+      return http('POST', M + '/rentals/listings/' + enc(listingId) + '/requests', data).then(unwrap);
+    },
+    myRequests: function (params) {
+      return http('GET', M + '/rentals/requests' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    incomingRequests: function (params) {
+      return http('GET', M + '/rentals/requests/incoming' + (params ? '?' + buildQuery(params) : '')).then(unwrap);
+    },
+    counts: function () {
+      return http('GET', M + '/rentals/requests/counts').then(unwrap);
+    },
+    decide: function (requestId, data) {
+      return http('PATCH', M + '/rentals/requests/' + enc(requestId) + '/decision', data).then(unwrap);
+    },
+    cancel: function (requestId) {
+      return http('PATCH', M + '/rentals/requests/' + enc(requestId) + '/cancel').then(unwrap);
+    }
+  };
+
   var GovernmentService = {
     listSchemes: function (params) {
       var qs = '';
@@ -2623,6 +2656,7 @@ Backend: FastAPI served from the same origin (port 8000).
     InputStore: InputStoreService,
     Marketplace: MarketplaceService,
     MarketplaceSeller: MarketplaceSellerService,
+    MarketplaceRental: MarketplaceRentalService,
     Government: GovernmentService,
     GovernmentService: GovernmentService,
     Community: CommunityService,
@@ -2670,6 +2704,7 @@ Backend: FastAPI served from the same origin (port 8000).
   global.InputStoreService = InputStoreService;
   global.MarketplaceService = MarketplaceService;
   global.MarketplaceSellerService = MarketplaceSellerService;
+  global.MarketplaceRentalService = MarketplaceRentalService;
   global.GovernmentService = GovernmentService;
   global.CommunityService = CommunityService;
   global.FarmBuzzService = FarmBuzzService;

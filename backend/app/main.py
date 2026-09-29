@@ -33,6 +33,7 @@ from .routers import (
     insurance, calendar, input_store, tools_equipment,
     marketplace_seller, monitoring, livestock, soil_irrigation,
     crop_health, marketplace_browse, sustainability,
+    marketplace_rentals,
 )
 
 
@@ -72,6 +73,7 @@ app.include_router(workers.router)
 app.include_router(marketplace.router)
 app.include_router(marketplace_seller.router)
 app.include_router(marketplace_browse.router)
+app.include_router(marketplace_rentals.router)
 app.include_router(input_store.router)
 app.include_router(government.router)
 app.include_router(community.router)

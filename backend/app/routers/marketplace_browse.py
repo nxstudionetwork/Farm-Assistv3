@@ -21,6 +21,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -82,11 +83,13 @@ def _browse_listing_payload(db: Session, listing: MarketplaceListing, settings: 
     show_location = not settings or bool(settings.show_location_to_buyers)
     show_contact = not settings or bool(settings.show_contact_to_buyers)
     seller = db.query(User).filter(User.id == listing.user_id).first()
+    listing_type = listing.listing_type or "sell"
     return {
         "id": listing.id,
         "listing_id": listing.listing_id,
         "title": listing.title,
         "description": listing.description,
+        "listing_type": listing_type,
         "category": (
             {"id": listing.category.id, "name": listing.category.name, "slug": listing.category.slug,
              "group": listing.category.group} if listing.category else None
@@ -105,6 +108,14 @@ def _browse_listing_payload(db: Session, listing: MarketplaceListing, settings: 
         "brand": listing.brand,
         "model": listing.model,
         "usage_details": listing.usage_details,
+        "rental_period": listing.rental_period,
+        "min_rental_duration": listing.min_rental_duration,
+        "available_from": listing.available_from,
+        "available_until": listing.available_until,
+        "security_deposit": listing.security_deposit,
+        "rental_terms": listing.rental_terms,
+        "service_area": listing.service_area,
+        "delivery_option": listing.delivery_option,
         "contact_method": listing.contact_method if show_contact else None,
         "status": listing.status,
         "remaining_quantity": max(float(listing.quantity or 0) - float(listing.sold_quantity or 0), 0),
@@ -118,6 +129,7 @@ def _browse_listing_payload(db: Session, listing: MarketplaceListing, settings: 
         } if show_contact else {"id": seller.id if seller else None, "full_name": None, "farmer_id": None},
         "is_owner": listing.user_id == viewer_id,
         "can_enquire": bool(listing.user_id != viewer_id and (not settings or bool(settings.allow_buyer_enquiries))),
+        "can_rent": bool(listing.user_id != viewer_id and listing_type == "rent"),
     }
 
 
@@ -193,6 +205,54 @@ def _sale_payload(sale: MarketplaceSale, listing: Optional[MarketplaceListing] =
     }
 
 
+@router.get("/categories")
+def browse_categories(
+    group: Optional[str] = Query(None, pattern="^(produce|items)$"),
+    listing_type: Optional[str] = Query(None, pattern="^(sell|rent)$"),
+    db: Session = Depends(get_db),
+):
+    """Marketplace categories for browse surfaces (e.g. the Tools & Equipment Rent subform).
+
+    ``listing_type`` optionally narrows the per-category listing counts so the
+    Rent subform can show how many rent items each category currently holds.
+    """
+    cats = (
+        db.query(MarketplaceCategory)
+        .filter(MarketplaceCategory.is_active == True)  # noqa: E712
+        .order_by(MarketplaceCategory.display_order, MarketplaceCategory.name)
+        .all()
+    )
+    if group:
+        cats = [c for c in cats if (c.group or "") == group]
+
+    rows = []
+    for cat in cats:
+        count_q = (
+            db.query(func.count(MarketplaceListing.id))
+            .filter(
+                MarketplaceListing.category_id == cat.id,
+                MarketplaceListing.status == "active",
+                MarketplaceListing.is_active == True,  # noqa: E712
+                MarketplaceListing.is_deleted == False,  # noqa: E712
+            )
+        )
+        if listing_type == "rent":
+            count_q = count_q.filter(MarketplaceListing.listing_type == "rent")
+        elif listing_type == "sell":
+            count_q = count_q.filter(
+                or_(MarketplaceListing.listing_type == "sell", MarketplaceListing.listing_type.is_(None))
+            )
+        rows.append({
+            "id": cat.id,
+            "name": cat.name,
+            "slug": cat.slug,
+            "group": cat.group,
+            "icon": cat.icon,
+            "count": count_q.scalar() or 0,
+        })
+    return {"status": "success", "data": {"items": rows, "total": len(rows)}}
+
+
 @router.get("/listings")
 def browse_listings(
     page: int = Query(1, ge=1),
@@ -200,6 +260,7 @@ def browse_listings(
     search: Optional[str] = None,
     category_id: Optional[str] = None,
     group: Optional[str] = Query(None, pattern="^(produce|items)$"),
+    listing_type: Optional[str] = Query(None, pattern="^(sell|rent)$"),
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     location: Optional[str] = None,
@@ -215,6 +276,14 @@ def browse_listings(
         MarketplaceListing.user_id != current_user.id,
         MarketplaceCategory.is_active == True,  # noqa: E712
     )
+    if listing_type:
+        # Legacy rows predate the column, so fall back to "sell" when NULL.
+        if listing_type == "sell":
+            q = q.filter(
+                or_(MarketplaceListing.listing_type == "sell", MarketplaceListing.listing_type.is_(None))
+            )
+        else:
+            q = q.filter(MarketplaceListing.listing_type == listing_type)
     if search:
         term = f"%{search}%"
         q = q.filter(
