@@ -340,6 +340,7 @@
   <script src="assets/js/navigation.js"></script>
   <script src="assets/js/app.js"></script>
   <script src="js/script.js"></script>
+  <script src="js/farm-geo.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
   (function () {
@@ -430,19 +431,30 @@
       return Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Math.abs(Number(lat)) <= 90 && Math.abs(Number(lng)) <= 180;
     }
 
+    /* Boundaries are stored as {"points": [[lat, lng], ...]} by the My Farm
+       boundary editor, which is exactly the shape FarmGeo.toPoints() reads.
+       Reading the format here as well is what lets a farm or field outline
+       drawn in My Farm actually appear on this map. FarmGeo also normalises
+       legacy clients, GeoJSON-style "coordinates" and bare pair lists, and
+       drops anything outside valid latitude/longitude ranges. */
     function boundaryPoints(b) {
-      var raw = Array.isArray(b) ? b : (b && Array.isArray(b.coordinates) ? b.coordinates : null);
-      if (!raw) return [];
-      if (raw[0] && Array.isArray(raw[0])) raw = raw[0];
-      var pts = [];
-      raw.forEach(function (p) {
-        if (Array.isArray(p) && p.length >= 2) {
-          pts.push({ lat: Number(p[0]), lng: Number(p[1]) });
-        } else if (p && p.lat != null && p.lng != null) {
-          pts.push({ lat: Number(p.lat), lng: Number(p.lng) });
+      var out = [];
+      if (window.FarmGeo && typeof window.FarmGeo.toPoints === 'function') {
+        out = window.FarmGeo.toPoints(b);
+      } else if (b) {
+        var raw = Array.isArray(b) ? b
+          : (b.points || b.coordinates || (Array.isArray(b.coordinates) ? b.coordinates : null));
+        if (raw && raw.length && Array.isArray(raw[0][0])) raw = raw[0];
+        if (Array.isArray(raw)) {
+          raw.forEach(function (p) {
+            if (Array.isArray(p) && p.length >= 2) out.push([Number(p[0]), Number(p[1])]);
+            else if (p && p.lat != null && p.lng != null) out.push([Number(p.lat), Number(p.lng)]);
+          });
         }
-      });
-      return pts.filter(function (p) { return validPoint(p.lat, p.lng); });
+      }
+      return out
+        .filter(function (p) { return validPoint(p[0], p[1]); })
+        .map(function (p) { return { lat: p[0], lng: p[1] }; });
     }
 
     function findFarm(id) {
@@ -710,10 +722,21 @@
       el.innerHTML = text ? esc(text) : '';
     }
 
+    /* The shared service layer already resolves the API base, attaches the
+       bearer token and unwraps the {status, data} envelope. Preferring it
+       keeps this page working on whatever host or port the API is served from,
+       where the hard-coded localhost fallback above would silently fail. */
+    function fetchFarmMap() {
+      if (window.API && window.API.Maps && typeof window.API.Maps.getFarmMap === 'function') {
+        return window.API.Maps.getFarmMap().then(function (payload) { return { data: payload }; });
+      }
+      return apiGet('/maps/farm-map');
+    }
+
     function loadData() {
       showLoading(true);
       hideMessage();
-      apiGet('/maps/farm-map').then(function (res) {
+      fetchFarmMap().then(function (res) {
         data = (res && res.data) || { farms: [], plots: [] };
         data.farms = data.farms || [];
         data.plots = data.plots || [];
@@ -761,6 +784,7 @@
         });
         sel.onchange = function () {
           activeFarmId = sel.value || null;
+          persistFarmSelection();
           fitDirty = true;
           renderAll();
           recenter();
@@ -999,24 +1023,40 @@
       refreshLegend();
     }
 
-    /* Setup guidance only appears while boundary data is genuinely missing, and
-       only once there is a located farm to hang it off. */
+    /* Boundary coverage is reported honestly. A farm or field that has a saved
+       location but no outline is still missing its real shape, so the banner
+       counts what is outlined and what is not rather than only appearing when
+       nothing at all is stored. Counts come from the parsed geometry, so the
+       banner can never claim a boundary the map is not actually drawing. */
     function showBoundaryBanner(plots) {
       var banner = $('boundary-banner');
       var farms = visibleFarms();
-      var anyFarmLoc = farms.some(function (f) { return f.has_location; });
-      var anyBoundary = farms.some(function (f) { return f.has_boundary; }) ||
-        plots.some(function (p) { return p.has_boundary; });
-      if (anyFarmLoc && !anyBoundary) {
-        banner.hidden = false;
-        banner.innerHTML = '<i class="fa-solid fa-draw-polygon"></i>' +
-          '<span>No farm boundary has been added yet. <a href="farm.html">Add it in My Farm</a></span>' +
-          '<button type="button" aria-label="Dismiss">&times;</button>';
-        var bbtn = banner.querySelector('button');
-        if (bbtn) bbtn.onclick = function () { banner.hidden = true; };
-      } else {
-        banner.hidden = true;
+      var farmsLocated = farms.filter(function (f) { return f.has_location; });
+      var farmsOutlined = farms.filter(function (f) { return boundaryPoints(f.boundary_coordinates).length >= 3; });
+      var plotsLocated = plots.filter(function (p) { return p.has_location; });
+      var plotsOutlined = plots.filter(function (p) { return boundaryPoints(p.boundary_coordinates).length >= 3; });
+
+      var missingFarms = farmsLocated.length - farmsOutlined.length;
+      var missingPlots = plotsLocated.length - plotsOutlined.length;
+      if (!farmsLocated.length && !plotsLocated.length) { banner.hidden = true; return; }
+      if (missingFarms <= 0 && missingPlots <= 0) { banner.hidden = true; return; }
+
+      var bits = [];
+      if (farmsLocated.length) {
+        bits.push(farmsOutlined.length + ' of ' + farmsLocated.length + ' ' +
+          (farmsLocated.length === 1 ? 'farm' : 'farms') + ' outlined');
       }
+      if (plotsLocated.length) {
+        bits.push(plotsOutlined.length + ' of ' + plotsLocated.length + ' ' +
+          (plotsLocated.length === 1 ? 'field' : 'fields') + ' outlined');
+      }
+      banner.hidden = false;
+      banner.innerHTML = '<i class="fa-solid fa-draw-polygon"></i>' +
+        '<span>' + esc(bits.join(' \u00b7 ')) +
+        '. Add the missing boundaries in <a href="farm.html">My Farm</a> to see the real field outlines here.</span>' +
+        '<button type="button" aria-label="Dismiss">&times;</button>';
+      var bbtn = banner.querySelector('button');
+      if (bbtn) bbtn.onclick = function () { banner.hidden = true; };
     }
 
     /* The legend only advertises layers that are actually on screen, and names
@@ -1028,7 +1068,7 @@
       if (farms.some(function (f) { return f.has_location; })) {
         items.push({ cls: 'round', style: 'background:#176b45', label: 'Farm' });
       }
-      if (farms.some(function (f) { return f.has_boundary; })) {
+      if (farms.some(function (f) { return boundaryPoints(f.boundary_coordinates).length >= 3; })) {
         items.push({ cls: 'boundary', label: 'Farm boundary' });
       }
       var crops = [];
@@ -1276,6 +1316,7 @@
         var sel2 = $('farm-select');
         if (sel2 && !sel2.hidden) sel2.value = '';
       }
+      persistFarmSelection();
       filters.plots = draft.plot ? new Set([draft.plot]) : new Set();
       filters.crops = draft.crop ? new Set([draft.crop]) : new Set();
       filters.statuses = copySet(draft.statuses);
@@ -1310,6 +1351,7 @@
         var sel = $('farm-select');
         if (sel && !sel.hidden) sel.value = '';
       }
+      persistFarmSelection();
       closeFilterDialog();
       fitDirty = true;
       renderAll();
@@ -1875,16 +1917,39 @@
       }
     }
 
-    /* My Farm links here with ?farm=&field= so a farmer lands on the exact
-       record they came from. */
+    /* My Farm remembers the farm the farmer last opened under the same key, so
+       arriving here from that page lands on the farm they were just working
+       on instead of resetting to the first one. My Farm also links here with
+       ?farm=&field= so an explicit deep link still wins over that memory. */
+    function rememberedFarmId() {
+      try { return localStorage.getItem('fa-selected-farm-id') || ''; } catch (e) { return ''; }
+    }
+
+    function persistFarmSelection() {
+      try {
+        if (activeFarmId == null || activeFarmId === '') localStorage.removeItem('fa-selected-farm-id');
+        else localStorage.setItem('fa-selected-farm-id', String(activeFarmId));
+      } catch (e) { /* storage unavailable; selection is still applied in-page */ }
+    }
+
     function applyDeepLink() {
       var params;
       try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
       var farmRef = params.get('farm') || params.get('farm_id');
       var fieldRef = params.get('field') || params.get('plot_id');
-      if (!farmRef && !fieldRef) return;
 
-      var farm = findFarm(farmRef);
+      if (!farmRef && !fieldRef) {
+        var remembered = findFarm(rememberedFarmId());
+        if (remembered) {
+          activeFarmId = remembered.id;
+          var rsel = $('farm-select');
+          if (rsel && !rsel.hidden) rsel.value = String(remembered.id);
+          fitDirty = true;
+        }
+        return;
+      }
+
+      var farm = farmRef ? findFarm(farmRef) : null;
       if (farm) {
         activeFarmId = farm.id;
         var sel = $('farm-select');
@@ -1893,12 +1958,14 @@
       }
       var target = fieldRef ? findPlot(fieldRef) : null;
       if (target) {
+        persistFarmSelection();
         renderAll();
         openPanel(target.id);
         var pt = plotFocusPoint(target);
         if (pt) map.panTo(pt, { animate: false });
         return;
       }
+      persistFarmSelection();
       renderAll();
     }
 
