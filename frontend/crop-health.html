@@ -12,7 +12,7 @@
      * Identity: Crop -> Stage -> Health -> Risk -> Action -> Progress
      * ========================================================================= */
 
-    .ch-shell { display: grid; grid-template-columns: 72px 1fr; gap: 18px; }
+    .ch-shell { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 18px; }
     .ch-rail { display: flex; flex-direction: column; align-items: center; gap: 0; padding-top: 6px; }
     .ch-rail-dot {
       width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
@@ -37,12 +37,14 @@
 
     .ch-lbl {
       font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
-      color: var(--text-secondary); margin: 22px 0 10px; display: flex; align-items: center; gap: 8px;
+      color: var(--text-secondary); margin: 22px 0 10px; display: flex; align-items: center;
+      gap: 8px; flex-wrap: wrap;
     }
     .ch-lbl .pill { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--text-muted); background: var(--bg-card-soft); border: 1px solid var(--border-light); border-radius: 20px; padding: 2px 10px; text-transform: none; letter-spacing: 0; }
 
     /* Current stage hero */
-    .ch-hero { display: grid; grid-template-columns: 180px 1fr; gap: 22px; align-items: center; position: relative; overflow: hidden; }
+    .ch-hero { position: relative; }
+    .ch-hero-inner { display: grid; grid-template-columns: 180px 1fr; gap: 22px; align-items: center; position: relative; z-index: 1; }
     .ch-hero::after {
       content: ''; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px;
       background: radial-gradient(circle, rgba(27,94,63,.08) 0%, transparent 70%);
@@ -83,6 +85,25 @@
     .ch-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--text-secondary); background: var(--bg-card-soft); border: 1px solid var(--border-light); }
     .ch-chip i { color: var(--primary-green); }
 
+    .ch-next {
+      margin-top: 12px; display: flex; gap: 10px; align-items: flex-start;
+      border-left: 3px solid var(--primary-green); background: var(--bg-card-soft);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 9px 13px;
+    }
+    .ch-next i { color: var(--primary-green); margin-top: 2px; }
+    .ch-next .nx-t { font-size: 12.5px; font-weight: 700; color: var(--text-primary); }
+    .ch-next .nx-w { font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; margin-top: 2px; }
+
+    /* Harvest preparation */
+    .ch-harvest-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 12px; }
+    .ch-harvest-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 13px; box-shadow: var(--shadow-sm); }
+    .ch-harvest-card h5 { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin-bottom: 7px; display: flex; align-items: center; gap: 6px; }
+    .ch-harvest-card h5 i { color: var(--primary-green); }
+    .ch-harvest-card .hi { font-size: 12.5px; color: var(--text-primary); line-height: 1.55; padding: 4px 0 4px 14px; position: relative; }
+    .ch-harvest-card .hi::before { content: '\2022'; position: absolute; left: 2px; color: var(--medium-green); font-weight: 800; }
+    .ch-harvest-card .hi em { font-style: normal; display: block; font-size: 11.5px; color: var(--text-muted); }
+    .ch-harvest-dates { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+
     /* Crop cycle timeline */
     .ch-cycle { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding: 6px 2px 10px; scrollbar-width: thin; }
     .ch-cycle-stage {
@@ -92,19 +113,21 @@
       transition: all .2s ease;
     }
     .ch-cycle-stage:hover { border-color: var(--medium-green); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-    .ch-cycle-stage.done { opacity: .82; }
-    .ch-cycle-stage.now { border-color: var(--primary-green); background: #F3F8F1; }
-    .ch-cycle-stage.now::before {
+    .ch-cycle-stage:active { transform: translateY(0); }
+    /* The API emits state as completed | current | upcoming. */
+    .ch-cycle-stage.completed { opacity: .82; }
+    .ch-cycle-stage.current { border-color: var(--primary-green); background: #F3F8F1; }
+    .ch-cycle-stage.current::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
       background: linear-gradient(90deg, var(--primary-green), var(--medium-green));
       border-radius: var(--radius-sm) var(--radius-sm) 0 0;
     }
     .ch-cycle-stage .ico { font-size: 16px; color: var(--text-muted); margin-bottom: 6px; }
-    .ch-cycle-stage.done .ico, .ch-cycle-stage.now .ico { color: var(--primary-green); }
+    .ch-cycle-stage.completed .ico, .ch-cycle-stage.current .ico { color: var(--primary-green); }
     .ch-cycle-stage .nm { font-size: 11.5px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
     .ch-cycle-stage .dy { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
     .ch-cycle-stage .st-tag { margin-top: 7px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); }
-    .ch-cycle-stage.now .st-tag { color: var(--primary-green); }
+    .ch-cycle-stage.current .st-tag { color: var(--primary-green); }
 
     .ch-stage-detail { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 14px; margin-top: 4px; box-shadow: var(--shadow-sm); }
     .ch-stage-detail h4 { font-size: 13px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -130,11 +153,11 @@
     .ch-item {
       display: flex; gap: 12px; padding: 13px; border: 1px solid var(--border-light);
       border-radius: var(--radius-sm); margin-bottom: 10px; background: var(--bg-card);
-      box-shadow: var(--shadow-sm); align-items: flex-start;
+      box-shadow: var(--shadow-sm); align-items: flex-start; flex-wrap: wrap;
     }
     .ch-item:last-child { margin-bottom: 0; }
     .ch-item .lvl { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; background: var(--soft-green); color: var(--primary-green); }
-    .ch-item .body { flex: 1; min-width: 0; }
+    .ch-item .body { flex: 1 1 160px; min-width: 0; }
     .ch-item .t { font-size: 13px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .ch-item .w { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.55; }
     .ch-item .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
@@ -146,7 +169,11 @@
     .ch-pri.medium { background: #FFF6E0; color: #A67C00; }
     .ch-pri.low { background: var(--bg-card-soft); color: var(--text-muted); }
 
+    /* Wraps to its own full-width row once the row runs out of space. */
     .ch-add-task { margin-left: auto; flex-shrink: 0; }
+    @media (max-width: 420px) {
+      .ch-add-task { margin-left: 0; width: 100%; justify-content: center; }
+    }
 
     /* Health overview factors */
     .ch-condition-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -161,34 +188,48 @@
     .ch-factor-upd { font-size: 10px; color: var(--text-muted); margin-top: 6px; }
 
     /* Watch cards */
-    .ch-watch-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .ch-watch-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 12px; }
     .ch-watch {
       background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-sm);
       padding: 13px; box-shadow: var(--shadow-sm); cursor: pointer; transition: all .2s ease;
+      text-align: left; font: inherit; color: inherit; width: 100%;
     }
     .ch-watch:hover { border-color: var(--medium-green); transform: translateY(-2px); }
+    .ch-watch:active { transform: translateY(0) scale(.99); }
     .ch-watch .wt { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; flex-wrap: wrap; }
     .ch-watch .wt i { color: var(--primary-green); }
     .ch-watch .wd { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
     .ch-watch .go { margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--medium-green); display: inline-flex; align-items: center; gap: 5px; }
 
     .ch-sv { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
-    .ch-sv.high { background: #FFF0F0; color: var(--danger); }
+    .ch-sv.critical, .ch-sv.high { background: #FFF0F0; color: var(--danger); }
+    .ch-sv.critical { animation: chPulse 1.6s infinite; }
     .ch-sv.medium { background: #FFF6E0; color: #A67C00; }
-    .ch-sv.critical { background: #FFF0F0; color: var(--danger); animation: chPulse 1.6s infinite; }
+    /* The API may report watch/low; without these the chip renders unstyled. */
+    .ch-sv.watch { background: var(--sky-soft); color: #1F6FA8; }
+    .ch-sv.low, .ch-sv.none { background: var(--bg-card-soft); color: var(--text-muted); }
     @keyframes chPulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 
     /* Check form */
     .ch-check-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .ch-sym-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .ch-sym-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 8px; }
     .ch-sym {
       display: flex; align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid var(--border-light);
       border-radius: var(--radius-sm); cursor: pointer; background: var(--bg-card-soft);
       transition: all .15s ease; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      /* Meets the shared 40px tap-target floor; it is a <label>, so the global
+         button rule does not apply to it. */
+      min-height: 44px;
     }
     .ch-sym:hover { border-color: var(--medium-green); }
+    .ch-sym:active { transform: scale(.98); }
     .ch-sym.on { border-color: var(--primary-green); background: #F3F8F1; color: var(--primary-green); }
-    .ch-sym input { display: none; }
+    /* Real checkbox: hidden visually but still focusable and screen-reader readable. */
+    .ch-sym-box {
+      position: absolute; opacity: 0; width: 1px; height: 1px;
+      margin: 0; padding: 0; pointer-events: none;
+    }
+    .ch-sym:has(.ch-sym-box:focus-visible) { outline: 2px solid var(--primary-green); outline-offset: 2px; }
     .ch-sym .tip { display: block; font-size: 10px; font-weight: 500; color: var(--text-muted); margin-top: 1px; }
 
     .ch-field-txt label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin-bottom: 6px; }
@@ -228,6 +269,8 @@
     .ch-tl-date { font-size: 12px; font-weight: 700; color: var(--text-primary); }
     .ch-tl-src { font-size: 10px; color: var(--text-muted); }
     .ch-tl-body { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; margin-top: 2px; }
+    .ch-tl-full { margin-top: 8px; }
+    .ch-tl-head .ch-src { cursor: pointer; }
     .ch-trend { font-size: 12px; font-weight: 700; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 6px; }
     .ch-trend.improving { color: var(--primary-green); }
     .ch-trend.declining { color: var(--danger); }
@@ -241,6 +284,7 @@
       color: inherit; text-decoration: none; transition: all .2s ease;
     }
     .ch-link:hover { border-color: var(--medium-green); transform: translateY(-2px); }
+    .ch-link:active { transform: translateY(0); }
     .ch-link .ico { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--soft-green); color: var(--primary-green); flex-shrink: 0; font-size: 15px; }
     .ch-link .nm { font-size: 13px; font-weight: 700; color: var(--text-primary); }
     .ch-link .ds { font-size: 11px; color: var(--text-muted); }
@@ -266,18 +310,58 @@
 
     .u-hidden { display: none !important; }
 
+    /* Most .ch-* text lives in <div>/<span>, which the shared stylesheet's
+       break-word rule does not cover. API-supplied values and raw stage keys
+       (e.g. post_harvest) would otherwise push past the viewport. */
+    .ch-factor-val, .ch-factor-label, .ch-factor-exp, .ch-factor-upd,
+    .ch-item .t, .ch-item .w, .ch-item .dy,
+    .ch-next .nx-t, .ch-next .nx-w, .ch-narrative, .ch-note span,
+    .ch-result-row .o, .ch-result-row .c, .ch-tl-body, .ch-tl-src, .ch-tl-date,
+    .ch-cycle-stage .nm, .ch-cycle-stage .dy, .ch-cycle-stage .st-tag,
+    .ch-link .nm, .ch-link .ds, .ch-lbl, .ch-harvest-card .hi, .ch-harvest-card .hi em,
+    .ch-sym span, .ch-watch .wt, .ch-watch .wd, .ch-sv, .ch-pri, .ch-src,
+    .ch-skel, .ch-empty-inner h3, .ch-empty-inner p {
+      overflow-wrap: anywhere;
+    }
+    /* Chips and badges must never be wider than their container. */
+    .ch-chip, .ch-badge, .ch-sym, .ch-stage-detail { max-width: 100%; }
+
     @media (max-width: 720px) {
       .ch-selectors { grid-template-columns: 1fr; }
-      .ch-hero { grid-template-columns: 1fr; gap: 14px; }
+      /* Collapse the 72px stage rail so it stops eating the content column. */
+      .ch-shell { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+      .ch-rail { flex-direction: row; align-items: center; padding-top: 0; gap: 0; overflow-x: auto; }
+      .ch-rail-item { flex-direction: row; align-items: center; }
+      .ch-rail-line { width: auto; height: 2px; flex: 1; min-height: 0; min-width: 6px; }
+      .ch-hero-inner { grid-template-columns: 1fr; gap: 14px; justify-items: center; }
       .ch-hero-strip { grid-template-columns: 1fr; }
+      .ch-hero-icon { width: 76px; height: 76px; font-size: 30px; }
+      .ch-hero-strip { margin-top: 14px; }
       .ch-condition-grid { grid-template-columns: 1fr 1fr; }
       .ch-check-form { grid-template-columns: 1fr; }
       .ch-links { grid-template-columns: 1fr; }
-      .ch-cycle-stage { flex-basis: 88px; }
+      /* Compact vertical crop-cycle timeline on small screens */
+      .ch-cycle { flex-direction: column; overflow-x: visible; gap: 6px; -webkit-overflow-scrolling: touch; }
+      .ch-cycle-stage {
+        flex: 1 1 auto; max-width: none; width: 100%;
+        flex-direction: row; align-items: center; text-align: left; gap: 10px; padding: 9px 12px;
+      }
+      .ch-cycle-stage .ico { margin-bottom: 0; font-size: 15px; }
+      .ch-cycle-stage .nm { flex: 1; }
+      .ch-cycle-stage .dy { margin-top: 0; }
+      .ch-cycle-stage .st-tag { margin-top: 0; margin-left: auto; }
+      .ch-cycle-stage.current::before { top: 0; bottom: 0; left: 0; right: auto; width: 3px; height: auto;
+        background: linear-gradient(180deg, var(--primary-green), var(--medium-green));
+        border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
     }
     @media (max-width: 420px) {
       .ch-condition-grid { grid-template-columns: 1fr; }
       .ch-sym-grid { grid-template-columns: 1fr; }
+    }
+    /* Very narrow phones: the stage rail icons no longer fit four across. */
+    @media (max-width: 360px) {
+      .ch-rail-dot { width: 32px; height: 32px; font-size: 13px; }
+      .ch-cycle-stage .dy { font-size: 9.5px; }
     }
   </style>
 </head>
@@ -320,9 +404,9 @@
     </div>
 
     <div id="ch-loading">
-      <div class="ch-skel" style="height:150px;margin-bottom:16px;"></div>
-      <div class="ch-skel" style="height:120px;margin-bottom:12px;"></div>
-      <div class="ch-skel" style="height:120px;"></div>
+      <div class="ch-skel" style="min-height:150px;margin-bottom:16px;"></div>
+      <div class="ch-skel" style="min-height:120px;margin-bottom:12px;"></div>
+      <div class="ch-skel" style="min-height:120px;"></div>
     </div>
 
     <div id="ch-empty" class="card-premium u-hidden"></div>
@@ -340,7 +424,7 @@
           </div>
 
           <!-- Crop Cycle -->
-          <div class="ch-lbl" id="ch-cycle-lbl">
+          <div class="ch-lbl">
             <i class="fas fa-route"></i> Crop Cycle
             <span class="pill" id="ch-cycle-pill"></span>
           </div>
@@ -412,6 +496,15 @@
           <div class="ch-lbl"><i class="fas fa-clock-rotate-left"></i> Health History</div>
           <div class="card-premium"><div id="ch-history"></div></div>
 
+          <!-- Harvest Preparation (only shown when the crop approaches harvest) -->
+          <div id="ch-harvest-sec" class="u-hidden">
+            <div class="ch-lbl">
+              <i class="fas fa-basket-shopping"></i> Harvest Preparation
+              <span class="pill" id="ch-harvest-pill"></span>
+            </div>
+            <div class="card-premium"><div id="ch-harvest"></div></div>
+          </div>
+
           <!-- Source feature links -->
           <div class="ch-lbl"><i class="fas fa-link"></i> Related Farm Data</div>
           <div class="ch-links">
@@ -461,7 +554,9 @@
       if (!v) return '';
       var s = String(v);
       var d = new Date(s.length <= 10 ? s + 'T00:00:00' : s);
-      if (isNaN(d.getTime())) return s;
+      // Unparseable input is still shown, but trimmed, so a malformed stored
+      // value cannot inject a long unbroken string into the layout.
+      if (isNaN(d.getTime())) return s.slice(0, 40);
       return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
@@ -591,14 +686,29 @@
       var cycle = data.cycle || {};
       var g = data.growth_stage || {};
       var h = data.health || {};
+      var ctx = data.crop_context || {};
       var box = el('ch-hero');
 
       var icon = cycle.current_icon || 'fa-leaf';
       var stageName = cycle.current_label || g.current_stage_label || 'Not recorded';
       var pct = (cycle.overall_pct !== undefined && cycle.overall_pct !== null) ? cycle.overall_pct : g.progress_pct;
+      // Clamp before use: this value is interpolated into a CSS width and into
+      // visible text, and an out-of-range or non-numeric value would break the bar.
+      pct = (pct === null || pct === undefined || isNaN(parseFloat(pct))) ? null : Math.max(0, Math.min(100, Math.round(parseFloat(pct))));
       var healthBadge = statusBadge(h.available ? h.status_code : 'insufficient');
 
       var meta = [];
+      if (ctx.farm_name) {
+        meta.push('<span class="ch-chip"><i class="fas fa-tractor"></i>' + esc(ctx.farm_name) +
+          (ctx.farm_area ? ' \u00B7 ' + esc(String(ctx.farm_area) + ' ' + (ctx.area_unit || '')) : '') + '</span>');
+      }
+      if (ctx.plot_name) {
+        meta.push('<span class="ch-chip"><i class="fas fa-vector-square"></i>' + esc(ctx.plot_name) +
+          (ctx.plot_area ? ' \u00B7 ' + esc(String(ctx.plot_area)) + ' plot area' : '') + '</span>');
+      }
+      if (ctx.location) {
+        meta.push('<span class="ch-chip"><i class="fas fa-location-dot"></i>' + esc(ctx.location) + '</span>');
+      }
       meta.push('<span class="ch-chip"><i class="fas fa-seedling"></i>' + esc(crop.crop_name || 'Crop') + (crop.variety ? ' \u00B7 ' + esc(crop.variety) : '') + '</span>');
       if (g.days_since_sowing !== null && g.days_since_sowing !== undefined) {
         meta.push('<span class="ch-chip"><i class="fas fa-calendar-days"></i>Day ' + g.days_since_sowing + '</span>');
@@ -616,6 +726,10 @@
         meta.push('<span class="ch-chip"><i class="fas fa-forward"></i>Next: ' + esc(cycle.next_stage.label) + '</span>');
       }
       if (crop.season) meta.push('<span class="ch-chip"><i class="fas fa-cloud-sun"></i>' + esc(crop.season) + '</span>');
+      if (ctx.last_health_check) {
+        meta.push('<span class="ch-chip"><i class="fas fa-stethoscope"></i>Last check ' +
+          esc(fmtDate(ctx.last_health_check.date)) + ' \u00B7 ' + esc(ctx.last_health_check.status_label || '') + '</span>');
+      }
 
       var currentKey = cycle.current_stage || g.current_stage || '';
       var detail = (data.stage_details || {})[currentKey] || {};
@@ -642,15 +756,26 @@
         strip += '</div>';
       }
 
+      var nextAction = '';
+      if (ctx.next_action && ctx.next_action.action) {
+        nextAction = '<div class="ch-next">' +
+          '<i class="fas fa-bolt"></i>' +
+          '<div><div class="nx-t">Next important action: ' + esc(ctx.next_action.action) + '</div>' +
+          '<div class="nx-w">' + esc(ctx.next_action.when || '') +
+          (ctx.next_action.why ? ' \u00B7 ' + esc(ctx.next_action.why) : '') + '</div></div>' +
+          '</div>';
+      }
+
       var heroRight = '<div class="ch-hero-copy">' +
         '<h2>' + esc(stageName) + ' ' + healthBadge + '</h2>' +
         (meaning || h.explanation ? '<p>' + esc(meaning || h.explanation) + '</p>' : '') +
         '<div class="ch-hero-meta">' + meta.join('') + '</div>' +
+        nextAction +
         '</div>';
 
       box.innerHTML =
         '<div>' +
-          '<div class="ch-hero">' +
+          '<div class="ch-hero-inner">' +
             '<div class="ch-hero-stage">' +
               '<div class="ch-hero-icon"><i class="fas ' + esc(icon) + '"></i></div>' +
               '<div class="ch-hero-stage-name">' + esc(stageName) + '</div>' +
@@ -684,7 +809,7 @@
           : s.state === 'completed' ? '<div class="st-tag">Done</div>'
           : '<div class="st-tag"><i class="fas fa-clock"></i> Upcoming</div>';
         var dates = '';
-        if (s.start_date) dates = '<div class="dy">' + fmtDate(s.start_date) + (s.end_date ? ' \u2192 ' + fmtDate(s.end_date) : '') + '</div>';
+        if (s.start_date) dates = '<div class="dy">' + esc(fmtDate(s.start_date)) + (s.end_date ? ' \u2192 ' + esc(fmtDate(s.end_date)) : '') + '</div>';
         return '<button class="ch-cycle-stage ' + esc(s.state) + '" data-stage="' + esc(s.key) + '">' +
           '<div class="ico"><i class="fas ' + esc(s.icon || 'fa-leaf') + '"></i></div>' +
           '<div class="nm">' + esc(s.label) + '</div>' +
@@ -767,7 +892,9 @@
         var srcTag = it.source === 'data' ? '<span class="ch-src data">From your data</span>' : '<span class="ch-src">Stage guidance</span>';
         var stageTag = it.stage_label ? '<span class="ch-src">' + esc(it.stage_label) + '</span>' : '';
         var addBtn = '';
-        if (it.existing_task_id) {
+        if (it.task_status === 'completed') {
+          addBtn = '<span class="ch-src" style="margin-left:auto;flex-shrink:0;"><i class="fas fa-circle-check"></i> In tasks \u00B7 done</span>';
+        } else if (it.existing_task_id) {
           addBtn = '<button class="btn-primary ch-add-task" data-done="' + i + '" style="padding:6px 10px;font-size:11px;border-radius:10px;"><i class="fas fa-check"></i> Mark Complete</button>';
         } else if (it.can_track) {
           addBtn = '<button class="btn-secondary ch-add-task" data-add="' + i + '" style="padding:6px 10px;font-size:11px;border-radius:10px;"><i class="fas fa-plus"></i> Add to Tasks</button>';
@@ -780,6 +907,7 @@
             '<div class="tags">' +
               (it.when ? '<span class="ch-src"><i class="fas fa-clock"></i> ' + esc(it.when) + '</span>' : '') +
               stageTag + srcTag +
+              (it.task_status === 'completed' ? '<span class="ch-src" style="color:var(--primary-green);">Completed</span>' : '') +
             '</div>' +
           '</div>' +
           addBtn +
@@ -868,7 +996,70 @@
       var order = ['growth', 'water', 'soil', 'weather', 'pest', 'care'];
       var byKey = {};
       (data.factors || []).forEach(function (f) { byKey[f.key] = f; });
-      el('ch-condition').innerHTML = order.map(function (k) { return factorCard(byKey[k]); }).join('');
+      el('ch-condition').innerHTML = order.map(function (k) { return factorCard(byKey[k]); }).join('') +
+        '<div style="grid-column:1/-1;"><div class="ch-note" style="margin:0;">' +
+        '<i class="fas fa-tower-broadcast"></i><span>' + esc((data.sensors || {}).message ||
+          'No connected sensor data available.') + '</span></div></div>';
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Harvest preparation (only near maturity)                            */
+    /* ------------------------------------------------------------------ */
+    function renderHarvest(data) {
+      var sec = el('ch-harvest-sec');
+      var h = (data.harvest || {});
+      if (!h.applicable) {
+        sec.classList.add('u-hidden');
+        return;
+      }
+      sec.classList.remove('u-hidden');
+      el('ch-harvest-pill').textContent = h.is_generic ? 'General guidance' : ((h.crop || '') + ' maturity');
+
+      var readiness = {
+        preparing: { label: 'Preparing', cls: 'ch-warn', icon: 'fa-hourglass-half' },
+        ready: { label: 'Ready to harvest', cls: 'ch-good', icon: 'fa-circle-check' },
+        recorded: { label: 'Harvest recorded', cls: 'ch-info', icon: 'fa-box-archive' }
+      }[h.readiness] || { label: 'Harvest', cls: 'ch-good', icon: 'fa-basket-shopping' };
+
+      var dates = '<div class="ch-harvest-dates">' +
+        '<span class="ch-badge ' + readiness.cls + '"><i class="fas ' + readiness.icon + '"></i> ' + esc(readiness.label) + '</span>';
+      if (h.expected_maturity_date) {
+        dates += '<span class="ch-chip"><i class="fas fa-seedling"></i>Expected maturity ' + esc(fmtDate(h.expected_maturity_date)) + '</span>';
+      }
+      if (h.expected_harvest_date) {
+        dates += '<span class="ch-chip"><i class="fas fa-basket-shopping"></i>Expected harvest ' + esc(fmtDate(h.expected_harvest_date)) + '</span>';
+      }
+      if (h.actual_harvest_date) {
+        dates += '<span class="ch-chip"><i class="fas fa-flag-checkered"></i>Harvested on ' + esc(fmtDate(h.actual_harvest_date)) + '</span>';
+      }
+      if (h.days_to_harvest !== null && h.days_to_harvest !== undefined && h.readiness !== 'recorded') {
+        dates += '<span class="ch-chip"><i class="fas fa-calendar-day"></i>' +
+          (h.days_to_harvest < 0 ? Math.abs(h.days_to_harvest) + ' day(s) past expected harvest'
+            : (h.days_to_harvest === 0 ? 'Expected today' : h.days_to_harvest + ' day(s) to harvest')) +
+          '</span>';
+      }
+      dates += '</div>';
+
+      var indicators = (h.indicators || []).map(function (i) {
+        return '<div class="hi">' + esc(i.title) + (i.detail ? '<em>' + esc(i.detail) + '</em>' : '') + '</div>';
+      }).join('');
+
+      var prep = (h.preparation || []).map(function (p) {
+        return '<div class="hi">' + esc(p.action) +
+          (p.when ? '<em>' + esc(p.when) + (p.why ? ' \u00B7 ' + esc(p.why) : '') + '</em>' : '') + '</div>';
+      }).join('');
+
+      var cards = '';
+      if (indicators) {
+        cards += '<div class="ch-harvest-card"><h5><i class="fas fa-magnifying-glass"></i> Harvest indicators</h5>' + indicators + '</div>';
+      }
+      if (prep) {
+        cards += '<div class="ch-harvest-card"><h5><i class="fas fa-list-check"></i> Preparation reminders</h5>' + prep + '</div>';
+      }
+
+      el('ch-harvest').innerHTML = dates +
+        (cards ? '<div class="ch-harvest-grid">' + cards + '</div>' : '<div class="ch-narrative">No harvest preparation notes are available for this crop yet.</div>') +
+        (h.note ? '<div class="ch-note" style="margin:14px 0 0;"><i class="fas fa-circle-info"></i><span>' + esc(h.note) + '</span></div>' : '');
     }
 
     /* ------------------------------------------------------------------ */
@@ -882,11 +1073,11 @@
         return;
       }
       box.innerHTML = '<div class="ch-watch-list">' + watch.map(function (w, i) {
-        return '<div class="ch-watch" data-watch="' + i + '">' +
-          '<div class="wt"><i class="fas fa-eye"></i> ' + esc(w.title) + '<span class="ch-sv ' + esc(w.severity || 'medium') + '">' + esc(w.severity || 'watch') + '</span></div>' +
+        return '<button type="button" class="ch-watch" data-watch="' + i + '">' +
+          '<div class="wt"><i class="fas fa-eye" aria-hidden="true"></i> ' + esc(w.title) + '<span class="ch-sv ' + esc(w.severity || 'medium') + '">' + esc(w.severity || 'watch') + '</span></div>' +
           '<div class="wd">' + esc(w.observe) + '</div>' +
-          '<div class="go"><i class="fas fa-circle-question"></i> Why it matters &amp; what to do</div>' +
-          '</div>';
+          '<div class="go"><i class="fas fa-circle-question" aria-hidden="true"></i> Why it matters &amp; what to do</div>' +
+          '</button>';
       }).join('') + '</div>';
 
       box.querySelectorAll('[data-watch]').forEach(function (card) {
@@ -902,7 +1093,8 @@
       modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(10,26,18,.5);display:flex;align-items:center;justify-content:center;padding:16px;';
       modal.innerHTML =
         '<div style="background:var(--bg-card);border-radius:var(--radius-md);max-width:520px;width:100%;box-shadow:var(--shadow-lg);position:relative;max-height:88vh;overflow:auto;padding:20px;">' +
-        '<button id="ch-modal-x" style="position:absolute;top:12px;right:12px;border:none;background:var(--bg-card-soft);width:32px;height:32px;border-radius:50%;cursor:pointer;color:var(--text-secondary);"><i class="fas fa-times"></i></button>' +
+        '<button id="ch-modal-x" aria-label="Close" style="position:absolute;top:12px;right:12px;border:none;background:var(--bg-card-soft);width:40px;height:40px;min-height:40px;border-radius:50%;cursor:pointer;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;">' +
+        '<i class="fas fa-times" aria-hidden="true"></i></button>' +
         '<h3 style="font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:14px;padding-right:30px;"><i class="fas fa-eye" style="color:var(--primary-green);margin-right:8px;"></i>' + esc(w.title) + '</h3>' +
         '<div class="ch-result-body" style="padding:0;">' +
           '<div class="ch-result-row"><div class="c">What to look for</div><div class="o">' + esc(w.observe) + '</div></div>' +
@@ -913,8 +1105,12 @@
         '</div>' +
         '</div>';
       document.body.appendChild(modal);
-      modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
-      modal.querySelector('#ch-modal-x').addEventListener('click', function () { modal.remove(); });
+      function dismiss() { modal.remove(); document.removeEventListener('keydown', onKey); }
+      function onKey(e) { if (e.key === 'Escape') dismiss(); }
+      modal.addEventListener('click', function (e) { if (e.target === modal) dismiss(); });
+      modal.querySelector('#ch-modal-x').addEventListener('click', dismiss);
+      document.addEventListener('keydown', onKey);
+      modal.querySelector('#ch-modal-x').focus();
     }
 
     /* ------------------------------------------------------------------ */
@@ -928,22 +1124,23 @@
         return;
       }
       grid.innerHTML = catalogue.map(function (s) {
-        return '<label class="ch-sym" data-code="' + esc(s.code) + '">' +
-          '<i class="fas fa-circle-check"></i>' +
+        return '<label class="ch-sym">' +
+          '<input type="checkbox" class="ch-sym-box" value="' + esc(s.code) + '">' +
+          '<i class="fas fa-circle-check" aria-hidden="true"></i>' +
           '<span>' + esc(s.label) + (s.tip ? '<span class="tip">' + esc(s.tip) + '</span>' : '') + '</span>' +
           '</label>';
       }).join('');
-      grid.querySelectorAll('.ch-sym').forEach(function (sym) {
-        sym.addEventListener('click', function () {
-          sym.classList.toggle('on');
+      grid.querySelectorAll('.ch-sym-box').forEach(function (box) {
+        box.addEventListener('change', function () {
+          box.closest('.ch-sym').classList.toggle('on', box.checked);
         });
       });
     }
 
     function selectedSymptoms() {
       var codes = [];
-      el('ch-symptoms').querySelectorAll('.ch-sym.on').forEach(function (sym) {
-        codes.push(sym.getAttribute('data-code'));
+      el('ch-symptoms').querySelectorAll('.ch-sym-box').forEach(function (box) {
+        if (box.checked) codes.push(box.value);
       });
       return codes;
     }
@@ -1028,7 +1225,12 @@
           el('ch-observations').value = '';
           el('ch-photo').value = '';
           el('ch-photo-preview').innerHTML = '';
-          el('ch-symptoms').querySelectorAll('.ch-sym.on').forEach(function (s) { s.classList.remove('on'); });
+          // Uncheck the source of truth, not just the highlight class, or the
+          // next submission would resend the symptoms that were just recorded.
+          el('ch-symptoms').querySelectorAll('.ch-sym-box').forEach(function (box) {
+            box.checked = false;
+            box.closest('.ch-sym').classList.remove('on');
+          });
           state.data = null;
           refresh();
         }).catch(function () {
@@ -1082,8 +1284,10 @@
           label: fmtDate(c.created_at),
           status_code: c.health_status || 'watch',
           title: 'Crop health check',
+          stage: c.stage,
           body: c.possible_concern || c.observations || 'Check recorded',
-          source: 'your check'
+          source: 'your check',
+          check: c
         });
       });
       (hist.points || []).forEach(function (p) {
@@ -1094,7 +1298,8 @@
           status_code: p.status_code || 'good',
           title: 'Assessment',
           body: p.source || 'Assessment recorded',
-          source: p.source || ''
+          source: p.source || '',
+          check: null
         });
       });
       points.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
@@ -1106,16 +1311,50 @@
         if (fb) fb.addEventListener('click', goCheck);
         return;
       }
-      box.innerHTML = trendHtml + '<div class="ch-timeline">' + points.slice(0, 12).map(function (p) {
+      box.innerHTML = trendHtml + '<div class="ch-timeline">' + points.slice(0, 12).map(function (p, i) {
+        var full = p.check ? checkRecordHtml(p.check) : '';
         return '<div class="ch-tl-item ' + esc(p.status_code) + '">' +
           '<div class="ch-tl-head">' +
             '<span class="ch-tl-date">' + esc(p.label) + '</span>' +
+            (p.stage ? '<span class="ch-tl-src">' + esc(stageLabel(p.stage)) + '</span>' : '') +
             statusBadge(p.status_code) +
+            (full ? '<button class="ch-src" data-open="' + i + '" style="cursor:pointer;margin-left:auto;"><i class="fas fa-chevron-down"></i> Full record</button>' : '') +
           '</div>' +
           '<div class="ch-tl-body">' + esc(p.title) + (p.source ? ' <span class="ch-tl-src">\u00B7 ' + esc(p.source) + '</span>' : '') + '</div>' +
           (p.body && p.body !== p.title ? '<div class="ch-tl-body" style="color:var(--text-muted);font-size:11.5px;">' + esc(p.body) + '</div>' : '') +
+          (full ? '<div class="ch-tl-full u-hidden" id="ch-rec-' + i + '">' + full + '</div>' : '') +
           '</div>';
       }).join('') + '</div>';
+
+      box.querySelectorAll('[data-open]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var rec = el('ch-rec-' + btn.getAttribute('data-open'));
+          if (!rec) return;
+          rec.classList.toggle('u-hidden');
+          btn.innerHTML = rec.classList.contains('u-hidden')
+            ? '<i class="fas fa-chevron-down"></i> Full record'
+            : '<i class="fas fa-chevron-up"></i> Hide record';
+        });
+      });
+    }
+
+    function stageLabel(key) {
+      var details = (state.data || {}).stage_details || {};
+      return (details[key] && details[key].label) || key || '';
+    }
+
+    function checkRecordHtml(c) {
+      var rows = [
+        ['Growth stage', stageLabel(c.stage) || c.stage],
+        ['Observation', c.observations],
+        ['Possible concern', c.possible_concern],
+        ['Action taken', c.recommended_action],
+        ['Follow-up', c.follow_up]
+      ].filter(function (r) { return r[1]; });
+      if (!rows.length) return '';
+      return rows.map(function (r) {
+        return '<div class="ch-result-row"><div class="c">' + esc(r[0]) + '</div><div class="o">' + esc(r[1]) + '</div></div>';
+      }).join('');
     }
 
     /* ------------------------------------------------------------------ */
@@ -1123,6 +1362,9 @@
     /* ------------------------------------------------------------------ */
     function renderEmpty(data) {
       var box = el('ch-empty');
+      // Every exit path must clear the skeleton, otherwise a user with no farms
+      // or no crop cycle is left staring at the loading shimmer forever.
+      el('ch-loading').classList.add('u-hidden');
       if (!data.farms || !data.farms.length) {
         box.innerHTML = emptyBlock('fa-tractor', 'No farms yet',
           'Add a farm and a crop cycle to start tracking crop health.', 'farm.html', 'Go to Farm Management');
@@ -1175,6 +1417,7 @@
       }
       el('ch-check-result').innerHTML = '';
       renderHistory(data);
+      renderHarvest(data);
       el('ch-loading').classList.add('u-hidden');
       if (data.helper_note) {
         el('ch-helper-note').querySelector('span').textContent = data.helper_note;
@@ -1185,9 +1428,13 @@
     }
 
     var lastParams = {};
+    var loadSeq = 0;
 
     function load(params) {
       lastParams = params || {};
+      // Guard against out-of-order responses when the user changes selectors
+      // faster than the network can respond.
+      var seq = ++loadSeq;
       el('ch-error').classList.remove('show');
       if (!state.data) {
         el('ch-loading').classList.remove('u-hidden');
@@ -1196,11 +1443,15 @@
       }
       return API.CropHealth.overview(lastParams.farm_id, lastParams.plot_id, lastParams.cycle_id)
         .then(function (res) {
+          if (seq !== loadSeq) return;
           var empty = renderEmpty(res);
           if (!empty) render(res);
           else state.data = null;
         })
-        .catch(function () { showError(); });
+        .catch(function () {
+          if (seq !== loadSeq) return;
+          showError();
+        });
     }
 
     function onFarmChange() { state.data = null; load({ farm_id: el('sel-farm').value }); }

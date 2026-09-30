@@ -16,7 +16,7 @@ from app.main import app
 from app.database.connection import engine, Base, SessionLocal
 from app.models.user import User
 from app.models.farm import Farm, FarmPlot
-from app.models.crop import Crop, CropCycle, SoilRecord, IrrigationRecord
+from app.models.crop import Crop, CropCycle, CropTask, SoilRecord, IrrigationRecord
 from app.utils.auth import hash_password, create_access_token
 
 
@@ -469,3 +469,177 @@ def test_crop_health_recognises_legacy_farm_with_null_is_active(db):
     d2 = r2.json()["data"]
     assert len(d2["farms"]) == 1
     assert d2["farms"][0]["farm_name"] == "Legacy Farm"
+
+
+def _seed_cycle(db, user, *, farm_ref, plot_ref, crop_ref, cycle_ref,
+                days_ago, stage, duration=120, expected_harvest_in=None):
+    """Farm -> Plot -> Crop -> CropCycle for a single farmer."""
+    farm = Farm(
+        farm_id=farm_ref, user_id=user.id, farm_name="Ramesh Farm",
+        village="Kollipara", district="Guntur", state="Andhra Pradesh",
+        total_area=4.0, area_unit="Acres",
+    )
+    db.add(farm)
+    db.commit()
+    plot = FarmPlot(
+        plot_id=plot_ref, farm_id=farm.id, plot_name="Plot A1",
+        area=2.0, soil_type="Clay Loam",
+    )
+    db.add(plot)
+    db.commit()
+    crop = Crop(
+        crop_id=crop_ref, name="Rice", variety="Sona Masuri",
+        category="Cereals", season="Kharif", growth_duration_days=duration,
+    )
+    db.add(crop)
+    db.commit()
+    expected = None
+    if expected_harvest_in is not None:
+        expected = (datetime.utcnow() + timedelta(days=expected_harvest_in)).strftime("%Y-%m-%d")
+    cycle = CropCycle(
+        cycle_id=cycle_ref, farm_id=farm.id, plot_id=plot.id, crop_id=crop.id,
+        sowing_date=(datetime.utcnow() - timedelta(days=days_ago)).strftime("%Y-%m-%d"),
+        expected_harvest_date=expected,
+        current_stage=stage, status="active",
+    )
+    db.add(cycle)
+    db.commit()
+    return farm, plot, crop, cycle
+
+
+def test_crop_health_harvest_preparation_only_near_maturity(db):
+    """Harvest Preparation must stay hidden early in the cycle and appear
+    once the crop actually approaches maturity (recorded stage or dates)."""
+    user = create_user(db, "FA-CH-00000010", "Farmer Ramesh", "9876543210", "ramesh@farm.com")
+    headers = {"Authorization": f"Bearer {get_token(user)}"}
+
+    _seed_cycle(db, user, farm_ref="FA-CHF-0010", plot_ref="FA-CHP-0010",
+                crop_ref="FA-CHC-0010", cycle_ref="FA-CHY-0010",
+                days_ago=45, stage="Vegetative")
+
+    r = client.get("/api/v1/crop-health/overview", headers=headers)
+    assert r.status_code == 200
+    early = r.json()["data"]["harvest"]
+    assert early["applicable"] is False
+    assert early["readiness"] is None
+    assert early["days_to_harvest"] is not None and early["days_to_harvest"] > 21
+
+    # Same crop, now 105 days into a 120 day cycle: dates alone trigger it.
+    cycle = db.query(CropCycle).filter(CropCycle.cycle_id == "FA-CHY-0010").one()
+    cycle.sowing_date = (datetime.utcnow() - timedelta(days=105)).strftime("%Y-%m-%d")
+    cycle.current_stage = None
+    db.commit()
+
+    r = client.get("/api/v1/crop-health/overview", headers=headers)
+    d = r.json()["data"]
+    h = d["harvest"]
+    assert h["applicable"] is True
+    assert h["readiness"] == "preparing"
+    assert 0 <= h["days_to_harvest"] <= 21
+    assert h["expected_maturity_date"] and h["expected_harvest_date"]
+    assert h["harvest_date_is_estimate"] is True   # derived, not stored on the cycle
+    assert h["indicators"] and h["indicators"][0]["title"]
+    assert h["preparation"] and h["preparation"][0]["action"]
+    assert h["note"]
+
+    # Recorded harvest stage flips the label to "ready".
+    cycle.current_stage = "Harvest"
+    db.commit()
+    r = client.get("/api/v1/crop-health/overview", headers=headers)
+    assert r.json()["data"]["harvest"]["readiness"] == "ready"
+
+    # An already recorded harvest date is reported, not re-forecast.
+    cycle.actual_harvest_date = datetime.utcnow().strftime("%Y-%m-%d")
+    db.commit()
+    r = client.get("/api/v1/crop-health/overview", headers=headers)
+    done = r.json()["data"]["harvest"]
+    assert done["readiness"] == "recorded"
+    assert done["actual_harvest_date"] is not None
+
+    # The plan endpoint carries the same section.
+    r_plan = client.get("/api/v1/crop-health/plan", headers=headers)
+    assert r_plan.json()["data"]["harvest"]["applicable"] is True
+
+
+def test_crop_health_context_and_sensor_state(db):
+    """Current-crop context comes from the real farm/plot/cycle and reports the
+    last check, the next action and honest sensor availability."""
+    user = create_user(db, "FA-CH-00000011", "Farmer Ramesh", "9876543210", "ramesh@farm.com")
+    headers = {"Authorization": f"Bearer {get_token(user)}"}
+    _, _, _, cycle = _seed_cycle(
+        db, user, farm_ref="FA-CHF-0011", plot_ref="FA-CHP-0011",
+        crop_ref="FA-CHC-0011", cycle_ref="FA-CHY-0011",
+        days_ago=45, stage="Vegetative",
+    )
+
+    r = client.get("/api/v1/crop-health/overview", headers=headers)
+    d = r.json()["data"]
+
+    ctx = d["crop_context"]
+    assert ctx["farm_name"] == "Ramesh Farm"
+    assert "Guntur" in ctx["location"]
+    assert ctx["plot_name"] == "Plot A1"
+    assert ctx["crop_name"] == "Rice"
+    assert ctx["variety"] == "Sona Masuri"
+    assert ctx["season"] == "Kharif"
+    assert ctx["days_since_sowing"] == 45
+    assert ctx["last_health_check"] is None          # nothing recorded yet
+    assert ctx["next_action"]["action"]              # real plan item
+    assert ctx["next_action"]["bucket"] in ("now", "this_week", "coming_up")
+
+    # No sensor is connected -> say so instead of showing a fake reading.
+    assert d["sensors"]["available"] is False
+    assert d["sensors"]["message"] == "No connected sensor data available."
+    assert d["sensors"]["readings"] == {}
+
+    # After a check, the context reports it.
+    client.post("/api/v1/crop-health/check", json={"symptoms": ["wilting"]}, headers=headers)
+    d = client.get("/api/v1/crop-health/overview", headers=headers).json()["data"]
+    last = d["crop_context"]["last_health_check"]
+    assert last is not None
+    assert last["check_id"].startswith("FA-CHK-")
+    assert last["status_label"]
+    assert d["harvest"]["applicable"] is False
+
+
+def test_crop_health_plan_does_not_repeat_tracked_actions(db):
+    """A recommendation already added to Tasks must not offer a second
+    'Add to Tasks', and a completed one must read as completed."""
+    user = create_user(db, "FA-CH-00000012", "Farmer Ramesh", "9876543210", "ramesh@farm.com")
+    headers = {"Authorization": f"Bearer {get_token(user)}"}
+    _, _, _, cycle = _seed_cycle(
+        db, user, farm_ref="FA-CHF-0012", plot_ref="FA-CHP-0012",
+        crop_ref="FA-CHC-0012", cycle_ref="FA-CHY-0012",
+        days_ago=45, stage="Vegetative",
+    )
+
+    d = client.get("/api/v1/crop-health/overview", headers=headers).json()["data"]
+    plan = d["plan"]
+    bucket = next(
+        (b for b in ("now", "this_week", "coming_up")
+         if any(i.get("can_track") for i in plan[b])),
+        None,
+    )
+    assert bucket is not None
+    target = next(i for i in plan[bucket] if i.get("can_track"))
+    assert target["existing_task_id"] is None
+
+    db.add(CropTask(
+        task_id="FA-CHT-9001", crop_cycle_id=cycle.id, title=target["action"],
+        category="Crop Care", due_date=datetime.utcnow().strftime("%Y-%m-%d"),
+        status="pending", priority="high",
+    ))
+    db.commit()
+
+    d = client.get("/api/v1/crop-health/overview", headers=headers).json()["data"]
+    tracked = next(i for i in d["plan"][bucket] if i["action"] == target["action"])
+    assert tracked["existing_task_id"] == "FA-CHT-9001"
+    assert tracked["can_track"] is False
+    assert tracked["task_status"] == "pending"
+
+    db.query(CropTask).filter(CropTask.task_id == "FA-CHT-9001").one().status = "completed"
+    db.commit()
+    d = client.get("/api/v1/crop-health/overview", headers=headers).json()["data"]
+    done = next(i for i in d["plan"][bucket] if i["action"] == target["action"])
+    assert done["task_status"] == "completed"
+    assert done["can_track"] is False

@@ -1913,6 +1913,153 @@ def build_watch(crop_name: Optional[str], stage: str) -> List[Dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
+# Harvest preparation
+# ---------------------------------------------------------------------------
+
+# Stages whose reference data covers maturity, harvest and post-harvest work.
+HARVEST_STAGES = ("maturity", "harvest", "post_harvest")
+# Show preparation this many days before the expected harvest date when the
+# cycle has not already reached a harvest stage.
+HARVEST_LEAD_DAYS = 21
+
+
+def harvest_window(
+    profile: Dict[str, Any],
+    days_since_sowing: Optional[int],
+    total_days: Optional[float],
+) -> Tuple[Optional[date], Optional[date]]:
+    """Start/end day (from sowing) of the harvest window for this crop."""
+    if not total_days or total_days <= 0 or days_since_sowing is None:
+        return None, None
+    bounds = stage_bounds(profile)
+    start = int(round(bounds.get("maturity", 0.9) * total_days))
+    end = int(round(bounds.get("harvest", 0.95) * total_days))
+    return start, end
+
+
+def build_harvest_preparation(
+    crop_name: Optional[str],
+    stage: Optional[str],
+    days_since_sowing: Optional[int] = None,
+    total_days: Optional[float] = None,
+    expected_harvest_date: Optional[str] = None,
+    actual_harvest_date: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Harvest preparation for a crop that has reached (or is close to) maturity.
+
+    Returns ``applicable: False`` while the crop is still early in the cycle so
+    the section is never shown permanently. Every line comes from the crop's
+    reference activities / watch list plus the cycle's own dates - nothing is
+    invented.
+    """
+    profile, is_generic = get_crop_profile(crop_name)
+    labels = dict(STAGE_LABELS, **(profile.get("stage_labels") or {}))
+    today = _now()
+
+    stage_key = stage if stage in STAGE_KEYS else None
+    expected = _parse_date(expected_harvest_date)
+    actual = _parse_date(actual_harvest_date)
+    window_start_day, window_end_day = harvest_window(profile, days_since_sowing, total_days)
+
+    days_to_harvest = None
+    if expected is not None:
+        days_to_harvest = (expected - today).days
+    elif window_end_day is not None and days_since_sowing is not None:
+        days_to_harvest = window_end_day - days_since_sowing
+
+    sow = today - timedelta(days=days_since_sowing) if days_since_sowing is not None else None
+    expected_maturity = _fmt(sow + timedelta(days=window_start_day)) if (
+        sow is not None and window_start_day is not None
+    ) else None
+    window_end_date = _fmt(expected) if expected is not None else (
+        _fmt(sow + timedelta(days=window_end_day)) if (
+            sow is not None and window_end_day is not None
+        ) else None
+    )
+
+    if actual is not None:
+        readiness = "recorded"
+    elif stage_key == "harvest":
+        readiness = "ready"
+    elif stage_key == "post_harvest":
+        readiness = "recorded"
+    elif stage_key == "maturity":
+        readiness = "preparing"
+    elif days_to_harvest is not None and 0 <= days_to_harvest <= HARVEST_LEAD_DAYS:
+        readiness = "preparing"
+    else:
+        readiness = None
+
+    if readiness is None:
+        return {
+            "applicable": False,
+            "is_generic": is_generic,
+            "crop": crop_name,
+            "stage": stage_key,
+            "readiness": None,
+            "days_to_harvest": days_to_harvest,
+            "note": (
+                "Harvest preparation appears here automatically once the crop "
+                "approaches maturity."
+            ),
+        }
+
+    indicators = []
+    for key in ("maturity", "harvest"):
+        for item in build_watch(crop_name, key)[:2]:
+            indicators.append({
+                "title": item["title"],
+                "detail": item.get("observe") or item.get("why") or "",
+                "stage": key,
+                "stage_label": labels.get(key, STAGE_LABELS.get(key, key)),
+            })
+
+    preparation = []
+    seen_actions = set()
+    for key in HARVEST_STAGES:
+        for act in _activity_items(profile, key):
+            action = act.get("action")
+            if not action or action in seen_actions:
+                continue
+            seen_actions.add(action)
+            preparation.append({
+                "action": action,
+                "why": act.get("why"),
+                "when": act.get("when"),
+                "priority": act.get("priority", "medium"),
+                "stage": key,
+                "stage_label": labels.get(key, STAGE_LABELS.get(key, key)),
+                "source": "stage",
+            })
+
+    return {
+        "applicable": True,
+        "is_generic": is_generic,
+        "crop": crop_name,
+        "stage": stage_key,
+        "stage_label": labels.get(stage_key, STAGE_LABELS.get(stage_key)) if stage_key else None,
+        "readiness": readiness,
+        "expected_maturity_date": expected_maturity,
+        "expected_harvest_date": _fmt(expected) or window_end_date,
+        "harvest_date_is_estimate": expected is None,
+        "actual_harvest_date": _fmt(actual),
+        "harvest_window_end": window_end_date,
+        "days_to_harvest": days_to_harvest,
+        "indicators": indicators[:4],
+        "preparation": preparation[:6],
+        "watch": build_watch(crop_name, stage_key or "harvest"),
+        "note": (
+            "General reference guidance for a mature crop. Confirm readiness in "
+            "the field and with a local expert before harvesting or storing."
+            if is_generic else
+            "Reference guidance for this crop at maturity. Confirm readiness in "
+            "the field before harvesting or storing."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Health check evaluation
 # ---------------------------------------------------------------------------
 

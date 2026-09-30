@@ -22,6 +22,7 @@ farmer's data.
 
 from datetime import datetime, date, timedelta
 from typing import Optional, List
+import re
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -1493,6 +1494,45 @@ def _pending_tasks(db: Session, cycle: Optional[CropCycle]) -> list:
     ]
 
 
+def _task_key(text: Optional[str]) -> str:
+    """Normalised action text used to recognise an already tracked action."""
+    cleaned = re.sub(r"[^a-z0-9 ]+", " ", (text or "").lower())
+    return " ".join(cleaned.split())
+
+
+def _mark_tracked(plan: dict, tasks: list) -> dict:
+    """
+    Attach the farmer's existing crop tasks to the matching plan items.
+
+    A recommendation that is already tracked must not offer "Add to Tasks"
+    again (duplicate task creation), and an already completed one must read as
+    completed instead of pending.
+    """
+    by_action: dict = {}
+    for t in tasks:
+        key = _task_key(t.get("title"))
+        if not key:
+            continue
+        existing = by_action.get(key)
+        # Prefer an unfinished task: it is the one the farmer can still action.
+        if existing is None or (
+            existing.get("status") == "completed" and t.get("status") != "completed"
+        ):
+            by_action[key] = t
+
+    for bucket in ("now", "this_week", "coming_up"):
+        for item in plan.get(bucket, []):
+            task = by_action.get(_task_key(item.get("action")))
+            if not task:
+                item.setdefault("existing_task_id", None)
+                item.setdefault("task_status", None)
+                continue
+            item["existing_task_id"] = task.get("task_id")
+            item["task_status"] = task.get("status")
+            item["can_track"] = False
+    return plan
+
+
 def _health_check_dict(hc: CropHealthCheck) -> dict:
     return {
         "check_id": hc.check_id,
@@ -1526,6 +1566,95 @@ def _check_history(db: Session, cycle: Optional[CropCycle], plot_ids) -> list:
     return [_health_check_dict(hc) for hc in rows]
 
 
+def _crop_context(ctx: dict, plan: dict, checks: list) -> dict:
+    """
+    Farm -> Field/Plot -> Crop -> Crop Cycle context for the current crop.
+
+    Only real stored values are returned; a missing plot or a farmer who has
+    never run a check simply comes back empty instead of being guessed.
+    """
+    farm = ctx["farm"]
+    plot = ctx["plot"]
+    crop = ctx["crop"]
+    cycle = ctx["cycle"]
+    stage = ctx["stage"]
+
+    location = None
+    if farm is not None:
+        parts = [farm.village, farm.mandal, farm.district, farm.state]
+        location = ", ".join([p for p in parts if p]) or farm.address or None
+
+    next_action = None
+    for bucket in ("now", "this_week", "coming_up"):
+        items = plan.get(bucket) or []
+        if not items:
+            continue
+        item = items[0]
+        next_action = {
+            "action": item.get("action"),
+            "why": item.get("why"),
+            "when": item.get("when"),
+            "priority": item.get("priority"),
+            "bucket": bucket,
+            "source": item.get("source"),
+            "stage_label": item.get("stage_label"),
+            "task_status": item.get("task_status"),
+        }
+        break
+
+    last_check = None
+    if checks:
+        hc = checks[0]
+        last_check = {
+            "check_id": hc["check_id"],
+            "date": hc["created_at"],
+            "status": hc["health_status"],
+            "status_label": guidance.severity_label(hc["health_status"]),
+            "observations": hc["observations"],
+        }
+
+    return {
+        "farm_name": farm.farm_name if farm is not None else None,
+        "farm_area": farm.total_area if farm is not None else None,
+        "area_unit": farm.area_unit if farm is not None else None,
+        "location": location,
+        "plot_name": plot.plot_name if plot is not None else None,
+        "plot_area": plot.area if plot is not None else None,
+        "crop_name": crop.name if crop is not None else None,
+        "variety": crop.variety if crop is not None else None,
+        "season": crop.season if crop is not None else None,
+        "sowing_date": cycle.sowing_date if cycle is not None else None,
+        "expected_harvest_date": cycle.expected_harvest_date if cycle is not None else None,
+        "current_stage_label": stage.get("current_stage_label"),
+        "days_since_sowing": stage.get("days_since_sowing"),
+        "last_health_check": last_check,
+        "next_action": next_action,
+    }
+
+
+def _sensor_status(ctx: dict) -> dict:
+    """
+    Real sensor availability for the selected farm/field.
+
+    Crop Health never shows a made-up reading, so an unconnected field reports
+    itself as having no sensor data instead of a placeholder value.
+    """
+    current = ctx["monitoring_current"] or {}
+    if current:
+        return {
+            "available": True,
+            "source": "monitoring",
+            "message": "Readings are coming from a connected field sensor.",
+            "readings": current,
+        }
+    return {
+        "available": False,
+        "source": None,
+        "message": "No connected sensor data available.",
+        "readings": {},
+    }
+
+
 def _companion_sections(db: Session, ctx: dict) -> dict:
     """
     Build the crop-cycle timeline, 'Your Crop Health Plan', the 'Watch for
@@ -1551,14 +1680,18 @@ def _companion_sections(db: Session, ctx: dict) -> dict:
 
     # Your Crop Health Plan (data + knowledge driven).
     factor_map = {f["key"]: f for f in ctx["factors"]}
-    plan = guidance.build_plan(
-        crop_name,
-        watch_stage,
-        days,
-        duration,
-        factors=factor_map,
-        weather=ctx["weather"],
-        tasks_due=_pending_tasks(db, cycle),
+    tasks = _pending_tasks(db, cycle)
+    plan = _mark_tracked(
+        guidance.build_plan(
+            crop_name,
+            watch_stage,
+            days,
+            duration,
+            factors=factor_map,
+            weather=ctx["weather"],
+            tasks_due=tasks,
+        ),
+        tasks,
     )
 
     checks = _check_history(db, cycle, [ctx["plot"].id] if ctx["plot"] else [])
@@ -1577,10 +1710,20 @@ def _companion_sections(db: Session, ctx: dict) -> dict:
             "watch": guidance.build_watch(crop_name, key),
         }
 
+    harvest = guidance.build_harvest_preparation(
+        crop_name,
+        watch_stage,
+        days_since_sowing=days,
+        total_days=duration,
+        expected_harvest_date=cycle.expected_harvest_date if cycle else None,
+        actual_harvest_date=cycle.actual_harvest_date if cycle else None,
+    )
+
     return {
         "cycle": cycle_timeline,
         "watch": watch,
         "plan": plan,
+        "harvest": harvest,
         "health_checks": checks,
         "stage_details": stage_details,
         "symptom_catalogue": guidance.SYMPTOM_CATALOGUE,
@@ -1714,9 +1857,13 @@ async def crop_health_plan(
         "data": {
             "crop": _crop_cycle_dict(ctx["cycle"], ctx["crop"]),
             "has_crop": ctx["cycle"] is not None,
+            "crop_context": _crop_context(
+                ctx, companion["plan"], companion["health_checks"]
+            ),
             "plan": companion["plan"],
             "watch": companion["watch"],
             "cycle": companion["cycle"],
+            "harvest": companion["harvest"],
             "stage_details": companion["stage_details"],
         },
     }
@@ -1753,6 +1900,9 @@ async def crop_health_overview(
                 "crop": _crop_cycle_dict(ctx["cycle"], ctx["crop"]),
             },
             "crop": _crop_cycle_dict(ctx["cycle"], ctx["crop"]),
+            "crop_context": _crop_context(
+                ctx, companion["plan"], companion["health_checks"]
+            ),
             "health": ctx["health"],
             "factors": factors,
             "condition": {
@@ -1787,6 +1937,7 @@ async def crop_health_overview(
                 "current": ctx["monitoring_current"],
                 "alerts": ctx["alerts"],
             },
+            "sensors": _sensor_status(ctx),
             "weather": ctx["weather"],
             "whats_happening": ctx["happening"],
             "crop_needs": ctx["needs"],
@@ -1795,6 +1946,7 @@ async def crop_health_overview(
             "cycle": companion["cycle"],
             "watch": companion["watch"],
             "plan": companion["plan"],
+            "harvest": companion["harvest"],
             "health_checks": companion["health_checks"],
             "stage_details": companion["stage_details"],
             "symptom_catalogue": companion["symptom_catalogue"],
