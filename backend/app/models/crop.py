@@ -66,6 +66,8 @@ class CropTask(Base):
     due_time = Column(String(10), nullable=True)
     status = Column(String(20), default="pending")
     priority = Column(String(20), default="medium")
+    source = Column(String(30), nullable=True)
+    growth_stage = Column(String(50), nullable=True)
     completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

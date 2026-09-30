@@ -162,6 +162,7 @@
     .ai-source{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;background:rgba(245,158,11,.15);color:#b45309}
     .ai-source.climate{background:rgba(59,130,246,.15);color:#2563eb}
     .ai-source.crop_health{background:rgba(16,185,129,.15);color:#059669}
+    .stage-badge{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:capitalize;background:rgba(139,92,246,.12);color:#6d28d9}
     .ai-panel-empty{color:rgba(255,255,255,.9);font-size:12px;margin-top:10px}
     @media(min-width:640px){.ai-sugg-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
     @media(max-width:380px){.ai-card{flex-direction:column}.ai-card .ai-card-actions{flex-direction:row;width:100%}.ai-card .ai-card-actions .ai-link-btn{flex:1}}
@@ -179,6 +180,7 @@
 
     <div class="page-action-bar">
       <span class="pab-title">Actions</span>
+      <button class="pab-btn" id="gen-tasks-btn" onclick="generateTasks()"><i class="fas fa-wand-magic-sparkles"></i> Auto-Generate</button>
       <button class="pab-btn primary" onclick="showAddTask()"><i class="fas fa-plus"></i> Add Task</button>
     </div>
 
@@ -627,6 +629,41 @@
       });
     }
 
+    function generateTasks() {
+      if (savingTask) return;
+      if (!isAuthed()) { showToast('Please log in to generate tasks', 'error'); return; }
+      savingTask = true;
+      setGenerateBusy(true);
+      window.API.Crop.generateTasks().then(function (res) {
+        savingTask = false;
+        setGenerateBusy(false);
+        var created = (res && res.tasks) || [];
+        for (var i = 0; i < created.length; i++) upsertTask(allTasks, created[i]);
+        aiSuggestions = [];
+        renderAiSuggestions();
+        showToast(
+          created.length
+            ? 'Generated ' + created.length + ' task' + (created.length > 1 ? 's' : '') + ' from your farm data'
+            : 'Everything is already up to date — no new tasks needed',
+          'success'
+        );
+        fetchTasks(true);
+      }).catch(function (err) {
+        savingTask = false;
+        setGenerateBusy(false);
+        showToast((err && err.message) || 'Failed to generate tasks', 'error');
+      });
+    }
+
+    function setGenerateBusy(busy) {
+      var btn = document.getElementById('gen-tasks-btn');
+      if (!btn) return;
+      btn.disabled = !!busy;
+      btn.innerHTML = busy
+        ? '<i class="fas fa-spinner fa-spin"></i> Generating...'
+        : '<i class="fas fa-wand-magic-sparkles"></i> Auto-Generate';
+    }
+
     function populateFilterOptions() {
       var cropSet = {}, farmSet = {}, plotSet = {};
       for (var i = 0; i < cycles.length; i++) {
@@ -744,10 +781,10 @@
         else buckets.upcoming.push(t);
       }
       var out = [];
-      if (buckets.overdue.length) out.push({ key: 'overdue', label: 'Overdue', icon: 'fa-exclamation-triangle', badge: 'overdue', badgeText: 'OVERDUE', tasks: buckets.overdue });
       if (buckets.today.length) out.push({ key: 'today', label: 'Today', dateLabel: getSectionDateLabel(0), icon: 'fa-calendar-day', badge: 'today-badge', badgeText: 'TODAY', tasks: buckets.today });
       if (buckets.tomorrow.length) out.push({ key: 'tomorrow', label: 'Tomorrow', dateLabel: getSectionDateLabel(1), icon: 'fa-calendar-day', tasks: buckets.tomorrow });
       if (buckets.upcoming.length) out.push({ key: 'upcoming', label: 'Upcoming', icon: 'fa-calendar-week', tasks: buckets.upcoming });
+      if (buckets.overdue.length) out.push({ key: 'overdue', label: 'Overdue', icon: 'fa-exclamation-triangle', badge: 'overdue', badgeText: 'OVERDUE', tasks: buckets.overdue });
       if (buckets.completed.length) out.push({ key: 'completed', label: 'Completed', icon: 'fa-check-double', badge: 'completed-badge', badgeText: 'DONE', tasks: buckets.completed });
       return out;
     }
@@ -817,6 +854,8 @@
       html += '<div class="task-meta">';
       if (t.category) html += '<span class="cat-badge">' + escapeHtml(t.category) + '</span>';
       html += '<span class="priority-badge ' + escapeHtml(t.priority) + '">' + escapeHtml(t.priority) + '</span>';
+      if (t.source && t.source !== 'manual') html += '<span class="ai-source ' + escapeHtml(t.source) + '">' + escapeHtml(String(t.source).replace(/_/g, ' ')) + '</span>';
+      if (t.growth_stage) html += '<span class="stage-badge"><i class="fas fa-spa" style="font-size:8px"></i> ' + escapeHtml(String(t.growth_stage).replace(/_/g, ' ')) + '</span>';
       html += '<span class="status-pill ' + st + '">' + st.replace('_', ' ') + '</span>';
       html += '</div>';
       if (t.description) html += '<div class="task-desc">' + escapeHtml(t.description) + '</div>';
@@ -1102,6 +1141,8 @@
       if (t.crop_name) html += '<div class="detail-row"><i class="fas fa-seedling"></i><span class="dr-label">Crop</span><span class="dr-value">' + escapeHtml(t.crop_name) + '</span></div>';
       if (t.farm_name) html += '<div class="detail-row"><i class="fas fa-tractor"></i><span class="dr-label">Farm</span><span class="dr-value">' + escapeHtml(t.farm_name) + '</span></div>';
       if (t.plot_name) html += '<div class="detail-row"><i class="fas fa-map-marked-alt"></i><span class="dr-label">Plot</span><span class="dr-value">' + escapeHtml(t.plot_name) + '</span></div>';
+      if (t.source) html += '<div class="detail-row"><i class="fas fa-robot"></i><span class="dr-label">Source</span><span class="dr-value">' + escapeHtml(String(t.source).replace(/_/g, ' ')) + '</span></div>';
+      if (t.growth_stage) html += '<div class="detail-row"><i class="fas fa-spa"></i><span class="dr-label">Stage</span><span class="dr-value">' + escapeHtml(String(t.growth_stage).replace(/_/g, ' ')) + '</span></div>';
       var dueDateText = formatDateDisplay(t.due_date);
       html += '<div class="detail-row"><i class="fas fa-calendar-day"></i><span class="dr-label">Due</span><span class="dr-value">' + (dueDateText || 'No date') + (t.due_time ? ' at ' + escapeHtml(t.due_time) : '') + (st === 'overdue' ? ' <span style="color:#dc2626;font-weight:600">(overdue)</span>' : '') + '</span></div>';
       if (t.created_at) {

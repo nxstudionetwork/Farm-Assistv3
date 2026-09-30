@@ -414,6 +414,9 @@ Backend: FastAPI served from the same origin (port 8000).
     suggestTasks: function () {
       return http('GET', '/crop-tasks/ai-suggest').then(unwrap);
     },
+    generateTasks: function () {
+      return http('POST', '/crop-tasks/generate', {}).then(unwrap);
+    },
     createTask: function (data) {
       return http('POST', '/crop-tasks', data).then(unwrap);
     },

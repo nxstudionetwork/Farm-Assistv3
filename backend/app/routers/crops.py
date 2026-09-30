@@ -69,6 +69,8 @@ class CropTaskCreateRequest(BaseModel):
     due_date: Optional[str] = None
     due_time: Optional[str] = None
     priority: Optional[str] = "medium"
+    source: Optional[str] = None
+    growth_stage: Optional[str] = None
 
 
 class CropTaskUpdateRequest(BaseModel):
@@ -148,6 +150,8 @@ def _task_dict(task: CropTask) -> dict:
         "due_time": task.due_time,
         "status": task.status,
         "priority": task.priority,
+        "source": task.source,
+        "growth_stage": task.growth_stage,
         "completed_at": str(task.completed_at) if task.completed_at else None,
         "created_at": str(task.created_at) if task.created_at else None,
     }
@@ -434,6 +438,8 @@ def create_crop_task(
         due_date=payload.due_date,
         due_time=payload.due_time,
         priority=payload.priority,
+        source=payload.source or "manual",
+        growth_stage=payload.growth_stage,
     )
     db.add(task)
     db.commit()
@@ -580,7 +586,7 @@ _STAGE_TASKS = {
 }
 
 
-def _mk_suggestion(title, category, off, priority, description, cycle, crop, source, reason, links=None):
+def _mk_suggestion(title, category, off, priority, description, cycle, crop, source, reason, links=None, growth_stage=None):
     return {
         "crop_cycle_id": cycle.id,
         "title": title,
@@ -590,6 +596,7 @@ def _mk_suggestion(title, category, off, priority, description, cycle, crop, sou
         "priority": priority,
         "source": source,
         "reason": reason,
+        "growth_stage": growth_stage,
         "crop_id": crop.id if crop else None,
         "crop_name": crop.name if crop else None,
         "farm_id": cycle.farm_id,
@@ -634,6 +641,7 @@ def _stage_suggestions(cycle: CropCycle, crop: Crop, stage: str) -> list:
             title, tpl["category"], tpl["off"], tpl["priority"], description,
             cycle, crop, "crop_stage",
             "Based on the current growth stage of " + crop_name,
+            growth_stage=stage,
         ))
     return out
 
@@ -718,15 +726,17 @@ def _crop_health_suggestion(cycle: CropCycle, crop: Crop, stage: str) -> list:
     )]
 
 
-@router.get("/crop-tasks/ai-suggest", response_model=dict)
-def suggest_ai_tasks(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
+def _collect_suggestions(db: Session, current_user: User) -> tuple:
+    """Build data-driven task candidates for every active crop cycle.
+
+    Returns ``(suggestions, weather)``. Suggestions are already deduplicated
+    against the farmer's existing pending/in-progress tasks, so both the
+    read-only AI panel and the persistent generator can share this.
+    """
     farms = db.query(Farm).filter(Farm.user_id == current_user.id, Farm.is_active == True).all()
     farm_ids = [f.id for f in farms]
     if not farm_ids:
-        return {"status": "success", "data": {"weather": None, "suggestions": []}}
+        return [], None
 
     cycles = (
         db.query(CropCycle)
@@ -734,7 +744,7 @@ def suggest_ai_tasks(
         .all()
     )
     if not cycles:
-        return {"status": "success", "data": {"weather": None, "suggestions": []}}
+        return [], None
 
     from app.services.weather_service import get_current_weather
 
@@ -813,9 +823,71 @@ def suggest_ai_tasks(
         weather_out["location"] = wf.district or wf.farm_name
         weather_out["soil_type"] = wf.soil_type
 
+    return suggestions, weather_out
+
+
+@router.get("/crop-tasks/ai-suggest", response_model=dict)
+def suggest_ai_tasks(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    suggestions, weather_out = _collect_suggestions(db, current_user)
     return {
         "status": "success",
         "data": {"weather": weather_out, "suggestions": suggestions[:12]},
+    }
+
+
+@router.post("/crop-tasks/generate", response_model=dict, status_code=status.HTTP_201_CREATED)
+def generate_crop_tasks(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Persist the data-driven suggestions as real tasks for this farmer.
+
+    Tasks already present on a cycle (pending, in progress or completed) are
+    skipped, so the endpoint is safe to call repeatedly.
+    """
+    suggestions, _weather = _collect_suggestions(db, current_user)
+
+    created = []
+    for cand in suggestions:
+        cycle = db.query(CropCycle).filter(CropCycle.id == cand["crop_cycle_id"]).first()
+        # The helper already scopes to owned farms; re-check so a cycle
+        # belonging to another farmer can never be written to.
+        if not cycle or cycle.farm is None or cycle.farm.user_id != current_user.id:
+            continue
+        task = CropTask(
+            task_id=generate_id("FA-TSK", db, CropTask),
+            crop_cycle_id=cycle.id,
+            title=cand["title"],
+            description=cand["description"],
+            category=cand["category"],
+            due_date=cand["due_date"],
+            priority=cand["priority"],
+            source=cand["source"],
+            growth_stage=cand.get("growth_stage"),
+            status="pending",
+        )
+        db.add(task)
+        created.append(task)
+
+    if created:
+        db.commit()
+        for task in created:
+            db.refresh(task)
+
+    return {
+        "status": "success",
+        "message": (
+            "Generated {0} new task(s) from your farm data.".format(len(created))
+            if created
+            else "Your tasks are already up to date."
+        ),
+        "data": {
+            "created_count": len(created),
+            "tasks": [_task_dict(t) for t in created],
+        },
     }
 
 

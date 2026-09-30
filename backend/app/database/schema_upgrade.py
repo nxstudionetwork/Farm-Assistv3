@@ -232,6 +232,12 @@ ADDITIVE_COLUMNS = {
         ("cancelled_by", "VARCHAR(30)"),
         ("cancel_reason", "TEXT"),
         ("missed_at", "DATETIME"),
+        ("subtotal", "FLOAT"),
+        ("gst_amount", "FLOAT"),
+    ],
+    "crop_tasks": [
+        ("source", "VARCHAR(30)"),
+        ("growth_stage", "VARCHAR(50)"),
     ],
 }
 
@@ -350,7 +356,17 @@ def _migrate_sqlite(database_url: str) -> None:
     try:
         conn = sqlite3.connect(db_path)
         try:
+            present = {
+                row[0]
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
             for table, columns in ADDITIVE_COLUMNS.items():
+                # A database that predates this table has nothing to alter, and
+                # ALTER would raise and abort every later table's migration.
+                if table not in present:
+                    continue
                 existing = {
                     row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
                 }
@@ -362,6 +378,8 @@ def _migrate_sqlite(database_url: str) -> None:
                         logger.info("Added column %s.%s", table, column)
             conn.executescript(MARKET_PRICE_LATEST_SQLITE_DDL)
             for table, index_names in MARKET_PRICE_LC_INDEXES.items():
+                if table not in present:
+                    continue
                 lc_cols = {
                     "commodity": "commodity",
                     "market": "market",
@@ -407,6 +425,10 @@ def _migrate_postgres(database_url: str) -> None:
                     (table,),
                 )
                 existing = {row[0] for row in cur.fetchall()}
+                # Skip tables this database never had; ALTER would raise and
+                # abort every later table's migration.
+                if not existing:
+                    continue
                 for column, declaration in columns:
                     if column not in existing:
                         pg_type = declaration.upper().replace("VARCHAR", "VARCHAR")
