@@ -17,6 +17,7 @@ from app.models.worker import (
 from app.models.wallet import Wallet, WalletTransaction
 from app.services.worker_booking_service import (
     apply_status_transition,
+    compute_booking_cost,
     record_status_history,
     run_overdue_sweep,
     now_utc,
@@ -125,6 +126,8 @@ def _serialize_booking(b, worker=None, farm=None, plot=None, payment=None, inclu
         "end_time": b.end_time,
         "duration_days": b.duration_days,
         "hours_per_day": b.hours_per_day,
+        "subtotal": b.subtotal,
+        "gst_amount": b.gst_amount,
         "total_cost": b.total_cost,
         "status": b.status,
         "payment_status": payment.status if payment else "unpaid",
@@ -540,13 +543,9 @@ def create_worker_booking(
                             detail="This worker is already booked on the selected date.",
                         )
 
-    total_cost = 0.0
-    if worker.daily_rate and payload.duration_days:
-        total_cost = worker.daily_rate * payload.duration_days
-    elif worker.hourly_rate and payload.hours_per_day and payload.duration_days:
-        total_cost = worker.hourly_rate * payload.hours_per_day * payload.duration_days
-
-    total_cost = round(total_cost, 2)
+    subtotal, gst_amount, total_cost = compute_booking_cost(
+        worker, payload.duration_days, payload.hours_per_day
+    )
 
     wallet = _get_wallet(db, current_user.id)
     paid = False
@@ -584,6 +583,8 @@ def create_worker_booking(
             end_time=payload.end_time,
             duration_days=payload.duration_days,
             hours_per_day=payload.hours_per_day,
+            subtotal=subtotal,
+            gst_amount=gst_amount,
             total_cost=total_cost,
             notes=payload.notes,
             status="pending",
@@ -658,6 +659,8 @@ def create_worker_booking(
                 "farm_name": farm.farm_name,
                 "work_type": booking.work_type,
                 "booking_date": booking.booking_date,
+                "subtotal": booking.subtotal,
+                "gst_amount": booking.gst_amount,
                 "total_cost": booking.total_cost,
                 "status": booking.status,
                 "payment_status": "completed" if paid else "unpaid",

@@ -1,9 +1,8 @@
 """Focused unit tests for worker-booking status-history integrity.
 
-These run against a two-table in-memory SQLite database so they stay fast and
-independent of the full application schema, which cannot be created in one pass
-because several tables reference models that are not registered in
-``app.models`` (see ``monitoring_alerts.sensor_id`` -> ``sensors``).
+These run against a small in-memory SQLite database containing only the tables
+the booking service touches, so they stay fast and independent of the full
+application schema used by the API-level suite.
 """
 
 import os
@@ -23,11 +22,12 @@ from sqlalchemy.orm import sessionmaker
 # metadata before any mapper configuration is triggered.
 import app.main  # noqa: F401
 from app.models.farm import gen_uuid
-from app.models.worker import WorkerBooking, WorkerBookingStatusHistory
+from app.models.worker import Worker, WorkerBooking, WorkerBookingStatusHistory
 from app.models.user import UserSettings
 from app.models.notification import Notification
 from app.services.worker_booking_service import (
     apply_status_transition,
+    compute_booking_cost,
     mark_missed,
     record_status_history,
 )
@@ -148,3 +148,36 @@ class TestMissedSweep:
         assert rows[-1].new_status == "missed"
         assert rows[-1].previous_status == "confirmed"
         assert rows[-1].changed_by == "system"
+
+
+class TestBookingCost:
+    def test_daily_rate_charges_per_day_plus_ten_percent_gst(self):
+        worker = Worker(daily_rate=700.0, hourly_rate=None)
+        subtotal, gst, total = compute_booking_cost(worker, duration_days=2)
+        assert subtotal == 1400.0
+        assert gst == 140.0
+        assert total == 1540.0
+
+    def test_hourly_rate_charges_hours_times_days_plus_gst(self):
+        worker = Worker(daily_rate=None, hourly_rate=50.0)
+        subtotal, gst, total = compute_booking_cost(
+            worker, duration_days=2, hours_per_day=8
+        )
+        assert subtotal == 800.0
+        assert gst == 80.0
+        assert total == 880.0
+
+    def test_hourly_worker_without_hours_has_no_charge(self):
+        worker = Worker(daily_rate=None, hourly_rate=50.0)
+        subtotal, gst, total = compute_booking_cost(worker, duration_days=1, hours_per_day=0)
+        assert subtotal == 0.0
+        assert gst == 0.0
+        assert total == 0.0
+
+    def test_daily_rate_wins_when_both_are_set(self):
+        worker = Worker(daily_rate=500.0, hourly_rate=60.0)
+        subtotal, gst, total = compute_booking_cost(
+            worker, duration_days=1, hours_per_day=8
+        )
+        assert subtotal == 500.0
+        assert total == 550.0

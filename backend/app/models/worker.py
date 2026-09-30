@@ -65,6 +65,8 @@ class WorkerBooking(Base):
     end_time = Column(String(10), nullable=True)
     duration_days = Column(Integer, default=1)
     hours_per_day = Column(Float, nullable=True)
+    subtotal = Column(Float, nullable=True)
+    gst_amount = Column(Float, nullable=True)
     total_cost = Column(Float, nullable=True)
     status = Column(String(20), default="pending")
     notes = Column(Text, nullable=True)

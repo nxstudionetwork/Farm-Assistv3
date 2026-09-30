@@ -122,7 +122,6 @@
     /* ---------- Bookings list ---------- */
     .wrk-bookings { display: flex; flex-direction: column; gap: 12px; }
     .wrk-booking-card { background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; box-shadow: var(--shadow-sm); }
-    .wrk-booking-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--wrk-bg); color: var(--wrk); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
     .wrk-booking-avatar { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px; flex-shrink: 0; overflow: hidden; }
     .wrk-booking-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .wrk-booking-id { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
@@ -403,9 +402,7 @@
   var bookings = { page: 1, totalPages: 1, total: 0, items: [], loading: false, filter: 'upcoming' };
   var filtersData = null;
   var activeFilters = {};
-  var filterCount = 0;
   var currentWorker = null;   // full worker being detailed/booked
-  var currentBookingList = [];// bookings currently rendered
   var editMode = 'explore';
   var reviewCtx = null;       // { workerId, workerName, bookingId }
   var farmNameMap = {};       // farmIdKey -> human farm name (booking step 1)
@@ -510,6 +507,20 @@
 
   function timeClamp(h) {
     return Math.round((h || 0) * 4) / 4;
+  }
+
+  var GST_RATE = 0.10;
+
+  function costBreakdown(worker, startTime, endTime, days) {
+    var r = parseRate(worker);
+    var daysN = Math.max(1, parseInt(days, 10) || 1);
+    var hours = 0;
+    if (r && r.type === 'hr') {
+      hours = Math.max(0, timeClamp(endTime) - timeClamp(startTime));
+    }
+    var subtotal = costFor(worker, startTime, endTime, days);
+    var gst = Math.round(subtotal * GST_RATE * 100) / 100;
+    return { rate: r, days: daysN, hours: hours, subtotal: subtotal, gst: gst, total: Math.round((subtotal + gst) * 100) / 100 };
   }
 
   function costFor(worker, startTime, endTime, days) {
@@ -823,7 +834,7 @@
       '<div class="wrk-section"><h4><i class="fas fa-star"></i> Reviews</h4>' + reviewsHtml + '</div>' +
 
       '<div style="display:flex;gap:10px;margin-top:6px;">' +
-        '<button class="wrk-btn wrk-btn-secondary" style="flex:1;padding:11px;background:var(--wrk-bg);color:var(--wrk-dark);border:none;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer;" onclick="WorkersApp.closeDetail()">Close</button>' +
+        '<button class="wrk-btn wrk-btn-ghost" style="flex:1;padding:11px;border-radius:10px;font-weight:700;font-size:12.5px;" onclick="WorkersApp.closeDetail()">Close</button>' +
         '<button class="wrk-btn" style="flex:1;padding:11px;background:var(--wrk);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer;" onclick="WorkersApp.startBooking(\'' + esc(w.id) + '\')"' + (!w.is_available ? ' disabled' : '') + '><i class="fas fa-calendar-check"></i> Book Worker</button>' +
       '</div>';
   }
@@ -1074,15 +1085,15 @@
     }
     var sh = parseFloat(st.split(':')[0]);
     var eh = parseFloat(en.split(':')[0]);
-    var hrs = Math.max(0, eh - sh);
-    var r = parseRate(currentWorker);
-    var cost = costFor(currentWorker, sh, eh, days);
+    var bd = costBreakdown(currentWorker, sh, eh, days);
     var html =
       '<div class="line"><span>Worker</span><span>' + esc(currentWorker.full_name) + '</span></div>' +
-      (r ? '<div class="line"><span>Rate</span><span>' + moneys(r.value) + '/' + (r.type === 'day' ? 'day' : 'hr') + '</span></div>' : '') +
-      '<div class="line"><span>Duration</span><span>' + days + ' day' + (days > 1 ? 's' : '') + '</span></div>' +
-      (hrs > 0 ? '<div class="line"><span>Hours/day</span><span>' + hrs.toFixed(0) + '</span></div>' : '') +
-      '<div class="line total"><span>Estimated Total</span><span>' + moneys(cost) + '</span></div>';
+      (bd.rate ? '<div class="line"><span>' + (bd.rate.type === 'day' ? 'Daily rate' : 'Hourly rate') + '</span><span>' + moneys(bd.rate.value) + '/' + (bd.rate.type === 'day' ? 'day' : 'hr') + '</span></div>' : '') +
+      '<div class="line"><span>Duration</span><span>' + bd.days + ' day' + (bd.days > 1 ? 's' : '') + '</span></div>' +
+      (bd.rate && bd.rate.type === 'hr' ? '<div class="line"><span>Hours/day</span><span>' + bd.hours.toFixed(0) + '</span></div>' : '') +
+      '<div class="line"><span>Subtotal</span><span>' + moneys(bd.subtotal) + '</span></div>' +
+      '<div class="line"><span>GST (10%)</span><span>' + moneys(bd.gst) + '</span></div>' +
+      '<div class="line total"><span>Total Amount</span><span>' + moneys(bd.total) + '</span></div>';
     $('bCostBox').innerHTML = html;
   }
 
@@ -1126,8 +1137,9 @@
     BSTEP = 4;
     resetBookingContent();
 
-    var cost = costFor(currentWorker, parseFloat(booking.start_time.split(':')[0]), parseFloat(booking.end_time.split(':')[0]), booking.duration_days);
-    var r = parseRate(currentWorker);
+    var bd = costBreakdown(currentWorker, parseFloat(booking.start_time.split(':')[0]), parseFloat(booking.end_time.split(':')[0]), booking.duration_days);
+    var cost = bd.total;
+    var r = bd.rate;
     var farmName = booking.farm_name || 'Selected farm';
     var plotName = booking.plot_name || 'Selected plot';
 
@@ -1145,8 +1157,9 @@
         '<div class="line"><span>Date</span><span>' + esc(booking.booking_date) + '</span></div>' +
         '<div class="line"><span>Time</span><span>' + esc(booking.start_time) + ' - ' + esc(booking.end_time) + '</span></div>' +
         '<div class="line"><span>Duration</span><span>' + booking.duration_days + ' day' + (booking.duration_days > 1 ? 's' : '') + '</span></div>' +
-        (r ? '<div class="line"><span>Rate</span><span>' + moneys(r.value) + '/' + (r.type === 'day' ? 'day' : 'hr') + '</span></div>' : '') +
-        '<div class="line total"><span>Estimated Total</span><span>' + moneys(cost) + '</span></div>' +
+        '<div class="line"><span>Subtotal</span><span>' + moneys(bd.subtotal) + '</span></div>' +
+        '<div class="line"><span>GST (10%)</span><span>' + moneys(bd.gst) + '</span></div>' +
+        '<div class="line total"><span>Total Amount</span><span>' + moneys(bd.total) + '</span></div>' +
       '</div>' +
       (cost > 0 ? walletHtml : '') +
       '<div class="wrk-wizard-actions"><button class="wrk-btn wrk-btn-ghost" onclick="WorkersApp.bookingBack()"><i class="fas fa-chevron-left"></i> Back</button><button class="wrk-btn wrk-btn-primary" id="bConfirmBtn" onclick="WorkersApp.confirmBooking()"><i class="fas fa-check-circle"></i> Confirm Booking</button></div>';
@@ -1166,7 +1179,7 @@
   }
 
   function confirmBooking() {
-    var cost = costFor(currentWorker, parseFloat(booking.start_time.split(':')[0]), parseFloat(booking.end_time.split(':')[0]), booking.duration_days);
+    var cost = costBreakdown(currentWorker, parseFloat(booking.start_time.split(':')[0]), parseFloat(booking.end_time.split(':')[0]), booking.duration_days).total;
     var pin = '';
     var pinEl = $('bPin');
     if (pinEl) pin = pinEl.value.trim();
@@ -1653,10 +1666,6 @@
     if (tab === 'bookings') loadBookings();
   }
 
-  function toggleBookings() {
-    switchTab(editMode === 'bookings' ? 'explore' : 'bookings');
-  }
-
   function closeDetail() { $('wrkDetailModal').classList.remove('open'); }
   function closeBooking() { $('wrkBookingModal').classList.remove('open'); BSTEP = 1; }
   function closeBDetail() { $('wrkBDetailModal').classList.remove('open'); }
@@ -1764,7 +1773,6 @@
     clearSearch: clearSearch,
     onSortChange: onSortChange,
     switchTab: switchTab,
-    toggleBookings: toggleBookings,
     loadWorkers: loadWorkers,
     loadBookings: loadBookings,
     setBookingsFilter: setBookingsFilter,

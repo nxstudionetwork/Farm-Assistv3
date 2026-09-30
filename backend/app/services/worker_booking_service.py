@@ -61,6 +61,32 @@ STATUS_DISPLAY_LABELS = {
     "missed": "Missed",
 }
 
+#: Goods & Services Tax applied on top of every worker-booking subtotal.
+GST_RATE = 0.10
+
+
+def compute_booking_cost(worker, duration_days, hours_per_day=None):
+    """Return ``(subtotal, gst, total)`` for a booking against ``worker``.
+
+    Daily-rate workers are billed per day; hourly-rate workers per hour per
+    day. GST (``GST_RATE``) is added on top of the subtotal. The returned
+    ``total`` is the authoritative amount to charge the wallet.
+    """
+    days = max(1, int(duration_days or 1))
+    daily = float(worker.daily_rate or 0)
+    hourly = float(worker.hourly_rate or 0)
+    hours = float(hours_per_day or 0)
+
+    subtotal = 0.0
+    if daily > 0:
+        subtotal = daily * days
+    elif hourly > 0 and hours > 0:
+        subtotal = hourly * hours * days
+
+    subtotal = round(subtotal, 2)
+    gst = round(subtotal * GST_RATE, 2)
+    return subtotal, gst, round(subtotal + gst, 2)
+
 
 def now_utc() -> datetime:
     return datetime.utcnow()
