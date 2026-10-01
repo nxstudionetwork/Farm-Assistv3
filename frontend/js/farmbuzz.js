@@ -664,6 +664,12 @@
     d.querySelectorAll('[data-share]').forEach(function (el) {
       el.addEventListener('click', function () { openShare(el.getAttribute('data-share')); });
     });
+    // NOTE: the hashtag delegation for #fbDetailBody is bound once in
+    // bindEvents(). fbDetailBody is a persistent element, so adding the
+    // listener here would stack a new handler on every detail render.
+  }
+
+  function bindDetailBodyEvents() {
     $('fbDetailBody').addEventListener('click', function (e) {
       var tag = e.target.closest && e.target.closest('.fb-hashtag');
       if (tag) { e.stopPropagation(); openTagSearch(tag.getAttribute('data-tag')); }
@@ -808,6 +814,9 @@
     closeModals();
     $('fbReportModal').classList.add('open');
     $('fbReportDesc').value = '';
+    // Reset the submit button: a previous submission may have left it disabled.
+    var rb = $('fbReportBtn');
+    if (rb) { rb.disabled = false; rb.innerHTML = '<i class="fas fa-flag"></i> Submit Report'; }
   }
 
   function submitReport() {
@@ -816,13 +825,14 @@
     var reason = $('fbReportReason').value;
     var desc = $('fbReportDesc').value.trim();
     if (!reason) { toast('Please select a report reason', 'warning'); return; }
+    // Guard AND set the flag: otherwise rapid double-taps send two reports.
     if (btn && btn.disabled) return;
-    if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...'; }
     FB.report(reportTargetId, { reason: reason, description: desc || null }).then(function (data) {
       toast((data && data.message) || 'Report submitted', 'success');
       closeModals();
     }).catch(apiErr).then(function () {
-      if (btn) btn.innerHTML = '<i class="fas fa-flag"></i> Submit Report';
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-flag"></i> Submit Report'; }
     });
   }
 
@@ -1200,7 +1210,10 @@
           if (v) v.pause();
         });
       }, { threshold: [0, 0.5] });
-      shorts.forEach(function () { spIo.observe(stage.lastChild); });
+      // Observe every slide, not just the last one: an earlier slide that
+      // scrolls out of view must pause, otherwise background videos keep
+      // playing (and keep firing watch/complete events) off-screen.
+      for (var oi = 0; oi < stage.children.length; oi++) spIo.observe(stage.children[oi]);
     }
     requestAnimationFrame(function () {
       stage.scrollTop = spIdx * stage.clientHeight;
@@ -2356,6 +2369,7 @@
     bindSearchEvents();
     bindComposerEvents();
     bindTagPeople();
+    bindDetailBodyEvents();
 
     document.getElementById('fbSelfTabs').addEventListener('click', function (e) {
       var btn = e.target.closest('button');
@@ -2481,10 +2495,18 @@
 
   init();
 
-  if (postQParam) {
-    FB && FB.feed({ limit: 1, page: 1, search: postQParam }).then(function (data) {
-      var items = (data && data.items) || [];
-      if (items.length) openDetail(items[0].id);
-    }).catch(function () {});
+  if (postQParam && FB) {
+    // Deep link from a share message: open the exact post, not a search hit.
+    // The backend resolves both the internal id and the business post_id.
+    FB.getPost(postQParam).then(function (post) {
+      if (!post) return;
+      if (post.content_type === 'short') {
+        openContent(post);
+      } else {
+        openDetail(post.id);
+      }
+    }).catch(function () {
+      toast('That shared post is no longer available', 'warning');
+    });
   }
 })();

@@ -13,9 +13,42 @@ from app.models.farm import Farm, FarmPlot
 from app.models.document import UserDocument
 from app.schemas.auth import UserResponse
 from app.utils.auth import get_current_user
+from app.utils.masking import mask_aadhaar, mask_pan
 from app.integrations.file_storage import FileStorageService
 
 router = APIRouter(prefix="/api/v1", tags=["Users"])
+
+HYDROPONICS_STATUSES = {"not_interested", "curious", "planning", "active"}
+
+
+def _last4(value) -> str:
+    """Trailing 4 characters of an identity number, for masked display only."""
+    cleaned = re.sub(r"\s+", "", str(value or "")).upper()
+    return cleaned[-4:] if len(cleaned) >= 4 else ""
+
+
+def _join_csv(values):
+    if values is None:
+        return None
+    if isinstance(values, str):
+        return values.strip() or None
+    parts = [str(value).strip() for value in values if str(value).strip()]
+    return ", ".join(parts) if parts else None
+
+
+def _csv_list(value):
+    if not value:
+        return []
+    return [part.strip() for part in str(value).split(",") if part.strip()]
+
+
+def _normalise_hydroponics_status(value):
+    if value is None:
+        return None
+    status_value = str(value).strip().lower().replace(" ", "_").replace("-", "_")
+    if not status_value:
+        return None
+    return status_value if status_value in HYDROPONICS_STATUSES else "curious"
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -28,6 +61,14 @@ class ProfileUpdateRequest(BaseModel):
     aadhaar_number: Optional[str] = None
     pan_number: Optional[str] = None
     irrigation_type: Optional[str] = None
+    farming_types: Optional[list] = None
+    farming_activities: Optional[list] = None
+    hydroponics_status: Optional[str] = None
+    hydroponics_units_count: Optional[int] = None
+    hydroponics_system: Optional[str] = None
+    hydroponics_crops: Optional[list] = None
+    hydroponics_area: Optional[float] = None
+    hydroponics_area_unit: Optional[str] = None
 
     @field_validator("full_name")
     @classmethod
@@ -71,7 +112,9 @@ def get_profile(current_user: User = Depends(get_current_user), db: Session = De
 
     profile_data = UserResponse.model_validate(current_user).model_dump()
 
-    if address:
+    if not address:
+        profile_data["address"] = None
+    else:
         profile_data["address"] = {
             "address_line": address.address_line,
             "village": address.village,
@@ -84,18 +127,60 @@ def get_profile(current_user: User = Depends(get_current_user), db: Session = De
             "longitude": address.longitude,
         }
 
-    if farmer_profile:
-        profile_data["farmer_profile"] = {
-            "farmer_id": farmer_profile.farmer_id,
-            "date_of_birth": farmer_profile.date_of_birth,
-            "gender": farmer_profile.gender,
-            "occupation": farmer_profile.occupation,
-            "farming_experience": farmer_profile.farming_experience,
-            "preferred_crops": farmer_profile.preferred_crops,
-            "aadhaar_number": farmer_profile.aadhaar_number,
-            "pan_number": farmer_profile.pan_number,
-            "irrigation_type": farmer_profile.irrigation_type,
-        }
+    # Always present, even before a FarmerProfile row exists, so the profile
+    # page can render its form without branching on a missing key.
+    profile_data["farmer_profile"] = {
+        "farmer_id": farmer_profile.farmer_id if farmer_profile else None,
+        "date_of_birth": farmer_profile.date_of_birth if farmer_profile else None,
+        "gender": farmer_profile.gender if farmer_profile else None,
+        "occupation": farmer_profile.occupation if farmer_profile else None,
+        "farming_experience": farmer_profile.farming_experience if farmer_profile else None,
+        "preferred_crops": farmer_profile.preferred_crops if farmer_profile else None,
+        # Aadhaar/PAN are never echoed back in full. Only a masked form and a
+        # verification status reach the client; the cleartext value stays server
+        # side. `*_masked` is what the profile UI displays.
+        "aadhaar_masked": mask_aadhaar(
+            farmer_profile.aadhaar_number or farmer_profile.aadhaar_last4
+        ) if farmer_profile else "",
+        "aadhaar_provided": bool(
+            farmer_profile and (farmer_profile.aadhaar_number or farmer_profile.aadhaar_last4)
+        ),
+        "aadhaar_verification_status": (
+            farmer_profile.aadhaar_verification_status if farmer_profile else None
+        ) or "not_provided",
+        "pan_masked": mask_pan(
+            farmer_profile.pan_number or farmer_profile.pan_last4
+        ) if farmer_profile else "",
+        "pan_provided": bool(
+            farmer_profile and (farmer_profile.pan_number or farmer_profile.pan_last4)
+        ),
+        "pan_verification_status": (
+            farmer_profile.pan_verification_status if farmer_profile else None
+        ) or "not_provided",
+        "farmer_card_masked": (
+            f"****{farmer_profile.farmer_card_last4}"
+            if farmer_profile and farmer_profile.farmer_card_last4 else ""
+        ),
+        "farmer_card_issuing_authority": (
+            farmer_profile.farmer_card_issuing_authority if farmer_profile else None
+        ),
+        "farmer_card_verification_status": (
+            farmer_profile.farmer_card_verification_status if farmer_profile else None
+        ) or "not_provided",
+        "identity_verification_status": (
+            farmer_profile.identity_verification_status if farmer_profile else None
+        ) or "not_provided",
+        "irrigation_type": farmer_profile.irrigation_type if farmer_profile else None,
+        "farming_type": farmer_profile.farming_type if farmer_profile else None,
+        "farming_types": _csv_list(farmer_profile.farming_types) if farmer_profile else [],
+        "farming_activities": _csv_list(farmer_profile.farming_activities) if farmer_profile else [],
+        "hydroponics_status": farmer_profile.hydroponics_status if farmer_profile else None,
+        "hydroponics_units_count": farmer_profile.hydroponics_units_count if farmer_profile else None,
+        "hydroponics_system": farmer_profile.hydroponics_system if farmer_profile else None,
+        "hydroponics_crops": _csv_list(farmer_profile.hydroponics_crops) if farmer_profile else [],
+        "hydroponics_area": farmer_profile.hydroponics_area if farmer_profile else None,
+        "hydroponics_area_unit": farmer_profile.hydroponics_area_unit if farmer_profile else None,
+    }
 
     return {"status": "success", "data": profile_data}
 
@@ -129,19 +214,65 @@ def update_profile(
     if payload.preferred_crops is not None:
         farmer_profile.preferred_crops = payload.preferred_crops
     if payload.aadhaar_number is not None:
+        # A changed identity value is unverified again until a provider checks
+        # it; the last-4 is what the UI is allowed to show from now on.
         farmer_profile.aadhaar_number = payload.aadhaar_number
+        farmer_profile.aadhaar_last4 = _last4(payload.aadhaar_number)
+        farmer_profile.aadhaar_verification_status = "pending"
+        farmer_profile.identity_verification_status = "pending"
     if payload.pan_number is not None:
         farmer_profile.pan_number = payload.pan_number
+        farmer_profile.pan_last4 = _last4(payload.pan_number)
+        farmer_profile.pan_verification_status = "pending"
     if payload.irrigation_type is not None:
         farmer_profile.irrigation_type = payload.irrigation_type
+    if payload.farming_types is not None:
+        farmer_profile.farming_types = _join_csv(payload.farming_types)
+        farmer_profile.farming_type = (
+            _csv_list(farmer_profile.farming_types)[0] if farmer_profile.farming_types else None
+        )
+    if payload.farming_activities is not None:
+        farmer_profile.farming_activities = _join_csv(payload.farming_activities)
+    if payload.hydroponics_status is not None:
+        farmer_profile.hydroponics_status = _normalise_hydroponics_status(
+            payload.hydroponics_status
+        )
+    if payload.hydroponics_units_count is not None:
+        farmer_profile.hydroponics_units_count = payload.hydroponics_units_count
+    if payload.hydroponics_system is not None:
+        farmer_profile.hydroponics_system = payload.hydroponics_system
+    if payload.hydroponics_crops is not None:
+        farmer_profile.hydroponics_crops = _join_csv(payload.hydroponics_crops)
+    if payload.hydroponics_area is not None:
+        farmer_profile.hydroponics_area = payload.hydroponics_area
+    if payload.hydroponics_area_unit is not None:
+        farmer_profile.hydroponics_area_unit = payload.hydroponics_area_unit
 
     db.commit()
     db.refresh(current_user)
+    db.refresh(farmer_profile)
+
+    data = UserResponse.model_validate(current_user).model_dump()
+    data["farmer_profile"] = {
+        "farmer_id": farmer_profile.farmer_id,
+        "farming_experience": farmer_profile.farming_experience,
+        "preferred_crops": farmer_profile.preferred_crops,
+        "irrigation_type": farmer_profile.irrigation_type,
+        "farming_type": farmer_profile.farming_type,
+        "farming_types": _csv_list(farmer_profile.farming_types),
+        "farming_activities": _csv_list(farmer_profile.farming_activities),
+        "hydroponics_status": farmer_profile.hydroponics_status,
+        "hydroponics_units_count": farmer_profile.hydroponics_units_count,
+        "hydroponics_system": farmer_profile.hydroponics_system,
+        "hydroponics_crops": _csv_list(farmer_profile.hydroponics_crops),
+        "hydroponics_area": farmer_profile.hydroponics_area,
+        "hydroponics_area_unit": farmer_profile.hydroponics_area_unit,
+    }
 
     return {
         "status": "success",
         "message": "Profile updated successfully",
-        "data": UserResponse.model_validate(current_user).model_dump(),
+        "data": data,
     }
 
 

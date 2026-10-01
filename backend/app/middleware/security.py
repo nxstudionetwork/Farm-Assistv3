@@ -14,7 +14,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Cache-Control"] = "no-store"
+        # Default to no-store, but never clobber a Cache-Control the route set
+        # deliberately: immutable media (FarmBuzz Shorts video) must stay
+        # cacheable, otherwise every feed view re-downloads the whole library.
+        if "cache-control" not in response.headers:
+            response.headers["Cache-Control"] = "no-store"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(self), microphone=(self), camera=(self)"
         return response

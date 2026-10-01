@@ -43,6 +43,7 @@ class Expense(Base):
     payment_method = Column(String(50), nullable=True)
     receipt_url = Column(String(500), nullable=True)
     expense_date = Column(DateTime, nullable=True)
+    hydroponic_unit_id = Column(String(36), ForeignKey("hydroponic_units.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

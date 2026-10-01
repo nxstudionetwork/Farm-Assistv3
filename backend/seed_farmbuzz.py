@@ -5,12 +5,13 @@ Usage:
     python seed_farmbuzz.py [--count 104] [--reset-farmbuzz]
 
 - Uses the SAME SQLAlchemy models and relationships as real users.
-- Media: real photographic farm assets served from uploads/farmbuzz/seed/
-  (farm_01.jpg .. farm_12.jpg, valid JPEGs served through the existing
-  /media endpoint) + a few text-only posts. Every short references a real
-  photo so the Shorts feed and player never show placeholder tiles.
-  If the photo assets are missing, lightweight SVG assets are generated
-  as a last resort (no broken refs, no external fake URLs).
+- Media: every Short is a real, uniquely-numbered vertical H.264 clip
+  (uploads/farmbuzz/seed/video/short_NNNN.mp4) with its own JPEG poster frame,
+  all served through the existing /api/v1/farmbuzz/media endpoint. Clips are
+  rendered on demand by seed_farmbuzz_video.py (Pillow + bundled ffmpeg), so
+  the Shorts feed never shows a placeholder tile, a recycled still or a
+  broken reference. Posts/stories use the real farm photo assets
+  (farm_01.jpg .. farm_12.jpg) served from the same directory.
 - Idempotent: skips when 100+ active shorts already exist (unless --reset-farmbuzz).
 """
 import os
@@ -22,6 +23,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.config import settings
 from app.database.connection import SessionLocal, engine, Base
+# The Sensor model lives in app/routers/sensors.py rather than app/models/, so
+# the declarative registry only knows it once that module is imported. The app
+# gets this for free because app.main imports every router; standalone scripts
+# must do it explicitly or mapper configuration dies on MonitoringAlert.sensor.
+import app.routers.sensors  # noqa: E402,F401  (import for side effect)
 from app.models import (
     User, FarmerProfile, FarmBuzzPost, FarmBuzzComment, FarmBuzzLike,
     FarmBuzzSave, FarmBuzzShare, FarmBuzzFollow, FarmBuzzHashtag,
@@ -71,6 +77,36 @@ def make_seed_media(n=12):
             f.write(svg)
         urls.append(f"/api/v1/farmbuzz/media/farmbuzz/seed/seed_{i + 1:02d}.svg")
     return urls
+
+
+def make_short_videos(count):
+    """Return [(video_url, poster_url)] for the real playable Shorts pool.
+
+    Vertical H.264 clips are rendered by seed_farmbuzz_video.py into the same
+    media storage the /media endpoint already serves. If a clip is missing it
+    is rendered on demand, so the Shorts feed never references a dead file.
+    """
+    import seed_farmbuzz_video as vid
+
+    out_dir = os.path.join(SEED_DIR, "video")
+    os.makedirs(out_dir, exist_ok=True)
+    topics = (TOPICS * ((count // len(TOPICS)) + 2))[:count]
+
+    # Render anything missing first (single process keeps ffmpeg output clean).
+    for i, (cat, crop, title, _cap, _tags) in enumerate(topics):
+        mp4 = os.path.join(out_dir, f"short_{i + 1:04d}.mp4")
+        jpg = os.path.join(out_dir, f"short_{i + 1:04d}.jpg")
+        have = (os.path.isfile(mp4) and os.path.getsize(mp4) > 4096
+                and os.path.isfile(jpg) and os.path.getsize(jpg) > 900)
+        if not have:
+            vid.make_clip(i, title, cat, crop, out_dir)
+
+    pool = []
+    for i in range(count):
+        stem = f"short_{i + 1:04d}"
+        base = f"/api/v1/farmbuzz/media/farmbuzz/seed/video/{stem}"
+        pool.append((f"{base}.mp4", f"{base}.jpg"))
+    return pool
 
 
 TOPICS = [
@@ -272,6 +308,7 @@ def main():
             seed_interactions_only = False
 
         media_urls = make_seed_media(12)
+        short_videos = make_short_videos(max(args.count, 100) + 8)
         farmers = get_or_create_farmers(db)
         # refresh ids
         for f in farmers:
@@ -290,18 +327,18 @@ def main():
                 days_ago = (i * 37) % 30
                 hours_ago = (i * 13) % 24
                 created = now - timedelta(days=days_ago, hours=hours_ago)
-                use_image = (i % 3 != 2)  # 2/3 image, 1/3 text-only
-                media_url = media_urls[i % len(media_urls)] if use_image else None
-                media_type = "image" if use_image else "text"
+                # Every Short is a real, uniquely-numbered vertical video clip
+                # with its own poster frame. No recycled stills, no dead refs.
+                video_url, poster_url = short_videos[i % len(short_videos)]
                 post = FarmBuzzPost(
                     post_id=generate_id("FA-BZ", db, FarmBuzzPost),
                     user_id=author.id,
                     content_type="short",
                     title=title,
                     caption=caption,
-                    media_url=media_url,
-                    media_type=media_type,
-                    thumbnail_url=media_url,
+                    media_url=video_url,
+                    media_type="video",
+                    thumbnail_url=poster_url,
                     location=random.choice([
                         "Nalgonda, Telangana", "Warangal, Telangana",
                         "Karimnagar, Telangana", "Krishna, AP", "Guntur, AP",
@@ -487,22 +524,38 @@ def main():
         n_stories = db.query(FarmBuzzStory).filter(FarmBuzzStory.is_active == True).count()
         # every playable short must have valid media or be text-only
         bad = 0
+        video_shorts = 0
+        distinct_videos = set()
         q = db.query(FarmBuzzPost).filter(
             FarmBuzzPost.content_type == "short", FarmBuzzPost.is_active == True).all()
         for p in q:
-            if p.media_type == "video" and not p.media_url:
-                bad += 1
+            if p.media_type == "video":
+                video_shorts += 1
+                if p.media_url:
+                    distinct_videos.add(p.media_url)
+                if not p.media_url:
+                    bad += 1
             if p.media_url and p.media_url.startswith("/api/v1/farmbuzz/media/"):
                 rel = p.media_url.replace("/api/v1/farmbuzz/media/", "")
+                if not os.path.exists(os.path.join(settings.STORAGE_LOCAL_PATH, rel)):
+                    bad += 1
+            if p.thumbnail_url and p.thumbnail_url.startswith("/api/v1/farmbuzz/media/"):
+                rel = p.thumbnail_url.replace("/api/v1/farmbuzz/media/", "")
                 if not os.path.exists(os.path.join(settings.STORAGE_LOCAL_PATH, rel)):
                     bad += 1
             if p.media_url and p.media_url.startswith("http"):
                 bad += 1
         print(f"Shorts: {n_shorts}, Posts: {n_posts}, Stories: {n_stories}")
-        print(f"Seed media files: {len(media_urls)} in {SEED_DIR}")
+        print(f"Playable video shorts: {video_shorts} "
+              f"({len(distinct_videos)} distinct clips)")
+        print(f"Seed photo media files: {len(media_urls)} in {SEED_DIR}")
         print(f"Broken media refs: {bad}")
         assert n_shorts >= 100, f"Expected 100+ shorts, got {n_shorts}"
         assert bad == 0, f"{bad} broken media references"
+        assert video_shorts >= 100, (
+            f"Expected 100+ playable video shorts, got {video_shorts}")
+        assert len(distinct_videos) >= 100, (
+            f"Expected 100+ distinct clips, got {len(distinct_videos)}")
         print("FarmBuzz seed OK — recommendation pool ready.")
     finally:
         db.close()

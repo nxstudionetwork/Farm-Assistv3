@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -14,13 +15,111 @@ from app.schemas.auth import (
     RegisterRequest, LoginRequest, OTPRequest, OTPVerifyRequest,
     UserResponse, TokenResponse,
 )
+from app.services import otp_service
+from app.services.otp_service import OTPError
 from app.utils.auth import (
-    create_access_token, hash_password, verify_password,
+    create_access_token, decode_token, hash_password, verify_password,
     get_current_user, generate_farmer_id, generate_id, normalize_farmer_id,
-    phone_lookup_candidates,
+    phone_lookup_candidates, revoke_session_by_jti, security,
+)
+from app.utils.masking import (
+    mask_aadhaar, mask_email, mask_farmer_card, mask_pan, mask_phone,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["Authentication"])
+
+HYDROPONICS_STATUSES = {"not_interested", "curious", "planning", "active"}
+
+
+def join_csv(values):
+    if values is None:
+        return None
+    if isinstance(values, str):
+        return values.strip() or None
+    parts = [str(value).strip() for value in values if str(value).strip()]
+    return ", ".join(parts) if parts else None
+
+
+def normalise_hydroponics_status(value):
+    status_value = (value or "").strip().lower().replace(" ", "_").replace("-", "_")
+    if not status_value:
+        return None
+    return status_value if status_value in HYDROPONICS_STATUSES else "curious"
+
+
+def _issue_session(db: Session, user: User, token: str, device: Optional[str] = None) -> str:
+    """Register the token's jti in user_sessions so logout can revoke it.
+
+    A JWT stays cryptographically valid until it expires, so every token we
+    hand out needs a server-side record; otherwise /auth/logout could only
+    clear the browser copy and the credential would keep working.
+    """
+    payload = decode_token(token) or {}
+    jti = payload.get("jti")
+    if jti:
+        db.add(UserSession(
+            user_id=user.id,
+            token_jti=jti,
+            device=device,
+            expires_at=datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        ))
+        db.commit()
+    return token
+
+
+def _trailing4(value) -> str:
+    """Last 4 characters of an identity number, for masked display only."""
+    cleaned = "".join(ch for ch in str(value or "") if ch.isalnum()).upper()
+    return cleaned[-4:] if len(cleaned) >= 4 else ""
+
+
+def _mark_channel_verified(user, channel: str) -> None:
+    """Record proof of ownership for the single channel that was verified."""
+    if channel == otp_service.CHANNEL_PHONE:
+        if user.phone_number:
+            user.phone_verified = True
+            user.phone_verified_at = datetime.utcnow()
+    elif channel == otp_service.CHANNEL_EMAIL:
+        if user.email:
+            user.email_verified = True
+            user.email_verified_at = datetime.utcnow()
+
+
+def _farmer_profile_payload(profile: Optional[FarmerProfile]) -> Optional[dict]:
+    """
+    Farmer profile data safe for a normal (non-privileged) client.
+
+    Aadhaar and PAN are never returned in full, never under their original key,
+    and never logged. Only a masked form and a verification status are exposed.
+    """
+    if not profile:
+        return None
+    payload = {
+        "date_of_birth": profile.date_of_birth,
+        "gender": profile.gender,
+        "farming_experience": profile.farming_experience,
+        "preferred_crops": profile.preferred_crops,
+        "irrigation_type": profile.irrigation_type,
+        "farming_type": profile.farming_type,
+        "farming_types": profile.farming_types,
+        "farming_activities": profile.farming_activities,
+        # Verification posture, not verification data.
+        "identity_verification_status": profile.identity_verification_status or "not_provided",
+        "aadhaar_provided": bool(profile.aadhaar_number or profile.aadhaar_last4),
+        "aadhaar_masked": mask_aadhaar(profile.aadhaar_number or profile.aadhaar_last4),
+        "aadhaar_verification_status": profile.aadhaar_verification_status or "not_provided",
+        "pan_provided": bool(profile.pan_number or profile.pan_last4),
+        "pan_masked": mask_pan(profile.pan_number or profile.pan_last4),
+        "pan_verification_status": profile.pan_verification_status or "not_provided",
+        "farmer_card_provided": bool(profile.farmer_card_number),
+        "farmer_card_masked": (
+            f"****{profile.farmer_card_last4}" if profile.farmer_card_last4 else ""
+        ),
+        "farmer_card_issuing_authority": profile.farmer_card_issuing_authority,
+        "farmer_card_verification_status": profile.farmer_card_verification_status or "not_provided",
+    }
+    return payload
+
 
 LOCATIONS = {
     "Telangana": {
@@ -635,6 +734,9 @@ class LoginRequest(BaseModel):
     password: Optional[str] = None
     farmer_id: Optional[str] = None
     login_method: Optional[str] = "phone"
+    # Optional label recorded against the revocable session (e.g. "android").
+    # Not a raw user-agent dump, to avoid storing fingerprint data.
+    device: Optional[str] = None
 
 
 class OTPRequest(BaseModel):
@@ -684,6 +786,23 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         if email_exists:
             raise HTTPException(status_code=400, detail="Email already registered")
 
+    # Government identity is never collected silently. If the request carries
+    # any identity value it must also carry the farmer's recorded consent.
+    identity_values = {
+        "aadhaar_number": payload.aadhaar_number,
+        "pan_number": payload.pan_number,
+        "farmer_card_number": payload.farmer_card_number,
+    }
+    wants_identity = any(identity_values.values())
+    if wants_identity and not payload.identity_consent_given:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Consent is required before government identity details can be stored. "
+                "Please review and accept the identity disclosure."
+            ),
+        )
+
     farmer_id = generate_farmer_id(db)
     pin_value = payload.pin or payload.password
     if not pin_value:
@@ -698,6 +817,13 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         password_hash=password_hash,
         preferred_language=payload.preferred_language or "en",
         is_verified=False,
+        phone_verified=False,
+        email_verified=False,
+        # Consent ledger: what was agreed, and when.
+        identity_consent_given=bool(payload.identity_consent_given),
+        identity_consent_version=payload.identity_consent_version if payload.identity_consent_given else None,
+        identity_consent_at=datetime.utcnow() if payload.identity_consent_given else None,
+        onboarding_status=payload.onboarding_status or "registered",
         is_active=True,
     )
     db.add(user)
@@ -713,7 +839,29 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         preferred_crops=payload.preferred_crops,
         aadhaar_number=payload.aadhaar_number,
         pan_number=payload.pan_number,
+        # Self-declared at signup and format-checked only. Nothing here has been
+        # checked against any authority, so the status records that honestly.
+        aadhaar_last4=_trailing4(payload.aadhaar_number),
+        aadhaar_verification_status="pending" if payload.aadhaar_number else "not_provided",
+        pan_last4=_trailing4(payload.pan_number),
+        pan_verification_status="pending" if payload.pan_number else "not_provided",
+        identity_verification_status="pending" if (payload.aadhaar_number or payload.pan_number) else "not_provided",
+        farmer_card_number=payload.farmer_card_number,
+        farmer_card_issuing_authority=payload.farmer_card_issuing_authority,
+        farmer_card_last4=_trailing4(payload.farmer_card_number),
+        farmer_card_verification_status=(
+            "pending" if payload.farmer_card_number else "not_provided"
+        ),
         irrigation_type=payload.irrigation_type,
+        farming_types=join_csv(payload.farming_types),
+        farming_type=(payload.farming_types or [None])[0],
+        farming_activities=join_csv(payload.farming_activities),
+        hydroponics_status=normalise_hydroponics_status(payload.hydroponics_status),
+        hydroponics_units_count=payload.hydroponics_units_count,
+        hydroponics_system=payload.hydroponics_system,
+        hydroponics_crops=join_csv(payload.hydroponics_crops),
+        hydroponics_area=payload.hydroponics_area,
+        hydroponics_area_unit=payload.hydroponics_area_unit,
     )
     db.add(profile)
 
@@ -753,7 +901,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    token = create_access_token(data={"sub": user.id, "phone": user.phone_number})
+    token = _issue_session(db, user, create_access_token(data={"sub": user.id, "phone": user.phone_number}))
 
     return {
         "status": "success",
@@ -768,47 +916,37 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     }
 
 
+def _otp_http_error(exc: OTPError) -> HTTPException:
+    return HTTPException(status_code=exc.status_code, detail=exc.message)
+
+
 @router.post("/auth/send-otp", response_model=dict)
 def send_otp(payload: OTPRequest, db: Session = Depends(get_db)):
     if not payload.phone_number and not payload.email:
         raise HTTPException(status_code=400, detail="Phone number or email required")
 
-    otp_code = f"{random.randint(0, 9999):04d}"
-    otp_hash = hash_password(otp_code)
-    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    channel = otp_service.CHANNEL_PHONE if payload.phone_number else otp_service.CHANNEL_EMAIL
+    destination = payload.phone_number if payload.phone_number else payload.email
 
     user = None
-    if payload.phone_number:
+    if channel == otp_service.CHANNEL_PHONE:
         user = db.query(User).filter(
-            User.phone_number.in_(phone_lookup_candidates(payload.phone_number))
+            User.phone_number.in_(phone_lookup_candidates(destination))
         ).first()
-    elif payload.email:
-        user = db.query(User).filter(User.email == payload.email).first()
+    else:
+        user = db.query(User).filter(User.email == destination).first()
 
-    otp_record = OTPVerification(
-        user_id=user.id if user else None,
-        phone=payload.phone_number or "",
-        email=payload.email,
-        otp_hash=otp_hash,
-        expires_at=expires_at,
-    )
-    db.add(otp_record)
-    db.commit()
-
-    # Development/Test mode: expose the OTP in the API response (the frontend
-    # logs it to the browser console in development). The debug OTP is only
-    # available while settings.DEBUG is enabled so it is never exposed in
-    # production deployments.
-    response = {
-        "status": "success",
-        "message": "OTP sent successfully",
-        "expires_in_seconds": 600,
-    }
-    if settings.DEBUG:
-        response["debug_otp"] = otp_code
-        response["debug_mode"] = True
-
-    return response
+    # Bind the code to the account when one exists, so verification cannot be
+    # satisfied by an OTP minted for a different destination.
+    try:
+        return otp_service.issue_otp(
+            db,
+            channel=channel,
+            destination=destination,
+            user_id=user.id if user else None,
+        )
+    except OTPError as exc:
+        raise _otp_http_error(exc)
 
 
 @router.post("/auth/send-farmer-otp", response_model=dict)
@@ -834,38 +972,15 @@ def send_farmer_otp(payload: FarmerOTPRequest, db: Session = Depends(get_db)):
     if channel == "email" and not email:
         raise HTTPException(status_code=400, detail="No registered email found")
 
-    otp_code = f"{random.randint(0, 9999):04d}"
-    otp_hash = hash_password(otp_code)
-    expires_at = datetime.utcnow() + timedelta(minutes=10)
-
-    otp_record = OTPVerification(
-        user_id=user.id,
-        phone=phone if channel == "phone" else "",
-        email=email if channel == "email" else None,
-        otp_hash=otp_hash,
-        expires_at=expires_at,
-    )
-    db.add(otp_record)
-    db.commit()
-
-    masked = None
-    if channel == "phone" and phone and len(phone) >= 5:
-        masked = phone[:3] + "****" + phone[-2:]
-    elif channel == "email" and email and "@" in email:
-        masked = email[:2] + "***@" + email.split("@")[1]
-
-    response = {
-        "status": "success",
-        "message": "OTP sent successfully",
-        "channel": channel,
-        "masked": masked,
-        "expires_in_seconds": 600,
-    }
-    if settings.DEBUG:
-        response["debug_otp"] = otp_code
-        response["debug_mode"] = True
-
-    return response
+    try:
+        return otp_service.issue_otp(
+            db,
+            channel=channel,
+            destination=phone if channel == "phone" else email,
+            user_id=user.id,
+        )
+    except OTPError as exc:
+        raise _otp_http_error(exc)
 
 
 @router.post("/auth/verify-farmer-otp", response_model=dict)
@@ -884,32 +999,22 @@ def verify_farmer_otp(payload: FarmerOTPVerifyRequest, db: Session = Depends(get
     lookup_phone = user.phone_number if channel == "phone" else None
     lookup_email = user.email if channel == "email" else None
 
-    q = db.query(OTPVerification).filter(
-        OTPVerification.verified_at.is_(None),
-        OTPVerification.expires_at > datetime.utcnow(),
-    )
-    if lookup_phone:
-        q = q.filter(OTPVerification.phone == lookup_phone)
-    if lookup_email:
-        q = q.filter(OTPVerification.email == lookup_email)
+    try:
+        otp_record = otp_service.consume_otp(
+            db,
+            channel=channel,
+            destination=lookup_phone or lookup_email or "",
+            code=payload.otp_code,
+        )
+    except OTPError as exc:
+        raise _otp_http_error(exc)
 
-    otp_record = q.order_by(OTPVerification.created_at.desc()).first()
-    if not otp_record:
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-    if otp_record.attempts >= 5:
-        raise HTTPException(status_code=400, detail="Too many attempts. Request a new OTP.")
-
-    otp_record.attempts += 1
-    if not verify_password(payload.otp_code, otp_record.otp_hash):
-        db.commit()
-        raise HTTPException(status_code=400, detail="Incorrect OTP")
-
-    otp_record.verified_at = datetime.utcnow()
     otp_record.user_id = user.id
     user.is_verified = True
+    _mark_channel_verified(user, channel)
     db.commit()
 
-    token = create_access_token(data={"sub": user.id, "phone": user.phone_number})
+    token = _issue_session(db, user, create_access_token(data={"sub": user.id, "phone": user.phone_number}))
     return {
         "status": "success",
         "message": "OTP verified successfully",
@@ -930,46 +1035,42 @@ def verify_otp(payload: OTPVerifyRequest, db: Session = Depends(get_db)):
     if not lookup_phone and not lookup_email:
         raise HTTPException(status_code=400, detail="Phone number or email required")
 
-    q = db.query(OTPVerification).filter(
-        OTPVerification.verified_at.is_(None),
-        OTPVerification.expires_at > datetime.utcnow(),
-    )
-    if lookup_phone:
-        q = q.filter(OTPVerification.phone == lookup_phone)
-    if lookup_email:
-        q = q.filter(OTPVerification.email == lookup_email)
+    channel = otp_service.CHANNEL_PHONE if lookup_phone else otp_service.CHANNEL_EMAIL
+    destination = lookup_phone if lookup_phone else lookup_email
 
-    otp_record = q.order_by(OTPVerification.created_at.desc()).first()
-    if not otp_record:
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-
-    if otp_record.attempts >= 5:
-        raise HTTPException(status_code=400, detail="Too many attempts. Request a new OTP.")
-
-    otp_record.attempts += 1
-    if not verify_password(payload.otp_code, otp_record.otp_hash):
-        db.commit()
-        raise HTTPException(status_code=400, detail="Incorrect OTP")
-
-    otp_record.verified_at = datetime.utcnow()
+    try:
+        otp_record = otp_service.consume_otp(
+            db, channel=channel, destination=destination, code=payload.otp_code
+        )
+    except OTPError as exc:
+        raise _otp_http_error(exc)
 
     user = None
-    if lookup_phone:
+    if channel == otp_service.CHANNEL_PHONE:
         user = db.query(User).filter(
             User.phone_number.in_(phone_lookup_candidates(lookup_phone))
         ).first()
-    elif lookup_email:
+    else:
         user = db.query(User).filter(User.email == lookup_email).first()
 
     if user:
-        user.is_verified = True
+        # The record was bound to a user at issue time; refuse to let a code
+        # minted for one account verify a different one.
+        if otp_record.user_id and otp_record.user_id != user.id:
+            db.rollback()
+            raise HTTPException(
+                status_code=400,
+                detail="That code is invalid or has expired. Please request a new one.",
+            )
         otp_record.user_id = user.id
+        user.is_verified = True
+        _mark_channel_verified(user, channel)
 
     db.commit()
 
     token = None
     if user:
-        token = create_access_token(data={"sub": user.id, "phone": user.phone_number})
+        token = _issue_session(db, user, create_access_token(data={"sub": user.id, "phone": user.phone_number}))
 
     return {
         "status": "success",
@@ -1029,6 +1130,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     login_entry = LoginHistory(user_id=user.id)
     db.add(login_entry)
     db.commit()
+    _issue_session(db, user, token, device=payload.device)
 
     profile_data = UserResponse.model_validate(user).model_dump()
     address = db.query(UserAddress).filter(
@@ -1044,16 +1146,9 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "pincode": address.pincode,
         }
     farmer_profile = db.query(FarmerProfile).filter(FarmerProfile.user_id == user.id).first()
-    if farmer_profile:
-        profile_data["farmer_profile"] = {
-            "date_of_birth": farmer_profile.date_of_birth,
-            "gender": farmer_profile.gender,
-            "farming_experience": farmer_profile.farming_experience,
-            "preferred_crops": farmer_profile.preferred_crops,
-            "aadhaar_number": farmer_profile.aadhaar_number,
-            "pan_number": farmer_profile.pan_number,
-            "irrigation_type": farmer_profile.irrigation_type,
-        }
+    safe_profile = _farmer_profile_payload(farmer_profile)
+    if safe_profile:
+        profile_data["farmer_profile"] = safe_profile
 
     return {
         "status": "success",
@@ -1167,7 +1262,17 @@ def lookup_profile(payload: ProfileLookupRequest, db: Session = Depends(get_db))
 
 
 @router.post("/auth/logout", response_model=dict)
-def logout(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def logout(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    # Revoke the presented token server side. Clearing the local copy in the
+    # browser alone leaves a usable credential for the rest of its lifetime.
+    token_revoked = False
+    if credentials and credentials.credentials:
+        token_revoked = revoke_session_by_jti(db, credentials.credentials)
+
     login_entry = (
         db.query(LoginHistory)
         .filter(LoginHistory.user_id == current_user.id, LoginHistory.logout_time.is_(None))
@@ -1178,7 +1283,11 @@ def logout(current_user: User = Depends(get_current_user), db: Session = Depends
         login_entry.logout_time = datetime.utcnow()
         db.commit()
 
-    return {"status": "success", "message": "Logged out successfully"}
+    return {
+        "status": "success",
+        "message": "Logged out successfully",
+        "token_revoked": token_revoked,
+    }
 
 
 @router.get("/auth/me", response_model=dict)

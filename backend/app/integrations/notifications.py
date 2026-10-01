@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional, List
 from app.config import settings
 from app.integrations.base import BaseIntegration
+from app.utils.masking import mask_phone
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +185,9 @@ class SMSService(BaseIntegration):
     @staticmethod
     async def send_sms(phone: str, message: str) -> bool:
         if not settings.SMS_API_KEY:
-            logger.info(f"SMS not configured. Would send to {phone}: {message}")
+            # Never interpolate the message body: callers use this channel for
+            # OTPs, and an unconfigured provider must not print the code.
+            logger.info("SMS provider not configured; message to %s was not sent", mask_phone(phone))
             return False
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:

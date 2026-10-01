@@ -16,6 +16,9 @@ ADDITIVE_COLUMNS = {
     "farms": [
         ("boundary_coordinates", "JSON"),
     ],
+    # NOTE: only one "farmer_profiles" key may exist in this dict. A second
+    # literal key silently replaces the first, so columns listed in the earlier
+    # entry would never be applied to existing databases. Merge instead.
     "farmer_profiles": [
         ("aadhaar_number", "VARCHAR(12)"),
         ("pan_number", "VARCHAR(10)"),
@@ -23,6 +26,29 @@ ADDITIVE_COLUMNS = {
         ("bio", "TEXT"),
         ("farm_location", "VARCHAR(200)"),
         ("farming_type", "VARCHAR(100)"),
+        ("farming_types", "VARCHAR(200)"),
+        ("farming_activities", "VARCHAR(500)"),
+        ("hydroponics_status", "VARCHAR(50)"),
+        ("hydroponics_units_count", "INTEGER"),
+        ("hydroponics_system", "VARCHAR(100)"),
+        ("hydroponics_crops", "VARCHAR(500)"),
+        ("hydroponics_area", "FLOAT"),
+        ("hydroponics_area_unit", "VARCHAR(20)"),
+        # Identity verification ledger. The cleartext aadhaar/pan columns above
+        # are retained for existing rows, but the client is only ever shown
+        # these last-4 values plus a status that honestly reflects that nothing
+        # has been checked against any authority.
+        ("aadhaar_last4", "VARCHAR(4)"),
+        ("aadhaar_verification_status", "VARCHAR(20)"),
+        ("pan_last4", "VARCHAR(4)"),
+        ("pan_verification_status", "VARCHAR(20)"),
+        ("farmer_card_number", "VARCHAR(64)"),
+        ("farmer_card_issuing_authority", "VARCHAR(120)"),
+        ("farmer_card_last4", "VARCHAR(4)"),
+        ("farmer_card_verification_status", "VARCHAR(20)"),
+        ("identity_verification_status", "VARCHAR(20)"),
+        ("identity_provider", "VARCHAR(60)"),
+        ("identity_provider_ref", "VARCHAR(120)"),
     ],
     "feedback": [
         ("category", "VARCHAR(50)"),
@@ -113,6 +139,22 @@ ADDITIVE_COLUMNS = {
         ("last_seen_at", "DATETIME"),
         ("typing_conversation_id", "VARCHAR(36)"),
         ("is_demo", "BOOLEAN DEFAULT 0"),
+        # Phone/email proof of ownership is tracked per channel. The legacy
+        # is_verified flag stays as an overall "this account was checked" marker
+        # so existing login checks keep working unchanged.
+        ("phone_verified", "BOOLEAN DEFAULT 0"),
+        ("phone_verified_at", "DATETIME"),
+        ("email_verified", "BOOLEAN DEFAULT 0"),
+        ("email_verified_at", "DATETIME"),
+        # Consent ledger for government identity verification.
+        ("identity_consent_given", "BOOLEAN DEFAULT 0"),
+        ("identity_consent_version", "VARCHAR(20)"),
+        ("identity_consent_at", "DATETIME"),
+        # Server-authoritative onboarding state so a farmer can resume on any
+        # device instead of re-entering everything into browser localStorage.
+        ("onboarding_status", "VARCHAR(30)"),
+        ("onboarding_step", "VARCHAR(30)"),
+        ("onboarding_updated_at", "DATETIME"),
     ],
     "messages": [
         ("status", "VARCHAR(10) DEFAULT 'sent'"),
@@ -239,6 +281,37 @@ ADDITIVE_COLUMNS = {
         ("source", "VARCHAR(30)"),
         ("growth_stage", "VARCHAR(50)"),
     ],
+    # Scalable crop taxonomy. Every column is nullable so existing farmer rows
+    # and their crop_cycles keep working untouched.
+    "crops": [
+        ("domain", "VARCHAR(80)"),
+        ("category_id", "VARCHAR(36)"),
+        ("subcategory", "VARCHAR(80)"),
+        ("scientific_name", "VARCHAR(150)"),
+        ("local_names", "JSON"),
+        ("life_cycle_type", "VARCHAR(30)"),
+        ("suitable_seasons", "VARCHAR(120)"),
+        ("suitable_climate", "VARCHAR(160)"),
+        ("suitable_soil_types", "VARCHAR(160)"),
+        ("water_requirement", "VARCHAR(80)"),
+        ("harvest_type", "VARCHAR(80)"),
+        ("production_unit", "VARCHAR(30)"),
+        ("storage_notes", "VARCHAR(255)"),
+        ("market_type", "VARCHAR(80)"),
+        ("lifecycle_stages", "JSON"),
+        ("suitable_cultivation_methods", "JSON"),
+        ("is_catalog", "BOOLEAN DEFAULT 0"),
+        ("is_archived", "BOOLEAN DEFAULT 0"),
+    ],
+    "crop_cycles": [
+        ("variety_id", "VARCHAR(36)"),
+        ("cultivation_method_id", "VARCHAR(36)"),
+        ("protected_structure", "VARCHAR(40)"),
+        ("planting_material", "VARCHAR(120)"),
+    ],
+    "expenses": [
+        ("hydroponic_unit_id", "VARCHAR(36)"),
+    ],
 }
 
 
@@ -309,6 +382,92 @@ CREATE INDEX IF NOT EXISTS ix_mkt_latest_fetched_at ON market_price_latest (fetc
 """
 
 
+#: Structured crop taxonomy, variety and cultivation-method tables. These are
+#: created with ``IF NOT EXISTS`` so the script is safe to run on every boot.
+CROP_TAXONOMY_SQLITE_DDL = """
+CREATE TABLE IF NOT EXISTS crop_categories (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    code VARCHAR(120) NOT NULL UNIQUE,
+    domain VARCHAR(80),
+    category VARCHAR(80),
+    subcategory VARCHAR(80),
+    display_name VARCHAR(120),
+    description TEXT,
+    icon VARCHAR(60),
+    sort_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT 1,
+    created_at DATETIME
+);
+CREATE TABLE IF NOT EXISTS cultivation_methods (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    code VARCHAR(60) NOT NULL UNIQUE,
+    name VARCHAR(120) NOT NULL,
+    is_soil_based BOOLEAN DEFAULT 1,
+    is_protected BOOLEAN DEFAULT 0,
+    description TEXT,
+    sort_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT 1,
+    created_at DATETIME
+);
+CREATE TABLE IF NOT EXISTS crop_varieties (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    crop_id VARCHAR(36) NOT NULL REFERENCES crops (id) ON DELETE CASCADE,
+    name VARCHAR(150) NOT NULL,
+    local_name VARCHAR(150),
+    is_hybrid BOOLEAN DEFAULT 0,
+    duration_days FLOAT,
+    is_custom BOOLEAN DEFAULT 0,
+    is_active BOOLEAN DEFAULT 1,
+    created_at DATETIME
+);
+CREATE INDEX IF NOT EXISTS ix_crop_varieties_crop_id ON crop_varieties (crop_id);
+CREATE INDEX IF NOT EXISTS ix_crops_domain ON crops (domain);
+CREATE INDEX IF NOT EXISTS ix_crops_category_id ON crops (category_id);
+CREATE INDEX IF NOT EXISTS ix_crops_is_catalog ON crops (is_catalog);
+"""
+
+
+def _backfill_crop_varieties_sqlite(conn) -> None:
+    """Move legacy ``crops.variety`` text into the new ``crop_varieties`` table.
+
+    Older builds stored a single variety directly on the crop row, which meant
+    a crop and one of its varieties were the same record. The text column is
+    left in place (existing readers still use it) and mirrored into a real
+    variety row so the farmer's existing data is not lost and the same crop
+    can now carry further varieties without creating duplicate crops.
+    """
+    try:
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        if not {"crops", "crop_varieties"} <= tables:
+            return
+        conn.execute(
+            """
+            INSERT INTO crop_varieties
+                (id, crop_id, name, duration_days, is_custom, is_active, created_at)
+            SELECT
+                lower(hex(randomblob(16))),
+                c.id,
+                trim(c.variety),
+                c.growth_duration_days,
+                0,
+                1,
+                CURRENT_TIMESTAMP
+            FROM crops c
+            WHERE c.variety IS NOT NULL
+              AND trim(c.variety) <> ''
+              AND NOT EXISTS (
+                  SELECT 1 FROM crop_varieties v
+                  WHERE v.crop_id = c.id AND lower(trim(v.name)) = lower(trim(c.variety))
+              )
+            """
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("Crop variety backfill failed: %s", exc)
+
+
 def _backfill_cycle_farms_sqlite(conn) -> None:
     """Make every crop cycle agree with the farm that owns its plot.
 
@@ -351,6 +510,46 @@ def _backfill_cycle_farms_sqlite(conn) -> None:
         logger.error("Crop cycle farm backfill failed: %s", exc)
 
 
+def _rename_production_unit_sqlite(conn) -> None:
+    """Move the harvest quantity unit onto an unambiguous column name.
+
+    The harvest record originally stored the yield unit in a column called
+    ``unit``, which is also the name of the relationship pointing back at the
+    hydroponic unit. The relationship won, so the column never reached the
+    database. The value now lives in ``quantity_unit``; any database created by
+    that earlier build still has the stray ``unit`` column, so rename it.
+    """
+    try:
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        if "hydroponic_production_records" not in tables:
+            return
+        existing = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(hydroponic_production_records)"
+            ).fetchall()
+        }
+        if "quantity_unit" in existing:
+            return
+        conn.execute(
+            "ALTER TABLE hydroponic_production_records "
+            "ADD COLUMN quantity_unit VARCHAR(20) DEFAULT 'kg'"
+        )
+        if "unit" in existing:
+            conn.execute(
+                "UPDATE hydroponic_production_records SET quantity_unit = unit "
+                "WHERE quantity_unit IS NULL AND unit IS NOT NULL"
+            )
+        logger.info("Added column hydroponic_production_records.quantity_unit")
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("Hydroponic production unit rename failed: %s", exc)
+
+
 def _migrate_sqlite(database_url: str) -> None:
     db_path = database_url.replace("sqlite:///", "", 1)
     try:
@@ -377,6 +576,7 @@ def _migrate_sqlite(database_url: str) -> None:
                         )
                         logger.info("Added column %s.%s", table, column)
             conn.executescript(MARKET_PRICE_LATEST_SQLITE_DDL)
+            conn.executescript(CROP_TAXONOMY_SQLITE_DDL)
             for table, index_names in MARKET_PRICE_LC_INDEXES.items():
                 if table not in present:
                     continue
@@ -395,6 +595,8 @@ def _migrate_sqlite(database_url: str) -> None:
                         f"ON {table} (lower({lc_cols[marker]}))"
                     )
             _backfill_cycle_farms_sqlite(conn)
+            _backfill_crop_varieties_sqlite(conn)
+            _rename_production_unit_sqlite(conn)
             conn.commit()
         finally:
             conn.close()
@@ -436,8 +638,95 @@ def _migrate_postgres(database_url: str) -> None:
                             f"ALTER TABLE {table} ADD COLUMN {column} {pg_type}"
                         )
                         logger.info("Added column %s.%s (postgres)", table, column)
+            cur.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'hydroponic_production_records'"
+            )
+            pg_cols = {row[0] for row in cur.fetchall()}
+            if pg_cols and "quantity_unit" not in pg_cols:
+                cur.execute(
+                    "ALTER TABLE hydroponic_production_records "
+                    "ADD COLUMN quantity_unit VARCHAR(20) DEFAULT 'kg'"
+                )
+                if "unit" in pg_cols:
+                    cur.execute(
+                        "UPDATE hydroponic_production_records "
+                        "SET quantity_unit = unit "
+                        "WHERE quantity_unit IS NULL AND unit IS NOT NULL"
+                    )
+                logger.info("Added column hydroponic_production_records.quantity_unit")
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS market_price_latest (
+                CREATE TABLE IF NOT EXISTS crop_categories (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    code VARCHAR(120) NOT NULL UNIQUE,
+                    domain VARCHAR(80),
+                    category VARCHAR(80),
+                    subcategory VARCHAR(80),
+                    display_name VARCHAR(120),
+                    description TEXT,
+                    icon VARCHAR(60),
+                    sort_order INTEGER DEFAULT 0,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS cultivation_methods (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    code VARCHAR(60) NOT NULL UNIQUE,
+                    name VARCHAR(120) NOT NULL,
+                    is_soil_based BOOLEAN DEFAULT TRUE,
+                    is_protected BOOLEAN DEFAULT FALSE,
+                    description TEXT,
+                    sort_order INTEGER DEFAULT 0,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS crop_varieties (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    crop_id VARCHAR(36) NOT NULL REFERENCES crops (id) ON DELETE CASCADE,
+                    name VARCHAR(150) NOT NULL,
+                    local_name VARCHAR(150),
+                    is_hybrid BOOLEAN DEFAULT FALSE,
+                    duration_days FLOAT,
+                    is_custom BOOLEAN DEFAULT FALSE,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP
+                )
+            """)
+            for idx_sql in (
+                "CREATE INDEX IF NOT EXISTS ix_crop_varieties_crop_id ON crop_varieties (crop_id)",
+                "CREATE INDEX IF NOT EXISTS ix_crops_domain ON crops (domain)",
+                "CREATE INDEX IF NOT EXISTS ix_crops_category_id ON crops (category_id)",
+                "CREATE INDEX IF NOT EXISTS ix_crops_is_catalog ON crops (is_catalog)",
+            ):
+                cur.execute(idx_sql)
+            pg_crop_cols = {
+                row[0] for row in cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'crops'").fetchall()
+            }
+            if pg_crop_cols:
+                cur.execute("""
+                    INSERT INTO crop_varieties
+                        (id, crop_id, name, duration_days, is_custom, is_active, created_at)
+                    SELECT
+                        md5(random()::text || clock_timestamp()::text),
+                        c.id,
+                        btrim(c.variety),
+                        c.growth_duration_days,
+                        FALSE,
+                        TRUE,
+                        CURRENT_TIMESTAMP
+                    FROM crops c
+                    WHERE c.variety IS NOT NULL
+                      AND btrim(c.variety) <> ''
+                      AND NOT EXISTS (
+                          SELECT 1 FROM crop_varieties v
+                          WHERE v.crop_id = c.id AND lower(btrim(v.name)) = lower(btrim(c.variety))
+                      )
+                """)
+            cur.execute("""
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     price_id VARCHAR(20),
                     variety_key VARCHAR(120),

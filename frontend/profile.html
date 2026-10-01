@@ -93,6 +93,12 @@
     .modal-box label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px}
     .modal-box .form-input{width:100%;padding:10px 12px;border:1px solid #e0e0e0;border-radius:var(--pf-radius-sm);font-size:13px;transition:border-color 0.2s}
     .modal-box .form-input:focus{border-color:var(--pf-green);outline:none}
+    .pf-chip-select{display:flex;flex-wrap:wrap;gap:6px}
+    .pf-chip{padding:6px 12px;border:1px solid #e0e0e0;border-radius:999px;background:#fafafa;color:#455a64;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;font-family:inherit}
+    .pf-chip:hover{border-color:var(--pf-green);background:#f2f9f2}
+    .pf-chip.active{background:var(--pf-green);border-color:var(--pf-green);color:#fff}
+    .pf-hydro-note{display:flex;align-items:center;gap:6px;font-size:11px;color:#0277bd;background:#eaf6fd;border-radius:8px;padding:7px 9px;margin-bottom:8px}
+    #fm-hydro-block{margin-top:4px;padding:12px;border:1px solid #d6ecf8;border-radius:var(--pf-radius-sm);background:#f7fcff}
     .modal-box select.form-input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
     .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
     .modal-actions .pf-btn{width:auto}
@@ -345,6 +351,61 @@
     <div class="form-group">
       <label>Preferred Crops (comma separated)</label>
       <input class="form-input" type="text" id="fm-crops" placeholder="e.g. Rice, Wheat, Cotton">
+    </div>
+    <div class="form-group">
+      <label>Preferred Language</label>
+      <select class="form-input" id="fm-language">
+        <option value="en">English</option>
+        <option value="te">Telugu</option>
+        <option value="hi">Hindi</option>
+        <option value="ta">Tamil</option>
+        <option value="kn">Kannada</option>
+        <option value="mr">Marathi</option>
+        <option value="gu">Gujarati</option>
+        <option value="bn">Bengali</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Farming Activities (select any)</label>
+      <div class="pf-chip-select" id="fm-activities">
+        <button type="button" class="pf-chip" data-value="Crop Farming">Crop Farming</button>
+        <button type="button" class="pf-chip" data-value="Horticulture">Horticulture</button>
+        <button type="button" class="pf-chip" data-value="Hydroponics">Hydroponics</button>
+        <button type="button" class="pf-chip" data-value="Dairy">Dairy</button>
+        <button type="button" class="pf-chip" data-value="Poultry">Poultry</button>
+        <button type="button" class="pf-chip" data-value="Fishery">Fishery</button>
+        <button type="button" class="pf-chip" data-value="Sericulture">Sericulture</button>
+        <button type="button" class="pf-chip" data-value="Organic Farming">Organic Farming</button>
+      </div>
+    </div>
+    <div class="form-group" id="fm-hydro-block">
+      <label>Hydroponic Interest (optional)</label>
+      <div class="pf-hydro-note"><i class="fas fa-droplet"></i> Records your interest only. It does not create a hydroponic unit.</div>
+      <select class="form-input" id="fm-hyd-status">
+        <option value="">Current status</option>
+        <option value="planning">Just planning</option>
+        <option value="interested">Interested, not started</option>
+        <option value="setup">Setting it up</option>
+        <option value="running">Already running</option>
+      </select>
+      <select class="form-input" id="fm-hyd-system" style="margin-top:8px">
+        <option value="">System type</option>
+        <option value="DWC">DWC (Deep Water Culture)</option>
+        <option value="NFT">NFT (Nutrient Film Technique)</option>
+        <option value="Ebb and Flow">Ebb and Flow</option>
+        <option value="Aeroponics">Aeroponics</option>
+        <option value="Kratky">Kratky</option>
+      </select>
+      <input class="form-input" type="text" id="fm-hyd-crops" placeholder="Crops you grow or plan to grow" style="margin-top:8px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <input class="form-input" type="number" id="fm-hyd-area" placeholder="Area" min="0" step="0.01">
+        <select class="form-input" id="fm-hyd-areaunit">
+          <option value="sq ft">sq ft</option>
+          <option value="sq m">sq m</option>
+          <option value="sq yd">sq yd</option>
+        </select>
+      </div>
+      <input class="form-input" type="number" id="fm-hyd-units" placeholder="Number of units" min="0" step="1" style="margin-top:8px">
     </div>
     <div class="modal-actions">
       <button class="pf-btn pf-btn-secondary" style="width:auto" onclick="pfCloseFarmingModal()">Cancel</button>
@@ -629,6 +690,17 @@
       document.getElementById('fm-experience').value = fp.farming_experience || '';
       document.getElementById('fm-irrigation').value = fp.irrigation_type || '';
       document.getElementById('fm-crops').value = fp.preferred_crops || '';
+      // Language and farming activities
+      document.getElementById('fm-language').value = u.preferred_language || 'en';
+      setActivityChips(fp.farming_activities || fp.farming_types || []);
+      // Hydroponic interest
+      document.getElementById('fm-hyd-status').value = fp.hydroponics_status || '';
+      document.getElementById('fm-hyd-system').value = fp.hydroponics_system || '';
+      document.getElementById('fm-hyd-crops').value = (fp.hydroponics_crops || []).join(', ');
+      document.getElementById('fm-hyd-area').value = fp.hydroponics_area || '';
+      document.getElementById('fm-hyd-areaunit').value = fp.hydroponics_area_unit || 'sq ft';
+      document.getElementById('fm-hyd-units').value = fp.hydroponics_units_count || '';
+      syncHydroBlock();
       // Address modal prefill
       document.getElementById('ea-line').value = addr.address_line || '';
       document.getElementById('ea-village').value = addr.village || '';
@@ -726,6 +798,37 @@
   }
 
   // === EDIT FARMING DETAILS ===
+  function setActivityChips(values){
+    var wanted = (values || []).map(function(v){ return String(v).trim(); });
+    document.querySelectorAll('#fm-activities .pf-chip').forEach(function(chip){
+      chip.classList.toggle('active', wanted.indexOf(chip.getAttribute('data-value')) !== -1);
+    });
+  }
+
+  function getActivityChips(){
+    return Array.prototype.slice.call(document.querySelectorAll('#fm-activities .pf-chip.active'))
+      .map(function(chip){ return chip.getAttribute('data-value'); });
+  }
+
+  // The Hydroponic block only appears when the farmer keeps that activity, so the
+  // optional fields never look mandatory.
+  function syncHydroBlock(){
+    var block = document.getElementById('fm-hydro-block');
+    if(!block) return;
+    block.style.display = getActivityChips().indexOf('Hydroponics') === -1 ? 'none' : '';
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var group = document.getElementById('fm-activities');
+    if(!group) return;
+    group.addEventListener('click', function(event){
+      var chip = event.target.closest('.pf-chip');
+      if(!chip) return;
+      chip.classList.toggle('active');
+      syncHydroBlock();
+    });
+  });
+
   window.pfCloseFarmingModal = function(){
     document.getElementById('edit-farming-modal').classList.remove('active');
     var btn = document.getElementById('fm-save-btn');
@@ -739,10 +842,27 @@
     if(crops && !/^[A-Za-z&.,\s\-]+$/.test(crops)){ showToast('Crops can only contain letters, commas, spaces and hyphens','error'); return; }
     var btn = document.getElementById('fm-save-btn');
     setBtn(btn, true);
+    var activities = getActivityChips();
+    var hydroCropText = document.getElementById('fm-hyd-crops').value.trim();
+    var hydroArea = parseFloat(document.getElementById('fm-hyd-area').value);
+    var hydroUnits = parseFloat(document.getElementById('fm-hyd-units').value);
+    var wantsHydro = activities.indexOf('Hydroponics') !== -1;
     var payload = {
       farming_experience: experience || null,
       preferred_crops: crops || null,
-      irrigation_type: irrigation || null
+      irrigation_type: irrigation || null,
+      preferred_language: document.getElementById('fm-language').value || 'en',
+      farming_types: activities,
+      farming_activities: activities,
+      // Clearing the activity clears the optional Hydroponic answers with it.
+      hydroponics_status: wantsHydro ? (document.getElementById('fm-hyd-status').value || 'interested') : null,
+      hydroponics_system: wantsHydro ? (document.getElementById('fm-hyd-system').value || null) : null,
+      hydroponics_crops: wantsHydro
+        ? hydroCropText.split(',').map(function(c){ return c.trim(); }).filter(Boolean)
+        : [],
+      hydroponics_area: wantsHydro && !isNaN(hydroArea) ? hydroArea : null,
+      hydroponics_area_unit: wantsHydro ? document.getElementById('fm-hyd-areaunit').value : null,
+      hydroponics_units_count: wantsHydro && !isNaN(hydroUnits) ? hydroUnits : null
     };
     API.Profile.update(payload).then(function(){
       setBtn(btn, false);

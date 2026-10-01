@@ -27,6 +27,7 @@
     { type: 'item', label: 'Tasks', icon: 'fa-list-check', href: 'tasks.html' },
     { type: 'item', label: 'Crop Health', icon: 'fa-leaf', href: 'crop-health.html' },
     { type: 'item', label: 'Soil & Irrigation', icon: 'fa-droplet', href: 'soil-irrigation.html' },
+    { type: 'item', label: 'Hydroponics', icon: 'fa-seedling', href: 'hydroponics.html' },
     { type: 'item', label: 'Weather', icon: 'fa-cloud-sun', href: 'weather.html' },
     { type: 'item', label: 'Farm Map', icon: 'fa-map-location-dot', href: 'map.html' },
     { type: 'item', label: 'Sensors', icon: 'fa-microchip', href: 'sensors.html' },

@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, field_validator
+import re
 
 
 class RegisterRequest(BaseModel):
@@ -30,6 +31,42 @@ class RegisterRequest(BaseModel):
     soil_type: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    farming_types: Optional[List[str]] = None
+    farming_activities: Optional[List[str]] = None
+    hydroponics_status: Optional[str] = None
+    hydroponics_units_count: Optional[int] = None
+    hydroponics_system: Optional[str] = None
+    hydroponics_crops: Optional[List[str]] = None
+    hydroponics_area: Optional[float] = None
+    hydroponics_area_unit: Optional[str] = None
+
+    # ---- Government Farmer Card / ID (optional, and never verified locally) ----
+    farmer_card_number: Optional[str] = None
+    farmer_card_issuing_authority: Optional[str] = None
+
+    # ---- Consent for identity verification ----
+    # The client must assert that the farmer was shown the disclosure and
+    # agreed. Absent or False, identity fields are not accepted, so government
+    # identity can never be collected silently.
+    identity_consent_given: bool = False
+    identity_consent_version: Optional[str] = None
+
+    # ---- Server-authoritative onboarding state ----
+    onboarding_status: Optional[str] = None
+
+    @field_validator("farmer_card_number")
+    @classmethod
+    def validate_farmer_card(cls, v: Optional[str]) -> Optional[str]:
+        """Format sanity-check only. There is no farmer-card registry to check
+        against, so this never results in a 'verified' status."""
+        if v is None:
+            return None
+        card = re.sub(r"\s+", "", str(v)).upper()
+        if not card:
+            return None
+        if not re.fullmatch(r"[A-Z0-9/-]{4,64}", card):
+            raise ValueError("Farmer card number contains unsupported characters")
+        return card
 
     @field_validator("full_name")
     @classmethod
@@ -134,6 +171,9 @@ class LoginRequest(BaseModel):
     pin: Optional[str] = None
     password: Optional[str] = None
     farmer_id: Optional[str] = None
+    # Optional label recorded against the revocable session, e.g. "android".
+    # Never a raw user-agent dump, to keep session listings free of fingerprint data.
+    device: Optional[str] = None
 
 
 class OTPRequest(BaseModel):

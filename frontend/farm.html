@@ -1238,6 +1238,7 @@
         <a href="map.html" class="mf-action-chip"><i class="fas fa-map-location-dot"></i> Farm Map</a>
         <a href="crop-health.html" class="mf-action-chip"><i class="fas fa-leaf"></i> Crop Health</a>
         <a href="soil-irrigation.html" class="mf-action-chip"><i class="fas fa-droplet"></i> Soil &amp; Water</a>
+        <a href="hydroponics.html" class="mf-action-chip"><i class="fas fa-seedling"></i> Hydroponics</a>
         <a href="tasks.html" class="mf-action-chip"><i class="fas fa-list-check"></i> Tasks</a>
         <a href="farm-calendar.html" class="mf-action-chip"><i class="fas fa-calendar-days"></i> Calendar</a>
       </nav>
@@ -1432,6 +1433,18 @@
             <div id="soil-water-summary">
               <div class="loading-shimmer"></div>
               <div class="loading-shimmer" style="width:85%"></div>
+            </div>
+          </section>
+
+          <!-- 🌱 HYDROPONICS SUMMARY -->
+          <section class="mf-card" id="farm-hydroponics-card">
+            <div class="mf-card-header">
+              <h2 class="mf-card-title"><i class="fas fa-droplet" style="color:#0288d1;"></i> Hydroponics</h2>
+              <a href="hydroponics.html" class="mf-card-link">Open Hydroponics <i class="fas fa-angle-right"></i></a>
+            </div>
+            <div id="farm-hydroponics-summary">
+              <div class="loading-shimmer"></div>
+              <div class="loading-shimmer" style="width:60%"></div>
             </div>
           </section>
 
@@ -3988,6 +4001,56 @@
         '</div>';
     }
 
+    function renderHydroponics() {
+      var box = $id('farm-hydroponics-summary');
+      if (!box) return;
+      var farm = getSelectedFarm();
+      if (!farm) { box.innerHTML = ''; return; }
+
+      if (!window.API || !API.Hydroponics) {
+        box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Hydroponics module unavailable.</div>';
+        return;
+      }
+
+      API.Hydroponics.getDashboard(farm.id).then(function (res) {
+        var d = (res && res.data) || {};
+        var units = d.total_units || 0;
+        var activeCrops = d.active_crops || 0;
+        var soon = d.harvesting_soon || [];
+        var alerts = d.alerts || [];
+
+        if (!units) {
+          box.innerHTML =
+            '<div style="text-align:center;padding:14px;color:var(--text-muted);font-size:12px;line-height:1.5;">' +
+              '<i class="fas fa-droplet" style="font-size:24px;opacity:0.4;display:block;margin-bottom:6px;color:#0288d1;"></i>' +
+              'No hydroponic units in this farm yet.<br>' +
+              '<a href="hydroponics.html" style="color:#0288d1;font-weight:700;">Set up a hydroponic unit &rarr;</a>' +
+            '</div>';
+          return;
+        }
+
+        var alertLine = alerts.length
+          ? '<div style="margin-top:10px;padding:8px 11px;background:#fef2f2;border-radius:9px;font-size:11.5px;color:#b91c1c;line-height:1.45;">' +
+            '<i class="fas fa-triangle-exclamation"></i> ' + alerts.length + ' unit' + (alerts.length > 1 ? 's' : '') + ' need a pH or EC check</div>'
+          : '';
+
+        var harvestLine = soon.length
+          ? '<div style="margin-top:10px;padding:8px 11px;background:#f0f9ff;border-radius:9px;font-size:11.5px;color:#075985;line-height:1.45;">' +
+            '<i class="fas fa-basket-shopping"></i> ' + esc(soon[0].crop_name) + ' ready in ' + soon[0].days_remaining + ' day' + (soon[0].days_remaining === 1 ? '' : 's') + '</div>'
+          : '';
+
+        box.innerHTML =
+          '<div class="mf-details-grid">' +
+            '<div class="mf-detail-row"><span class="lbl"><i class="fas fa-layer-group"></i> Hydroponic Units</span><span class="val">' + units + ' (' + (d.active_units || 0) + ' active)</span></div>' +
+            '<div class="mf-detail-row"><span class="lbl"><i class="fas fa-seedling"></i> Active Crops</span><span class="val">' + activeCrops + '</span></div>' +
+            '<div class="mf-detail-row"><span class="lbl"><i class="fas fa-indian-rupee-sign"></i> Net Profit</span><span class="val" style="color:' + ((d.net_profit || 0) >= 0 ? '#15803d' : '#b91c1c') + '">&#8377;' + Number(d.net_profit || 0).toLocaleString('en-IN') + '</span></div>' +
+          '</div>' +
+          alertLine + harvestLine;
+      }).catch(function () {
+        box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Unable to load hydroponic summary right now.</div>';
+      });
+    }
+
     function renderWeather() {
       var box = $id('farm-weather-summary');
       var farm = getSelectedFarm();
@@ -4148,6 +4211,7 @@
       renderUpcoming();
       renderAlerts();
       renderSoilWater();
+      renderHydroponics();
       renderWeather();
       renderTimeline();
       renderAIOverview();
@@ -4165,6 +4229,7 @@
         renderMapPreview();
         renderWeather();
         renderSoilWater();
+        renderHydroponics();
         renderFarmHealth();
         renderAIOverview();
         pcRefresh(true);

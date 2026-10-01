@@ -12,8 +12,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session
@@ -1495,12 +1495,101 @@ async def upload_media(
     }
 
 
+_MEDIA_TYPES = {
+    ".mp4": "video/mp4",
+    ".m4v": "video/mp4",
+    ".webm": "video/webm",
+    ".ogv": "video/ogg",
+    ".mov": "video/quicktime",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+}
+
+
+def _guess_media_type(name: str) -> str:
+    import mimetypes
+    guessed = mimetypes.guess_type(name)[0]
+    if guessed:
+        return guessed
+    return _MEDIA_TYPES.get(os.path.splitext(name)[1].lower(), "application/octet-stream")
+
+
+def _parse_byte_range(header: str, file_size: int):
+    """Parse a single-range ``Range: bytes=`` header.
+
+    Returns an inclusive ``(start, end)`` tuple, or None when the header is
+    absent/unsatisfiable (the caller then serves the whole file with 200).
+    Multi-range requests are intentionally not supported; browsers only need
+    single ranges for media seeking.
+    """
+    if not header:
+        return None
+    spec = header.strip()
+    if not spec.lower().startswith("bytes="):
+        return None
+    spec = spec[6:].split(",")[0].strip()
+    if "-" not in spec:
+        return None
+    start_s, _, end_s = spec.partition("-")
+    try:
+        if not start_s:
+            # suffix form: last N bytes
+            if not end_s:
+                return None
+            suffix = int(end_s)
+            if suffix <= 0:
+                return None
+            start = max(0, file_size - suffix)
+            end = file_size - 1
+        else:
+            start = int(start_s)
+            end = int(end_s) if end_s else file_size - 1
+    except ValueError:
+        return None
+    if start < 0 or start >= file_size or start > end:
+        return None
+    return start, min(end, file_size - 1)
+
+
 @router.get("/media/{file_path:path}")
-def serve_media(file_path: str):
+def serve_media(file_path: str, request: Request):
     storage_root = Path(settings.STORAGE_LOCAL_PATH).resolve()
     full_path = (storage_root / file_path).resolve()
     if not str(full_path).startswith(str(storage_root) + os.sep):
         raise HTTPException(status_code=400, detail="Invalid file path")
-    if full_path.exists() and full_path.is_file():
-        return FileResponse(full_path, headers={"Cache-Control": "public, max-age=604800"})
-    raise HTTPException(status_code=404, detail="File not found")
+    if not (full_path.exists() and full_path.is_file()):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    headers = {"Cache-Control": "public, max-age=604800", "Accept-Ranges": "bytes"}
+    file_size = full_path.stat().st_size
+    span = _parse_byte_range(request.headers.get("range"), file_size)
+    if span is None:
+        return FileResponse(full_path, headers=headers)
+
+    # Starlette's FileResponse in this version ignores Range, which breaks
+    # seeking (and playback entirely in Safari) for the vertical Shorts.
+    start, end = span
+    length = end - start + 1
+
+    def iter_slice():
+        with open(full_path, "rb") as fh:
+            fh.seek(start)
+            remaining = length
+            while remaining > 0:
+                chunk = fh.read(min(256 * 1024, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+                yield chunk
+
+    headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+    return StreamingResponse(
+        iter_slice(),
+        status_code=206,
+        media_type=_guess_media_type(str(full_path)),
+        headers=headers,
+    )

@@ -39,6 +39,7 @@ NOTIFICATION_TYPE_SETTINGS = {
     "message": "notif_messages",
     "chat": "notif_messages",
     "emergency": "notif_emergency",
+    "hydroponics": "notif_tasks",
 }
 
 

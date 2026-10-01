@@ -50,6 +50,7 @@ TYPE_TO_CATEGORY = {
     "scheme": "farmassist",
     "government": "farmassist",
     "govt": "farmassist",
+    "hydroponics": "farmassist",
 }
 
 # notification_type value -> the Farm Assist team that sent it.
@@ -76,6 +77,7 @@ TYPE_TO_SENDER = {
     "scheme": ("Farm Assist Scheme", "farmassist", "fa-landmark"),
     "government": ("Farm Assist Scheme", "farmassist", "fa-landmark"),
     "govt": ("Farm Assist Scheme", "farmassist", "fa-landmark"),
+    "hydroponics": ("Farm Assist Hydroponics", "farmassist", "fa-droplet"),
 }
 
 VALID_CATEGORIES = {

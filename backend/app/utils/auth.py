@@ -12,7 +12,7 @@ from sqlalchemy import func
 
 from app.config import settings
 from app.database.connection import get_db
-from app.models.user import User
+from app.models.user import User, UserSession
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
@@ -99,23 +99,40 @@ def normalize_farmer_id(raw_id: Optional[str], prefix: str = "FA-AS-") -> str:
     return text
 
 
-def generate_farmer_id(db: Session) -> str:
-    last = db.query(func.max(User.farmer_id)).filter(
-        User.farmer_id.like('FA-AS-%')
-    ).scalar()
+FARMER_ID_PREFIX = "FA-AS-"
+FARMER_ID_WIDTH = 8
+_ID_ALLOCATION_ATTEMPTS = 64
 
-    num = 1
-    if last:
-        try:
-            candidate = str(last).strip().upper()
-            if candidate.startswith('FA-AS-'):
-                candidate = candidate.replace('FA-AS-', '', 1)
-            digits = re.sub(r"\D", "", candidate)
-            if digits:
-                num = int(digits) + 1
-        except (ValueError, TypeError):
-            num = 1
-    return f"FA-AS-{str(num).zfill(8)}"
+
+def generate_farmer_id(db: Session) -> str:
+    """
+    Allocate the next unused 8-digit Farmer ID.
+
+    The obvious ``MAX(farmer_id) + 1`` is unsafe twice over: it is a
+    read-modify-write race, so two concurrent registrations can be handed the
+    same ID and one of them dies on the unique constraint, and a lexicographic
+    MAX over a VARCHAR breaks the moment the counter outgrows its width.
+
+    Instead the numeric part is parsed into a real integer and the candidate is
+    verified to be free, considering rows already pending in this session as
+    well as committed ones. The database unique index remains the final
+    authority; this just makes the common case deterministic and retryable.
+    """
+    used = set()
+    for value in db.query(User.farmer_id).filter(
+        User.farmer_id.like(f"{FARMER_ID_PREFIX}%")
+    ).all():
+        digits = re.sub(r"\D", "", str(value or ""))
+        if digits:
+            used.add(int(digits))
+
+    num = max(used) + 1 if used else 1
+    for _ in range(_ID_ALLOCATION_ATTEMPTS):
+        candidate = f"{FARMER_ID_PREFIX}{num:0{FARMER_ID_WIDTH}d}"
+        if num not in used:
+            return candidate
+        num += 1
+    raise RuntimeError("Unable to allocate a unique Farmer ID")
 
 
 ID_COLUMN_MAP: Dict[str, str] = {
@@ -223,6 +240,11 @@ ID_COLUMN_MAP: Dict[str, str] = {
     "LivestockWeightRecord": "weight_id",
     "LivestockProductionRecord": "production_id",
     "LivestockExpenseRecord": "expense_id",
+    "HydroponicUnit": "unit_id",
+    "HydroponicCrop": "cycle_id",
+    "HydroponicWaterLog": "log_id",
+    "HydroponicHealthRecord": "record_id",
+    "HydroponicProductionRecord": "production_id",
 }
 
 
@@ -296,7 +318,34 @@ async def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is deactivated",
         )
+    # Honour logout. A JWT is valid until it expires, so without this check a
+    # token captured before logout keeps working for the full 8h lifetime.
+    # Sessions that were never registered in user_sessions (older tokens issued
+    # before session tracking existed) are still honoured.
+    jti = payload.get("jti")
+    if jti:
+        session = db.query(UserSession).filter(UserSession.token_jti == jti).first()
+        if session and session.revoked_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has been revoked. Please sign in again.",
+            )
     return user
+
+
+def revoke_session_by_jti(db: Session, token: str) -> bool:
+    """Mark the session behind ``token`` as revoked. Returns True if a live
+    session was found. Safe to call twice and with an already-invalid token."""
+    payload = decode_token(token)
+    jti = payload.get("jti") if payload else None
+    if not jti:
+        return False
+    session = db.query(UserSession).filter(UserSession.token_jti == jti).first()
+    if not session or session.revoked_at is not None:
+        return False
+    session.revoked_at = datetime.utcnow()
+    db.commit()
+    return True
 
 
 async def get_optional_user(

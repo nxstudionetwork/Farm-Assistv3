@@ -4,7 +4,7 @@ from app.models.user import (
 from app.models.farm import Farm, FarmPlot, FarmDocument
 from app.models.crop import (
     Crop, CropCycle, CropTask, FarmJournal, SoilRecord, IrrigationRecord,
-    CropHealthCheck,
+    CropHealthCheck, CropCategory, CropVariety, CultivationMethod,
 )
 from app.models.sustainability import (
     EnergyUsageRecord, SustainablePracticeRecord, SustainabilityProfileRecord
@@ -21,7 +21,7 @@ from app.models.marketplace import (
     Payment, DeliveryTracking, EquipmentMetadata, FarmerRecentlyViewed,
     MarketplaceCategory, MarketplaceListing, MarketplaceListingImage,
     MarketplaceEnquiry, MarketplaceSale, MarketplaceBuyerRecommendation,
-    MarketplaceSellerSettings, EquipmentReport,
+    MarketplaceSellerSettings, EquipmentReport, MarketplaceRentalRequest,
 )
 from app.models.government import (
     GovernmentScheme, SchemeApplication, SchemeDocument,
@@ -78,13 +78,17 @@ from app.models.livestock import (
     LivestockWeightRecord, LivestockProductionRecord, LivestockExpenseRecord,
 )
 from app.models.listing_cart import ListingCart, ListingCartItem, ListingPurchaseKey
+from app.models.hydroponics import (
+    HydroponicUnit, HydroponicCrop, HydroponicWaterLog,
+    HydroponicHealthRecord, HydroponicProductionRecord,
+)
 
 __all__ = [
     "User", "FarmerProfile", "UserAddress", "OTPVerification",
     "LoginHistory", "UserSession", "UserSettings",
     "Farm", "FarmPlot", "FarmDocument",
     "Crop", "CropCycle", "CropTask", "FarmJournal", "SoilRecord", "IrrigationRecord",
-    "CropHealthCheck",
+    "CropHealthCheck", "CropCategory", "CropVariety", "CultivationMethod",
     "Transaction", "Expense", "Income", "Budget", "Loan",
     "ServiceRequest",
     "Worker", "WorkerAvailability", "WorkerBooking", "WorkerPayment", "WorkerReview",
@@ -94,7 +98,7 @@ __all__ = [
     "Payment", "DeliveryTracking", "EquipmentMetadata", "FarmerRecentlyViewed",
     "MarketplaceCategory", "MarketplaceListing", "MarketplaceListingImage",
     "MarketplaceEnquiry", "MarketplaceSale", "MarketplaceBuyerRecommendation",
-    "MarketplaceSellerSettings", "EquipmentReport",
+    "MarketplaceSellerSettings", "EquipmentReport", "MarketplaceRentalRequest",
     "GovernmentScheme", "SchemeApplication", "SchemeDocument",
     "InsurancePolicy", "InsuranceClaim", "SchemeSyncLog",
     "InsuranceProduct", "SavedInsurance", "InsuranceApplication",
@@ -129,4 +133,6 @@ __all__ = [
     "LivestockTreatment", "LivestockFeedingRecord", "LivestockBreedingRecord",
     "LivestockWeightRecord", "LivestockProductionRecord", "LivestockExpenseRecord",
     "ListingCart", "ListingCartItem", "ListingPurchaseKey",
+    "HydroponicUnit", "HydroponicCrop", "HydroponicWaterLog",
+    "HydroponicHealthRecord", "HydroponicProductionRecord",
 ]

@@ -1,10 +1,93 @@
 from datetime import datetime
 from sqlalchemy import (
-    Column, String, DateTime, Float, ForeignKey, Text, Boolean, JSON
+    Column, String, DateTime, Float, ForeignKey, Text, Boolean, JSON, Integer
 )
 from sqlalchemy.orm import relationship
 from app.database.base import Base
 from app.models.farm import gen_uuid
+
+
+class CropCategory(Base):
+    """One node of the crop taxonomy.
+
+    The hierarchy is expressed with plain ``domain`` / ``category`` /
+    ``subcategory`` columns rather than a self-referencing parent, so a new
+    level can be introduced without reshaping existing rows. Examples:
+
+        Field Crops  / Cereals     / Rice
+        Horticulture / Fruits      / Grapes
+        Horticulture / Vegetables  / Tomato
+    """
+
+    __tablename__ = "crop_categories"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    #: machine key, unique and language independent (e.g. ``horticulture.fruits``)
+    code = Column(String(120), unique=True, index=True, nullable=False)
+    #: broad agricultural domain (Field Crops, Horticulture, Plantation, ...)
+    domain = Column(String(80), nullable=True, index=True)
+    #: group inside the domain (Cereals, Fruits, Vegetables, Spices, ...)
+    category = Column(String(80), nullable=True, index=True)
+    #: optional finer grouping inside the category
+    subcategory = Column(String(80), nullable=True, index=True)
+    display_name = Column(String(120), nullable=True)
+    description = Column(Text, nullable=True)
+    icon = Column(String(60), nullable=True)
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    crops = relationship("Crop", back_populates="category_ref")
+
+
+class CultivationMethod(Base):
+    """How a crop is grown, kept separate from the crop itself.
+
+    This is what stops the catalog growing duplicates such as
+    "Tomato Greenhouse" and "Tomato Field": the same Crop row is reused and
+    only the method recorded on the crop cycle changes.
+    """
+
+    __tablename__ = "cultivation_methods"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    code = Column(String(60), unique=True, index=True, nullable=False)
+    name = Column(String(120), nullable=False)
+    #: False for hydroponics, where soil based guidance must not apply.
+    is_soil_based = Column(Boolean, default=True)
+    #: True for greenhouse/polyhouse/shade-net style protected structures.
+    is_protected = Column(Boolean, default=False)
+    description = Column(Text, nullable=True)
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    cycles = relationship("CropCycle", back_populates="cultivation_method")
+
+
+class CropVariety(Base):
+    """A variety of a crop.
+
+    Kept as its own table so a crop is never duplicated per variety. The
+    legacy free-text ``Crop.variety`` column is still readable and is
+    migrated into this table, so existing records keep working.
+    """
+
+    __tablename__ = "crop_varieties"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    crop_id = Column(String(36), ForeignKey("crops.id"), nullable=False, index=True)
+    name = Column(String(150), nullable=False)
+    local_name = Column(String(150), nullable=True)
+    is_hybrid = Column(Boolean, default=False)
+    duration_days = Column(Float, nullable=True)
+    #: True when the farmer typed this in rather than picking a known variety.
+    is_custom = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    crop = relationship("Crop", back_populates="varieties")
+    cycles = relationship("CropCycle", back_populates="variety")
 
 
 class Crop(Base):
@@ -12,13 +95,50 @@ class Crop(Base):
 
     id = Column(String(36), primary_key=True, default=gen_uuid)
     crop_id = Column(String(20), unique=True, index=True)
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False, index=True)
+    #: Legacy free-text variety. Retained for backward compatibility and
+    #: mirrored into :class:`CropVariety` by the migration.
     variety = Column(String(100), nullable=True)
     category = Column(String(50), nullable=True)
     season = Column(String(50), nullable=True)
     growth_duration_days = Column(Float, nullable=True)
+
+    # --- scalable taxonomy -------------------------------------------------
+    domain = Column(String(80), nullable=True, index=True)
+    category_id = Column(String(36), ForeignKey("crop_categories.id"), nullable=True)
+    subcategory = Column(String(80), nullable=True, index=True)
+
+    # --- descriptive reference data ----------------------------------------
+    scientific_name = Column(String(150), nullable=True)
+    #: {"te": "...", "hi": "..."} - names per language, never separate crops
+    local_names = Column(JSON, nullable=True)
+    #: annual / perennial / biennial / seasonal / multi_year
+    life_cycle_type = Column(String(30), nullable=True, index=True)
+    suitable_seasons = Column(String(120), nullable=True)
+    suitable_climate = Column(String(160), nullable=True)
+    suitable_soil_types = Column(String(160), nullable=True)
+    water_requirement = Column(String(80), nullable=True)
+    harvest_type = Column(String(80), nullable=True)
+    production_unit = Column(String(30), nullable=True)
+    storage_notes = Column(String(255), nullable=True)
+    market_type = Column(String(80), nullable=True)
+    #: Ordered stage names for this crop, e.g. grapes' dormancy -> pruning.
+    lifecycle_stages = Column(JSON, nullable=True)
+    #: Cultivation method codes this crop supports, e.g.
+    #: ["open_field", "soil", "protected", "hydroponic"]. Derived by the catalog
+    #: seeder so the UI can filter by environment without a second crop list.
+    suitable_cultivation_methods = Column(JSON, nullable=True)
+
+    # --- catalog bookkeeping ------------------------------------------------
+    #: True for the shared reference catalog, False for farmer-created crops.
+    is_catalog = Column(Boolean, default=False, index=True)
+    is_archived = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    category_ref = relationship("CropCategory", back_populates="crops")
+    varieties = relationship(
+        "CropVariety", back_populates="crop", cascade="all, delete-orphan"
+    )
     crop_cycles = relationship("CropCycle", back_populates="crop")
 
 
@@ -47,9 +167,20 @@ class CropCycle(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # --- variety and cultivation method ------------------------------------
+    variety_id = Column(String(36), ForeignKey("crop_varieties.id"), nullable=True)
+    cultivation_method_id = Column(
+        String(36), ForeignKey("cultivation_methods.id"), nullable=True
+    )
+    #: greenhouse / polyhouse / shade_net / net_house / none
+    protected_structure = Column(String(40), nullable=True)
+    planting_material = Column(String(120), nullable=True)
+
     farm = relationship("Farm", back_populates="crop_cycles")
     plot = relationship("FarmPlot", back_populates="crop_cycles")
     crop = relationship("Crop", back_populates="crop_cycles")
+    variety = relationship("CropVariety", back_populates="cycles")
+    cultivation_method = relationship("CultivationMethod", back_populates="cycles")
     tasks = relationship("CropTask", back_populates="crop_cycle", cascade="all, delete-orphan")
 
 

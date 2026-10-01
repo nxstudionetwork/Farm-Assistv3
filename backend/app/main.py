@@ -33,7 +33,7 @@ from .routers import (
     insurance, calendar, input_store, tools_equipment,
     marketplace_seller, monitoring, livestock, soil_irrigation,
     crop_health, marketplace_browse, sustainability,
-    marketplace_rentals,
+    marketplace_rentals, hydroponics,
 )
 
 
@@ -110,6 +110,7 @@ app.include_router(livestock.router)
 app.include_router(soil_irrigation.router)
 app.include_router(crop_health.router)
 app.include_router(sustainability.router)
+app.include_router(hydroponics.router)
 
 
 

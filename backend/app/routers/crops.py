@@ -4,18 +4,29 @@ from datetime import datetime, date, timedelta
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, case, func
 
 from app.database.connection import get_db
 from app.models.user import User
 from app.models.farm import Farm, FarmPlot
-from app.models.crop import Crop, CropCycle, CropTask, FarmJournal
+from app.models.crop import (
+    Crop,
+    CropCategory,
+    CropCycle,
+    CropTask,
+    CropVariety,
+    CultivationMethod,
+    FarmJournal,
+)
 from app.utils.auth import get_current_user, generate_id
 
 TASK_STATUSES = ["pending", "in_progress", "completed"]
 TASK_PRIORITIES = ["low", "medium", "high"]
+
+#: Sorted last so a farmer's own row always stays visible next to its catalog row.
+CROP_SORT = (Crop.is_catalog, Crop.name)
 
 router = APIRouter(prefix="/api/v1", tags=["Crops"])
 
@@ -26,6 +37,63 @@ class CropCreateRequest(BaseModel):
     category: Optional[str] = None
     season: Optional[str] = None
     growth_duration_days: Optional[float] = None
+    # --- scalable taxonomy (all optional, existing clients are unaffected) ---
+    domain: Optional[str] = None
+    subcategory: Optional[str] = None
+    category_code: Optional[str] = None
+    scientific_name: Optional[str] = None
+    local_names: Optional[dict] = None
+    life_cycle_type: Optional[str] = None
+    suitable_seasons: Optional[str] = None
+    suitable_climate: Optional[str] = None
+    suitable_soil_types: Optional[str] = None
+    water_requirement: Optional[str] = None
+    harvest_type: Optional[str] = None
+    production_unit: Optional[str] = None
+    market_type: Optional[str] = None
+    lifecycle_stages: Optional[List[str]] = None
+    suitable_cultivation_methods: Optional[List[str]] = None
+
+
+class CropUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    variety: Optional[str] = None
+    category: Optional[str] = None
+    season: Optional[str] = None
+    growth_duration_days: Optional[float] = None
+    domain: Optional[str] = None
+    subcategory: Optional[str] = None
+    category_code: Optional[str] = None
+    scientific_name: Optional[str] = None
+    local_names: Optional[dict] = None
+    life_cycle_type: Optional[str] = None
+    suitable_seasons: Optional[str] = None
+    suitable_climate: Optional[str] = None
+    suitable_soil_types: Optional[str] = None
+    water_requirement: Optional[str] = None
+    harvest_type: Optional[str] = None
+    production_unit: Optional[str] = None
+    market_type: Optional[str] = None
+    storage_notes: Optional[str] = None
+    lifecycle_stages: Optional[List[str]] = None
+    suitable_cultivation_methods: Optional[List[str]] = None
+    is_archived: Optional[bool] = None
+
+
+class CropVarietyCreateRequest(BaseModel):
+    crop_id: str
+    name: str = Field(min_length=1, max_length=150)
+    local_name: Optional[str] = None
+    is_hybrid: Optional[bool] = False
+    duration_days: Optional[float] = None
+
+
+class CropVarietyUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    local_name: Optional[str] = None
+    is_hybrid: Optional[bool] = None
+    duration_days: Optional[float] = None
+    is_active: Optional[bool] = None
 
 
 class CropCycleCreateRequest(BaseModel):
@@ -40,6 +108,14 @@ class CropCycleCreateRequest(BaseModel):
     pesticide_usage: Optional[str] = None
     irrigation_schedule: Optional[str] = None
     notes: Optional[str] = None
+    # --- variety / cultivation method -------------------------------------
+    variety_id: Optional[str] = None
+    variety: Optional[str] = None
+    cultivation_method_id: Optional[str] = None
+    cultivation_method: Optional[str] = None
+    protected_structure: Optional[str] = None
+    planting_material: Optional[str] = None
+    current_stage: Optional[str] = None
 
 
 class CropCycleUpdateRequest(BaseModel):
@@ -59,6 +135,12 @@ class CropCycleUpdateRequest(BaseModel):
     revenue: Optional[float] = None
     notes: Optional[str] = None
     status: Optional[str] = None
+    variety_id: Optional[str] = None
+    variety: Optional[str] = None
+    cultivation_method_id: Optional[str] = None
+    cultivation_method: Optional[str] = None
+    protected_structure: Optional[str] = None
+    planting_material: Optional[str] = None
 
 
 class CropTaskCreateRequest(BaseModel):
@@ -90,8 +172,56 @@ class JournalCreateRequest(BaseModel):
     notes: Optional[str] = None
 
 
-def _crop_dict(crop: Crop) -> dict:
+def _variety_dict(variety: CropVariety) -> dict:
     return {
+        "id": variety.id,
+        "crop_id": variety.crop_id,
+        "crop_name": variety.crop.name if variety.crop else None,
+        "name": variety.name,
+        "local_name": variety.local_name,
+        "is_hybrid": bool(variety.is_hybrid),
+        "duration_days": variety.duration_days,
+        "is_custom": bool(variety.is_custom),
+        "is_active": bool(variety.is_active) if variety.is_active is not None else True,
+        "created_at": str(variety.created_at) if variety.created_at else None,
+    }
+
+
+def _method_dict(method: CultivationMethod) -> dict:
+    return {
+        "id": method.id,
+        "code": method.code,
+        "name": method.name,
+        "is_soil_based": bool(method.is_soil_based),
+        "is_protected": bool(method.is_protected),
+        "description": method.description,
+        "sort_order": method.sort_order,
+    }
+
+
+def _category_dict(node: CropCategory, crop_count: int = 0) -> dict:
+    return {
+        "id": node.id,
+        "code": node.code,
+        "domain": node.domain,
+        "category": node.category,
+        "subcategory": node.subcategory,
+        "display_name": node.display_name or node.category or node.code,
+        "description": node.description,
+        "icon": node.icon,
+        "sort_order": node.sort_order,
+        "crop_count": crop_count,
+    }
+
+
+def _crop_dict(crop: Crop, include_varieties: bool = False) -> dict:
+    """Serialise a crop.
+
+    The original seven keys are unchanged so existing clients keep working; the
+    taxonomy, lifecycle and cultivation metadata is additive.
+    """
+    varieties = [v for v in (crop.varieties or []) if v.is_active is not False]
+    data = {
         "id": crop.id,
         "crop_id": crop.crop_id,
         "name": crop.name,
@@ -99,10 +229,38 @@ def _crop_dict(crop: Crop) -> dict:
         "category": crop.category,
         "season": crop.season,
         "growth_duration_days": crop.growth_duration_days,
+        # --- taxonomy --------------------------------------------------------
+        "domain": crop.domain,
+        "subcategory": crop.subcategory,
+        "category_code": crop.category_ref.code if crop.category_ref else None,
+        "category_name": crop.category_ref.display_name if crop.category_ref else None,
+        # --- agronomy --------------------------------------------------------
+        "scientific_name": crop.scientific_name,
+        "local_names": crop.local_names or {},
+        "life_cycle_type": crop.life_cycle_type,
+        "suitable_seasons": crop.suitable_seasons,
+        "suitable_climate": crop.suitable_climate,
+        "suitable_soil_types": crop.suitable_soil_types,
+        "water_requirement": crop.water_requirement,
+        "harvest_type": crop.harvest_type,
+        "production_unit": crop.production_unit,
+        "market_type": crop.market_type,
+        "storage_notes": crop.storage_notes,
+        "lifecycle_stages": crop.lifecycle_stages or [],
+        "suitable_cultivation_methods": crop.suitable_cultivation_methods or [],
+        # --- bookkeeping -----------------------------------------------------
+        "is_catalog": bool(crop.is_catalog),
+        "is_archived": bool(crop.is_archived),
+        "variety_count": len(varieties),
     }
+    if include_varieties:
+        data["varieties"] = [_variety_dict(v) for v in varieties]
+    return data
 
 
 def _cycle_dict(cycle: CropCycle) -> dict:
+    crop = cycle.crop
+    method = cycle.cultivation_method
     return {
         "id": cycle.id,
         "cycle_id": cycle.cycle_id,
@@ -111,11 +269,12 @@ def _cycle_dict(cycle: CropCycle) -> dict:
         "plot_id": cycle.plot_id,
         "plot_name": cycle.plot.plot_name if cycle.plot else None,
         "crop_id": cycle.crop_id,
-        "crop_name": cycle.crop.name if cycle.crop else None,
+        "crop_name": crop.name if crop else None,
         "sowing_date": cycle.sowing_date,
         "expected_harvest_date": cycle.expected_harvest_date,
         "actual_harvest_date": cycle.actual_harvest_date,
         "current_stage": cycle.current_stage,
+        "lifecycle_stages": (crop.lifecycle_stages or []) if crop else [],
         "seed_quantity": cycle.seed_quantity,
         "seed_unit": cycle.seed_unit,
         "fertilizer_usage": cycle.fertilizer_usage,
@@ -126,6 +285,14 @@ def _cycle_dict(cycle: CropCycle) -> dict:
         "revenue": cycle.revenue,
         "notes": cycle.notes,
         "status": cycle.status,
+        # --- variety / cultivation method -----------------------------------
+        "variety_id": cycle.variety_id,
+        "variety_name": cycle.variety.name if cycle.variety else None,
+        "cultivation_method_id": cycle.cultivation_method_id,
+        "cultivation_method": method.code if method else None,
+        "cultivation_method_name": method.name if method else None,
+        "protected_structure": cycle.protected_structure,
+        "planting_material": cycle.planting_material,
         "created_at": str(cycle.created_at) if cycle.created_at else None,
     }
 
@@ -185,16 +352,299 @@ def _verify_cycle_ownership(db: Session, cycle_id: str, user_id: str) -> CropCyc
     return cycle
 
 
+def _resolve_category(db: Session, category_code: Optional[str]):
+    if not category_code:
+        return None
+    node = db.query(CropCategory).filter(CropCategory.code == category_code).first()
+    if not node:
+        raise HTTPException(
+            status_code=404,
+            detail="Crop category '%s' not found" % category_code,
+        )
+    return node
+
+
+def _resolve_variety(db: Session, crop: Crop, variety_id=None, variety_name=None):
+    """Accept a variety id or a variety name and return the row to record.
+
+    A name is only ever looked up inside the crop's own varieties, so two crops
+    can share a variety name without being confused.
+    """
+    if variety_id:
+        row = db.query(CropVariety).filter(CropVariety.id == variety_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Crop variety not found")
+        if row.crop_id != crop.id:
+            raise HTTPException(
+                status_code=400,
+                detail="Variety '%s' does not belong to crop '%s'" % (row.name, crop.name),
+            )
+        return row
+    if variety_name and str(variety_name).strip():
+        term = str(variety_name).strip()
+        row = (
+            db.query(CropVariety)
+            .filter(
+                CropVariety.crop_id == crop.id,
+                func.lower(CropVariety.name) == term.lower(),
+            )
+            .first()
+        )
+        if not row:
+            # An unknown name is a farmer's own variety, not an error.
+            row = CropVariety(
+                crop_id=crop.id,
+                name=term,
+                duration_days=crop.growth_duration_days,
+                is_custom=True,
+            )
+            db.add(row)
+            db.flush()
+        return row
+    return None
+
+
+def _resolve_method(db: Session, crop: Crop, method_id=None, method_code=None):
+    if method_id:
+        method = db.query(CultivationMethod).filter(CultivationMethod.id == method_id).first()
+        if not method:
+            raise HTTPException(status_code=404, detail="Cultivation method not found")
+    elif method_code and str(method_code).strip():
+        method = (
+            db.query(CultivationMethod)
+            .filter(CultivationMethod.code == str(method_code).strip())
+            .first()
+        )
+        if not method:
+            raise HTTPException(
+                status_code=404,
+                detail="Cultivation method '%s' not found" % method_code,
+            )
+    else:
+        return None
+
+    supported = crop.suitable_cultivation_methods or []
+    if supported and method.code not in supported:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "'%s' is not normally grown as %s. Supported methods: %s"
+                % (crop.name, method.name, ", ".join(supported))
+            ),
+        )
+    return method
+
+
+def _validate_stage(crop: Crop, stage: Optional[str]) -> Optional[str]:
+    """Reject a lifecycle stage the crop does not have, with the valid list."""
+    if not stage:
+        return None
+    stages = crop.lifecycle_stages or []
+    if not stages:
+        return stage
+    if not any(str(stage).strip().lower() == str(s).strip().lower() for s in stages):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "'%s' is not a lifecycle stage of %s. Valid stages: %s"
+                % (stage, crop.name, ", ".join(stages))
+            ),
+        )
+    return stage
+
+
 @router.get("/crops", response_model=dict)
 def list_crops(
+    q: Optional[str] = None,
+    domain: Optional[str] = None,
+    category: Optional[str] = None,
+    subcategory: Optional[str] = None,
+    category_code: Optional[str] = None,
+    life_cycle_type: Optional[str] = None,
+    cultivation_method: Optional[str] = None,
+    season: Optional[str] = None,
+    include_archived: bool = False,
+    include_varieties: bool = False,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(200, ge=1, le=500),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    crops = db.query(Crop).all()
+    """List crops from the shared catalog.
+
+    ``data`` stays a plain array of crop objects so existing clients keep
+    working; the new filters and the ``meta`` block are additive.
+    """
+    qry = db.query(Crop).options(selectinload(Crop.varieties), selectinload(Crop.category_ref))
+
+    if not include_archived:
+        qry = qry.filter(Crop.is_archived.is_(False))
+
+    if q and str(q).strip():
+        term = "%%%s%%" % str(q).strip()
+        local = "%%%s%%" % str(q).strip()
+        qry = qry.filter(
+            or_(
+                Crop.name.ilike(term),
+                Crop.scientific_name.ilike(term),
+                Crop.crop_id.ilike(term),
+                Crop.market_type.ilike(term),
+                Crop.variety.ilike(term),
+            )
+        )
+        # JSON local names are matched in Python because SQLite has no JSON
+        # text search operator; the catalog is small and already paged.
+    if domain:
+        qry = qry.filter(Crop.domain == domain)
+    if category:
+        qry = qry.filter(Crop.category == category)
+    if subcategory:
+        qry = qry.filter(Crop.subcategory == subcategory)
+    if category_code:
+        node = db.query(CropCategory).filter(CropCategory.code == category_code).first()
+        if not node:
+            return {"status": "success", "data": [], "meta": _empty_meta(page, page_size)}
+        if node.subcategory:
+            # A subcategory node is a specific slice, so only its own crops.
+            node_ids = [node.id]
+        else:
+            # A parent node also returns the crops filed under its subcategories.
+            node_ids = [
+                c.id
+                for c in db.query(CropCategory).filter(
+                    CropCategory.domain == node.domain,
+                    CropCategory.category == node.category,
+                ).all()
+            ]
+        qry = qry.filter(Crop.category_id.in_(node_ids))
+    if life_cycle_type:
+        qry = qry.filter(Crop.life_cycle_type == life_cycle_type)
+    if season:
+        qry = qry.filter(Crop.suitable_seasons.ilike("%%%s%%" % str(season).strip()))
+
+    total = qry.count()
+    rows = (
+        qry.order_by(*CROP_SORT)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    if cultivation_method:
+        wanted = str(cultivation_method).strip()
+        rows = [c for c in rows if wanted in (c.suitable_cultivation_methods or [])]
+
+    if q and str(q).strip():
+        needle = str(q).strip().lower()
+        rows = [c for c in rows if _matches_local_name(c, needle)]
+
     return {
         "status": "success",
-        "data": [_crop_dict(c) for c in crops],
+        "data": [_crop_dict(c, include_varieties) for c in rows],
+        "meta": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "pages": (total + page_size - 1) // page_size,
+        },
     }
+
+
+def _empty_meta(page: int, page_size: int) -> dict:
+    return {"page": page, "page_size": page_size, "total": 0, "pages": 0}
+
+
+def _matches_local_name(crop: Crop, needle: str) -> bool:
+    for value in (crop.local_names or {}).values():
+        if value and needle in str(value).lower():
+            return True
+    return False
+
+
+@router.get("/crops/categories", response_model=dict)
+def list_crop_categories(
+    q: Optional[str] = None,
+    domain: Optional[str] = None,
+    include_empty: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Taxonomy tree with crop counts, used to build grouped selectors."""
+    counts = dict(
+        db.query(Crop.category_id, func.count(Crop.id))
+        .filter(Crop.is_archived.is_(False))
+        .group_by(Crop.category_id)
+        .all()
+    )
+
+    qry = db.query(CropCategory).filter(CropCategory.is_active.isnot(False))
+    if domain:
+        qry = qry.filter(CropCategory.domain == domain)
+
+    nodes = qry.order_by(CropCategory.sort_order, CropCategory.category, CropCategory.subcategory).all()
+    out = []
+    for node in nodes:
+        count = counts.get(node.id, 0)
+        if not include_empty and not count and node.subcategory is None:
+            continue
+        if q and str(q).strip():
+            needle = str(q).strip().lower()
+            haystack = " ".join(
+                str(x or "") for x in (node.code, node.display_name, node.category, node.subcategory)
+            ).lower()
+            if needle not in haystack:
+                continue
+        out.append(_category_dict(node, count))
+
+    domains = []
+    for name in sorted({n.domain for n in nodes if n.domain}):
+        domain_nodes = [n for n in nodes if n.domain == name]
+        domains.append(
+            {
+                "domain": name,
+                "crop_count": sum(counts.get(n.id, 0) for n in domain_nodes),
+                "categories": [
+                    _category_dict(n, counts.get(n.id, 0))
+                    for n in sorted(
+                        domain_nodes,
+                        key=lambda n: (n.category or "", n.sort_order or 0, n.subcategory or ""),
+                    )
+                ],
+            }
+        )
+
+    return {"status": "success", "data": out, "domains": domains}
+
+
+@router.get("/crops/cultivation-methods", response_model=dict)
+def list_cultivation_methods(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    methods = (
+        db.query(CultivationMethod)
+        .filter(CultivationMethod.is_active.isnot(False))
+        .order_by(CultivationMethod.sort_order, CultivationMethod.name)
+        .all()
+    )
+    return {"status": "success", "data": [_method_dict(m) for m in methods]}
+
+
+@router.get("/crops/{crop_ref}", response_model=dict)
+def get_crop(
+    crop_ref: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    crop = (
+        db.query(Crop)
+        .options(selectinload(Crop.varieties), selectinload(Crop.category_ref))
+        .filter(or_(Crop.id == crop_ref, Crop.crop_id == crop_ref))
+        .first()
+    )
+    if not crop:
+        raise HTTPException(status_code=404, detail="Crop not found")
+    return {"status": "success", "data": _crop_dict(crop, include_varieties=True)}
 
 
 @router.post("/crops", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -203,24 +653,257 @@ def create_crop(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    crop_id = generate_id("FA-CRP", db, Crop)
+    node = _resolve_category(db, payload.category_code)
 
     crop = Crop(
-        crop_id=crop_id,
+        crop_id=generate_id("FA-CRP", db, Crop),
         name=payload.name,
         variety=payload.variety,
-        category=payload.category,
+        category=payload.category or (node.category if node else None),
         season=payload.season,
         growth_duration_days=payload.growth_duration_days,
+        domain=payload.domain or (node.domain if node else None),
+        subcategory=payload.subcategory or (node.subcategory if node else None),
+        category_id=node.id if node else None,
+        scientific_name=payload.scientific_name,
+        local_names=payload.local_names,
+        life_cycle_type=payload.life_cycle_type,
+        suitable_seasons=payload.suitable_seasons or payload.season,
+        suitable_climate=payload.suitable_climate,
+        suitable_soil_types=payload.suitable_soil_types,
+        water_requirement=payload.water_requirement,
+        harvest_type=payload.harvest_type,
+        production_unit=payload.production_unit,
+        market_type=payload.market_type,
+        lifecycle_stages=list(payload.lifecycle_stages) if payload.lifecycle_stages else None,
+        suitable_cultivation_methods=(
+            list(payload.suitable_cultivation_methods)
+            if payload.suitable_cultivation_methods
+            else None
+        ),
+        is_catalog=False,
     )
     db.add(crop)
+    db.flush()
+
+    # A free-text variety on create becomes a real variety row, so the farmer
+    # never has to choose between the legacy column and the new table.
+    if payload.variety and str(payload.variety).strip():
+        db.add(
+            CropVariety(
+                crop_id=crop.id,
+                name=str(payload.variety).strip(),
+                duration_days=crop.growth_duration_days,
+                is_custom=True,
+            )
+        )
+
     db.commit()
     db.refresh(crop)
 
     return {
         "status": "success",
         "message": "Crop created successfully",
-        "data": _crop_dict(crop),
+        "data": _crop_dict(crop, include_varieties=True),
+    }
+
+
+@router.put("/crops/{crop_ref}", response_model=dict)
+def update_crop(
+    crop_ref: str,
+    payload: CropUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    crop = (
+        db.query(Crop)
+        .filter(or_(Crop.id == crop_ref, Crop.crop_id == crop_ref))
+        .first()
+    )
+    if not crop:
+        raise HTTPException(status_code=404, detail="Crop not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    category_code = data.pop("category_code", None)
+    if category_code is not None:
+        node = _resolve_category(db, category_code)
+        crop.category_id = node.id if node else None
+        crop.domain = node.domain if node else None
+        crop.category = node.category if node else None
+        crop.subcategory = node.subcategory if node else None
+
+    for field, value in data.items():
+        setattr(crop, field, value)
+
+    db.commit()
+    db.refresh(crop)
+
+    return {
+        "status": "success",
+        "message": "Crop updated successfully",
+        "data": _crop_dict(crop, include_varieties=True),
+    }
+
+
+# ==================== Varieties ====================
+
+
+@router.get("/crop-varieties", response_model=dict)
+def list_crop_varieties(
+    crop_id: Optional[str] = None,
+    q: Optional[str] = None,
+    include_inactive: bool = False,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(500, ge=1, le=1000),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    qry = db.query(CropVariety).options(selectinload(CropVariety.crop))
+    if crop_id:
+        crop = (
+            db.query(Crop)
+            .filter(or_(Crop.id == crop_id, Crop.crop_id == crop_id))
+            .first()
+        )
+        if not crop:
+            raise HTTPException(status_code=404, detail="Crop not found")
+        qry = qry.filter(CropVariety.crop_id == crop.id)
+    if not include_inactive:
+        qry = qry.filter(CropVariety.is_active.isnot(False))
+    if q and str(q).strip():
+        qry = qry.filter(CropVariety.name.ilike("%%%s%%" % str(q).strip()))
+
+    total = qry.count()
+    rows = (
+        qry.order_by(CropVariety.name)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    return {
+        "status": "success",
+        "data": [_variety_dict(v) for v in rows],
+        "meta": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "pages": (total + page_size - 1) // page_size,
+        },
+    }
+
+
+@router.post("/crop-varieties", response_model=dict, status_code=status.HTTP_201_CREATED)
+def create_crop_variety(
+    payload: CropVarietyCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    crop = (
+        db.query(Crop)
+        .filter(or_(Crop.id == payload.crop_id, Crop.crop_id == payload.crop_id))
+        .first()
+    )
+    if not crop:
+        raise HTTPException(status_code=404, detail="Crop not found")
+
+    name = str(payload.name).strip()
+    existing = (
+        db.query(CropVariety)
+        .filter(CropVariety.crop_id == crop.id, func.lower(CropVariety.name) == name.lower())
+        .first()
+    )
+    if existing:
+        if existing.is_active is False:
+            existing.is_active = True
+            db.commit()
+            db.refresh(existing)
+            return {
+                "status": "success",
+                "message": "Variety re-activated",
+                "data": _variety_dict(existing),
+            }
+        raise HTTPException(
+            status_code=400,
+            detail="Variety '%s' already exists for %s" % (name, crop.name),
+        )
+
+    variety = CropVariety(
+        crop_id=crop.id,
+        name=name,
+        local_name=payload.local_name,
+        is_hybrid=bool(payload.is_hybrid),
+        duration_days=payload.duration_days or crop.growth_duration_days,
+        is_custom=True,
+    )
+    db.add(variety)
+    db.commit()
+    db.refresh(variety)
+
+    return {
+        "status": "success",
+        "message": "Variety added successfully",
+        "data": _variety_dict(variety),
+    }
+
+
+@router.put("/crop-varieties/{variety_id}", response_model=dict)
+def update_crop_variety(
+    variety_id: str,
+    payload: CropVarietyUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    variety = db.query(CropVariety).filter(CropVariety.id == variety_id).first()
+    if not variety:
+        raise HTTPException(status_code=404, detail="Variety not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(variety, field, value)
+
+    db.commit()
+    db.refresh(variety)
+
+    return {
+        "status": "success",
+        "message": "Variety updated successfully",
+        "data": _variety_dict(variety),
+    }
+
+
+@router.delete("/crop-varieties/{variety_id}", response_model=dict)
+def delete_crop_variety(
+    variety_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Deactivate a variety.
+
+    A variety used by a crop cycle is never removed, only deactivated, so an
+    existing cycle keeps reporting the variety it was recorded with.
+    """
+    variety = db.query(CropVariety).filter(CropVariety.id == variety_id).first()
+    if not variety:
+        raise HTTPException(status_code=404, detail="Variety not found")
+
+    in_use = db.query(CropCycle).filter(CropCycle.variety_id == variety.id).count()
+    if in_use:
+        variety.is_active = False
+        db.commit()
+        return {
+            "status": "success",
+            "message": (
+                "Variety is used by %d crop cycle(s), so it was deactivated "
+                "instead of deleted." % in_use
+            ),
+            "data": {"id": variety.id, "is_active": False, "deactivated": True},
+        }
+
+    db.delete(variety)
+    db.commit()
+    return {
+        "status": "success",
+        "message": "Variety deleted successfully",
+        "data": {"id": variety_id, "deactivated": False},
     }
 
 
@@ -256,6 +939,14 @@ def create_crop_cycle(
         if not plot:
             raise HTTPException(status_code=404, detail="Plot not found in this farm")
 
+    variety = _resolve_variety(db, crop, payload.variety_id, payload.variety)
+    method = _resolve_method(
+        db, crop, payload.cultivation_method_id, payload.cultivation_method
+    )
+    stage = _validate_stage(crop, payload.current_stage)
+    if not stage and crop.lifecycle_stages:
+        stage = crop.lifecycle_stages[0]
+
     cycle_id = generate_id("FA-CYC", db, CropCycle)
 
     cycle = CropCycle(
@@ -271,6 +962,11 @@ def create_crop_cycle(
         pesticide_usage=payload.pesticide_usage,
         irrigation_schedule=payload.irrigation_schedule,
         notes=payload.notes,
+        variety_id=variety.id if variety else None,
+        cultivation_method_id=method.id if method else None,
+        protected_structure=payload.protected_structure,
+        planting_material=payload.planting_material,
+        current_stage=stage,
     )
     db.add(cycle)
     db.commit()
@@ -295,6 +991,34 @@ def update_crop_cycle(
     update_data = payload.model_dump(exclude_unset=True)
     if "status" in update_data and update_data["status"] == "completed":
         cycle.actual_harvest_date = cycle.actual_harvest_date or datetime.utcnow().strftime("%Y-%m-%d")
+
+    # Variety, method and stage are validated against the cycle's crop so a
+    # cycle can never end up with, say, a rice variety on a grape crop.
+    variety_id = update_data.pop("variety_id", None)
+    variety_name = update_data.pop("variety", None)
+    method_id = update_data.pop("cultivation_method_id", None)
+    method_code = update_data.pop("cultivation_method", None)
+
+    crop = None
+    if "crop_id" in update_data and update_data["crop_id"] != cycle.crop_id:
+        crop = db.query(Crop).filter(Crop.id == update_data["crop_id"]).first()
+        if not crop:
+            raise HTTPException(status_code=404, detail="Crop not found")
+        update_data["crop_id"] = crop.id
+    crop = crop or cycle.crop
+    sent = payload.model_fields_set or set()
+
+    if "variety_id" in sent or ("variety" in sent and str(variety_name or "").strip()):
+        variety = _resolve_variety(db, crop, variety_id, variety_name)
+        cycle.variety_id = variety.id if variety else None
+
+    if "cultivation_method_id" in sent or ("cultivation_method" in sent and str(method_code or "").strip()):
+        method = _resolve_method(db, crop, method_id, method_code)
+        cycle.cultivation_method_id = method.id if method else None
+
+    if "current_stage" in update_data:
+        stage = _validate_stage(crop, update_data["current_stage"])
+        update_data["current_stage"] = stage
 
     for field, value in update_data.items():
         setattr(cycle, field, value)
@@ -522,19 +1246,63 @@ def _date_from_today(offset: int) -> str:
     return (date.today() + timedelta(days=offset)).isoformat()
 
 
+#: Generic fallbacks used only when a crop has no lifecycle of its own.
+_GENERIC_STAGES = ["seedling", "vegetative", "flowering", "ripening", "harvest"]
+
+#: How a crop's own lifecycle stage maps onto the shared agronomy buckets, so a
+#: grape's "Bud break" still produces sensible nutrition and scouting advice.
+_STAGE_BUCKET = {
+    "nursery": "seedling", "sowing": "seedling", "germination": "seedling",
+    "sprouting": "seedling", "establishment": "seedling", "planting": "seedling",
+    "transplanting": "seedling", "juvenile growth": "seedling",
+    "seedling": "seedling", "hardening": "seedling", "vegetative": "vegetative",
+    "vegetative growth": "vegetative", "thinning": "vegetative",
+    "tillering": "vegetative", "maintenance": "vegetative",
+    "replanting": "vegetative", "squareing": "vegetative", "pod development": "vegetative",
+    "root development": "vegetative", "tuber initiation": "vegetative",
+    "dormancy": "dormant", "pruning": "dormant", "first cutting": "vegetative",
+    "regrowth": "vegetative", "shoot growth": "vegetative", "bud break": "flowering",
+    "flowering": "flowering", "flower bud initiation": "flowering",
+    "flowering / bearing": "flowering",
+    "flower cutting": "harvest", "loose flower harvest": "harvest",
+    "fruit set": "flowering", "pod formation": "flowering",
+    "grain filling": "ripening", "seed filling": "ripening",
+    "tuber bulking": "ripening", "fruit development": "ripening",
+    "berry development": "ripening", "rhizome / bulb development": "ripening",
+    "maturity": "ripening", "ripening": "ripening", "bearing": "ripening",
+    "harvest": "harvest", "post-harvest": "harvest",
+    "repeat cycle": "harvest", "repeat cutting": "harvest",
+    "ready for transplant / dispatch": "harvest",
+}
+
+
+def _stage_bucket(stage: str) -> str:
+    return _STAGE_BUCKET.get((stage or "").strip().lower(), "vegetative")
+
+
 def _cycle_stage(cycle: CropCycle, crop: Crop) -> str:
+    """Work out the current lifecycle stage of a cycle.
+
+    The crop's own ``lifecycle_stages`` list wins, so a perennial crop reports
+    "Dormancy" or "Pruning" instead of being forced through a seedling-to-harvest
+    sequence. Crops without a lifecycle fall back to elapsed days.
+    """
     if cycle.current_stage:
-        return cycle.current_stage.strip().lower()
+        return cycle.current_stage.strip()
     sowing = cycle.sowing_date or cycle.created_at.strftime("%Y-%m-%d") if cycle.created_at else None
     if not sowing:
-        return "vegetative"
+        stages = (crop.lifecycle_stages or []) if crop else []
+        return stages[0] if stages else "vegetative"
     try:
         sd = date.fromisoformat(str(sowing)[:10])
         days = (date.today() - sd).days
     except Exception:
-        return "vegetative"
+        stages = (crop.lifecycle_stages or []) if crop else []
+        return stages[0] if stages else "vegetative"
     if days < 0:
-        return "vegetative"
+        stages = (crop.lifecycle_stages or []) if crop else []
+        return stages[0] if stages else "vegetative"
+
     duration = crop.growth_duration_days or 0
     if not duration or duration <= 0:
         if days < 40: return "seedling"
@@ -542,18 +1310,26 @@ def _cycle_stage(cycle: CropCycle, crop: Crop) -> str:
         if days < 120: return "flowering"
         if days < 160: return "ripening"
         return "harvest"
-    fraction = days / duration
-    if fraction < 0.15: return "seedling"
-    if fraction < 0.45: return "vegetative"
-    if fraction < 0.70: return "flowering"
-    if fraction <= 1.0: return "ripening"
-    return "harvest"
+
+    stages = crop.lifecycle_stages or _GENERIC_STAGES
+    if len(stages) == 1:
+        return stages[0]
+    index = int(min(max(days / duration, 0.0), 0.999) * len(stages))
+    return stages[index]
 
 
 _STAGE_TASKS = {
     "seedling": [
         {"title": "Thin seedlings and check germination", "category": "Crop Care", "off": 3, "priority": "high",
          "desc_extra": "Remove weak seedlings so healthy plants get enough space and sunlight."},
+    ],
+    "dormant": [
+        {"title": "Prune and sanitize the crop", "category": "Crop Care", "off": 5, "priority": "medium",
+         "desc_extra": "Remove dead and diseased wood during dormancy and clean the tools between plants."},
+        {"title": "Apply basal organic manure", "category": "Crop Care", "off": 10, "priority": "medium",
+         "desc_extra": "Add well decomposed farmyard manure to each plant before the season restarts."},
+        {"title": "Check irrigation lines and leaks", "category": "Irrigation", "off": 7, "priority": "low",
+         "desc_extra": "Repair leaks now so the crop gets a full and even watering after bud break."},
     ],
     "vegetative": [
         {"title": "Apply nitrogen top dressing", "category": "Crop Care", "off": 7, "priority": "high",
@@ -607,33 +1383,39 @@ def _mk_suggestion(title, category, off, priority, description, cycle, crop, sou
     }
 
 
+#: Template title -> how the crop name is woven in, so a suggestion reads
+#: naturally for any crop instead of a hardcoded "Thin the Tomato seedlings".
+_TITLE_PATTERNS = (
+    ("irrigation lines", "Inspect irrigation and water the {crop}"),
+    ("top dressing", "Apply nitrogen top dressing to {crop}"),
+    ("flowering-stage nutrients", "Apply flowering-stage nutrients to {crop}"),
+    ("Thin seedlings", "Thin {crop} seedlings and check germination"),
+    ("Reduce irrigation", "Reduce irrigation to {crop} before harvest"),
+    ("Install bird scaring", "Install bird scaring devices near {crop}"),
+    ("Weed the field", "Weed the {crop} field"),
+    ("Harvest the mature crop", "Harvest mature {crop}"),
+    ("Plan post-harvest", "Plan post-harvest drying and storage for {crop}"),
+    ("Prune and sanitize", "Prune and sanitize the {crop} plants"),
+    ("basal organic manure", "Apply basal organic manure to the {crop}"),
+    ("Check irrigation lines and leaks", "Check the {crop} irrigation lines for leaks"),
+    ("Monitor pests and diseases", "Monitor {crop} for pests and diseases"),
+    ("Irrigate during flowering stage", "Irrigate {crop} during the flowering stage"),
+)
+
+
 def _stage_suggestions(cycle: CropCycle, crop: Crop, stage: str) -> list:
+    """Build tasks for a cycle from its crop's own lifecycle stage."""
     out = []
     crop_name = crop.name if crop else "your crop"
-    for tpl in _STAGE_TASKS.get(stage, _STAGE_TASKS["vegetative"]):
+    bucket = _stage_bucket(stage)
+    for tpl in _STAGE_TASKS.get(bucket, _STAGE_TASKS["vegetative"]):
         title = tpl["title"]
-        if "irrigation lines" in title:
-            title = "Inspect irrigation and water the " + crop_name
-        elif "top dressing" in title:
-            title = "Apply nitrogen top dressing to " + crop_name
-        elif "flowering-stage nutrients" in title:
-            title = "Apply flowering-stage nutrients to " + crop_name
-        elif "Monitoring" in title or tpl["title"].startswith("Monitor"):
-            title = tpl["title"] + " on " + crop_name
-        elif tpl["title"].startswith("Thin"):
-            title = "Thin " + crop_name + " seedlings and check germination"
-        elif tpl["title"].startswith("Reduce"):
-            title = "Reduce irrigation to " + crop_name + " before harvest"
-        elif tpl["title"].startswith("Install"):
-            title = "Install bird scaring devices near " + crop_name
-        elif tpl["title"].startswith("Weed"):
-            title = "Weed the " + crop_name + " field"
-        elif tpl["title"].startswith("Harvest"):
-            title = "Harvest mature " + crop_name
-        elif tpl["title"].startswith("Plan"):
-            title = "Plan post-harvest drying and storage for " + crop_name
+        for marker, template in _TITLE_PATTERNS:
+            if marker in title:
+                title = template.format(crop=crop_name)
+                break
         description = (
-            "AI suggestion for the " + stage.replace("_", " ") + " stage of " + crop_name + "."
+            "AI suggestion for the " + str(stage).lower() + " stage of " + crop_name + "."
             + " " + tpl["desc_extra"]
             + (" Plot: " + cycle.plot.plot_name if cycle.plot else "")
         )

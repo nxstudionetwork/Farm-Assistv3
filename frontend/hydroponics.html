@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="hydroponics">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <meta name="api-base-url" content="/api/v1">
+  <script>
+    window._API_BASE_URL = '/api/v1';
+  </script>
+  <title>Farm Assist - Hydroponics</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    :root {
+      --hyd: #0e7490;
+      --hyd-dark: #155e75;
+      --hyd-soft: #e0f2f7;
+      --hyd-bg: rgba(14, 116, 144, 0.08);
+    }
+    body { background: var(--bg-app); -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .page-container { max-width: 1180px; }
+
+    .hyd-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .hyd-header h1 { font-size: 22px; color: var(--hyd-dark); display: flex; align-items: center; gap: 10px; }
+    .hyd-header p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .hyd-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .hyd-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 11px; border: 1px solid var(--border-light); background: #fff; color: var(--text-primary); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; box-shadow: var(--shadow-sm); font-family: inherit; }
+    .hyd-btn:hover { border-color: var(--hyd); color: var(--hyd); }
+    .hyd-btn.primary { background: var(--hyd); color: #fff; border-color: var(--hyd); }
+    .hyd-btn.primary:hover { background: var(--hyd-dark); color: #fff; }
+    .hyd-btn.danger { color: var(--danger); border-color: rgba(214, 48, 49, .3); }
+    .hyd-btn.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+    .hyd-btn.sm { padding: 6px 10px; font-size: 11px; border-radius: 9px; }
+    .hyd-btn.sm.danger { color: #b91c1c; border-color: rgba(185, 28, 28, .28); background: rgba(185, 28, 28, .06); }
+    .hyd-btn.sm.danger:hover { background: rgba(185, 28, 28, .13); }
+    .hyd-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+    .hyd-tabs { display: flex; gap: 4px; padding: 5px; background: #fff; border: 1px solid var(--border-light); border-radius: 14px; box-shadow: var(--shadow-sm); margin-bottom: 16px; overflow-x: auto; }
+    .hyd-tab { padding: 9px 15px; font-size: 12px; font-weight: 700; border-radius: 10px; cursor: pointer; transition: all .2s; background: transparent; color: var(--text-secondary); border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+    .hyd-tab:hover:not(.active) { color: var(--hyd); }
+    .hyd-tab.active { background: var(--hyd); color: #fff; box-shadow: 0 2px 8px rgba(14, 116, 144, .25); }
+    .hyd-tab-count { background: rgba(255, 255, 255, .25); border-radius: 20px; padding: 0 6px; font-size: 10px; min-width: 17px; text-align: center; }
+    .hyd-tab:not(.active) .hyd-tab-count { background: var(--hyd-bg); color: var(--hyd); }
+
+    .hyd-grid { display: grid; gap: 14px; }
+    .hyd-grid.stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .hyd-grid.two { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .hyd-grid.three { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+    .hyd-card { background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm); }
+    .hyd-card h3 { font-size: 14px; color: var(--text-primary); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .hyd-card .hyd-sub { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+    .hyd-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+
+    .hyd-stat { background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 15px; box-shadow: var(--shadow-sm); }
+    .hyd-stat .hyd-stat-label { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+    .hyd-stat .hyd-stat-value { font-size: 24px; font-weight: 800; color: var(--hyd-dark); margin-top: 6px; }
+    .hyd-stat .hyd-stat-hint { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .hyd-stat.good .hyd-stat-value { color: var(--success); }
+    .hyd-stat.warn .hyd-stat-value { color: var(--warning); }
+    .hyd-stat.bad .hyd-stat-value { color: var(--danger); }
+
+    .hyd-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 10.5px; font-weight: 700; }
+    .hyd-badge.ok { background: rgba(45, 106, 79, .12); color: var(--success); }
+    .hyd-badge.warn { background: rgba(233, 182, 64, .18); color: #9a7410; }
+    .hyd-badge.bad { background: rgba(214, 48, 49, .12); color: var(--danger); }
+    .hyd-badge.info { background: var(--hyd-soft); color: var(--hyd-dark); }
+    .hyd-badge.muted { background: var(--light-gray); color: var(--text-secondary); }
+
+    .hyd-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+    .hyd-row:last-child { border-bottom: none; }
+    .hyd-row-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .hyd-row-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+    .hyd-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .hyd-alert { display: flex; gap: 10px; padding: 11px 13px; border-radius: 11px; font-size: 12px; line-height: 1.5; margin-bottom: 8px; }
+    .hyd-alert i { margin-top: 2px; flex-shrink: 0; }
+    .hyd-alert.warning { background: rgba(233, 182, 64, .13); color: #7d5f0c; }
+    .hyd-alert.critical { background: rgba(214, 48, 49, .1); color: #9b2222; }
+    .hyd-alert.info { background: var(--hyd-bg); color: var(--hyd-dark); }
+
+    .hyd-state { text-align: center; padding: 46px 20px; }
+    .hyd-state i { font-size: 38px; color: var(--hyd); opacity: .5; margin-bottom: 14px; }
+    .hyd-state h3 { font-size: 16px; color: var(--text-primary); margin-bottom: 6px; }
+    .hyd-state p { font-size: 13px; color: var(--text-muted); max-width: 420px; margin: 0 auto 16px; line-height: 1.6; }
+
+    .hyd-skeleton { background: linear-gradient(90deg, var(--light-gray) 25%, #f6faf6 50%, var(--light-gray) 75%); background-size: 200% 100%; animation: hydShimmer 1.3s infinite; border-radius: 10px; height: 15px; margin-bottom: 9px; }
+    @keyframes hydShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    .hyd-select, .hyd-input, .hyd-textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--form-outline); border-radius: 9px; background: #fff; color: var(--text-primary); font-size: 12.5px; outline: none; font-family: inherit; }
+    .hyd-select:focus, .hyd-input:focus, .hyd-textarea:focus { border-color: var(--hyd); }
+    .hyd-textarea { resize: vertical; min-height: 66px; }
+    .hyd-field { margin-bottom: 12px; }
+    .hyd-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .4px; display: block; }
+    .hyd-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.45; }
+
+    .hyd-modal { position: fixed; inset: 0; background: rgba(15, 46, 30, .45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 16px; backdrop-filter: blur(2px); }
+    .hyd-modal.open { display: flex; }
+    .hyd-modal-box { background: #fff; border-radius: var(--radius-lg); width: 100%; max-width: 560px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: var(--shadow-xl); animation: hydPop .2s ease; }
+    .hyd-modal-box.wide { max-width: 760px; }
+    @keyframes hydPop { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
+    .hyd-modal-head { padding: 16px 18px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .hyd-modal-head h3 { font-size: 15px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .hyd-modal-body { padding: 18px; overflow-y: auto; flex: 1; }
+    .hyd-modal-foot { padding: 14px 18px; border-top: 1px solid var(--border-light); display: flex; gap: 9px; justify-content: flex-end; }
+    .hyd-modal-close { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 16px; padding: 4px 6px; border-radius: 7px; }
+    .hyd-modal-close:hover { background: var(--light-gray); color: var(--text-primary); }
+
+    .hyd-toasts { position: fixed; bottom: 20px; right: 20px; z-index: 10050; display: flex; flex-direction: column; gap: 8px; }
+    .hyd-toast { background: var(--forest-800); color: #fff; padding: 11px 15px; border-radius: 11px; font-size: 12.5px; font-weight: 600; box-shadow: var(--shadow-lg); max-width: 320px; animation: hydPop .2s ease; display: flex; align-items: center; gap: 9px; }
+    .hyd-toast.error { background: var(--danger); }
+    .hyd-toast.success { background: var(--success); }
+
+    .hyd-chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
+    .hyd-chip { padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border-medium); background: #fff; font-size: 11.5px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all .2s; font-family: inherit; }
+    .hyd-chip:hover { border-color: var(--hyd); color: var(--hyd); }
+    .hyd-chip.active { background: var(--hyd); color: #fff; border-color: var(--hyd); }
+
+    .hyd-kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+    .hyd-kv-item { background: var(--bg-card-soft); border-radius: 10px; padding: 9px 11px; }
+    .hyd-kv-item .k { font-size: 10.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+    .hyd-kv-item .v { font-size: 13px; color: var(--text-primary); font-weight: 700; margin-top: 3px; }
+
+    .hyd-guide-item { border: 1px solid var(--border-light); border-radius: 11px; padding: 12px; margin-bottom: 9px; background: var(--bg-card-soft); }
+    .hyd-guide-item h4 { font-size: 13px; color: var(--text-primary); margin-bottom: 4px; }
+    .hyd-guide-item p { font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
+    .hyd-link { color: var(--hyd); font-weight: 600; cursor: pointer; text-decoration: none; font-size: 12px; }
+    .hyd-link:hover { text-decoration: underline; }
+
+    .hyd-check { display: flex; align-items: flex-start; gap: 9px; padding: 8px 0; font-size: 12.5px; color: var(--text-primary); cursor: pointer; }
+    .hyd-check input { width: 16px; height: 16px; accent-color: var(--hyd); margin-top: 1px; flex-shrink: 0; }
+
+    .hyd-meter { height: 6px; border-radius: 6px; background: var(--light-gray); overflow: hidden; margin-top: 6px; }
+    .hyd-meter span { display: block; height: 100%; border-radius: 6px; background: var(--hyd); }
+    .hyd-meter span.ok { background: var(--success); }
+    .hyd-meter span.warn { background: var(--warning); }
+    .hyd-meter span.bad { background: var(--danger); }
+
+    @media (max-width: 768px) {
+      .hyd-header h1 { font-size: 19px; }
+      .hyd-modal-box { max-height: 94vh; }
+      .hyd-stat .hyd-stat-value { font-size: 20px; }
+      .hyd-toasts { left: 14px; right: 14px; bottom: 84px; }
+      .hyd-toast { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+<main class="page-container">
+
+  <div class="hyd-header">
+    <div>
+      <h1><i class="fas fa-droplet"></i> Hydroponics</h1>
+      <p>Manage hydroponic units, crops, water, health, production and profit.</p>
+    </div>
+    <div class="hyd-header-actions">
+      <button class="hyd-btn" onclick="HydApp.goTab('guide')"><i class="fas fa-book"></i> Guide</button>
+      <button class="hyd-btn primary" onclick="HydApp.openUnitForm()"><i class="fas fa-plus"></i> Add Unit</button>
+    </div>
+  </div>
+
+  <div class="hyd-chips" id="hydFarmBar"></div>
+
+  <div class="hyd-tabs" id="hydTabs">
+    <button class="hyd-tab active" data-tab="overview" onclick="HydApp.goTab('overview')"><i class="fas fa-gauge-high"></i> Overview</button>
+    <button class="hyd-tab" data-tab="units" onclick="HydApp.goTab('units')"><i class="fas fa-layer-group"></i> Units <span class="hyd-tab-count" id="hydCountUnits">0</span></button>
+    <button class="hyd-tab" data-tab="crops" onclick="HydApp.goTab('crops')"><i class="fas fa-seedling"></i> Crops <span class="hyd-tab-count" id="hydCountCrops">0</span></button>
+    <button class="hyd-tab" data-tab="water" onclick="HydApp.goTab('water')"><i class="fas fa-flask"></i> Water &amp; Nutrients</button>
+    <button class="hyd-tab" data-tab="health" onclick="HydApp.goTab('health')"><i class="fas fa-leaf"></i> Health</button>
+    <button class="hyd-tab" data-tab="production" onclick="HydApp.goTab('production')"><i class="fas fa-basket-shopping"></i> Production</button>
+    <button class="hyd-tab" data-tab="economics" onclick="HydApp.goTab('economics')"><i class="fas fa-indian-rupee-sign"></i> Economics</button>
+    <button class="hyd-tab" data-tab="tasks" onclick="HydApp.goTab('tasks')"><i class="fas fa-list-check"></i> Tasks</button>
+  </div>
+
+  <div id="hydView"></div>
+
+</main>
+
+<div class="hyd-modal" id="hydModal" onclick="HydApp.onModalBg(event)">
+  <div class="hyd-modal-box" id="hydModalBox">
+    <div class="hyd-modal-head">
+      <h3 id="hydModalTitle">Form</h3>
+      <button class="hyd-modal-close" onclick="HydApp.closeModal()" aria-label="Close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="hyd-modal-body" id="hydModalBody"></div>
+    <div class="hyd-modal-foot" id="hydModalFoot"></div>
+  </div>
+</div>
+
+<div class="hyd-toasts" id="hydToasts"></div>
+
+<script src="js/services.js"></script>
+<script src="js/userStore.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var UNIT_STATUSES = ['planning', 'active', 'maintenance', 'completed', 'inactive'];
+  var STAGE_KEYS = ['germination', 'seedling', 'vegetative', 'flowering', 'harvest'];
+  var SEVERITIES = ['low', 'medium', 'high'];
+  var QUALITY_GRADES = ['Premium', 'Grade A', 'Grade B', 'Local sale'];
+
+  var state = {
+    tab: 'overview',
+    farmId: null,
+    activeUnitId: null,
+    requestedUnitId: null,
+    pendingAction: null,
+    plots: [],
+    plotsFarmId: null,
+    farms: [],
+    dashboard: null,
+    recommendations: null,
+    units: [],
+    unitDetail: null,
+    crops: [],
+    catalog: null,
+    loading: true,
+    error: null,
+    waterLogs: [],
+    healthRecords: [],
+    production: [],
+    costs: [],
+    tasks: [],
+    economics: null
+  };
+
+  // ---------- Helpers ----------
+  function esc(value) {
+    if (value === null || value === undefined) return '';
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function num(value) {
+    var parsed = parseFloat(value);
+    return isNaN(parsed) ? null : parsed;
+  }
+
+  function money(value) {
+    var parsed = num(value);
+    if (parsed === null) return '0';
+    return parsed.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  }
+
+  function today() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function toast(message, kind) {
+    var box = document.getElementById('hydToasts');
+    var node = document.createElement('div');
+    node.className = 'hyd-toast' + (kind ? ' ' + kind : '');
+    var icon = kind === 'error' ? 'fa-circle-exclamation' : kind === 'success' ? 'fa-circle-check' : 'fa-info-circle';
+    node.innerHTML = '<i class="fas ' + icon + '"></i><span>' + esc(message) + '</span>';
+    box.appendChild(node);
+    setTimeout(function () {
+      node.style.opacity = '0';
+      setTimeout(function () { if (node.parentNode) node.parentNode.removeChild(node); }, 250);
+    }, 3600);
+  }
+
+  function stateBlock(icon, title, message, actionLabel, actionFn) {
+    return '<div class="hyd-card"><div class="hyd-state">' +
+      '<i class="fas ' + icon + '"></i>' +
+      '<h3>' + esc(title) + '</h3>' +
+      '<p>' + esc(message) + '</p>' +
+      (actionLabel ? '<button class="hyd-btn primary" onclick="' + actionFn + '"><i class="fas fa-plus"></i> ' + esc(actionLabel) + '</button>' : '') +
+      '</div></div>';
+  }
+
+  function loadingBlock() {
+    var rows = '';
+    for (var i = 0; i < 4; i++) {
+      rows += '<div class="hyd-card" style="margin-bottom:12px"><div class="hyd-skeleton" style="width:42%"></div>' +
+        '<div class="hyd-skeleton" style="width:88%"></div>' +
+        '<div class="hyd-skeleton" style="width:64%"></div></div>';
+    }
+    return rows;
+  }
+
+  function errorBlock(message) {
+    return '<div class="hyd-card"><div class="hyd-state">' +
+      '<i class="fas fa-triangle-exclamation" style="color:var(--danger);opacity:1"></i>' +
+      '<h3>Could not load hydroponics data</h3>' +
+      '<p>' + esc(message || 'Something went wrong. Check your connection and try again.') + '</p>' +
+      '<button class="hyd-btn primary" onclick="HydApp.load()"><i class="fas fa-rotate"></i> Try again</button>' +
+      '</div></div>';
+  }
+
+  function badgeForStatus(value) {
+    var map = { active: 'ok', planning: 'info', maintenance: 'warn', completed: 'muted', inactive: 'muted' };
+    return map[value] || 'muted';
+  }
+
+  function needsAttention(waterStatus) {
+    if (!waterStatus) return 'muted';
+    if (waterStatus.severity === 'critical') return 'bad';
+    if (waterStatus.severity === 'warning') return 'warn';
+    return 'ok';
+  }
+
+  function options(list, selected) {
+    return list.map(function (item) {
+      var value = item.value !== undefined ? item.value : item;
+      var label = item.label !== undefined ? item.label : item;
+      var isSel = String(selected) === String(value) ? ' selected' : '';
+      return '<option value="' + esc(value) + '"' + isSel + '>' + esc(label) + '</option>';
+    }).join('');
+  }
+
+  // ---------- Modal ----------
+  function openModal(title, bodyHtml, footHtml, wide) {
+    document.getElementById('hydModalTitle').innerHTML = title;
+    document.getElementById('hydModalBody').innerHTML = bodyHtml;
+    document.getElementById('hydModalFoot').innerHTML = footHtml;
+    document.getElementById('hydModalBox').className = 'hyd-modal-box' + (wide ? ' wide' : '');
+    document.getElementById('hydModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('hydModal').classList.remove('open');
+    document.getElementById('hydModalBody').innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  function onModalBg(event) {
+    if (event.target === event.currentTarget) closeModal();
+  }
+
+  // Form fields are named hyd<PascalCase of the payload key>, so a logical key
+  // can be resolved without every form repeating the DOM id.
+  function fieldId(key) {
+    return 'hyd' + key.replace(/(^|_)([a-z])/g, function (m, sep, ch) {
+      return ch.toUpperCase();
+    });
+  }
+
+  function readValues(ids) {
+    var out = {};
+    ids.forEach(function (key) {
+      var el = document.getElementById(key) || document.getElementById(fieldId(key));
+      if (!el) return;
+      if (el.type === 'checkbox') {
+        out[key] = el.checked;
+      } else if (el.type === 'number') {
+        out[key] = el.value === '' ? null : parseFloat(el.value);
+      } else {
+        out[key] = el.value === '' ? null : el.value;
+      }
+    });
+    return out;
+  }
+
+  // ---------- Data loading ----------
+  function loadFarms() {
+    return API.Farm.list().then(function (data) {
+      state.farms = Array.isArray(data) ? data : (data && data.data) || [];
+      if (!state.farmId && state.farms.length) state.farmId = state.farms[0].id;
+    });
+  }
+
+  function renderFarmBar() {
+    var bar = document.getElementById('hydFarmBar');
+    if (!state.farms.length) { bar.innerHTML = ''; return; }
+    bar.innerHTML = state.farms.map(function (farm) {
+      var active = farm.id === state.farmId ? ' active' : '';
+      return '<button class="hyd-chip' + active + '" onclick="HydApp.setFarm(\'' + esc(farm.id) + '\')">' +
+        '<i class="fas fa-tractor"></i> ' + esc(farm.farm_name || 'Farm') + '</button>';
+    }).join('');
+  }
+
+  function scopedUnit() {
+    if (!state.units.length) return null;
+    if (state.activeUnitId) {
+      var match = state.units.filter(function (u) { return u.unit_id === state.activeUnitId; })[0];
+      if (match) return match;
+    }
+    return state.units[0];
+  }
+
+  function unitSwitcher() {
+    if (state.units.length < 2) return '';
+    var current = scopedUnit();
+    return '<div class="hyd-chips" id="hydUnitBar">' + state.units.map(function (unit) {
+      var active = current && unit.unit_id === current.unit_id ? ' active' : '';
+      return '<button class="hyd-chip' + active + '" onclick="HydApp.setUnit(\'' + esc(unit.unit_id) + '\')">' +
+        '<i class="fas fa-layer-group"></i> ' + esc(unit.name) + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function loadTabData() {
+    if (state.tab === 'overview') {
+      return Promise.all([
+        API.Hydroponics.getDashboard(state.farmId),
+        API.Hydroponics.getRecommendations()
+      ]);
+    }
+    if (state.tab === 'crops') {
+      var cropQuery = {};
+      if (state.farmId) cropQuery.farm_id = state.farmId;
+      return API.Hydroponics.listCrops(cropQuery).then(function (rows) { return [rows]; });
+    }
+    var unit = scopedUnit();
+    if (!unit) return Promise.resolve([null]);
+    if (state.tab === 'water') return API.Hydroponics.listWaterLogs(unit.unit_id).then(function (r) { return [r]; });
+    if (state.tab === 'health') return API.Hydroponics.listHealthRecords(unit.unit_id).then(function (r) { return [r]; });
+    if (state.tab === 'production') return API.Hydroponics.listProduction(unit.unit_id).then(function (r) { return [r]; });
+    if (state.tab === 'tasks') return API.Hydroponics.listUnitTasks(unit.unit_id).then(function (r) { return [r]; });
+    if (state.tab === 'economics') return API.Hydroponics.listCosts(unit.unit_id).then(function (r) { return [r]; });
+    return Promise.resolve([null]);
+  }
+
+  function applyTabResults(results) {
+    if (state.tab === 'overview') {
+      state.dashboard = results[0] || null;
+      state.recommendations = results[1] || null;
+      return;
+    }
+    var payload = results[0];
+    if (state.tab === 'crops') state.crops = payload || [];
+    else if (state.tab === 'water') state.waterLogs = payload || [];
+    else if (state.tab === 'health') state.healthRecords = payload || [];
+    else if (state.tab === 'production') state.production = payload || [];
+    else if (state.tab === 'tasks') state.tasks = payload || [];
+    else if (state.tab === 'economics') {
+      state.costs = payload || [];
+      var current = scopedUnit();
+      state.economics = current ? current.economics || null : null;
+    }
+  }
+
+  function load() {
+    state.loading = true;
+    state.error = null;
+    render();
+    loadFarms().then(function () {
+      renderFarmBar();
+      var unitQuery = { limit: 100 };
+      if (state.farmId) unitQuery.farm_id = state.farmId;
+      var cropQuery = {};
+      if (state.farmId) cropQuery.farm_id = state.farmId;
+      return Promise.all([
+        API.Hydroponics.listUnits(unitQuery),
+        API.Hydroponics.listCrops(cropQuery)
+      ]);
+    }).then(function (results) {
+      state.units = results[0] || [];
+      state.crops = results[1] || [];
+      var stillPresent = state.units.some(function (u) { return u.unit_id === state.activeUnitId; });
+      if (!stillPresent) state.activeUnitId = state.units.length ? state.units[0].unit_id : null;
+      document.getElementById('hydCountUnits').textContent = state.units.length;
+      document.getElementById('hydCountCrops').textContent = state.crops.filter(function (c) { return c.status === 'active'; }).length;
+      if (!state.catalog) {
+        return API.Hydroponics.getCatalog().then(function (data) { state.catalog = data; });
+      }
+      return null;
+    }).then(function () {
+      return loadTabData();
+    }).then(function (results) {
+      applyTabResults(results);
+      state.loading = false;
+      render();
+      applyPendingUrlAction();
+    }).catch(function (err) {
+      state.loading = false;
+      state.error = (err && err.message) || 'Unable to reach the server';
+      render();
+    });
+  }
+
+  // ---------- Render ----------
+  function render() {
+    if (state.error) {
+      document.getElementById('hydView').innerHTML = errorBlock(state.error);
+      return;
+    }
+    if (state.loading) {
+      document.getElementById('hydView').innerHTML = loadingBlock();
+      return;
+    }
+    var html = '';
+    if (!state.units.length && state.tab !== 'guide') {
+      html = stateBlock('fa-droplet', 'No hydroponic units yet',
+        'Add your first hydroponic unit to start tracking crops, water readings, harvests and profit.',
+        'Add Unit', "HydApp.openUnitForm()");
+    } else {
+      html = ({
+        overview: renderOverview,
+        units: renderUnits,
+        crops: renderCrops,
+        water: renderWater,
+        health: renderHealth,
+        production: renderProduction,
+        economics: renderEconomics,
+        tasks: renderTasks,
+        guide: renderGuide
+      }[state.tab] || renderOverview)();
+    }
+    document.getElementById('hydView').innerHTML = html;
+  }
+
+  function renderOverview() {
+    var d = state.dashboard || {};
+    var recs = (state.recommendations && state.recommendations.recommendations) || [];
+
+    var html = '<div class="hyd-grid stats" style="margin-bottom:14px">' +
+      '<div class="hyd-stat"><div class="hyd-stat-label">Units</div><div class="hyd-stat-value">' + (d.total_units || 0) + '</div><div class="hyd-stat-hint">' + (d.active_units || 0) + ' active</div></div>' +
+      '<div class="hyd-stat"><div class="hyd-stat-label">Active crops</div><div class="hyd-stat-value">' + (d.active_crops || 0) + '</div><div class="hyd-stat-hint">' + (d.total_crops || 0) + ' total cycles</div></div>' +
+      '<div class="hyd-stat ' + (num(d.net_profit) >= 0 ? 'good' : 'bad') + '"><div class="hyd-stat-label">Net profit</div><div class="hyd-stat-value">' + money(d.net_profit) + '</div><div class="hyd-stat-hint">Revenue ' + money(d.total_revenue) + ' - cost ' + money(d.total_cost) + '</div></div>' +
+      '<div class="hyd-stat ' + ((d.harvesting_soon || []).length ? 'warn' : '') + '"><div class="hyd-stat-label">Harvesting soon</div><div class="hyd-stat-value">' + ((d.harvesting_soon || []).length) + '</div><div class="hyd-stat-hint">Within 30 days</div></div>' +
+      '</div>';
+
+    if ((d.alerts || []).length) {
+      html += '<div class="hyd-card" style="margin-bottom:14px"><div class="hyd-card-head"><h3><i class="fas fa-triangle-exclamation" style="color:var(--warning)"></i> Needs attention</h3></div>';
+      d.alerts.forEach(function (alert) {
+        html += '<div class="hyd-alert ' + esc(alert.severity) + '"><i class="fas fa-droplet"></i><div><strong>' + esc(alert.unit_name) + '</strong>: ' +
+          esc((alert.messages || []).join('. ')) + '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div class="hyd-grid two">';
+    html += '<div class="hyd-card"><div class="hyd-card-head"><h3><i class="fas fa-lightbulb" style="color:var(--hyd)"></i> Recommendations</h3></div>';
+    if (state.recommendations && state.recommendations.enabled === false) {
+      html += '<p class="hyd-sub">' + esc(state.recommendations.message || '') + '</p>';
+    } else if (!recs.length) {
+      html += '<p class="hyd-sub">Nothing to act on right now. Your units are in range.</p>';
+    } else {
+      recs.slice(0, 6).forEach(function (rec) {
+        var tone = rec.priority === 'high' ? 'bad' : 'warn';
+        html += '<div class="hyd-row"><div><div class="hyd-row-title">' + esc(rec.title) + '</div>' +
+          '<div class="hyd-row-sub">' + esc(rec.detail) + '</div></div>' +
+          '<span class="hyd-badge ' + tone + '">' + esc(rec.priority) + '</span></div>';
+      });
+    }
+    html += '</div>';
+
+    html += '<div class="hyd-card"><div class="hyd-card-head"><h3><i class="fas fa-calendar-check" style="color:var(--hyd)"></i> Upcoming harvests</h3></div>';
+    if (!(d.harvesting_soon || []).length) {
+      html += '<p class="hyd-sub">No harvests expected in the next 30 days.</p>';
+    } else {
+      d.harvesting_soon.forEach(function (h) {
+        html += '<div class="hyd-row"><div><div class="hyd-row-title">' + esc(h.crop_name) + '</div>' +
+          '<div class="hyd-row-sub">Expected ' + esc(h.expected_harvest_date) + '</div></div>' +
+          '<span class="hyd-badge ' + (h.days_remaining <= 3 ? 'warn' : 'info') + '">' + h.days_remaining + ' days</span></div>';
+      });
+    }
+    html += '</div></div>';
+
+    html += '<div class="hyd-card" style="margin-top:14px"><div class="hyd-card-head"><h3><i class="fas fa-store" style="color:var(--hyd)"></i> Equipment &amp; inputs</h3>' +
+      '<span class="hyd-link" onclick="window.location.href=\'input-store.html\'">Open Input Store <i class="fas fa-arrow-right"></i></span></div>' +
+      '<p class="hyd-sub">Nutrients, growing media, net cups and pH testers for your setup are listed in the Input Store. Availability is shown as it is, so nothing is listed until a seller has stock.</p></div>';
+
+    return html;
+  }
+
+  function renderUnits() {
+    var html = '<div class="hyd-grid two">';
+    state.units.forEach(function (unit) {
+      var water = unit.water_status || {};
+      html += '<div class="hyd-card"><div class="hyd-card-head">' +
+        '<h3><i class="fas fa-layer-group" style="color:var(--hyd)"></i> ' + esc(unit.name) + '</h3>' +
+        '<span class="hyd-badge ' + badgeForStatus(unit.status) + '">' + esc(unit.status || 'planning') + '</span></div>' +
+        '<p class="hyd-sub">' + esc(unit.farm_name || '') + (unit.plot_name ? ' &middot; ' + esc(unit.plot_name) : '') +
+        (unit.system_type ? ' &middot; ' + esc(unit.system_type) : '') + '</p>';
+
+      html += '<div class="hyd-kv" style="margin-top:12px">' +
+        '<div class="hyd-kv-item"><div class="k">Crops</div><div class="v">' + (unit.active_crop_count || 0) + ' / ' + (unit.crop_count || 0) + '</div></div>' +
+        '<div class="hyd-kv-item"><div class="k">pH</div><div class="v">' + (water.ph === null || water.ph === undefined ? '-' : esc(water.ph)) + '</div></div>' +
+        '<div class="hyd-kv-item"><div class="k">EC</div><div class="v">' + (water.ec === null || water.ec === undefined ? '-' : esc(water.ec)) + '</div></div>' +
+        '<div class="hyd-kv-item"><div class="k">Profit</div><div class="v">' + money(unit.economics && unit.economics.net_profit) + '</div></div>' +
+        '</div>';
+
+      if ((water.messages || []).length) {
+        html += '<div class="hyd-alert ' + esc(water.severity) + '" style="margin-top:11px"><i class="fas fa-exclamation-circle"></i><div>' +
+          esc(water.messages.join('. ')) + '</div></div>';
+      }
+
+      html += '<div class="hyd-row-actions" style="margin-top:12px">' +
+        '<button class="hyd-btn sm" onclick="HydApp.openUnitForm(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-pen"></i> Edit</button>' +
+        '<button class="hyd-btn sm" onclick="HydApp.focusUnit(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-list-check"></i> Tasks</button>' +
+        '<button class="hyd-btn sm" onclick="HydApp.openCropForm(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-seedling"></i> Add crop</button>' +
+        '<button class="hyd-btn sm" onclick="HydApp.openWaterForm(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-flask"></i> Log water</button>' +
+        '<button class="hyd-btn sm" onclick="HydApp.openProductionForm(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-basket-shopping"></i> Record harvest</button>' +
+        '<button class="hyd-btn sm" onclick="HydApp.openCostForm(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-indian-rupee-sign"></i> Add cost</button>';
+      if (unit.status !== 'archived') {
+        html += '<button class="hyd-btn sm" onclick="HydApp.archiveUnit(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-box-archive"></i> Archive</button>';
+      } else {
+        html += '<button class="hyd-btn sm" onclick="HydApp.restoreUnit(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-box-open"></i> Restore</button>';
+      }
+      html += '<button class="hyd-btn sm danger" onclick="HydApp.deleteUnit(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-trash"></i> Delete</button>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderCrops() {
+    if (!state.crops.length) {
+      return stateBlock('fa-seedling', 'No crop cycles yet', 'Start a crop cycle in one of your units to track growth stages, harvests and yield.',
+        'Add crop', "HydApp.openCropForm(HydApp.firstUnitId())");
+    }
+    var html = '<div class="hyd-grid two">';
+    state.crops.forEach(function (crop) {
+      var stageIndex = STAGE_KEYS.indexOf(crop.current_stage);
+      html += '<div class="hyd-card"><div class="hyd-card-head">' +
+        '<h3><i class="fas fa-seedling" style="color:var(--hyd)"></i> ' + esc(crop.crop_name) + '</h3>' +
+        '<span class="hyd-badge ' + badgeForStatus(crop.status) + '">' + esc(crop.status || 'active') + '</span></div>' +
+        '<p class="hyd-sub">' + esc(crop.cycle_id) + (crop.unit ? ' &middot; ' + esc(crop.unit.name) : '') +
+        (crop.variety ? ' &middot; ' + esc(crop.variety) : '') + '</p>';
+      html += '<div class="hyd-meter"><span class="' + (stageIndex >= 0 ? 'ok' : '') + '" style="width:' +
+        (((stageIndex + 1) / STAGE_KEYS.length) * 100) + '%"></span></div>';
+      html += '<p class="hyd-hint">Stage: ' + esc(crop.current_stage || 'not set') + '</p>';
+      html += '<div class="hyd-kv" style="margin-top:11px">' +
+        '<div class="hyd-kv-item"><div class="k">Planted</div><div class="v">' + esc(crop.planting_date || '-') + '</div></div>' +
+        '<div class="hyd-kv-item"><div class="k">Expected harvest</div><div class="v">' + esc(crop.expected_harvest_date || '-') + '</div></div>' +
+        '<div class="hyd-kv-item"><div class="k">Plants</div><div class="v">' + (crop.plants_count || '-') + '</div></div>' +
+        '<div class="hyd-kv-item"><div class="k">Yield</div><div class="v">' + (crop.actual_yield || 0) + ' / ' + (crop.expected_yield || '-') + ' ' + esc(crop.yield_unit || 'kg') + '</div></div>' +
+        '</div>';
+      html += '<div class="hyd-row-actions" style="margin-top:12px">' +
+        '<button class="hyd-btn sm" onclick="HydApp.openCropStageForm(\'' + esc(crop.cycle_id) + '\')"><i class="fas fa-arrows-rotate"></i> Update stage</button>' +
+        '<button class="hyd-btn sm" onclick="HydApp.openHealthForm(\'' + esc(crop.unit ? crop.unit.unit_id : '') + '\',\'' + esc(crop.cycle_id) + '\')"><i class="fas fa-leaf"></i> Health check</button>' +
+        (crop.status === 'active' ? '<button class="hyd-btn sm danger" onclick="HydApp.closeCrop(\'' + esc(crop.cycle_id) + '\')"><i class="fas fa-flag-checkered"></i> Close cycle</button>' : '') +
+        (crop.status !== 'active' && !crop.actual_yield ? '<button class="hyd-btn sm danger" onclick="HydApp.deleteCrop(\'' + esc(crop.cycle_id) + '\')"><i class="fas fa-trash"></i> Delete</button>' : '') +
+        '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function unitContext() {
+    var unit = scopedUnit();
+    if (!unit) return '';
+    var water = unit.water_status || {};
+    return unitSwitcher() +
+      '<div class="hyd-alert info"><i class="fas fa-circle-info"></i><div>Showing records for <strong>' +
+      esc(unit.name) + '</strong>' + (water.ph_status === 'alert' ? ' &middot; last pH is outside the target range' : '') + '.</div></div>';
+  }
+
+  function renderWater() {
+    var html = unitContext() + '<div class="hyd-card" style="margin-top:12px"><div class="hyd-card-head">' +
+      '<h3><i class="fas fa-flask" style="color:var(--hyd)"></i> Water &amp; nutrient logs</h3>';
+    var unit = scopedUnit();
+    if (unit) {
+      html += '<button class="hyd-btn sm primary" onclick="HydApp.openWaterForm(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-plus"></i> Add log</button>';
+    }
+    html += '</div>';
+    if (!state.waterLogs.length) {
+      html += '<p class="hyd-sub">No water readings recorded yet. Log pH and EC at least every two days.</p></div>';
+      return html;
+    }
+    html += '<div class="hyd-kv" style="margin-bottom:12px"><div class="hyd-kv-item"><div class="k">Logs</div><div class="v">' + state.waterLogs.length + '</div></div>' +
+      '<div class="hyd-kv-item"><div class="k">Target pH</div><div class="v">' + phMin + '-' + phMax + '</div></div>' +
+      '<div class="hyd-kv-item"><div class="k">Target EC</div><div class="v">' + ecMin + '-' + ecMax + '</div></div></div>';
+    var unitWater = scopedUnit() ? scopedUnit().water_status : null;
+    var phMin = unitWater ? unitWater.ph_min : 5.5;
+    var phMax = unitWater ? unitWater.ph_max : 6.5;
+    var ecMin = unitWater ? unitWater.ec_min : 1.2;
+    var ecMax = unitWater ? unitWater.ec_max : 2.5;
+
+    state.waterLogs.forEach(function (log) {
+      var phOk = num(log.ph) === null || (log.ph >= phMin && log.ph <= phMax);
+      var ecOk = num(log.ec) === null || (log.ec >= ecMin && log.ec <= ecMax);
+      var inRange = phOk && ecOk;
+      html += '<div class="hyd-row"><div><div class="hyd-row-title">' + esc(log.recorded_date || '-') +
+        (log.water_replaced ? ' <span class="hyd-badge info">solution changed</span>' : '') + '</div>' +
+        '<div class="hyd-row-sub">pH ' + (log.ph === null || log.ph === undefined ? '-' : esc(log.ph)) +
+        ' &middot; EC ' + (log.ec === null || log.ec === undefined ? '-' : esc(log.ec)) +
+        ' &middot; TDS ' + (log.tds === null || log.tds === undefined ? '-' : esc(log.tds)) +
+        (log.water_temperature ? ' &middot; ' + esc(log.water_temperature) + ' C' : '') +
+        (log.nutrient_solution ? ' &middot; ' + esc(log.nutrient_solution) : '') + '</div></div>' +
+        '<div class="hyd-row-actions"><span class="hyd-badge ' + (inRange ? 'ok' : 'bad') + '">' + (inRange ? 'in range' : 'check') + '</span>' +
+        '<button class="hyd-btn sm danger" onclick="HydApp.deleteWaterLog(\'' + esc(log.log_id) + '\')"><i class="fas fa-trash"></i></button></div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderHealth() {
+    var html = unitContext() + '<div class="hyd-card" style="margin-top:12px"><div class="hyd-card-head">' +
+      '<h3><i class="fas fa-leaf" style="color:var(--hyd)"></i> Health observations</h3>';
+    var unit = scopedUnit();
+    if (unit) {
+      html += '<button class="hyd-btn sm primary" onclick="HydApp.openHealthForm(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-plus"></i> Add observation</button>';
+    }
+    html += '</div>';
+    if (!state.healthRecords.length) {
+      html += '<p class="hyd-sub">No health observations yet. Record leaf, root and water condition to spot problems early.</p></div>';
+      return html;
+    }
+    state.healthRecords.forEach(function (rec) {
+      html += '<div class="hyd-row"><div><div class="hyd-row-title">' + esc(rec.observed_date || '-') +
+        ' <span class="hyd-badge ' + (rec.severity === 'high' ? 'bad' : rec.severity === 'medium' ? 'warn' : 'muted') + '">' + esc(rec.severity || 'low') + '</span></div>' +
+        '<div class="hyd-row-sub">' +
+        (rec.leaf_condition ? 'Leaf: ' + esc(rec.leaf_condition) + ' &middot; ' : '') +
+        (rec.root_condition ? 'Root: ' + esc(rec.root_condition) + ' &middot; ' : '') +
+        (rec.growth_rate ? 'Growth: ' + esc(rec.growth_rate) : '') + '</div>' +
+        (rec.deficiency_symptoms ? '<div class="hyd-row-sub">' + esc(rec.deficiency_symptoms) + '</div>' : '') +
+        '</div><div class="hyd-row-actions">' +
+        '<button class="hyd-btn sm danger" onclick="HydApp.deleteHealth(\'' + esc(rec.record_id) + '\')"><i class="fas fa-trash"></i></button></div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderProduction() {
+    var html = unitContext() + '<div class="hyd-card" style="margin-top:12px"><div class="hyd-card-head">' +
+      '<h3><i class="fas fa-basket-shopping" style="color:var(--hyd)"></i> Production &amp; harvest</h3>';
+    var unit = scopedUnit();
+    if (unit) {
+      html += '<button class="hyd-btn sm primary" onclick="HydApp.openProductionForm(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-plus"></i> Record harvest</button>';
+    }
+    html += '</div>';
+    if (!state.production.length) {
+      html += '<p class="hyd-sub">No harvests recorded yet. Recording a harvest updates the crop yield and the profit calculator.</p></div>';
+      return html;
+    }
+    var total = state.production.reduce(function (sum, p) { return sum + (num(p.quantity) || 0); }, 0);
+    var revenue = state.production.reduce(function (sum, p) { return sum + (num(p.revenue) || 0); }, 0);
+    html += '<div class="hyd-kv" style="margin-bottom:12px">' +
+      '<div class="hyd-kv-item"><div class="k">Total harvested</div><div class="v">' + money(total) + '</div></div>' +
+      '<div class="hyd-kv-item"><div class="k">Revenue</div><div class="v">' + money(revenue) + '</div></div></div>';
+    state.production.forEach(function (p) {
+      html += '<div class="hyd-row"><div><div class="hyd-row-title">' + esc(p.recorded_date || '-') +
+        (p.quality_grade ? ' <span class="hyd-badge info">' + esc(p.quality_grade) + '</span>' : '') + '</div>' +
+        '<div class="hyd-row-sub">' + (p.quantity || 0) + ' ' + esc(p.unit || 'kg') +
+        (p.revenue ? ' &middot; ' + money(p.revenue) : '') + '</div></div>' +
+        '<div class="hyd-row-actions"><button class="hyd-btn sm danger" onclick="HydApp.deleteProduction(\'' + esc(p.production_id) + '\')"><i class="fas fa-trash"></i></button></div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderEconomics() {
+    var e = state.economics;
+    var unit = scopedUnit();
+    var html = unitContext();
+    if (!e) {
+      html += '<div class="hyd-card" style="margin-top:12px"><p class="hyd-sub">No cost records for this unit yet. Add setup and running costs to see profit, margin and ROI.</p></div>';
+      return html;
+    }
+    html += '<div class="hyd-card" style="margin-top:12px"><div class="hyd-card-head">' +
+      '<h3><i class="fas fa-indian-rupee-sign" style="color:var(--hyd)"></i> ' + esc(unit ? unit.name : '') + ' economics</h3>' +
+      (unit ? '<button class="hyd-btn sm primary" onclick="HydApp.openCostForm(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-plus"></i> Add cost</button>' : '') +
+      '</div>' +
+      '<div class="hyd-grid stats" style="margin-bottom:14px">' +
+      '<div class="hyd-stat"><div class="hyd-stat-label">Setup investment</div><div class="hyd-stat-value">' + money(e.setup_investment) + '</div></div>' +
+      '<div class="hyd-stat"><div class="hyd-stat-label">Running cost</div><div class="hyd-stat-value">' + money(e.running_cost) + '</div></div>' +
+      '<div class="hyd-stat good"><div class="hyd-stat-label">Revenue</div><div class="hyd-stat-value">' + money(e.revenue) + '</div></div>' +
+      '<div class="hyd-stat ' + (e.net_profit >= 0 ? 'good' : 'bad') + '"><div class="hyd-stat-label">Net profit</div><div class="hyd-stat-value">' + money(e.net_profit) + '</div></div>' +
+      '<div class="hyd-stat"><div class="hyd-stat-label">Margin</div><div class="hyd-stat-value">' + (e.profit_margin_percent === null ? '-' : e.profit_margin_percent + '%') + '</div></div>' +
+      '<div class="hyd-stat"><div class="hyd-stat-label">ROI</div><div class="hyd-stat-value">' + (e.roi_percent === null ? '-' : e.roi_percent + '%') + '</div></div>' +
+      '</div>';
+    if (!state.costs.length) {
+      html += '<p class="hyd-sub">No cost records yet. Hydroponic costs also appear in your farm Profit Calculator and finance records.</p>';
+    } else {
+      state.costs.forEach(function (cost) {
+        html += '<div class="hyd-row"><div><div class="hyd-row-title">' + esc(cost.category) +
+          ' <span class="hyd-badge ' + (cost.cost_type === 'setup' ? 'info' : 'muted') + '">' + esc(cost.cost_type) + '</span></div>' +
+          '<div class="hyd-row-sub">' + esc(cost.incurred_date || '-') + (cost.vendor ? ' &middot; ' + esc(cost.vendor) : '') + '</div></div>' +
+          '<div class="hyd-row-actions"><span class="hyd-row-title">' + money(cost.amount) + '</span>' +
+          '<button class="hyd-btn sm danger" onclick="HydApp.deleteCost(\'' + esc(cost.expense_id) + '\')"><i class="fas fa-trash"></i></button></div></div>';
+      });
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderTasks() {
+    var unit = scopedUnit();
+    var html = unitContext() + '<div class="hyd-card" style="margin-top:12px"><div class="hyd-card-head">' +
+      '<h3><i class="fas fa-list-check" style="color:var(--hyd)"></i> Tasks</h3>';
+    if (unit) {
+      html += '<button class="hyd-btn sm primary" onclick="HydApp.generateTasks(\'' + esc(unit.unit_id) + '\')"><i class="fas fa-wand-magic-sparkles"></i> Generate schedule</button>';
+    }
+    html += '</div><p class="hyd-sub" style="margin-bottom:12px">Tasks live in your existing task system, so they show on the Tasks page and in the calendar.</p>';
+    if (!state.tasks.length) {
+      html += '<p class="hyd-sub">No tasks for this unit yet. Generate a schedule to add pH, EC, reservoir, root, pest and cleaning reminders.</p></div>';
+      return html;
+    }
+    state.tasks.forEach(function (task) {
+      var done = task.status === 'completed';
+      html += '<div class="hyd-row"><div><div class="hyd-row-title" style="' + (done ? 'text-decoration:line-through;opacity:.6' : '') + '">' +
+        esc(task.title) + '</div><div class="hyd-row-sub">' + esc(task.due_date || 'no due date') +
+        (task.category ? ' &middot; ' + esc(task.category) : '') + '</div></div>' +
+        '<div class="hyd-row-actions"><span class="hyd-badge ' + (done ? 'ok' : task.priority === 'high' ? 'warn' : 'muted') + '">' +
+        esc(done ? 'done' : (task.status || 'pending')) + '</span>' +
+        '<span class="hyd-link" onclick="window.location.href=\'tasks.html\'">Open in Tasks</span></div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderGuide() {
+    var c = state.catalog;
+    if (!c) return loadingBlock();
+    var html = '<div class="hyd-grid two">';
+
+    html += '<div class="hyd-card"><div class="hyd-card-head"><h3><i class="fas fa-diagram-project" style="color:var(--hyd)"></i> Systems</h3></div>';
+    (c.systems || []).forEach(function (s) {
+      html += '<div class="hyd-guide-item"><h4>' + esc(s.name) + '</h4><p>' + esc(s.summary) + '</p>' +
+        '<p style="margin-top:5px"><span class="hyd-badge info">Best for ' + esc(s.best_for) + '</span> ' +
+        '<span class="hyd-badge muted">Aeration: ' + esc(s.aeration) + '</span></p></div>';
+    });
+    html += '</div>';
+
+    html += '<div class="hyd-card"><div class="hyd-card-head"><h3><i class="fas fa-seedling" style="color:var(--hyd)"></i> Growth stages</h3></div>';
+    (c.growth_stages || []).forEach(function (s) {
+      html += '<div class="hyd-guide-item"><h4>' + esc(s.label) + ' (day ' + s.day_from + '-' + s.day_to + ')</h4>' +
+        '<p>' + esc(s.focus) + '</p><p style="margin-top:5px">' + esc((s.tasks || []).join(' &middot; ')) + '</p></div>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="hyd-card" style="margin-top:14px"><div class="hyd-card-head"><h3><i class="fas fa-flask" style="color:var(--hyd)"></i> Target pH and EC by crop</h3></div>';
+    html += '<div class="hyd-grid three">';
+    (c.crop_targets || []).forEach(function (crop) {
+      html += '<div class="hyd-kv-item"><div class="k">' + esc(crop.crop) + (crop.category ? ' &middot; ' + esc(crop.category) : '') + '</div>' +
+        '<div class="v">pH ' + crop.ph_min + '-' + crop.ph_max + '</div>' +
+        '<div class="k" style="margin-top:3px">EC ' + crop.ec_min + '-' + crop.ec_max + ' mS</div></div>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="hyd-card" style="margin-top:14px"><div class="hyd-card-head"><h3><i class="fas fa-vial" style="color:var(--hyd)"></i> Deficiency guide</h3></div>';
+    (c.nutrient_reference || []).forEach(function (n) {
+      html += '<div class="hyd-guide-item"><h4>' + esc(n.nutrient) + '</h4><p><strong>Signs:</strong> ' + esc(n.symptom) + '</p>' +
+        '<p style="margin-top:4px"><strong>Fix:</strong> ' + esc(n.fix) + '</p></div>';
+    });
+    html += '</div>';
+
+    html += '<div class="hyd-card" style="margin-top:14px"><div class="hyd-card-head"><h3><i class="fas fa-screwdriver-wrench" style="color:var(--hyd)"></i> Equipment checklist</h3>' +
+      '<span class="hyd-link" onclick="window.location.href=\'input-store.html\'">Find inputs <i class="fas fa-arrow-right"></i></span></div>';
+    (c.equipment_checklist || []).forEach(function (item) {
+      var required = item.required_for === 'all' ? 'all systems' : (item.required_for || []).join(', ');
+      html += '<label class="hyd-check"><input type="checkbox"><span>' + esc(item.label) + ' <span class="hyd-badge muted">' + esc(required) + '</span></span></label>';
+    });
+    html += '</div>';
+
+    return html;
+  }
+
+  // ---------- Forms ----------
+  function plotSelectHtml(selected) {
+    var head = '<option value="">No specific plot</option>';
+    if (!state.plots.length) return head;
+    return head + state.plots.map(function (p) {
+      return '<option value="' + esc(p.id) + '"' + (p.id === selected ? ' selected' : '') + '>' + esc(p.plot_name) + '</option>';
+    }).join('');
+  }
+
+  // Plots arrive after the modal is already open, so refresh the select in place
+  // and reload it whenever the farmer switches farms inside the form.
+  function refreshPlotSelect(selected) {
+    var select = document.getElementById('hydPlot');
+    if (!select) return;
+    var farmId = document.getElementById('hydFarm');
+    var targetFarm = farmId ? farmId.value : '';
+    if (!targetFarm) { state.plots = []; select.innerHTML = plotSelectHtml(selected); return; }
+    if (state.plotsFarmId === targetFarm) { select.innerHTML = plotSelectHtml(selected); return; }
+    select.innerHTML = '<option value="">Loading plots...</option>';
+    API.Farm.getPlots(targetFarm).then(function (data) {
+      if (!document.getElementById('hydPlot')) return;
+      state.plots = Array.isArray(data) ? data : (data && data.data) || [];
+      state.plotsFarmId = targetFarm;
+      document.getElementById('hydPlot').innerHTML = plotSelectHtml(selected);
+    }).catch(function () {
+      if (document.getElementById('hydPlot')) {
+        document.getElementById('hydPlot').innerHTML = '<option value="">Plots not available</option>';
+      }
+    });
+  }
+
+  function openUnitForm(unitId) {
+    var unit = unitId ? state.units.filter(function (u) { return u.unit_id === unitId; })[0] : null;
+    var selectedFarm = unit ? unit.farm_id : state.farmId;
+    var currentPlot = unit ? unit.plot_id : '';
+    var body = '<div class="hyd-field"><label class="hyd-label" for="hydName">Unit name</label>' +
+      '<input class="hyd-input" id="hydName" placeholder="e.g. Polyhouse NFT - North side" value="' + esc(unit ? unit.name : '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydSystemType">System type</label><select class="hyd-select" id="hydSystemType">' +
+      options([{ value: '', label: 'Select a system' }].concat(((state.catalog && state.catalog.systems) || []).map(function (s) {
+        return { value: s.id, label: s.name };
+      })), unit ? unit.system_type : '') + '</select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydStatus">Status</label><select class="hyd-select" id="hydStatus">' +
+      options(UNIT_STATUSES, unit ? unit.status : 'planning') + '</select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydFarm">Farm</label><select class="hyd-select" id="hydFarm">' +
+      state.farms.map(function (f) {
+        return '<option value="' + esc(f.id) + '"' + (f.id === selectedFarm ? ' selected' : '') + '>' + esc(f.farm_name) + '</option>';
+      }).join('') + '</select><span class="hyd-hint">Hydroponic areas sit inside your registered farm and do not change the farm location.</span></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydPlot">Area inside the farm</label><select class="hyd-select" id="hydPlot">' +
+      plotSelectHtml(currentPlot) + '</select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydSetupLocation">Setup location</label>' +
+      '<input class="hyd-input" id="hydSetupLocation" placeholder="e.g. Behind the pump house" value="' + esc(unit ? unit.setup_location : '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydSetupDate">Setup date</label>' +
+      '<input class="hyd-input" type="date" id="hydSetupDate" value="' + esc(unit ? unit.setup_date : '') + '"></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydGrowingArea">Growing area</label><input class="hyd-input" type="number" step="0.01" id="hydGrowingArea" value="' + (unit && unit.growing_area ? unit.growing_area : '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydAreaUnit">Area unit</label><select class="hyd-select" id="hydAreaUnit">' +
+      options(['sq ft', 'sq m', 'sq yd'], unit ? unit.area_unit : 'sq ft') + '</select></div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydChannels">Channels</label><input class="hyd-input" type="number" id="hydChannels" value="' + (unit && unit.channels ? unit.channels : '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydSites">Planting sites</label><input class="hyd-input" type="number" id="hydPlantingSites" value="' + (unit && unit.planting_sites ? unit.planting_sites : '') + '"></div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydReservoir">Reservoir capacity</label><input class="hyd-input" type="number" step="0.1" id="hydReservoirCapacity" value="' + (unit && unit.reservoir_capacity ? unit.reservoir_capacity : '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydReservoirUnit">Capacity unit</label><select class="hyd-select" id="hydReservoirUnit">' +
+      options(['Litres', 'Liters', 'Gallons'], unit ? unit.reservoir_unit : 'Litres') + '</select></div>' +
+      '</div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydWaterSource">Water source</label>' +
+      '<input class="hyd-input" id="hydWaterSource" placeholder="e.g. Borewell, Canal" value="' + esc(unit ? unit.water_source : '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydLighting">Lighting setup</label>' +
+      '<input class="hyd-input" id="hydLightingSetup" placeholder="e.g. Shade net 50%" value="' + esc(unit ? unit.lighting_setup : '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydProtection">Protection structure</label>' +
+      '<input class="hyd-input" id="hydProtectionStructure" placeholder="e.g. Polyhouse" value="' + esc(unit ? unit.protection_structure : '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-check"><input type="checkbox" id="hydPumpAvailable"' + (unit && unit.pump_available ? ' checked' : '') + '><span>Circulation pump available</span></label>' +
+      '<label class="hyd-check"><input type="checkbox" id="hydAirPumpAvailable"' + (unit && unit.air_pump_available ? ' checked' : '') + '><span>Air pump available</span></label>' +
+      '<label class="hyd-check"><input type="checkbox" id="hydAutomationAvailable"' + (unit && unit.automation_available ? ' checked' : '') + '><span>Automation / timers available</span></label></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydNotes">Notes</label><textarea class="hyd-textarea" id="hydNotes">' + esc(unit ? unit.notes : '') + '</textarea></div>';
+
+    var foot = '<button class="hyd-btn" onclick="HydApp.closeModal()">Cancel</button>' +
+      '<button class="hyd-btn primary" onclick="HydApp.saveUnit(\'' + (unit ? unit.unit_id : '') + '\')"><i class="fas fa-check"></i> Save unit</button>';
+
+    openModal('<i class="fas fa-layer-group" style="color:var(--hyd)"></i> ' + (unit ? 'Edit unit' : 'Add hydroponic unit'), body, foot, true);
+    refreshPlotSelect(currentPlot);
+    var farmSelect = document.getElementById('hydFarm');
+    if (farmSelect) {
+      farmSelect.onchange = function () { refreshPlotSelect(''); };
+    }
+  }
+
+  function saveUnit(unitId) {
+    var name = document.getElementById('hydName').value.trim();
+    if (!name) { toast('Enter a unit name', 'error'); return; }
+    var payload = readValues(['system_type', 'status', 'setup_location', 'setup_date', 'growing_area', 'area_unit',
+      'channels', 'planting_sites', 'reservoir_capacity', 'reservoir_unit', 'water_source',
+      'pump_available', 'air_pump_available', 'lighting_setup', 'protection_structure',
+      'automation_available', 'notes']);
+    payload.name = name;
+    var plotId = document.getElementById('hydPlot').value;
+    payload.plot_id = plotId || '';
+
+    if (unitId) {
+      API.Hydroponics.updateUnit(unitId, payload).then(function () {
+        toast('Unit updated', 'success');
+        closeModal();
+        load();
+      }).catch(function (err) { toast((err && err.message) || 'Could not update the unit', 'error'); });
+    } else {
+      var farmId = document.getElementById('hydFarm').value;
+      if (!farmId) { toast('Add a farm before creating a unit', 'error'); return; }
+      payload.farm_id = farmId;
+      API.Hydroponics.createUnit(payload).then(function () {
+        toast('Unit created', 'success');
+        closeModal();
+        load();
+      }).catch(function (err) { toast((err && err.message) || 'Could not create the unit', 'error'); });
+    }
+  }
+
+  function openCropForm(unitId) {
+    var resolved = unitId || firstUnitId();
+    if (!resolved) { toast('Add a hydroponic unit first', 'error'); return; }
+    var body = '<div class="hyd-field"><label class="hyd-label" for="hydCropName">Crop</label>' +
+      '<input class="hyd-input" id="hydCropName" list="hydCropList" placeholder="e.g. Lettuce, Tomato, Basil">' +
+      '<datalist id="hydCropList">' + ((state.catalog && state.catalog.crop_targets) || []).map(function (c) {
+        return '<option value="' + esc(c.crop) + '">';
+      }).join('') + '</datalist>' +
+      '<span class="hyd-hint">A crop cycle is created in your existing crop system, so tasks, yield and profit all stay in one place.</span></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydVariety">Variety</label><input class="hyd-input" id="hydVariety"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydPlanting">Planting date</label><input class="hyd-input" type="date" id="hydPlantingDate" value="' + today() + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydHarvest">Expected harvest</label><input class="hyd-input" type="date" id="hydExpectedHarvestDate">' +
+      '<span class="hyd-hint">Leave blank to use the standard duration for the crop.</span></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydPlants">Number of plants</label><input class="hyd-input" type="number" id="hydPlantsCount"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydPlantsArea">Growing area</label><input class="hyd-input" type="number" step="0.01" id="hydGrowingArea"></div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydExpYield">Expected yield</label><input class="hyd-input" type="number" step="0.01" id="hydExpectedYield"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydYieldUnit">Yield unit</label><select class="hyd-select" id="hydYieldUnit">' +
+      options(['kg', 'g', 'quintal'], 'kg') + '</select></div>' +
+      '</div>';
+
+    var foot = '<button class="hyd-btn" onclick="HydApp.closeModal()">Cancel</button>' +
+      '<button class="hyd-btn primary" onclick="HydApp.saveCrop(\'' + resolved + '\')"><i class="fas fa-check"></i> Start cycle</button>';
+    openModal('<i class="fas fa-seedling" style="color:var(--hyd)"></i> Start a crop cycle', body, foot);
+  }
+
+  function saveCrop(unitId) {
+    var name = document.getElementById('hydCropName').value.trim();
+    if (!name) { toast('Enter a crop name', 'error'); return; }
+    var values = readValues(['variety', 'planting_date', 'expected_harvest_date', 'plants_count', 'growing_area', 'expected_yield', 'yield_unit']);
+    var payload = {
+      crop_name: name,
+      variety: values.variety,
+      planting_date: values.planting_date,
+      expected_harvest_date: values.expected_harvest_date,
+      plants_count: values.plants_count,
+      growing_area: values.growing_area,
+      expected_yield: values.expected_yield,
+      yield_unit: values.yield_unit
+    };
+    API.Hydroponics.createCrop(unitId, payload).then(function () {
+      toast('Crop cycle started', 'success');
+      closeModal();
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not start the cycle', 'error'); });
+  }
+
+  function openCropStageForm(cycleId) {
+    var crop = state.crops.filter(function (c) { return c.cycle_id === cycleId; })[0] || {};
+    var body = '<div class="hyd-field"><label class="hyd-label" for="hydCurrentStage">Growth stage</label><select class="hyd-select" id="hydCurrentStage">' +
+      options(STAGE_KEYS, crop.current_stage || 'germination') + '</select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydExpectedHarvestDate">Expected harvest date</label><input class="hyd-input" type="date" id="hydExpectedHarvestDate" value="' + esc(crop.expected_harvest_date || '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydActualYield">Actual yield so far</label><input class="hyd-input" type="number" step="0.01" id="hydActualYield" value="' + (crop.actual_yield || '') + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydNotes">Notes</label><textarea class="hyd-textarea" id="hydNotes">' + esc(crop.notes || '') + '</textarea></div>';
+    var foot = '<button class="hyd-btn" onclick="HydApp.closeModal()">Cancel</button>' +
+      '<button class="hyd-btn primary" onclick="HydApp.saveCropStage(\'' + esc(cycleId) + '\')"><i class="fas fa-check"></i> Save</button>';
+    openModal('<i class="fas fa-arrows-rotate" style="color:var(--hyd)"></i> Update ' + esc(crop.crop_name || 'crop'), body, foot);
+  }
+
+  function saveCropStage(cycleId) {
+    var values = readValues(['current_stage', 'expected_harvest_date', 'actual_yield', 'notes']);
+    var payload = {
+      current_stage: values.current_stage,
+      expected_harvest_date: values.expected_harvest_date,
+      actual_yield: values.actual_yield,
+      notes: values.notes
+    };
+    API.Hydroponics.updateCrop(cycleId, payload).then(function () {
+      toast('Crop updated', 'success');
+      closeModal();
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not update the crop', 'error'); });
+  }
+
+  function openWaterForm(unitId) {
+    var resolved = unitId || firstUnitId();
+    if (!resolved) { toast('Add a hydroponic unit first', 'error'); return; }
+    var body = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydPh">pH</label><input class="hyd-input" type="number" step="0.1" id="hydPh" placeholder="5.8"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydEc">EC (mS)</label><input class="hyd-input" type="number" step="0.1" id="hydEc" placeholder="1.8"></div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydTds">TDS (ppm)</label><input class="hyd-input" type="number" id="hydTds"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydWaterTemperature">Water temperature (C)</label><input class="hyd-input" type="number" step="0.1" id="hydWaterTemperature"></div>' +
+      '</div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydWaterQuantity">Water quantity</label>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><input class="hyd-input" type="number" step="0.1" id="hydWaterQuantity">' +
+      '<select class="hyd-select" id="hydWaterUnit">' + options(['Litres', 'Liters', 'Gallons'], 'Litres') + '</select></div></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydNutrientSolution">Nutrient solution</label>' +
+      '<input class="hyd-input" id="hydNutrientSolution" placeholder="e.g. A and B mix, 2-1-6"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydNutrientQuantity">Nutrient quantity</label>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><input class="hyd-input" type="number" step="0.01" id="hydNutrientQuantity">' +
+      '<select class="hyd-select" id="hydNutrientUnit">' + options(['g', 'ml', 'kg'], 'g') + '</select></div></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydRecordedDate">Reading date</label><input class="hyd-input" type="date" id="hydRecordedDate" value="' + today() + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-check"><input type="checkbox" id="hydWaterReplaced"><span>Changed the nutrient solution today</span></label></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydNotes">Notes</label><textarea class="hyd-textarea" id="hydNotes"></textarea></div>';
+
+    var foot = '<button class="hyd-btn" onclick="HydApp.closeModal()">Cancel</button>' +
+      '<button class="hyd-btn primary" onclick="HydApp.saveWater(\'' + resolved + '\')"><i class="fas fa-check"></i> Save reading</button>';
+    openModal('<i class="fas fa-flask" style="color:var(--hyd)"></i> Log water reading', body, foot);
+  }
+
+  function saveWater(unitId) {
+    var values = readValues(['ph', 'ec', 'tds', 'water_temperature', 'water_quantity', 'water_unit',
+      'nutrient_solution', 'nutrient_quantity', 'nutrient_unit', 'recorded_date', 'water_replaced', 'notes']);
+    var payload = {
+      ph: values.ph, ec: values.ec, tds: values.tds, water_temperature: values.water_temperature,
+      water_quantity: values.water_quantity, water_unit: values.water_unit,
+      nutrient_solution: values.nutrient_solution, nutrient_quantity: values.nutrient_quantity,
+      nutrient_unit: values.nutrient_unit, recorded_date: values.recorded_date,
+      water_replaced: values.water_replaced, notes: values.notes
+    };
+    API.Hydroponics.createWaterLog(unitId, payload).then(function (res) {
+      var alerts = res && res.alerts;
+      if (alerts && alerts.severity === 'critical') {
+        toast('Saved, but ' + (alerts.messages[0] || 'the reading is out of range'), 'error');
+      } else {
+        toast('Water log saved', 'success');
+      }
+      closeModal();
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not save the reading', 'error'); });
+  }
+
+  function openHealthForm(unitId, cycleId) {
+    var resolved = unitId || firstUnitId();
+    if (!resolved) { toast('Add a hydroponic unit first', 'error'); return; }
+    var unitCrops = state.crops.filter(function (c) { return c.unit && c.unit.unit_id === resolved && c.status === 'active'; });
+    var body = '<div class="hyd-field"><label class="hyd-label" for="hydHydroponicCropId">Crop cycle</label><select class="hyd-select" id="hydHydroponicCropId">' +
+      '<option value="">Whole unit</option>' + unitCrops.map(function (c) {
+        return '<option value="' + esc(c.cycle_id) + '"' + (c.cycle_id === cycleId ? ' selected' : '') + '>' + esc(c.crop_name) + '</option>';
+      }).join('') + '</select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydLeafCondition">Leaf condition</label><select class="hyd-select" id="hydLeafCondition">' +
+      options(['Healthy', 'Slight yellowing', 'Yellowing', 'Brown edges', 'Wilting', 'Pest damage'], '') + '</select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydRootCondition">Root condition</label><select class="hyd-select" id="hydRootCondition">' +
+      options(['White and healthy', 'Cream', 'Tan', 'Brown', 'Mushy or slimy', 'Not checked'], '') + '</select></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydGrowthRate">Growth rate</label><select class="hyd-select" id="hydGrowthRate">' +
+      options(['Fast', 'Normal', 'Slow', 'Stalled'], '') + '</select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydSeverity">Severity</label><select class="hyd-select" id="hydSeverity">' +
+      options(SEVERITIES, 'low') + '</select></div>' +
+      '</div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydDeficiencySymptoms">Deficiency symptoms</label>' +
+      '<textarea class="hyd-textarea" id="hydDeficiencySymptoms" placeholder="e.g. Yellowing between veins on older leaves"></textarea></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydPestObservation">Pest observation</label>' +
+      '<input class="hyd-input" id="hydPestObservation" placeholder="e.g. Aphids on lower leaves"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydWaterCondition">Water condition</label><select class="hyd-select" id="hydWaterCondition">' +
+      options(['Clear', 'Slightly cloudy', 'Cloudy', 'Warm', 'Cold'], '') + '</select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydObservedDate">Observed on</label><input class="hyd-input" type="date" id="hydObservedDate" value="' + today() + '"></div>';
+
+    var foot = '<button class="hyd-btn" onclick="HydApp.closeModal()">Cancel</button>' +
+      '<button class="hyd-btn primary" onclick="HydApp.saveHealth(\'' + resolved + '\')"><i class="fas fa-check"></i> Save observation</button>';
+    openModal('<i class="fas fa-leaf" style="color:var(--hyd)"></i> Health observation', body, foot);
+  }
+
+  function saveHealth(unitId) {
+    var values = readValues(['hydroponic_crop_id', 'leaf_condition', 'root_condition', 'growth_rate', 'severity',
+      'deficiency_symptoms', 'pest_observation', 'water_condition', 'observed_date']);
+    var payload = {
+      hydroponic_crop_id: values.hydroponic_crop_id,
+      leaf_condition: values.leaf_condition,
+      root_condition: values.root_condition,
+      growth_rate: values.growth_rate,
+      severity: values.severity,
+      deficiency_symptoms: values.deficiency_symptoms,
+      pest_observation: values.pest_observation,
+      water_condition: values.water_condition,
+      observed_date: values.observed_date
+    };
+    API.Hydroponics.createHealthRecord(unitId, payload).then(function () {
+      toast('Observation saved', 'success');
+      closeModal();
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not save the observation', 'error'); });
+  }
+
+  function openProductionForm(unitId) {
+    var resolved = unitId || firstUnitId();
+    if (!resolved) { toast('Add a hydroponic unit first', 'error'); return; }
+    var unitCrops = state.crops.filter(function (c) { return c.unit && c.unit.unit_id === resolved && c.status === 'active'; });
+    var body = '<div class="hyd-field"><label class="hyd-label" for="hydHydroponicCropId">Crop cycle</label><select class="hyd-select" id="hydHydroponicCropId">' +
+      '<option value="">No specific cycle</option>' + unitCrops.map(function (c) {
+        return '<option value="' + esc(c.cycle_id) + '">' + esc(c.crop_name) + '</option>';
+      }).join('') + '</select></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydQuantity">Quantity</label><input class="hyd-input" type="number" step="0.01" id="hydQuantity"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydUnit">Unit</label><select class="hyd-select" id="hydUnit">' +
+      options(['kg', 'g', 'quintal', 'bunches'], 'kg') + '</select></div>' +
+      '</div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydRevenue">Revenue (INR)</label><input class="hyd-input" type="number" step="0.01" id="hydRevenue">' +
+      '<span class="hyd-hint">Optional. Recorded revenue feeds the unit economics and your farm profit records.</span></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydQualityGrade">Quality grade</label><select class="hyd-select" id="hydQualityGrade">' +
+      options([''].concat(QUALITY_GRADES), '') + '</select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydRecordedDate">Harvest date</label><input class="hyd-input" type="date" id="hydRecordedDate" value="' + today() + '"></div>';
+
+    var foot = '<button class="hyd-btn" onclick="HydApp.closeModal()">Cancel</button>' +
+      '<button class="hyd-btn primary" onclick="HydApp.saveProduction(\'' + resolved + '\')"><i class="fas fa-check"></i> Record harvest</button>';
+    openModal('<i class="fas fa-basket-shopping" style="color:var(--hyd)"></i> Record harvest', body, foot);
+  }
+
+  function saveProduction(unitId) {
+    var values = readValues(['hydroponic_crop_id', 'quantity', 'unit', 'revenue', 'quality_grade', 'recorded_date', 'notes']);
+    var payload = {
+      hydroponic_crop_id: values.hydroponic_crop_id,
+      quantity: values.quantity,
+      unit: values.unit,
+      revenue: values.revenue,
+      quality_grade: values.quality_grade,
+      recorded_date: values.recorded_date
+    };
+    API.Hydroponics.createProduction(unitId, payload).then(function () {
+      toast('Harvest recorded', 'success');
+      closeModal();
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not record the harvest', 'error'); });
+  }
+
+  function openCostForm(unitId) {
+    var resolved = unitId || firstUnitId();
+    if (!resolved) { toast('Add a hydroponic unit first', 'error'); return; }
+    var catalog = state.catalog || {};
+    var body = '<div class="hyd-field"><label class="hyd-label" for="hydCostType">Cost type</label><select class="hyd-select" id="hydCostType">' +
+      options(['setup', 'running'], 'running') + '</select><span class="hyd-hint">Setup costs are one-time investment, running costs are recurring.</span></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydCostCategory">Category</label><select class="hyd-select" id="hydCostCategory"></select></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydAmount">Amount (INR)</label><input class="hyd-input" type="number" step="0.01" id="hydAmount"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydIncurredDate">Date</label><input class="hyd-input" type="date" id="hydIncurredDate" value="' + today() + '"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydVendor">Vendor</label><input class="hyd-input" id="hydVendor"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydNotes">Notes</label><textarea class="hyd-textarea" id="hydNotes"></textarea></div>' +
+      '<div class="hyd-hint">Hydroponic costs are also recorded in your farm finance so the Profit Calculator stays accurate.</div>';
+
+    var foot = '<button class="hyd-btn" onclick="HydApp.closeModal()">Cancel</button>' +
+      '<button class="hyd-btn primary" onclick="HydApp.saveCost(\'' + resolved + '\')"><i class="fas fa-check"></i> Save cost</button>';
+    openModal('<i class="fas fa-indian-rupee-sign" style="color:var(--hyd)"></i> Add cost record', body, foot);
+
+    var select = document.getElementById('hydCostCategory');
+    var typeSelect = document.getElementById('hydCostType');
+    function fillCategories() {
+      var list = typeSelect.value === 'setup' ? (catalog.setup_cost_categories || []) : (catalog.running_cost_categories || []);
+      select.innerHTML = options(list, list[0] || '');
+    }
+    fillCategories();
+    typeSelect.onchange = fillCategories;
+  }
+
+  function saveCost(unitId) {
+    var values = readValues(['cost_type', 'amount', 'incurred_date', 'vendor', 'notes']);
+    var category = document.getElementById('hydCostCategory').value;
+    if (values.amount === null) { toast('Enter an amount', 'error'); return; }
+    var payload = {
+      cost_type: values.cost_type,
+      category: category,
+      amount: values.amount,
+      incurred_date: values.incurred_date,
+      vendor: values.vendor,
+      notes: values.notes
+    };
+    API.Hydroponics.createCost(unitId, payload).then(function () {
+      toast('Cost recorded', 'success');
+      closeModal();
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not record the cost', 'error'); });
+  }
+
+  function generateTasks(unitId) {
+    API.Hydroponics.generateTasks(unitId, {}).then(function (res) {
+      var count = (res && res.data && res.data.length) || 0;
+      toast(count ? count + ' tasks added to your Tasks page' : 'Tasks are already up to date', 'success');
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not generate tasks', 'error'); });
+  }
+
+  function closeCrop(cycleId) {
+    if (!window.confirm('Close this crop cycle? It will be marked as completed.')) return;
+    API.Hydroponics.closeCrop(cycleId).then(function () {
+      toast('Crop cycle closed', 'success');
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not close the cycle', 'error'); });
+  }
+
+  function deleteCrop(cycleId) {
+    if (!window.confirm('Delete this crop cycle permanently? Its schedule will be removed too.')) return;
+    API.Hydroponics.deleteCrop(cycleId).then(function () {
+      toast('Crop cycle deleted', 'success');
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not delete the cycle', 'error'); });
+  }
+
+  function deleteWaterLog(logId) {
+    if (!window.confirm('Delete this water log?')) return;
+    API.Hydroponics.deleteWaterLog(logId).then(function () { toast('Log deleted', 'success'); load(); })
+      .catch(function (err) { toast((err && err.message) || 'Could not delete the log', 'error'); });
+  }
+
+  function deleteHealth(recordId) {
+    if (!window.confirm('Delete this health record?')) return;
+    API.Hydroponics.deleteHealthRecord(recordId).then(function () { toast('Record deleted', 'success'); load(); })
+      .catch(function (err) { toast((err && err.message) || 'Could not delete the record', 'error'); });
+  }
+
+  function deleteProduction(productionId) {
+    if (!window.confirm('Delete this harvest record?')) return;
+    API.Hydroponics.deleteProduction(productionId).then(function () { toast('Record deleted', 'success'); load(); })
+      .catch(function (err) { toast((err && err.message) || 'Could not delete the record', 'error'); });
+  }
+
+  function deleteCost(expenseId) {
+    if (!window.confirm('Delete this cost record?')) return;
+    API.Hydroponics.deleteCost(expenseId).then(function () { toast('Cost deleted', 'success'); load(); })
+      .catch(function (err) { toast((err && err.message) || 'Could not delete the cost', 'error'); });
+  }
+
+  function archiveUnit(unitId) {
+    if (!window.confirm('Archive this unit? It stays in your history but stops appearing in active views.')) return;
+    API.Hydroponics.archiveUnit(unitId).then(function () { toast('Unit archived', 'success'); load(); })
+      .catch(function (err) { toast((err && err.message) || 'Could not archive the unit', 'error'); });
+  }
+
+  function restoreUnit(unitId) {
+    API.Hydroponics.updateUnit(unitId, { status: 'active' }).then(function () {
+      toast('Unit restored', 'success');
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not restore the unit', 'error'); });
+  }
+
+  function deleteUnit(unitId) {
+    if (!window.confirm('Permanently delete this unit and all of its water logs, health records, harvests and costs? This cannot be undone.')) return;
+    API.Hydroponics.deleteUnit(unitId).then(function () {
+      if (state.activeUnitId === unitId) state.activeUnitId = null;
+      toast('Unit deleted', 'success');
+      load();
+    }).catch(function (err) { toast((err && err.message) || 'Could not delete the unit', 'error'); });
+  }
+
+  function firstUnitId() {
+    return state.units.length ? state.units[0].unit_id : '';
+  }
+
+  function setFarm(farmId) {
+    state.farmId = farmId;
+    renderFarmBar();
+    load();
+  }
+
+  function goTab(tab) {
+    state.tab = tab;
+    syncTabs();
+    state.loading = true;
+    state.error = null;
+    render();
+    loadTabData().then(function (results) {
+      applyTabResults(results);
+      state.loading = false;
+      render();
+    }).catch(function (err) {
+      state.loading = false;
+      state.error = (err && err.message) || 'Unable to load this section';
+      render();
+    });
+  }
+
+  function syncTabs() {
+    var buttons = document.querySelectorAll('#hydTabs .hyd-tab');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].classList.toggle('active', buttons[i].getAttribute('data-tab') === state.tab);
+    }
+  }
+
+  function setUnit(unitId) {
+    state.activeUnitId = unitId;
+    goTab(state.tab);
+  }
+
+  function focusUnit(unitId) {
+    state.activeUnitId = unitId;
+    goTab('tasks');
+  }
+
+  // Deep links such as /hydroponics.html?unit=FA-HYD-1&action=log-water
+  // focus that unit and then open the requested form once data has loaded.
+  var URL_ACTIONS = {
+    'add-unit': 'openUnitForm',
+    'add-crop': 'openCropForm',
+    'log-water': 'openWaterForm',
+    'log-health': 'openHealthForm',
+    'log-production': 'openProductionForm',
+    'add-cost': 'openCostForm',
+    'generate-tasks': 'generateTasks'
+  };
+
+  function captureUrlIntent() {
+    var requestedUnit = params.get('unit');
+    var requestedAction = params.get('action');
+    if (requestedUnit) state.requestedUnitId = requestedUnit;
+    if (requestedAction && URL_ACTIONS[requestedAction]) {
+      state.pendingAction = URL_ACTIONS[requestedAction];
+    }
+    if (requestedUnit || requestedAction) {
+      // Keep the address bar clean so a refresh does not reopen a modal.
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+
+  function applyPendingUrlAction() {
+    if (state.requestedUnitId) {
+      var target = state.requestedUnitId;
+      state.requestedUnitId = null;
+      var match = state.units.filter(function (u) { return u.unit_id === target; })[0];
+      if (match) state.activeUnitId = target;
+    }
+    var action = state.pendingAction;
+    if (!action) return;
+    state.pendingAction = null;
+    render();
+    if (action === 'generateTasks') { generateTasks(state.activeUnitId); return; }
+    if (action === 'openUnitForm') { openUnitForm(); return; }
+    openModalForUnit(action);
+  }
+
+  function openModalForUnit(formName) {
+    if (formName === 'openCropForm' || formName === 'openWaterForm' ||
+        formName === 'openHealthForm' || formName === 'openProductionForm' ||
+        formName === 'openCostForm') {
+      formName(state.activeUnitId);
+    }
+  }
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') closeModal();
+  });
+
+  var VALID_TABS = ['overview', 'units', 'crops', 'water', 'health', 'production', 'economics', 'tasks', 'guide'];
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('tab') && VALID_TABS.indexOf(params.get('tab')) !== -1) {
+    state.tab = params.get('tab');
+  }
+  captureUrlIntent();
+  syncTabs();
+
+  window.HydApp = {
+    goTab: goTab,
+    setFarm: setFarm,
+    setUnit: setUnit,
+    load: load,
+    render: render,
+    closeModal: closeModal,
+    onModalBg: onModalBg,
+    openUnitForm: openUnitForm,
+    saveUnit: saveUnit,
+    openCropForm: openCropForm,
+    saveCrop: saveCrop,
+    openCropStageForm: openCropStageForm,
+    saveCropStage: saveCropStage,
+    openWaterForm: openWaterForm,
+    saveWater: saveWater,
+    openHealthForm: openHealthForm,
+    saveHealth: saveHealth,
+    openProductionForm: openProductionForm,
+    saveProduction: saveProduction,
+    openCostForm: openCostForm,
+    saveCost: saveCost,
+    generateTasks: generateTasks,
+    closeCrop: closeCrop,
+    deleteCrop: deleteCrop,
+    deleteWaterLog: deleteWaterLog,
+    deleteHealth: deleteHealth,
+    deleteProduction: deleteProduction,
+    deleteCost: deleteCost,
+    archiveUnit: archiveUnit,
+    restoreUnit: restoreUnit,
+    deleteUnit: deleteUnit,
+    focusUnit: focusUnit,
+    firstUnitId: firstUnitId
+  };
+
+  load();
+})();
+</script>
+</body>
+</html>

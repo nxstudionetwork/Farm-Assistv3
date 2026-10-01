@@ -23,7 +23,24 @@ class User(Base):
     profile_image = Column(String(500), nullable=True)
     preferred_language = Column(String(10), default="en")
     role = Column(String(20), default="farmer")
+    # Legacy aggregate flag. Retained for compatibility with existing rows and
+    # existing consumers, but it is NOT an identity guarantee: ownership of a
+    # contact channel is tracked per-channel below, because proving a phone is
+    # not the same as proving an email or a government identity.
     is_verified = Column(Boolean, default=False)
+    phone_verified = Column(Boolean, default=False)
+    email_verified = Column(Boolean, default=False)
+    phone_verified_at = Column(DateTime, nullable=True)
+    email_verified_at = Column(DateTime, nullable=True)
+    # Onboarding lifecycle. 'completed' is the only state that permits the
+    # farmer to skip onboarding on subsequent logins.
+    onboarding_status = Column(String(30), default="not_started")
+    onboarding_step = Column(String(30), nullable=True)
+    onboarding_updated_at = Column(DateTime, nullable=True)
+    # Consent ledger for identity verification (see FarmerProfile below).
+    identity_consent_given = Column(Boolean, default=False)
+    identity_consent_version = Column(String(20), nullable=True)
+    identity_consent_at = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
     is_online = Column(Boolean, default=False)
     is_demo = Column(Boolean, default=False)
@@ -67,6 +84,33 @@ class FarmerProfile(Base):
     bio = Column(Text, nullable=True)
     farm_location = Column(String(200), nullable=True)
     farming_type = Column(String(100), nullable=True)
+    farming_types = Column(String(200), nullable=True)
+    farming_activities = Column(String(500), nullable=True)
+    # Government Farmer Card / ID. Stored as a reference only; the cleartext
+    # value is never returned by an API. `*_last4` is what the UI displays.
+    farmer_card_number = Column(String(64), nullable=True)
+    farmer_card_issuing_authority = Column(String(150), nullable=True)
+    farmer_card_last4 = Column(String(4), nullable=True)
+    farmer_card_verification_status = Column(String(30), default="not_provided")
+    # Set only by a real verification provider. Null means "never checked".
+    farmer_card_verification_reference = Column(String(120), nullable=True)
+    # Identity verification status: not_provided | pending | verified | rejected
+    # | not_applicable. There is deliberately no code path that writes
+    # 'verified' without a configured provider.
+    identity_verification_status = Column(String(30), default="not_provided")
+    identity_verification_reference = Column(String(120), nullable=True)
+    # Aadhaar / PAN are retained as last-4 + a provider reference. The full
+    # number is not kept once a verification reference exists.
+    aadhaar_last4 = Column(String(4), nullable=True)
+    aadhaar_verification_status = Column(String(30), default="not_provided")
+    pan_last4 = Column(String(4), nullable=True)
+    pan_verification_status = Column(String(30), default="not_provided")
+    hydroponics_status = Column(String(50), nullable=True)
+    hydroponics_units_count = Column(Integer, nullable=True)
+    hydroponics_system = Column(String(100), nullable=True)
+    hydroponics_crops = Column(String(500), nullable=True)
+    hydroponics_area = Column(Float, nullable=True)
+    hydroponics_area_unit = Column(String(20), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

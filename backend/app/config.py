@@ -54,6 +54,33 @@ class Settings(BaseSettings):
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 
+    # ---- OTP delivery / development escape hatch ----
+    # An OTP is a credential: whoever holds it can complete verification (and,
+    # for an existing account, obtain an access token). It is therefore never
+    # returned by an API response and never written to a log. Delivery happens
+    # only through a real SMS/email provider.
+    #
+    # The local-development escape hatch below is opt-in and additionally
+    # requires APP_ENV=development. Keep it OFF in every deployed environment.
+    OTP_DEV_ECHO_ENABLED: bool = False
+    OTP_TTL_SECONDS: int = 600
+    OTP_MAX_VERIFY_ATTEMPTS: int = 5
+    # Minimum seconds between OTP requests for the same destination, and the
+    # cap on how many OTPs may be requested per destination in an hour.
+    OTP_RESEND_COOLDOWN_SECONDS: int = 45
+    OTP_MAX_SENDS_PER_HOUR: int = 5
+    # Set False only if you deliberately want OTP issuing to succeed while no
+    # provider is wired up (useful for exercising the UI, unsafe anywhere else).
+    OTP_REQUIRE_DELIVERY: bool = True
+
+    # Which delivery channels are actually usable in this deployment.
+    SMS_PROVIDER_ENABLED: bool = False
+    EMAIL_PROVIDER_ENABLED: bool = False
+
+    # Deployment environment: "development" | "staging" | "production".
+    # Gates any behaviour that is unsafe outside a developer machine.
+    APP_ENV: str = "production"
+
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""

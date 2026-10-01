@@ -195,6 +195,14 @@ Backend: FastAPI served from the same origin (port 8000).
         soil_type: payload.soil_type,
         latitude: payload.latitude,
         longitude: payload.longitude,
+        farming_types: payload.farming_types,
+        farming_activities: payload.farming_activities,
+        hydroponics_status: payload.hydroponics_status,
+        hydroponics_units_count: payload.hydroponics_units_count,
+        hydroponics_system: payload.hydroponics_system,
+        hydroponics_crops: payload.hydroponics_crops,
+        hydroponics_area: payload.hydroponics_area,
+        hydroponics_area_unit: payload.hydroponics_area_unit,
       }).then(unwrap);
     },
     login: function (payload) {
@@ -392,8 +400,74 @@ Backend: FastAPI served from the same origin (port 8000).
   };
 
   var CropService = {
-    listCrops: function () {
-      return http('GET', '/crops').then(unwrap);
+    /**
+     * List crops from the shared catalog.
+     * @param {Object} [params] search / filter options:
+     *   q, domain, category, subcategory, category_code, life_cycle_type,
+     *   cultivation_method, season, include_archived, include_varieties, page, page_size
+     * @returns {Promise<Array>} crop objects (resolves to the array, as before)
+     */
+    listCrops: function (params) {
+      var qs = (params && Object.keys(params).length) ? buildQuery(params) : '';
+      return http('GET', '/crops' + qs).then(function (res) {
+        return (res && res.data) || [];
+      });
+    },
+    /** Same call, but keeps the pagination meta for the searchable selector. */
+    searchCrops: function (params) {
+      var qs = (params && Object.keys(params).length) ? buildQuery(params) : '';
+      return http('GET', '/crops' + qs).then(function (res) {
+        return { crops: (res && res.data) || [], meta: (res && res.meta) || null };
+      });
+    },
+    getCrop: function (cropRef) {
+      return http('GET', '/crops/' + encodeURIComponent(cropRef)).then(unwrap);
+    },
+    createCrop: function (data) {
+      return http('POST', '/crops', data).then(unwrap);
+    },
+    updateCrop: function (cropRef, data) {
+      return http('PUT', '/crops/' + encodeURIComponent(cropRef), data).then(unwrap);
+    },
+    /** Flat taxonomy list (each node carries its crop_count). */
+    listCategories: function (params) {
+      var qs = (params && Object.keys(params).length) ? buildQuery(params) : '';
+      return http('GET', '/crops/categories' + qs).then(function (res) {
+        return (res && res.data) || [];
+      });
+    },
+    /** Taxonomy grouped by domain, for grouped dropdowns. */
+    categoryTree: function (params) {
+      var qs = (params && Object.keys(params).length) ? buildQuery(params) : '';
+      return http('GET', '/crops/categories' + qs).then(function (res) {
+        return { categories: (res && res.data) || [], domains: (res && res.domains) || [] };
+      });
+    },
+    /** Cultivation methods (open field, protected, hydroponic, orchard, ...). */
+    listCultivationMethods: function () {
+      return http('GET', '/crops/cultivation-methods').then(unwrap);
+    },
+    listVarieties: function (params) {
+      var qs = (params && Object.keys(params).length) ? buildQuery(params) : '';
+      return http('GET', '/crop-varieties' + qs).then(function (res) {
+        return (res && res.data) || [];
+      });
+    },
+    /** Same as listVarieties, keeping pagination meta. */
+    searchVarieties: function (params) {
+      var qs = (params && Object.keys(params).length) ? buildQuery(params) : '';
+      return http('GET', '/crop-varieties' + qs).then(function (res) {
+        return { varieties: (res && res.data) || [], meta: (res && res.meta) || null };
+      });
+    },
+    createVariety: function (data) {
+      return http('POST', '/crop-varieties', data).then(unwrap);
+    },
+    updateVariety: function (id, data) {
+      return http('PUT', '/crop-varieties/' + id, data).then(unwrap);
+    },
+    deleteVariety: function (id) {
+      return http('DELETE', '/crop-varieties/' + id).then(unwrap);
     },
     listCycles: function () {
       return http('GET', '/crop-cycles').then(unwrap);
@@ -2628,6 +2702,98 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  var HydroponicService = {
+    getCatalog: function () {
+      return http('GET', '/hydroponics/catalog').then(unwrap);
+    },
+    getDashboard: function (farmId) {
+      var qs = farmId ? '?farm_id=' + encodeURIComponent(farmId) : '';
+      return http('GET', '/hydroponics/dashboard' + qs).then(unwrap);
+    },
+    getRecommendations: function (unitId) {
+      var qs = unitId ? '?unit_id=' + encodeURIComponent(unitId) : '';
+      return http('GET', '/hydroponics/recommendations' + qs).then(unwrap);
+    },
+    listUnits: function (params) {
+      var qs = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/hydroponics/units' + qs).then(unwrap);
+    },
+    getUnit: function (unitId) {
+      return http('GET', '/hydroponics/units/' + encodeURIComponent(unitId)).then(unwrap);
+    },
+    createUnit: function (data) {
+      return http('POST', '/hydroponics/units', data).then(unwrap);
+    },
+    updateUnit: function (unitId, data) {
+      return http('PUT', '/hydroponics/units/' + encodeURIComponent(unitId), data).then(unwrap);
+    },
+    archiveUnit: function (unitId) {
+      return http('POST', '/hydroponics/units/' + encodeURIComponent(unitId) + '/archive').then(unwrap);
+    },
+    deleteUnit: function (unitId) {
+      return http('DELETE', '/hydroponics/units/' + encodeURIComponent(unitId)).then(unwrap);
+    },
+    listCrops: function (params) {
+      var qs = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/hydroponics/crops' + qs).then(unwrap);
+    },
+    createCrop: function (unitId, data) {
+      return http('POST', '/hydroponics/units/' + encodeURIComponent(unitId) + '/crops', data).then(unwrap);
+    },
+    updateCrop: function (cycleId, data) {
+      return http('PUT', '/hydroponics/crops/' + encodeURIComponent(cycleId), data).then(unwrap);
+    },
+    closeCrop: function (cycleId) {
+      return http('POST', '/hydroponics/crops/' + encodeURIComponent(cycleId) + '/close').then(unwrap);
+    },
+    deleteCrop: function (cycleId) {
+      return http('DELETE', '/hydroponics/crops/' + encodeURIComponent(cycleId)).then(unwrap);
+    },
+    listWaterLogs: function (unitId) {
+      return http('GET', '/hydroponics/units/' + encodeURIComponent(unitId) + '/water-logs').then(unwrap);
+    },
+    createWaterLog: function (unitId, data) {
+      return http('POST', '/hydroponics/units/' + encodeURIComponent(unitId) + '/water-logs', data).then(unwrap);
+    },
+    deleteWaterLog: function (logId) {
+      return http('DELETE', '/hydroponics/water-logs/' + encodeURIComponent(logId)).then(unwrap);
+    },
+    listHealthRecords: function (unitId) {
+      return http('GET', '/hydroponics/units/' + encodeURIComponent(unitId) + '/health-records').then(unwrap);
+    },
+    createHealthRecord: function (unitId, data) {
+      return http('POST', '/hydroponics/units/' + encodeURIComponent(unitId) + '/health-records', data).then(unwrap);
+    },
+    deleteHealthRecord: function (recordId) {
+      return http('DELETE', '/hydroponics/health-records/' + encodeURIComponent(recordId)).then(unwrap);
+    },
+    listProduction: function (unitId) {
+      return http('GET', '/hydroponics/units/' + encodeURIComponent(unitId) + '/production').then(unwrap);
+    },
+    createProduction: function (unitId, data) {
+      return http('POST', '/hydroponics/units/' + encodeURIComponent(unitId) + '/production', data).then(unwrap);
+    },
+    deleteProduction: function (productionId) {
+      return http('DELETE', '/hydroponics/production/' + encodeURIComponent(productionId)).then(unwrap);
+    },
+    listCosts: function (unitId, params) {
+      var qs = params ? '?' + buildQuery(params) : '';
+      return http('GET', '/hydroponics/units/' + encodeURIComponent(unitId) + '/costs' + qs).then(unwrap);
+    },
+    createCost: function (unitId, data) {
+      return http('POST', '/hydroponics/units/' + encodeURIComponent(unitId) + '/costs', data).then(unwrap);
+    },
+    deleteCost: function (expenseId) {
+      return http('DELETE', '/hydroponics/costs/' + encodeURIComponent(expenseId)).then(unwrap);
+    },
+    listUnitTasks: function (unitId) {
+      return http('GET', '/hydroponics/units/' + encodeURIComponent(unitId) + '/tasks').then(unwrap);
+    },
+    generateTasks: function (unitId, data) {
+      return http('POST', '/hydroponics/units/' + encodeURIComponent(unitId) + '/tasks/generate', data || {}).then(unwrap);
+    }
+  };
+
   /* =========================================================================
    * MARKET PRICE SERVICE
    * ========================================================================= */
@@ -2692,6 +2858,7 @@ Backend: FastAPI served from the same origin (port 8000).
     Technique: TechniqueService,
     Calendar: CalendarService,
     Livestock: LivestockService,
+    Hydroponics: HydroponicService,
     buildQuery: buildQuery
   };
 
@@ -2735,5 +2902,6 @@ Backend: FastAPI served from the same origin (port 8000).
   global.TechniqueService = TechniqueService;
   global.CalendarService = CalendarService;
   global.LivestockService = LivestockService;
+  global.HydroponicService = HydroponicService;
 
 })(window);
