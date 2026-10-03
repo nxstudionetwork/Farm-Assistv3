@@ -49,6 +49,7 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     farmer_profile = relationship("FarmerProfile", back_populates="user", uselist=False)
+    customer_profile = relationship("Customer", back_populates="user", uselist=False)
     addresses = relationship("UserAddress", back_populates="user")
     farms = relationship("Farm", back_populates="user")
     login_history = relationship("LoginHistory", back_populates="user")

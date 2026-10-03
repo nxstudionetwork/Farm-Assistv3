@@ -94,6 +94,10 @@
     .modal-box .form-input{width:100%;padding:10px 12px;border:1px solid #e0e0e0;border-radius:var(--pf-radius-sm);font-size:13px;transition:border-color 0.2s}
     .modal-box .form-input:focus{border-color:var(--pf-green);outline:none}
     .pf-chip-select{display:flex;flex-wrap:wrap;gap:6px}
+    /* Grouped farming activity chips (js/farming-activities.js) */
+    .farming-activity-group{width:100%;margin-bottom:8px}
+    .farming-activity-group__label{margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--pf-green,#2e7d32)}
+    .farming-activity-group__chips{display:flex;flex-wrap:wrap;gap:6px}
     .pf-chip{padding:6px 12px;border:1px solid #e0e0e0;border-radius:999px;background:#fafafa;color:#455a64;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;font-family:inherit}
     .pf-chip:hover{border-color:var(--pf-green);background:#f2f9f2}
     .pf-chip.active{background:var(--pf-green);border-color:var(--pf-green);color:#fff}
@@ -367,16 +371,7 @@
     </div>
     <div class="form-group">
       <label>Farming Activities (select any)</label>
-      <div class="pf-chip-select" id="fm-activities">
-        <button type="button" class="pf-chip" data-value="Crop Farming">Crop Farming</button>
-        <button type="button" class="pf-chip" data-value="Horticulture">Horticulture</button>
-        <button type="button" class="pf-chip" data-value="Hydroponics">Hydroponics</button>
-        <button type="button" class="pf-chip" data-value="Dairy">Dairy</button>
-        <button type="button" class="pf-chip" data-value="Poultry">Poultry</button>
-        <button type="button" class="pf-chip" data-value="Fishery">Fishery</button>
-        <button type="button" class="pf-chip" data-value="Sericulture">Sericulture</button>
-        <button type="button" class="pf-chip" data-value="Organic Farming">Organic Farming</button>
-      </div>
+      <div class="pf-chip-select" id="fm-activities"><!-- rendered from js/farming-activities.js --></div>
     </div>
     <div class="form-group" id="fm-hydro-block">
       <label>Hydroponic Interest (optional)</label>
@@ -558,6 +553,7 @@
 <script src="js/database.js"></script>
 <script src="js/services.js"></script>
 <script src="js/userStore.js"></script>
+<script src="js/farming-activities.js"></script>
 <script src="assets/js/navigation.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
@@ -798,16 +794,23 @@
   }
 
   // === EDIT FARMING DETAILS ===
+  // The activity list comes from js/farming-activities.js, the same source the
+  // signup page uses, so onboarding and the profile can never drift apart.
+  function renderActivityChips(){
+    var group = document.getElementById('fm-activities');
+    if(!group) return;
+    if(group.childElementCount) return; // already rendered
+    FarmingActivities.render(group, { className: 'pf-chip', onChange: syncHydroBlock });
+  }
+
   function setActivityChips(values){
-    var wanted = (values || []).map(function(v){ return String(v).trim(); });
-    document.querySelectorAll('#fm-activities .pf-chip').forEach(function(chip){
-      chip.classList.toggle('active', wanted.indexOf(chip.getAttribute('data-value')) !== -1);
-    });
+    renderActivityChips();
+    FarmingActivities.setSelected('#fm-activities', values, '.pf-chip');
   }
 
   function getActivityChips(){
-    return Array.prototype.slice.call(document.querySelectorAll('#fm-activities .pf-chip.active'))
-      .map(function(chip){ return chip.getAttribute('data-value'); });
+    renderActivityChips();
+    return FarmingActivities.selected('#fm-activities', '.pf-chip.active');
   }
 
   // The Hydroponic block only appears when the farmer keeps that activity, so the
@@ -819,14 +822,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', function(){
-    var group = document.getElementById('fm-activities');
-    if(!group) return;
-    group.addEventListener('click', function(event){
-      var chip = event.target.closest('.pf-chip');
-      if(!chip) return;
-      chip.classList.toggle('active');
-      syncHydroBlock();
-    });
+    renderActivityChips();
+    syncHydroBlock();
   });
 
   window.pfCloseFarmingModal = function(){

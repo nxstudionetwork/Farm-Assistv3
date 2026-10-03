@@ -1,6 +1,9 @@
 from app.models.user import (
     User, FarmerProfile, UserAddress, OTPVerification, LoginHistory, UserSession, UserSettings
 )
+from app.models.customer import (
+    Customer, CustomerPointsEntry, CustomerSettings, CustomerPlant, IdSequence,
+)
 from app.models.farm import Farm, FarmPlot, FarmDocument
 from app.models.crop import (
     Crop, CropCycle, CropTask, FarmJournal, SoilRecord, IrrigationRecord,
@@ -20,6 +23,7 @@ from app.models.marketplace import (
     ProductCategory, Seller, Product, MarketplaceCart, MarketplaceCartItem, MarketplaceWishlist, MarketplaceOrder, OrderItem,
     Payment, DeliveryTracking, EquipmentMetadata, FarmerRecentlyViewed,
     MarketplaceCategory, MarketplaceListing, MarketplaceListingImage,
+    MarketplaceCropListing,
     MarketplaceEnquiry, MarketplaceSale, MarketplaceBuyerRecommendation,
     MarketplaceSellerSettings, EquipmentReport, MarketplaceRentalRequest,
 )
@@ -86,6 +90,7 @@ from app.models.hydroponics import (
 __all__ = [
     "User", "FarmerProfile", "UserAddress", "OTPVerification",
     "LoginHistory", "UserSession", "UserSettings",
+    "Customer", "CustomerPointsEntry", "CustomerSettings", "CustomerPlant", "IdSequence",
     "Farm", "FarmPlot", "FarmDocument",
     "Crop", "CropCycle", "CropTask", "FarmJournal", "SoilRecord", "IrrigationRecord",
     "CropHealthCheck", "CropCategory", "CropVariety", "CultivationMethod",
@@ -97,6 +102,7 @@ __all__ = [
     "ProductCategory", "Seller", "Product", "MarketplaceCart", "MarketplaceCartItem", "MarketplaceWishlist", "MarketplaceOrder", "OrderItem",
     "Payment", "DeliveryTracking", "EquipmentMetadata", "FarmerRecentlyViewed",
     "MarketplaceCategory", "MarketplaceListing", "MarketplaceListingImage",
+    "MarketplaceCropListing",
     "MarketplaceEnquiry", "MarketplaceSale", "MarketplaceBuyerRecommendation",
     "MarketplaceSellerSettings", "EquipmentReport", "MarketplaceRentalRequest",
     "GovernmentScheme", "SchemeApplication", "SchemeDocument",

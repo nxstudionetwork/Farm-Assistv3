@@ -25,6 +25,23 @@
     .step{display:none;animation:fadeUp .3s ease}
     .step.active{display:block}
     @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    /* ---- "Create Account As" ---- */
+    .role-choice{display:flex;flex-direction:column;gap:12px;margin-bottom:8px}
+    .role-choice-btn{display:flex;align-items:center;gap:14px;padding:16px;border:1.5px solid #e0e8e0;border-radius:16px;background:#fafcfa;cursor:pointer;text-align:left;transition:all .2s ease;font-family:inherit;width:100%}
+    .role-choice-btn:hover{border-color:#4caf50;background:#f5faf5;transform:translateY(-1px)}
+    /* The chosen account type stays highlighted after the step indicator moves
+       on, so it is always clear which kind of account is being created. */
+    .role-choice-btn.selected{border-color:#2e7d32;background:#eaf6ea;box-shadow:0 0 0 3px rgba(76,175,80,.15)}
+    .role-choice-btn.selected .rc-arrow{color:#2e7d32;transform:rotate(90deg)}
+    .rc-check{display:none;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#2e7d32;color:#fff;font-size:11px;flex:0 0 auto}
+    .role-choice-btn.selected .rc-check{display:inline-flex}
+    .role-choice-btn .rc-icon{width:46px;height:46px;border-radius:14px;background:#eaf6ea;color:#2e7d32;display:flex;align-items:center;justify-content:center;font-size:21px;flex:0 0 auto}
+    .role-choice-btn .rc-text{flex:1;min-width:0}
+    .role-choice-btn .rc-name{font-size:15px;font-weight:700;color:#1a2e1a;display:block}
+    .role-choice-btn .rc-desc{font-size:12px;color:#7a8f7a;line-height:1.45;display:block;margin-top:2px}
+    .role-choice-btn .rc-arrow{color:#a0b8a0;font-size:14px}
+    .customer-note{display:flex;gap:9px;padding:11px 13px;background:#f0f7ee;border-radius:11px;font-size:12px;color:#4a6a4a;line-height:1.5;margin-bottom:16px}
+    .customer-note i{color:#4caf50;margin-top:2px}
     .form-group{margin-bottom:16px}
     .form-group label{display:block;font-size:13px;font-weight:600;color:#2d3e2d;margin-bottom:5px}
     .input-wrap{position:relative}
@@ -35,6 +52,10 @@
     .input-wrap .select-arrow{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#7a9f7a;font-size:12px;pointer-events:none}
     .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .chip-select{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+    /* Grouped farming activity chips (js/farming-activities.js) */
+    .farming-activity-group{width:100%;margin-bottom:10px}
+    .farming-activity-group__label{margin:0 0 5px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#4caf50}
+    .farming-activity-group__chips{display:flex;flex-wrap:wrap;gap:8px}
     .chip{padding:8px 14px;border:1.5px solid #e0e8e0;border-radius:999px;background:#fafcfa;color:#3a5240;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s ease;font-family:inherit}
     .chip:hover{border-color:#4caf50;background:#f1f8f1}
     .chip.active{background:#4caf50;border-color:#4caf50;color:#fff;box-shadow:0 2px 8px rgba(76,175,80,.28)}
@@ -128,7 +149,7 @@
       <p>Create your farmer account</p>
     </div>
     <div class="auth-body">
-      <div class="step-indicator">
+      <div class="step-indicator" id="farmer-step-indicator">
         <div class="step-dot active" data-step="1"></div>
         <div class="step-dot" data-step="2"></div>
         <div class="step-dot" data-step="3"></div>
@@ -137,7 +158,44 @@
       <div class="step-dot" data-step="6"></div>
       <div class="step-dot" data-step="7"></div>
       </div>
+      <div class="step-indicator" id="customer-step-indicator" style="display:none">
+        <div class="step-dot active" data-cstep="1"></div>
+        <div class="step-dot" data-cstep="2"></div>
+        <div class="step-dot" data-cstep="3"></div>
+        <div class="step-dot" data-cstep="4"></div>
+        <div class="step-dot" data-cstep="5"></div>
+      </div>
       <p style="text-align:center;font-size:12px;color:#8a9f8a;margin:-8px 0 18px;">Fields marked with * are required</p>
+
+      <!--
+        Step 0: what kind of account is being created. Asked first because the two
+        types need entirely different details and are issued different IDs. The
+        farmer wizard below is unchanged by this.
+      -->
+      <div class="step active" id="step-0">
+        <div class="step-title">Create Account As</div>
+        <div class="step-desc">Choose the account that fits how you use Farm Assist</div>
+        <div class="role-choice">
+          <button class="role-choice-btn" onclick="selectSignupRole('farmer')" type="button" data-role="farmer">
+            <span class="rc-icon"><i class="fas fa-tractor"></i></span>
+            <span class="rc-text">
+              <span class="rc-name">Farmer</span>
+              <span class="rc-desc">Manage your farm, crops, soil, irrigation and market selling. You will get a Farmer ID.</span>
+            </span>
+            <i class="fas fa-check rc-check"></i>
+            <i class="fas fa-chevron-right rc-arrow"></i>
+          </button>
+          <button class="role-choice-btn" onclick="selectSignupRole('customer')" type="button" data-role="customer">
+            <span class="rc-icon"><i class="fas fa-shopping-basket"></i></span>
+            <span class="rc-text">
+              <span class="rc-name">Customer</span>
+              <span class="rc-desc">Buy from the marketplace, track orders and grow plants at home. You will get a Customer ID.</span>
+            </span>
+            <i class="fas fa-check rc-check"></i>
+            <i class="fas fa-chevron-right rc-arrow"></i>
+          </button>
+        </div>
+      </div>
 
       <!-- Step 1: Phone & OTP -->
       <div class="step active" id="step-1">
@@ -425,16 +483,7 @@
         </div>
         <div class="form-group">
           <label>Which farming activities do you run? (select any)</label>
-          <div class="chip-select" id="reg-activities">
-            <button type="button" class="chip" data-value="Crop Farming">Crop Farming</button>
-            <button type="button" class="chip" data-value="Horticulture">Horticulture</button>
-            <button type="button" class="chip" data-value="Hydroponics">Hydroponics</button>
-            <button type="button" class="chip" data-value="Dairy">Dairy</button>
-            <button type="button" class="chip" data-value="Poultry">Poultry</button>
-            <button type="button" class="chip" data-value="Fishery">Fishery</button>
-            <button type="button" class="chip" data-value="Sericulture">Sericulture</button>
-            <button type="button" class="chip" data-value="Organic Farming">Organic Farming</button>
-          </div>
+          <div class="chip-select" id="reg-activities"><!-- rendered from js/farming-activities.js --></div>
         </div>
         <div class="form-group hydro-interest" id="hydro-interest" hidden>
           <div class="hydro-head">
@@ -539,6 +588,120 @@
         <button class="btn-secondary" onclick="downloadFarmerCard()">Download Farmer Card <i class="fas fa-download"></i></button>
       </div>
 
+      <!--
+        ===================================================================
+        Customer sign-up.
+        A separate, deliberately short set of steps: a customer needs contact
+        details, a delivery address and a PIN. Nothing about land, soil, crops,
+        a farm or government documents is asked for, because none of it applies.
+        ===================================================================
+      -->
+      <div class="step" id="cust-step-2">
+        <div class="step-title">About You</div>
+        <div class="step-desc">Just the basics so we can reach you about your orders</div>
+        <div class="form-group">
+          <label for="cust-name">Full Name *</label>
+          <div class="input-wrap">
+            <i class="fas fa-user"></i>
+            <input type="text" id="cust-name" placeholder="Your name">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cust-email">Email (optional)</label>
+          <div class="input-wrap">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="cust-email" placeholder="you@example.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cust-dob">Date of Birth (optional)</label>
+          <div class="input-wrap">
+            <i class="fas fa-calendar"></i>
+            <input type="date" id="cust-dob">
+          </div>
+        </div>
+        <div class="customer-note">
+          <i class="fas fa-circle-info"></i>
+          <span>You verified this phone number in the previous step. It is how you will sign in.</span>
+        </div>
+        <button class="btn-submit" onclick="goCustStep(3)">Continue <i class="fas fa-arrow-right"></i></button>
+        <button class="btn-secondary" onclick="goCustStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+
+      <div class="step" id="cust-step-3">
+        <div class="step-title">Delivery Address</div>
+        <div class="step-desc">Where should your orders be delivered?</div>
+        <div class="form-group">
+          <label for="cust-address">Address *</label>
+          <div class="input-wrap">
+            <i class="fas fa-map-marker-alt"></i>
+            <input type="text" id="cust-address" placeholder="House / street">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cust-city">City / Town *</label>
+          <div class="input-wrap">
+            <i class="fas fa-city"></i>
+            <input type="text" id="cust-city" placeholder="Warangal">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cust-state">State *</label>
+          <div class="input-wrap">
+            <i class="fas fa-flag"></i>
+            <select id="cust-state" onchange="onCustStateChange()"><option value="">Select State</option></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cust-district">District *</label>
+          <div class="input-wrap">
+            <i class="fas fa-map"></i>
+            <select id="cust-district"><option value="">Select District</option></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cust-pincode">PIN Code *</label>
+          <div class="input-wrap">
+            <i class="fas fa-hashtag"></i>
+            <input type="text" id="cust-pincode" placeholder="506002" maxlength="6" oninput="formatDigits(this,'cust-pincode',6)">
+          </div>
+        </div>
+        <button class="btn-submit" onclick="goCustStep(4)">Continue <i class="fas fa-arrow-right"></i></button>
+        <button class="btn-secondary" onclick="goCustStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+
+      <div class="step" id="cust-step-4">
+        <div class="step-title">Set Your PIN</div>
+        <div class="step-desc">A 4-digit PIN you will use to sign in</div>
+        <div class="pin-grid" style="justify-content:center;margin-bottom:8px">
+          <input type="password" maxlength="1" id="cust-pin-1" oninput="focusNext(this,'cust-pin-2')" inputmode="numeric">
+          <input type="password" maxlength="1" id="cust-pin-2" oninput="focusNext(this,'cust-pin-3')" inputmode="numeric">
+          <input type="password" maxlength="1" id="cust-pin-3" oninput="focusNext(this,'cust-pin-4')" inputmode="numeric">
+          <input type="password" maxlength="1" id="cust-pin-4" oninput="focusNext(this,null)" inputmode="numeric">
+        </div>
+        <p style="text-align:center;font-size:12px;color:#8a9f8a;margin-bottom:20px">Keep this PIN safe &mdash; it is what secures your account.</p>
+        <button class="btn-submit" onclick="handleCustomerRegister()" id="cust-submit-btn">Create Customer Account <i class="fas fa-user-check"></i></button>
+        <button class="btn-secondary" onclick="goCustStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+
+      <div class="step" id="cust-step-5">
+        <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="step-title">Welcome to Farm Assist</div>
+        <div class="step-desc">Your customer account is ready. Save your Customer ID.</div>
+        <div class="id-card" id="cust-id-card">
+          <h3><i class="fas fa-seedling"></i> FARM ASSIST</h3>
+          <img class="avatar" id="cust-card-avatar" src="" alt="Profile">
+          <div class="name" id="cust-card-name">Customer</div>
+          <div class="farmer-id" id="cust-card-id">FA-CS-000000</div>
+          <div class="details" id="cust-card-details"></div>
+        </div>
+        <div class="customer-note" style="margin-top:16px">
+          <i class="fas fa-key"></i>
+          <span>Sign in with this Customer ID next time. You can also sign in with your phone number or email.</span>
+        </div>
+        <button class="btn-submit" id="cust-go-login">Go to Customer Dashboard <i class="fas fa-sign-in-alt"></i></button>
+      </div>
+
       <div class="auth-divider" id="login-link"><span>Already have an account?</span></div>
       <div class="auth-footer" id="login-link-footer">
         <a href="login.html">Login to your account</a>
@@ -548,6 +711,7 @@
 
   <script src="js/services.js"></script>
   <script src="js/userStore.js"></script>
+  <script src="js/farming-activities.js"></script>
   <script>
     var _toastTimer = null;
     function showToast(msg, type) {
@@ -624,10 +788,59 @@
     var _otpVerified = false;
     var _currentStep = 1;
 
+    /* ==================================================================== *
+     * Account type
+     *
+     * This only decides which form is shown. The role on the account is set
+     * by the backend when it creates it -- the choice made here is never sent
+     * as part of the request and never overrides what the server does.
+     * ==================================================================== */
+    var _signupRole = null;
+
+    function selectSignupRole(role) {
+      _signupRole = (role === 'customer') ? 'customer' : 'farmer';
+      try { sessionStorage.setItem('fa-signup-role', _signupRole); } catch (e) {}
+
+      var isCustomer = _signupRole === 'customer';
+      document.querySelectorAll('.role-choice-btn').forEach(function (b) {
+        b.classList.toggle('selected', b.getAttribute('data-role') === _signupRole);
+      });
+      document.getElementById('farmer-step-indicator').style.display = isCustomer ? 'none' : 'flex';
+      document.getElementById('customer-step-indicator').style.display = isCustomer ? 'flex' : 'none';
+      document.querySelector('.auth-header p').textContent = isCustomer
+        ? 'Create your customer account'
+        : 'Create your farmer account';
+      document.title = 'Farm Assist - ' + (isCustomer ? 'Customer Sign Up' : 'Farmer Sign Up');
+
+      if (isCustomer) {
+        showCustStep(1);
+      } else {
+        _currentStep = 0;
+        goStep(1);
+      }
+    }
+
+    /* Customer flow. Step 1 reuses the shared phone + OTP step, which runs the
+       existing OTP service, so verification is the real thing for both roles. */
+    function showCustStep(n) {
+      document.querySelectorAll('.step').forEach(function (s) { s.classList.remove('active'); });
+      var el = document.getElementById(n === 1 ? 'step-1' : 'cust-step-' + n);
+      if (el) el.classList.add('active');
+      document.querySelectorAll('#customer-step-indicator .step-dot').forEach(function (d) {
+        var s = parseInt(d.getAttribute('data-cstep'), 10);
+        d.classList.remove('active', 'done');
+        if (s === n) d.classList.add('active');
+        else if (s < n) d.classList.add('done');
+      });
+      _currentStep = n;
+      if (n >= 3) {
+        document.getElementById('login-link').style.display = 'none';
+        document.getElementById('login-link-footer').style.display = 'none';
+      }
+    }
+
     function selectedActivities() {
-      return Array.prototype.slice
-        .call(document.querySelectorAll('#reg-activities .chip.active'))
-        .map(function (c) { return c.getAttribute('data-value'); });
+      return FarmingActivities.selected('#reg-activities', '.chip.active');
     }
 
     // The Hydroponic block stays hidden until the farmer picks the activity, so
@@ -641,11 +854,11 @@
     function initActivityChips() {
       var group = document.getElementById('reg-activities');
       if (!group) return;
-      group.addEventListener('click', function (event) {
-        var chip = event.target.closest('.chip');
-        if (!chip) return;
-        chip.classList.toggle('active');
-        syncHydroponicsInterest();
+      // The activity list is shared with the profile page so the two surfaces
+      // can never drift apart.
+      FarmingActivities.render(group, {
+        className: 'chip',
+        onChange: syncHydroponicsInterest
       });
       syncHydroponicsInterest();
     }
@@ -654,6 +867,13 @@
       if (n === 2 && _currentStep === 1) {
         if (!_otpVerified) { showToast('Please verify your phone with OTP first', 'danger'); return; }
         if (!validateStep1()) return;
+        /* A customer never sees the farmer's farm and soil steps, so verified
+           phone hands over to the customer form instead. */
+        if (_signupRole === 'customer') {
+          if (!validateCustAbout()) { showCustStep(2); return; }
+          showCustStep(2);
+          return;
+        }
       }
       if (n === 3 && _currentStep === 2) {
         if (!validateStep2()) return;
@@ -764,6 +984,17 @@
     }
 
     /* Location dropdowns */
+    function loadCustStates() {
+      LocationService.getStates().then(function (states) {
+        var sel = document.getElementById('cust-state');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Select State</option>';
+        (states || []).forEach(function (s) {
+          sel.innerHTML += '<option value="' + s.name + '">' + s.name + '</option>';
+        });
+      }).catch(function () {});
+    }
+
     function loadStates() {
       LocationService.getStates().then(function(states) {
         var sel = document.getElementById('reg-state');
@@ -1346,6 +1577,147 @@
       });
     }
 
+    function goCustStep(n) {
+      if (n === 2) {
+        if (!_otpVerified) { showToast('Please verify your phone with OTP first', 'danger'); showCustStep(1); return; }
+        if (!validateStep1()) return;
+        if (!validateCustAbout()) { showCustStep(2); return; }
+      }
+      if (n === 3 && _currentStep === 2) {
+        if (!validateCustAbout()) return;
+      }
+      if (n === 4 && _currentStep === 3) {
+        if (!validateCustAddress()) return;
+      }
+      showCustStep(n);
+    }
+
+    function validateCustAbout() {
+      var name = document.getElementById('cust-name').value.trim();
+      if (name.length < 2) {
+        setFieldError('cust-name', 'Enter your full name');
+        showToast('Enter your full name', 'danger');
+        return false;
+      }
+      clearFieldError('cust-name');
+      var email = document.getElementById('cust-email').value.trim();
+      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        setFieldError('cust-email', 'Enter a valid email address');
+        showToast('Enter a valid email address', 'danger');
+        return false;
+      }
+      clearFieldError('cust-email');
+      return true;
+    }
+
+    function validateCustAddress() {
+      var ok = true;
+      var address = document.getElementById('cust-address').value.trim();
+      if (address.length < 5) { setFieldError('cust-address', 'Enter your address'); ok = false; }
+      else clearFieldError('cust-address');
+
+      var city = document.getElementById('cust-city').value.trim();
+      if (city.length < 2) { setFieldError('cust-city', 'Enter your city or town'); ok = false; }
+      else clearFieldError('cust-city');
+
+      if (!document.getElementById('cust-state').value) {
+        setFieldError('cust-state', 'Select your state'); ok = false;
+      } else clearFieldError('cust-state');
+
+      if (!document.getElementById('cust-district').value) {
+        setFieldError('cust-district', 'Select your district'); ok = false;
+      } else clearFieldError('cust-district');
+
+      var pincode = document.getElementById('cust-pincode').value.trim();
+      if (!/^\d{6}$/.test(pincode)) { setFieldError('cust-pincode', 'Enter a 6-digit PIN code'); ok = false; }
+      else clearFieldError('cust-pincode');
+
+      if (!ok) showToast('Please complete the highlighted fields', 'danger');
+      return ok;
+    }
+
+    function onCustStateChange() {
+      var state = document.getElementById('cust-state').value;
+      var sel = document.getElementById('cust-district');
+      sel.innerHTML = '<option value="">Select District</option>';
+      if (!state) return;
+      LocationService.getDistricts(state).then(function (list) {
+        (list || []).forEach(function (d) {
+          sel.innerHTML += '<option value="' + d.name + '">' + d.name + '</option>';
+        });
+      }).catch(function () {
+        sel.innerHTML = '<option value="">Could not load districts</option>';
+      });
+    }
+
+    /*
+     * Customer registration.
+     *
+     * Sends only the fields collected above -- no farm, soil, crop or document
+     * data is included. The Customer ID in the response is allocated by the
+     * server's database sequence; nothing here generates or influences it.
+     */
+    function handleCustomerRegister() {
+      if (!_otpVerified) {
+        showToast('Phone number is not verified. Please start over.', 'danger');
+        showCustStep(1);
+        return;
+      }
+      var pin = '';
+      for (var i = 1; i <= 4; i++) pin += document.getElementById('cust-pin-' + i).value;
+      if (pin.length < 4) { showToast('Set a 4-digit PIN', 'danger'); return; }
+      if (pin === '0000') { showToast('Choose a PIN other than 0000', 'danger'); return; }
+      if (!validateCustAbout()) return;
+      if (!validateCustAddress()) return;
+
+      var btn = document.getElementById('cust-submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
+
+      AuthService.registerCustomer({
+        full_name: document.getElementById('cust-name').value.trim(),
+        phone_number: _regData.phone,
+        email: document.getElementById('cust-email').value.trim() || null,
+        date_of_birth: document.getElementById('cust-dob').value || null,
+        pin: pin,
+        address_line: document.getElementById('cust-address').value.trim(),
+        city: document.getElementById('cust-city').value.trim(),
+        district: document.getElementById('cust-district').value,
+        state: document.getElementById('cust-state').value,
+        pincode: document.getElementById('cust-pincode').value.trim()
+      }).then(function (data) {
+        btn.disabled = false;
+        btn.innerHTML = 'Create Customer Account <i class="fas fa-user-check"></i>';
+        var cid = data && data.customer_id;
+        if (!cid) {
+          showToast('Account created! Please sign in.', 'success');
+          setTimeout(function () { window.location.href = 'login.html?role=customer'; }, 1500);
+          return;
+        }
+        var name = document.getElementById('cust-name').value.trim();
+        document.getElementById('cust-card-name').textContent = name;
+        document.getElementById('cust-card-id').textContent = cid;
+        document.getElementById('cust-card-avatar').src = UserStore.avatarFor({ full_name: name });
+        var details = ['Phone: ' + _regData.phone];
+        var city = document.getElementById('cust-city').value.trim();
+        var district = document.getElementById('cust-district').value;
+        var state = document.getElementById('cust-state').value;
+        if (district) details.push('Deliver to: ' + district + (state ? ', ' + state : ''));
+        if (city) details.push(city);
+        if (data.points_balance != null) details.push('Welcome points: ' + data.points_balance);
+        document.getElementById('cust-card-details').innerHTML = details.join('<br>');
+        document.getElementById('cust-go-login').onclick = function () {
+          window.location.href = 'customer.html';
+        };
+        showToast('Account created! Your Customer ID: ' + cid, 'success');
+        showCustStep(5);
+      }).catch(function (err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Create Customer Account <i class="fas fa-user-check"></i>';
+        showToast(err.message || 'Registration failed', 'danger');
+      });
+    }
+
     function generateQR(text) {
       var qr = document.getElementById('card-qr');
       qr.innerHTML = '';
@@ -1434,14 +1806,23 @@
     /* Init */
     document.addEventListener('DOMContentLoaded', function() {
       loadStates();
+      loadCustStates();
       initActivityChips();
       var params = new URLSearchParams(window.location.search);
-      if (params.get('phone')) {
-        document.getElementById('reg-phone').value = params.get('phone');
-        regSendOtp();
-      }
       if (params.get('email')) {
         document.getElementById('reg-email').value = params.get('email');
+      }
+      if (params.get('phone')) {
+        document.getElementById('reg-phone').value = params.get('phone');
+      }
+      /* Pick the account type up from the login screen if it sent one. The
+         chooser is still shown first for anyone arriving without a preference. */
+      var wanted = params.get('role') || (function () {
+        try { return sessionStorage.getItem('fa-signup-role'); } catch (e) { return null; }
+      })();
+      if (wanted === 'customer' || wanted === 'farmer') {
+        selectSignupRole(wanted);
+        if (params.get('phone')) regSendOtp();
       }
     });
   </script>

@@ -46,6 +46,18 @@ All data comes from the backend API via JWT tokens.
     return _read('fa-current-user-data', null);
   }
 
+  /*
+   * The role is only ever *displayed* from here. Access control lives on the
+   * server, which reads the role off the users row on every request; these
+   * helpers exist so the interface can show the right dashboard and the right
+   * navigation without a round trip, not to decide what anybody may reach.
+   */
+  function currentRole() {
+    var u = getUserData();
+    if (u && u.role) return u.role;
+    return localStorage.getItem('user-role') || 'farmer';
+  }
+
   var UserStore = {
     isLoggedIn: function () {
       return localStorage.getItem('fa-auth') === 'true' && !!localStorage.getItem('fa-auth-token');
@@ -59,6 +71,29 @@ All data comes from the backend API via JWT tokens.
       return localStorage.getItem('fa-auth-token');
     },
 
+    getRole: currentRole,
+
+    isCustomer: function () {
+      return currentRole() === 'customer';
+    },
+
+    isFarmer: function () {
+      return !this.isCustomer();
+    },
+
+    /* The Customer ID, for display only. Logins never send it as a selector. */
+    getCustomerId: function () {
+      var u = getUserData();
+      if (u && u.customer_id) return u.customer_id;
+      if (u && u.customer && u.customer.customer_id) return u.customer.customer_id;
+      return localStorage.getItem('customer-id') || null;
+    },
+
+    /* Where this account belongs after signing in. */
+    dashboardFor: function (role) {
+      return (role || currentRole()) === 'customer' ? 'customer.html' : 'index.html';
+    },
+
     setSession: function (userData) {
       _persist('fa-current-user-data', userData);
       localStorage.setItem('fa-auth', 'true');
@@ -66,6 +101,8 @@ All data comes from the backend API via JWT tokens.
       localStorage.setItem('session-last-activity', Date.now().toString());
       localStorage.setItem('user-role', userData.role || 'farmer');
       localStorage.setItem('user-name', userData.full_name || 'Farmer');
+      var cid = userData.customer_id || (userData.customer && userData.customer.customer_id);
+      if (cid) localStorage.setItem('customer-id', cid);
     },
 
     logout: function () {
@@ -75,6 +112,7 @@ All data comes from the backend API via JWT tokens.
       localStorage.removeItem('user-logged-in');
       localStorage.removeItem('user-name');
       localStorage.removeItem('user-role');
+      localStorage.removeItem('customer-id');
       localStorage.removeItem('session-last-activity');
       sessionStorage.clear();
     },

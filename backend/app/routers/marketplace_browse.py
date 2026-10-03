@@ -31,6 +31,7 @@ from app.models.user import User
 from app.models.marketplace import (
     MarketplaceCategory,
     MarketplaceListing,
+    MarketplaceCropListing,
     MarketplaceEnquiry,
     MarketplaceSale,
     MarketplaceSellerSettings,
@@ -39,7 +40,11 @@ from app.models.listing_cart import ListingCart, ListingCartItem, ListingPurchas
 from app.models.wallet import Wallet, WalletTransaction
 from app.utils.notification_helper import create_notification
 from app.routers.marketplace_seller import (
+    PUBLIC_LISTING_STATUSES,
+    SELL_TYPES,
+    _crop_detail_payload,
     _find_or_create_conversation,
+    _sale_state,
     _settings_payload,
 )
 
@@ -79,6 +84,17 @@ class ListingCartCheckout(BaseModel):
     wallet_pin: Optional[str] = Field(None, max_length=20)
 
 
+def _is_on_market(listing: MarketplaceListing) -> bool:
+    """True when a buyer may still see, enquire about and buy this listing.
+
+    The single place that answers "is this listing live?", so the browse feed,
+    the detail view, enquiries, the cart and purchase cannot drift apart when
+    :data:`PUBLIC_LISTING_STATUSES` changes. A reserved listing stays on the
+    market; a draft, paused, sold, cancelled or expired one does not.
+    """
+    return bool(listing.is_active and listing.status in PUBLIC_LISTING_STATUSES)
+
+
 def _browse_listing_payload(db: Session, listing: MarketplaceListing, settings: Optional[MarketplaceSellerSettings], viewer_id: str) -> dict:
     show_location = not settings or bool(settings.show_location_to_buyers)
     show_contact = not settings or bool(settings.show_contact_to_buyers)
@@ -90,6 +106,8 @@ def _browse_listing_payload(db: Session, listing: MarketplaceListing, settings: 
         "title": listing.title,
         "description": listing.description,
         "listing_type": listing_type,
+        "is_crop_listing": bool(getattr(listing, "crop_detail", None)),
+        **_sale_state(listing),
         "category": (
             {"id": listing.category.id, "name": listing.category.name, "slug": listing.category.slug,
              "group": listing.category.group} if listing.category else None
@@ -130,6 +148,7 @@ def _browse_listing_payload(db: Session, listing: MarketplaceListing, settings: 
         "is_owner": listing.user_id == viewer_id,
         "can_enquire": bool(listing.user_id != viewer_id and (not settings or bool(settings.allow_buyer_enquiries))),
         "can_rent": bool(listing.user_id != viewer_id and listing_type == "rent"),
+        "crop": _crop_detail_payload(db, getattr(listing, "crop_detail", None)),
     }
 
 
@@ -231,7 +250,7 @@ def browse_categories(
             db.query(func.count(MarketplaceListing.id))
             .filter(
                 MarketplaceListing.category_id == cat.id,
-                MarketplaceListing.status == "active",
+                MarketplaceListing.status.in_(PUBLIC_LISTING_STATUSES),
                 MarketplaceListing.is_active == True,  # noqa: E712
                 MarketplaceListing.is_deleted == False,  # noqa: E712
             )
@@ -239,8 +258,12 @@ def browse_categories(
         if listing_type == "rent":
             count_q = count_q.filter(MarketplaceListing.listing_type == "rent")
         elif listing_type == "sell":
+            # Sell Crop listings are sales too, so they must be counted as sell.
             count_q = count_q.filter(
-                or_(MarketplaceListing.listing_type == "sell", MarketplaceListing.listing_type.is_(None))
+                or_(
+                    MarketplaceListing.listing_type.in_(SELL_TYPES),
+                    MarketplaceListing.listing_type.is_(None),
+                )
             )
         rows.append({
             "id": cat.id,
@@ -260,17 +283,22 @@ def browse_listings(
     search: Optional[str] = None,
     category_id: Optional[str] = None,
     group: Optional[str] = Query(None, pattern="^(produce|items)$"),
-    listing_type: Optional[str] = Query(None, pattern="^(sell|rent)$"),
+    listing_type: Optional[str] = Query(None, pattern="^(sell|sell_crop|rent)$"),
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     location: Optional[str] = None,
     availability: Optional[str] = None,
+    crop_id: Optional[str] = None,
+    harvest_status: Optional[str] = Query(None, pattern="^(expected|ready|harvested|partially_harvested)$"),
+    farming_method: Optional[str] = Query(None, pattern="^(organic|conventional)$"),
     sort: Optional[str] = Query(None, pattern="^(newest|price_asc|price_desc)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     q = db.query(MarketplaceListing).join(MarketplaceCategory, MarketplaceListing.category_id == MarketplaceCategory.id).filter(
-        MarketplaceListing.status == "active",
+        # "active" plus "reserved": a listing held for a buyer is still on the
+        # market. A draft or cancelled listing is not.
+        MarketplaceListing.status.in_(PUBLIC_LISTING_STATUSES),
         MarketplaceListing.is_active == True,  # noqa: E712
         MarketplaceListing.is_deleted == False,  # noqa: E712
         MarketplaceListing.user_id != current_user.id,
@@ -278,12 +306,25 @@ def browse_listings(
     )
     if listing_type:
         # Legacy rows predate the column, so fall back to "sell" when NULL.
+        # A Sell Crop listing is still a sale, so it belongs to "sell" too.
         if listing_type == "sell":
             q = q.filter(
-                or_(MarketplaceListing.listing_type == "sell", MarketplaceListing.listing_type.is_(None))
+                or_(
+                    MarketplaceListing.listing_type.in_(SELL_TYPES),
+                    MarketplaceListing.listing_type.is_(None),
+                )
             )
         else:
             q = q.filter(MarketplaceListing.listing_type == listing_type)
+    if crop_id or harvest_status or farming_method:
+        # Crop filters run against the normalised crop-detail child table.
+        q = q.join(MarketplaceCropListing, MarketplaceCropListing.listing_id == MarketplaceListing.id)
+        if crop_id:
+            q = q.filter(MarketplaceCropListing.crop_id == crop_id)
+        if harvest_status:
+            q = q.filter(MarketplaceCropListing.harvest_status == harvest_status)
+        if farming_method:
+            q = q.filter(MarketplaceCropListing.farming_method == farming_method)
     if search:
         term = f"%{search}%"
         q = q.filter(
@@ -357,8 +398,8 @@ def browse_listing_detail(
         MarketplaceSellerSettings.user_id == listing.user_id
     ).first()
 
-    # A hidden (cancelled/sold/paused/expired) listing is only visible to its owner.
-    if not (listing.status == "active" and listing.is_active):
+    # A hidden (draft/paused/sold/cancelled/expired) listing is only visible to its owner.
+    if not _is_on_market(listing):
         if listing.user_id != current_user.id:
             raise HTTPException(status_code=404, detail="Listing not found")
         payload = _browse_listing_payload(db, listing, settings, current_user.id)
@@ -397,7 +438,7 @@ def create_enquiry(
         raise HTTPException(status_code=404, detail="Listing not found")
     if listing.user_id == current_user.id:
         raise HTTPException(status_code=400, detail="You cannot enquire about your own listing")
-    if not (listing.status == "active" and listing.is_active):
+    if not _is_on_market(listing):
         raise HTTPException(status_code=400, detail="This listing is no longer available")
 
     settings = db.query(MarketplaceSellerSettings).filter(
@@ -474,7 +515,7 @@ def _active_listing(db: Session, listing_id: str) -> MarketplaceListing:
     )
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
-    if not (listing.status == "active" and listing.is_active):
+    if not _is_on_market(listing):
         raise HTTPException(status_code=400, detail="This listing is no longer available")
     return listing
 
@@ -915,7 +956,7 @@ def _listing_cart_payload(db: Session, cart: ListingCart) -> dict:
             stale.append(item)
             continue
         remaining = _listing_remaining(listing)
-        buyable = bool(listing.status == "active" and listing.is_active and remaining > 0)
+        buyable = bool(_is_on_market(listing) and remaining > 0)
         price = round(float(listing.price or 0), 2)
         seller = db.query(User).filter(User.id == listing.user_id).first()
         items.append({
@@ -1095,7 +1136,7 @@ def checkout_listing_cart(
             raise HTTPException(status_code=400, detail="A cart item is no longer available")
         if listing.user_id == current_user.id:
             raise HTTPException(status_code=400, detail="You cannot buy your own listing")
-        if not (listing.status == "active" and listing.is_active):
+        if not _is_on_market(listing):
             raise HTTPException(status_code=400, detail=f"'{listing.title}' is no longer available")
         remaining = _listing_remaining(listing)
         quantity = float(item.quantity or 0)

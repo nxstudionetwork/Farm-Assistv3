@@ -128,6 +128,11 @@ class Crop(Base):
     #: ["open_field", "soil", "protected", "hydroponic"]. Derived by the catalog
     #: seeder so the UI can filter by environment without a second crop list.
     suitable_cultivation_methods = Column(JSON, nullable=True)
+    #: Nutrient solution targets for soilless culture, e.g.
+    #: {"ph": [5.5, 6.5], "ec": [1.2, 2.0], "days": 40, "group": "Leafy"}.
+    #: Lives on the crop so hydroponics reads its targets from the same catalog
+    #: as every other module instead of keeping a parallel hardcoded crop list.
+    hydroponic_targets = Column(JSON, nullable=True)
 
     # --- catalog bookkeeping ------------------------------------------------
     #: True for the shared reference catalog, False for farmer-created crops.

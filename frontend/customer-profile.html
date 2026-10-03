@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="customer-profile">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - My Profile</title>
+  <meta name="api-base-url" content="/api/v1">
+  <script>window._API_BASE_URL = '/api/v1';</script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .prof-head{background:linear-gradient(135deg,#0A2417 0%,#123A26 45%,#1B5E3F 100%);border-radius:var(--radius-xl);padding:22px;color:#fff;margin-bottom:16px;box-shadow:0 8px 32px rgba(27,67,50,.25);position:relative;overflow:hidden}
+    .prof-head::after{content:'';position:absolute;top:-70px;right:-70px;width:210px;height:210px;background:rgba(255,255,255,.04);border-radius:50%}
+    .prof-top{display:flex;align-items:center;gap:14px;position:relative;z-index:1}
+    .prof-avatar{width:62px;height:62px;border-radius:18px;border:2px solid rgba(255,255,255,.45);object-fit:cover;background:#1B5E3F}
+    .prof-name{font-size:19px;font-weight:800;color:#fff;line-height:1.2}
+    .prof-id{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.16);font-size:11.5px;font-weight:700;letter-spacing:.4px}
+    .prof-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px;position:relative;z-index:1}
+    .prof-stat{background:rgba(255,255,255,.1);border-radius:13px;padding:11px 8px;text-align:center}
+    .prof-stat .ps-num{font-size:18px;font-weight:800;color:#fff;line-height:1.2}
+    .prof-stat .ps-label{font-size:9.5px;opacity:.8;text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+    .detail-list{display:flex;flex-direction:column}
+    .detail-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light)}
+    .detail-row:last-child{border-bottom:0}
+    .detail-row .dr-icon{width:34px;height:34px;border-radius:11px;background:var(--soft-green);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:13px;flex:0 0 auto}
+    .detail-row .dr-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px}
+    .detail-row .dr-value{font-size:13.5px;font-weight:600;margin-top:1px;word-break:break-word}
+    .addr-card{border:1px solid var(--border-light);border-radius:13px;padding:13px;margin-bottom:10px}
+    .addr-card.primary{border-color:var(--primary-green);background:var(--soft-green)}
+    .addr-card .ac-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+    .addr-card .ac-line{font-size:13px;font-weight:600}
+    .addr-card .ac-sub{font-size:11.5px;color:var(--text-muted);margin-top:2px}
+    .addr-actions{display:flex;gap:8px;margin-top:10px}
+    .points-row{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--border-light)}
+    .points-row:last-child{border-bottom:0}
+    .points-row .pr-delta{font-size:14px;font-weight:800;min-width:52px;text-align:right}
+    .points-row .pr-delta.plus{color:var(--primary-green)}
+    .points-row .pr-delta.minus{color:var(--danger)}
+    .points-row .pr-reason{font-size:12.5px;font-weight:600;text-transform:capitalize}
+    .points-row .pr-date{font-size:10.5px;color:var(--text-muted)}
+    .points-row .pr-bal{margin-left:auto;font-size:11.5px;color:var(--text-muted);font-weight:700}
+  </style>
+</head>
+<body>
+  <main class="page-container">
+
+    <section class="prof-head">
+      <div class="prof-top">
+        <img class="prof-avatar" id="pf-avatar" src="" alt="Profile">
+        <div style="min-width:0">
+          <div class="prof-name" id="pf-name">Customer</div>
+          <div class="prof-id"><i class="fas fa-id-card"></i> <span id="pf-id">FA-CS-000000</span></div>
+          <div style="margin-top:7px;font-size:11px" id="pf-verification">Verification status</div>
+        </div>
+      </div>
+      <div class="prof-stats">
+        <a class="prof-stat" href="customer-orders.html" style="text-decoration:none;color:inherit">
+          <div class="ps-num" id="pf-orders">0</div><div class="ps-label">Orders</div>
+        </a>
+        <a class="prof-stat" href="marketplace.html#wishlist" style="text-decoration:none;color:inherit">
+          <div class="ps-num" id="pf-wishlist">0</div><div class="ps-label">Wishlist</div>
+        </a>
+        <div class="prof-stat">
+          <div class="ps-num" id="pf-points">0</div><div class="ps-label">Points</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Details -->
+    <section class="card-premium" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <h3 style="font-size:15px"><i class="fas fa-user" style="color:var(--primary-green);margin-right:6px"></i> Personal Details</h3>
+        <button class="mini-btn" id="pf-edit-toggle" type="button">Edit</button>
+      </div>
+      <div class="detail-list">
+        <div class="detail-row">
+          <span class="dr-icon"><i class="fas fa-user"></i></span>
+          <div><div class="dr-label">Full Name</div><div class="dr-value" id="pf-detail-name">-</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="dr-icon"><i class="fas fa-mobile-screen"></i></span>
+          <div><div class="dr-label">Phone</div><div class="dr-value" id="pf-detail-phone">-</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="dr-icon"><i class="fas fa-envelope"></i></span>
+          <div><div class="dr-label">Email</div><div class="dr-value" id="pf-detail-email">-</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="dr-icon"><i class="fas fa-calendar"></i></span>
+          <div><div class="dr-label">Date of Birth</div><div class="dr-value" id="pf-detail-dob">Not provided</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="dr-icon"><i class="fas fa-calendar-plus"></i></span>
+          <div><div class="dr-label">Member Since</div><div class="dr-value" id="pf-detail-created">-</div></div>
+        </div>
+      </div>
+
+      <!-- Edit form, hidden until Edit is tapped -->
+      <div id="pf-edit-form" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light)">
+        <div class="form-group" style="margin-bottom:12px">
+          <label for="pf-edit-name">Full Name</label>
+          <input type="text" id="pf-edit-name" placeholder="Your name">
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label for="pf-edit-email">Email</label>
+          <input type="email" id="pf-edit-email" placeholder="you@example.com">
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label for="pf-edit-dob">Date of Birth</label>
+          <input type="date" id="pf-edit-dob">
+        </div>
+        <div style="display:flex;gap:9px">
+          <button class="btn-submit" style="flex:1" id="pf-save" type="button">Save Changes</button>
+          <button class="btn-secondary" style="flex:0 0 auto" id="pf-cancel" type="button">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Points -->
+    <section class="card-premium" style="margin-bottom:16px" id="points">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <h3 style="font-size:15px"><i class="fas fa-star" style="color:#E9B640;margin-right:6px"></i> Points</h3>
+        <span style="font-size:12px;font-weight:800;color:var(--primary-green)" id="pf-points-balance">0 pts</span>
+      </div>
+      <div id="pf-points-history"><div class="loading-shimmer"></div></div>
+    </section>
+
+    <!-- Addresses -->
+    <section class="card-premium" style="margin-bottom:16px" id="addresses">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h3 style="font-size:15px"><i class="fas fa-location-dot" style="color:var(--primary-green);margin-right:6px"></i> Delivery Addresses</h3>
+        <button class="mini-btn" id="addr-add-toggle" type="button">+ Add</button>
+      </div>
+      <div id="pf-addresses"><div class="loading-shimmer"></div></div>
+
+      <div id="addr-form-wrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light)">
+        <div class="form-group" style="margin-bottom:11px">
+          <label for="addr-line">Address</label>
+          <input type="text" id="addr-line" placeholder="House / street">
+        </div>
+        <div class="form-group" style="margin-bottom:11px">
+          <label for="addr-city">City / Town</label>
+          <input type="text" id="addr-city" placeholder="Warangal">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
+          <div class="form-group" style="margin:0">
+            <label for="addr-state">State</label>
+            <input type="text" id="addr-state" placeholder="Telangana">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label for="addr-district">District</label>
+            <input type="text" id="addr-district" placeholder="Warangal">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:11px">
+          <label for="addr-pincode">PIN Code</label>
+          <input type="text" id="addr-pincode" placeholder="506002" maxlength="6" inputmode="numeric">
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-secondary);margin-bottom:12px">
+          <input type="checkbox" id="addr-primary"> Set as my primary delivery address
+        </label>
+        <div style="display:flex;gap:9px">
+          <button class="btn-submit" style="flex:1" id="addr-save" type="button">Save Address</button>
+          <button class="btn-secondary" style="flex:0 0 auto" id="addr-cancel" type="button">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Shortcuts -->
+    <section class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px;margin-bottom:12px"><i class="fas fa-compass" style="color:var(--primary-green);margin-right:6px"></i> My Account</h3>
+      <div class="detail-list">
+        <a class="detail-row" href="customer-orders.html" style="text-decoration:none;color:inherit">
+          <span class="dr-icon"><i class="fas fa-box-open"></i></span>
+          <div><div class="dr-label">Orders</div><div class="dr-value">Order history &amp; tracking</div></div>
+          <i class="fas fa-chevron-right" style="margin-left:auto;color:var(--text-muted)"></i>
+        </a>
+        <a class="detail-row" href="marketplace.html#wishlist" style="text-decoration:none;color:inherit">
+          <span class="dr-icon"><i class="fas fa-heart"></i></span>
+          <div><div class="dr-label">Wishlist</div><div class="dr-value">Saved products</div></div>
+          <i class="fas fa-chevron-right" style="margin-left:auto;color:var(--text-muted)"></i>
+        </a>
+        <a class="detail-row" href="customer-grow.html" style="text-decoration:none;color:inherit">
+          <span class="dr-icon"><i class="fas fa-seedling"></i></span>
+          <div><div class="dr-label">My Growing</div><div class="dr-value">Plants you are growing</div></div>
+          <i class="fas fa-chevron-right" style="margin-left:auto;color:var(--text-muted)"></i>
+        </a>
+        <a class="detail-row" href="customer-settings.html" style="text-decoration:none;color:inherit">
+          <span class="dr-icon"><i class="fas fa-gear"></i></span>
+          <div><div class="dr-label">Preferences</div><div class="dr-value">Notifications, shopping, grow &amp; more</div></div>
+          <i class="fas fa-chevron-right" style="margin-left:auto;color:var(--text-muted)"></i>
+        </a>
+      </div>
+    </section>
+
+    <!-- Security -->
+    <section class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px;margin-bottom:12px"><i class="fas fa-shield-halved" style="color:var(--primary-green);margin-right:6px"></i> Security</h3>
+      <div class="detail-list">
+        <div class="detail-row">
+          <span class="dr-icon"><i class="fas fa-mobile-screen"></i></span>
+          <div><div class="dr-label">Phone Verification</div><div class="dr-value" id="pf-phone-verified">-</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="dr-icon"><i class="fas fa-envelope"></i></span>
+          <div><div class="dr-label">Email Verification</div><div class="dr-value" id="pf-email-verified">-</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="dr-icon"><i class="fas fa-key"></i></span>
+          <div><div class="dr-label">PIN</div><div class="dr-value">Change your 4-digit sign-in PIN</div></div>
+          <button class="mini-btn" id="pf-change-pin" type="button" style="margin-left:auto">Change</button>
+        </div>
+        <div class="detail-row" id="pf-pin-row" style="display:none">
+          <div style="width:100%">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+              <input type="password" id="pf-old-pin" placeholder="Current PIN" maxlength="4" inputmode="numeric">
+              <input type="password" id="pf-new-pin" placeholder="New PIN" maxlength="4" inputmode="numeric">
+            </div>
+            <button class="btn-submit" id="pf-pin-save" type="button">Update PIN</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <button class="btn-submit" id="pf-logout" style="background:linear-gradient(135deg,#C0392B,#E74C3C);margin-bottom:20px">
+      <i class="fas fa-right-from-bracket"></i> Log Out
+    </button>
+
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    /*
+     * Customer Profile.
+     *
+     * Reached from the dashboard header. Shows the Customer ID, the
+     * verification status, contact details, addresses, orders, wishlist,
+     * points, preferences, security and sign-out.
+     *
+     * Every call goes to /api/v1/customers/me..., which resolves the customer
+     * from the bearer token. Nothing on this page asks for a customer id.
+     */
+    (function guardRole() {
+      var role = (window.UserStore && UserStore.getRole) ? UserStore.getRole() : 'farmer';
+      if (role !== 'customer') window.location.replace('index.html');
+    })();
+
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function shortDate(v) {
+      if (!v) return '-';
+      var d = new Date(v);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function toast(msg, type) {
+      if (window.FAShowToast) return FAShowToast(msg, type);
+      if (window.showToast) return showToast(msg, type);
+      console.log(msg);
+    }
+
+    var profile = null;
+
+    function renderProfile(p) {
+      profile = p;
+      var name = p.full_name || 'Customer';
+
+      document.getElementById('pf-name').textContent = name;
+      document.getElementById('pf-id').textContent = p.customer_id || 'FA-CS-000000';
+      document.getElementById('pf-avatar').src = p.profile_image ||
+        (window.UserStore && UserStore.avatarFor ? UserStore.avatarFor({ full_name: name }) : '');
+
+      var status = p.verification_status || 'pending';
+      document.getElementById('pf-verification').innerHTML =
+        status === 'verified'
+          ? '<i class="fas fa-circle-check" style="color:#81c784"></i> Verified'
+          : '<i class="fas fa-hourglass-half" style="color:#FFE8A3"></i> ' + esc(status.charAt(0).toUpperCase() + status.slice(1));
+
+      var stats = p.stats || {};
+      document.getElementById('pf-orders').textContent = stats.orders || 0;
+      document.getElementById('pf-wishlist').textContent = stats.wishlist || 0;
+      document.getElementById('pf-points').textContent = p.points_balance || 0;
+
+      document.getElementById('pf-detail-name').textContent = name;
+      document.getElementById('pf-detail-phone').textContent = p.phone_number || '-';
+      document.getElementById('pf-detail-email').textContent = p.email || 'Not provided';
+      document.getElementById('pf-detail-dob').textContent = p.date_of_birth ? shortDate(p.date_of_birth) : 'Not provided';
+      document.getElementById('pf-detail-created').textContent = shortDate(p.created_at);
+
+      document.getElementById('pf-phone-verified').innerHTML = p.phone_verified
+        ? '<span style="color:var(--primary-green)"><i class="fas fa-check"></i> Verified</span>'
+        : '<span style="color:var(--text-muted)">Not verified</span>';
+      document.getElementById('pf-email-verified').innerHTML = p.email_verified
+        ? '<span style="color:var(--primary-green)"><i class="fas fa-check"></i> Verified</span>'
+        : '<span style="color:var(--text-muted)">Not verified</span>';
+
+      document.getElementById('pf-edit-name').value = name;
+      document.getElementById('pf-edit-email').value = p.email || '';
+      document.getElementById('pf-edit-dob').value = p.date_of_birth || '';
+
+      renderAddresses(p.addresses || []);
+    }
+
+    function renderAddresses(list) {
+      var host = document.getElementById('pf-addresses');
+      if (!list.length) {
+        host.innerHTML = '<div class="empty-state" style="padding:14px 0">' +
+          '<i class="fas fa-map-marker-alt"></i><p>No delivery addresses saved yet.</p></div>';
+        return;
+      }
+      host.innerHTML = list.map(function (a) {
+        var parts = [a.address_line, a.village, a.mandal, a.district, a.state, a.pincode]
+          .filter(Boolean);
+        return '<div class="addr-card' + (a.is_primary ? ' primary' : '') + '">' +
+          '<div class="ac-top">' +
+            '<span class="ac-line">' + esc(parts[0] || 'Address') + '</span>' +
+            (a.is_primary ? '<span class="badge-status success">Primary</span>' : '') +
+          '</div>' +
+          '<div class="ac-sub">' + esc(parts.slice(1).join(', ')) + '</div>' +
+          '<div class="addr-actions">' +
+            '<button class="mini-btn" data-make-primary="' + esc(a.id) + '"' +
+              (a.is_primary ? ' disabled style="opacity:.5"' : '') + '>Make Primary</button>' +
+            '<button class="mini-btn danger" data-delete-address="' + esc(a.id) + '">Remove</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function loadPoints() {
+      API.Customer.getPoints(25).then(function (data) {
+        if (!data) return;
+        document.getElementById('pf-points-balance').textContent = (data.balance || 0) + ' pts';
+        var history = data.history || [];
+        var host = document.getElementById('pf-points-history');
+        if (!history.length) {
+          host.innerHTML = '<div class="empty-state" style="padding:12px 0">' +
+            '<i class="fas fa-star"></i><p>No points activity yet.</p></div>';
+          return;
+        }
+        host.innerHTML = history.map(function (e) {
+          var plus = (e.points || 0) >= 0;
+          return '<div class="points-row">' +
+            '<span class="dr-icon"><i class="fas fa-' + (plus ? 'plus' : 'minus') + '"></i></span>' +
+            '<div>' +
+              '<div class="pr-reason">' + esc((e.reason || 'points').replace(/_/g, ' ')) + '</div>' +
+              '<div class="pr-date">' + shortDate(e.created_at) + '</div>' +
+            '</div>' +
+            '<span class="pr-delta ' + (plus ? 'plus' : 'minus') + '">' + (plus ? '+' : '') + e.points + '</span>' +
+            '<span class="pr-bal">' + e.balance_after + '</span>' +
+          '</div>';
+        }).join('');
+      }).catch(function () {
+        document.getElementById('pf-points-history').innerHTML =
+          '<div class="empty-state" style="padding:12px 0"><p>Could not load points history.</p></div>';
+      });
+    }
+
+    function loadProfile() {
+      API.Customer.getMe().then(renderProfile).catch(function (err) {
+        var msg = (err && err.status === 403)
+          ? 'This account is not a customer account.'
+          : 'Could not load your profile.';
+        document.getElementById('pf-name').textContent = msg;
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      loadProfile();
+      loadPoints();
+
+      // --- Edit personal details ---
+      var editForm = document.getElementById('pf-edit-form');
+      document.getElementById('pf-edit-toggle').addEventListener('click', function () {
+        var open = editForm.style.display !== 'none';
+        editForm.style.display = open ? 'none' : 'block';
+        this.textContent = open ? 'Edit' : 'Close';
+      });
+      document.getElementById('pf-cancel').addEventListener('click', function () {
+        editForm.style.display = 'none';
+        document.getElementById('pf-edit-toggle').textContent = 'Edit';
+      });
+      document.getElementById('pf-save').addEventListener('click', function () {
+        var btn = this;
+        btn.disabled = true;
+        API.Customer.updateMe({
+          full_name: document.getElementById('pf-edit-name').value.trim(),
+          email: document.getElementById('pf-edit-email').value.trim() || null,
+          date_of_birth: document.getElementById('pf-edit-dob').value || null
+        }).then(function (data) {
+          btn.disabled = false;
+          toast('Profile updated', 'success');
+          if (data) renderProfile(data);
+          editForm.style.display = 'none';
+          document.getElementById('pf-edit-toggle').textContent = 'Edit';
+        }).catch(function (err) {
+          btn.disabled = false;
+          toast((err && err.message) || 'Could not save changes', 'danger');
+        });
+      });
+
+      // --- Addresses ---
+      var addrForm = document.getElementById('addr-form-wrap');
+      document.getElementById('addr-add-toggle').addEventListener('click', function () {
+        var open = addrForm.style.display !== 'none';
+        addrForm.style.display = open ? 'none' : 'block';
+        this.textContent = open ? '+ Add' : 'Close';
+      });
+      document.getElementById('addr-cancel').addEventListener('click', function () {
+        addrForm.style.display = 'none';
+        document.getElementById('addr-add-toggle').textContent = '+ Add';
+      });
+      document.getElementById('addr-save').addEventListener('click', function () {
+        var btn = this;
+        var line = document.getElementById('addr-line').value.trim();
+        var city = document.getElementById('addr-city').value.trim();
+        var state = document.getElementById('addr-state').value.trim();
+        var district = document.getElementById('addr-district').value.trim();
+        var pincode = document.getElementById('addr-pincode').value.trim();
+        if (line.length < 5 || !city || !state || !district || !/^\d{6}$/.test(pincode)) {
+          toast('Please complete the address, city, state, district and a 6-digit PIN code', 'danger');
+          return;
+        }
+        btn.disabled = true;
+        API.Customer.addAddress({
+          address_line: line, city: city, state: state, district: district,
+          pincode: pincode, is_primary: document.getElementById('addr-primary').checked
+        }).then(function () {
+          btn.disabled = false;
+          toast('Address saved', 'success');
+          addrForm.style.display = 'none';
+          document.getElementById('addr-add-toggle').textContent = '+ Add';
+          ['addr-line', 'addr-city', 'addr-state', 'addr-district', 'addr-pincode']
+            .forEach(function (id) { document.getElementById(id).value = ''; });
+          loadProfile();
+        }).catch(function (err) {
+          btn.disabled = false;
+          toast((err && err.message) || 'Could not save address', 'danger');
+        });
+      });
+
+      document.getElementById('pf-addresses').addEventListener('click', function (e) {
+        var makePrimary = e.target.getAttribute('data-make-primary');
+        var del = e.target.getAttribute('data-delete-address');
+        if (makePrimary) {
+          API.Customer.updateAddress(makePrimary, { is_primary: true }).then(function () {
+            toast('Primary address updated', 'success');
+            loadProfile();
+          }).catch(function (err) { toast((err && err.message) || 'Could not update', 'danger'); });
+        } else if (del) {
+          if (!confirm('Remove this address?')) return;
+          API.Customer.deleteAddress(del).then(function () {
+            toast('Address removed', 'success');
+            loadProfile();
+          }).catch(function (err) { toast((err && err.message) || 'Could not remove', 'danger'); });
+        }
+      });
+
+      // --- Security ---
+      document.getElementById('pf-change-pin').addEventListener('click', function () {
+        var row = document.getElementById('pf-pin-row');
+        row.style.display = row.style.display === 'none' ? 'block' : 'none';
+      });
+      document.getElementById('pf-pin-save').addEventListener('click', function () {
+        var oldPin = document.getElementById('pf-old-pin').value.trim();
+        var newPin = document.getElementById('pf-new-pin').value.trim();
+        if (oldPin.length !== 4 || newPin.length !== 4) { toast('Enter both 4-digit PINs', 'danger'); return; }
+        var btn = this;
+        btn.disabled = true;
+        API.Auth.changePin(oldPin, newPin).then(function () {
+          btn.disabled = false;
+          toast('PIN updated', 'success');
+          document.getElementById('pf-pin-row').style.display = 'none';
+          document.getElementById('pf-old-pin').value = '';
+          document.getElementById('pf-new-pin').value = '';
+        }).catch(function (err) {
+          btn.disabled = false;
+          toast((err && err.message) || 'Could not update PIN', 'danger');
+        });
+      });
+
+      // --- Log out ---
+      document.getElementById('pf-logout').addEventListener('click', function () {
+        if (!confirm('Log out of your customer account?')) return;
+        API.Auth.logout().then(function () {
+          window.location.href = 'login.html?role=customer';
+        }).catch(function () {
+          window.location.href = 'login.html?role=customer';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

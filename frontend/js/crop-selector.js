@@ -54,19 +54,184 @@
     return name;
   }
 
+  /**
+   * UI strings for the selector's own chrome.
+   *
+   * Crop *names* are multilingual through the API (`local_names`), keyed by a
+   * language-independent crop id. The component's labels are translated here so
+   * every page gets the same wording; callers can override any of it.
+   */
+  var STRINGS = {
+    en: {
+      placeholder: 'Search a crop...',
+      empty: 'No matching crop',
+      searchLabel: 'Search crops',
+      domainLabel: 'Filter by agricultural domain',
+      categoryLabel: 'Filter by crop category',
+      methodFilterLabel: 'Filter by cultivation method',
+      cropLabel: 'Crop',
+      methodLabel: 'Cultivation method',
+      varietyLabel: 'Variety',
+      allDomains: 'All domains',
+      allCategories: 'All categories',
+      anyMethod: 'Any cultivation',
+      varietyOptional: 'Variety (optional)',
+      addVariety: '+ Add another variety',
+      addCrop: 'Add crop not listed',
+      unavailable: 'Crop service unavailable.',
+      loading: 'Loading crop catalog...',
+      noCrops: 'No crops available yet.',
+      shownOne: '1 crop shown',
+      shownMany: function (n) { return n + ' crops shown'; },
+      available: function (n) { return n + ' crops available'; },
+      emptyHint: function (empty) {
+        return empty + '. Try a different search, or add the crop manually.';
+      },
+      season: 'season',
+      climate: 'climate',
+      soil: 'soil',
+      water: 'water',
+      stages: 'stages',
+      days: 'days',
+      varietyPrompt: 'Name of the variety you are growing',
+      cropPrompt: 'Name of the crop',
+      varietyFailed: 'Could not add that variety.',
+      cropFailed: 'Could not add that crop.'
+    },
+    hi: {
+      placeholder: 'फसल खोजें...',
+      empty: 'कोई फसल नहीं मिली',
+      searchLabel: 'फसल खोजें',
+      domainLabel: 'कृषि क्षेत्र से छाँटें',
+      categoryLabel: 'फसल श्रेणी से छाँटें',
+      methodLabel: 'खेती विधि से छाँटें',
+      cropLabel: 'फसल',
+      methodFilterLabel: 'खेती विधि से छाँटें',
+      varietyLabel: 'किस्म',
+      allDomains: 'सभी क्षेत्र',
+      allCategories: 'सभी श्रेणियाँ',
+      anyMethod: 'कोई भी विधि',
+      varietyOptional: 'किस्म (वैकल्पिक)',
+      addVariety: '+ दूसरी किस्म जोड़ें',
+      addCrop: 'सूची में नहीं है? जोड़ें',
+      unavailable: 'फसल सेवा उपलब्ध नहीं है।',
+      loading: 'फसल सूची लोड हो रही है...',
+      noCrops: 'अभी कोई फसल उपलब्ध नहीं।',
+      shownOne: '1 फसल दिख रही है',
+      shownMany: function (n) { return n + ' फसलें दिख रही हैं'; },
+      available: function (n) { return n + ' फसलें उपलब्ध'; },
+      emptyHint: function (empty) {
+        return empty + '. दूसरी खोज आज़माएँ, या फसल स्वयं जोड़ें।';
+      },
+      season: 'मौसम',
+      climate: 'जलवायु',
+      soil: 'मिट्टी',
+      water: 'पानी',
+      stages: 'अवस्थाएँ',
+      days: 'दिन',
+      varietyPrompt: 'आपकी किस्म का नाम',
+      cropPrompt: 'फसल का नाम',
+      varietyFailed: 'वह किस्म जोड़ी नहीं जा सकी।',
+      cropFailed: 'वह फसल जोड़ी नहीं जा सकी।'
+    },
+    te: {
+      placeholder: 'పంటను వెతకండి...',
+      empty: 'సరిపోలిన పంట లేదు',
+      searchLabel: 'పంటలను వెతకండి',
+      domainLabel: 'వ్యవసాయ రంగం ద్వారా వడపోత',
+      categoryLabel: 'పంట వర్గం ద్వారా వడపోత',
+      methodFilterLabel: 'సాగు పద్ధతి ద్వారా వడపోత',
+      cropLabel: 'పంట',
+      methodLabel: 'సాగు పద్ధతి',
+      varietyLabel: 'రకం',
+      allDomains: 'అన్ని రంగాలు',
+      allCategories: 'అన్ని వర్గాలు',
+      anyMethod: 'ఏదైనా పద్ధతి',
+      varietyOptional: 'రకం (ఐచ్ఛికం)',
+      addVariety: '+ మరో రకం జోడించండి',
+      addCrop: 'జాబితాలో లేదు - జోడించండి',
+      unavailable: 'పంట సేవ అందుబాటులో లేదు.',
+      loading: 'పంట జాబితా లోడ్ అవుతోంది...',
+      noCrops: 'ఇంకా పంటలు అందుబాటులో లేవు.',
+      shownOne: '1 పంట కనిపిస్తోంది',
+      shownMany: function (n) { return n + ' పంటలు కనిపిస్తున్నాయి'; },
+      available: function (n) { return n + ' పంటలు అందుబాటులో'; },
+      emptyHint: function (empty) {
+        return empty + '. వేరే అన్వేషణ ప్రయత్నించండి లేదా పంటను మానuallyగా జోడించండి.';
+      },
+      season: 'సీజన్',
+      climate: 'వాతావరణం',
+      soil: 'నేల',
+      water: 'నీరు',
+      stages: 'దశలు',
+      days: 'రోజులు',
+      varietyPrompt: 'మీరు పెంచుతున్న రకం పేరు',
+      cropPrompt: 'పంట పేరు',
+      varietyFailed: 'ఆ రకం జోడించలేకపోయాము.',
+      cropFailed: 'ఆ పంట జోడించలేకపోయాము.'
+    }
+  };
+
+  /** Pick a string set for the active language, falling back to English. */
+  function stringsFor(lang) {
+    return STRINGS[lang] || STRINGS.en;
+  }
+
+  /** Overlay caller-supplied labels on the language's strings. */
+  function mergeText(overrides) {
+    var base = stringsFor(resolveLang(overrides && overrides.lang));
+    if (!overrides || !overrides.text) return base;
+    var merged = {};
+    Object.keys(base).forEach(function (key) { merged[key] = base[key]; });
+    Object.keys(overrides.text).forEach(function (key) { merged[key] = overrides.text[key]; });
+    return merged;
+  }
+
+  /** Read a string that may be a plain value or a function. */
+  function t(text, key, arg) {
+    var value = text[key];
+    return typeof value === 'function' ? value(arg) : value;
+  }
+
+  /**
+   * Active UI language.
+   *
+   * The farmer's own preference wins: `UserStore.getCurrentUser().preferred_language`
+   * is the only place the choice is actually written (signup, settings). The
+   * `<html lang>` attribute is only a last resort, because it is almost always
+   * set to a truthy value such as "en" and would otherwise always win.
+   */
+  function resolveLang(explicit) {
+    if (explicit) return explicit;
+    var store = global.UserStore;
+    if (store && typeof store.getCurrentUser === 'function') {
+      try {
+        var user = store.getCurrentUser();
+        if (user && user.preferred_language) return user.preferred_language;
+      } catch (err) { /* storage unavailable */ }
+    }
+    try {
+      var stored = global.localStorage && localStorage.getItem('fa-language');
+      if (stored) return stored;
+    } catch (err) { /* storage unavailable */ }
+    var docLang = document.documentElement && document.documentElement.lang;
+    return docLang || 'en';
+  }
+
   function CropSelector(options) {
     options = options || {};
-    this.lang = options.lang ||
-      (document.documentElement && document.documentElement.lang) ||
-      (global.localStorage && localStorage.getItem('fa-language')) || 'en';
+    this.lang = resolveLang(options.lang);
     this.onChange = options.onChange || function () {};
     this.allowCustom = options.allowCustom !== false;
     this.required = options.required === true;
-    this.placeholder = options.placeholder || 'Search a crop...';
-    this.emptyText = options.emptyText || 'No matching crop';
+    this.text = mergeText(options.text);
+    this.placeholder = this.text.placeholder;
+    this.emptyText = this.text.empty;
 
     this.crops = [];
     this.methods = [];
+    this.domains = [];
+    this.categories = [];
     this.selected = null;
     this.varieties = [];
 
@@ -85,11 +250,13 @@
   CropSelector.prototype._build = function () {
     var self = this;
 
+    var text = this.text;
+
     var search = el('div', 'crop-selector__search');
     this.searchInput = el('input', 'crop-selector__input');
     this.searchInput.type = 'search';
     this.searchInput.placeholder = this.placeholder;
-    this.searchInput.setAttribute('aria-label', this.placeholder);
+    this.searchInput.setAttribute('aria-label', text.searchLabel);
     this.searchInput.addEventListener('input', function () {
       self._filters.q = self.searchInput.value || '';
       self._renderCropOptions();
@@ -99,7 +266,7 @@
     var filters = el('div', 'crop-selector__filters');
 
     this.domainSelect = el('select', 'crop-selector__select');
-    this.domainSelect.setAttribute('aria-label', 'Filter by agricultural domain');
+    this.domainSelect.setAttribute('aria-label', text.domainLabel);
     this.domainSelect.addEventListener('change', function () {
       self._filters.domain = self.domainSelect.value;
       self._filters.category_code = '';
@@ -110,7 +277,7 @@
     filters.appendChild(this.domainSelect);
 
     this.categorySelect = el('select', 'crop-selector__select');
-    this.categorySelect.setAttribute('aria-label', 'Filter by crop category');
+    this.categorySelect.setAttribute('aria-label', text.categoryLabel);
     this.categorySelect.addEventListener('change', function () {
       self._filters.category_code = self.categorySelect.value;
       self._renderCropOptions();
@@ -118,7 +285,7 @@
     filters.appendChild(this.categorySelect);
 
     this.methodSelect = el('select', 'crop-selector__select');
-    this.methodSelect.setAttribute('aria-label', 'Filter by cultivation method');
+    this.methodSelect.setAttribute('aria-label', text.methodFilterLabel);
     this.methodSelect.addEventListener('change', function () {
       self._filters.cultivation_method = self.methodSelect.value;
       self._renderCropOptions();
@@ -127,7 +294,7 @@
 
     var row = el('div', 'crop-selector__row');
     this.cropSelect = el('select', 'crop-selector__select crop-selector__select--crop');
-    this.cropSelect.setAttribute('aria-label', 'Crop');
+    this.cropSelect.setAttribute('aria-label', text.cropLabel);
     if (this.required) this.cropSelect.required = true;
     this.cropSelect.addEventListener('change', function () {
       self._onCropChange();
@@ -136,18 +303,18 @@
 
     var methodRow = el('div', 'crop-selector__row');
     this.methodField = el('select', 'crop-selector__select');
-    this.methodField.setAttribute('aria-label', 'Cultivation method');
+    this.methodField.setAttribute('aria-label', text.methodLabel);
     this.methodField.addEventListener('change', function () {
       self._emit();
     });
     methodRow.appendChild(this.methodField);
 
     this.varietySelect = el('select', 'crop-selector__select');
-    this.varietySelect.setAttribute('aria-label', 'Variety');
+    this.varietySelect.setAttribute('aria-label', text.varietyLabel);
     this.varietySelect.addEventListener('change', function () {
       if (this.value === '__new__') {
         var typed = global.prompt
-          ? global.prompt('Name of the variety you are growing')
+          ? global.prompt(text.varietyPrompt)
           : null;
         this.value = '';
         if (typed && typed.trim()) {
@@ -161,7 +328,7 @@
 
     var custom = el('button', 'btn btn--ghost crop-selector__custom');
     custom.type = 'button';
-    custom.textContent = 'Add crop not listed';
+    custom.textContent = text.addCrop;
     custom.addEventListener('click', function () {
       self._addCustomCrop();
     });
@@ -186,26 +353,31 @@
   CropSelector.prototype.load = function () {
     var self = this;
     if (!api) {
-      this._setStatus('Crop service unavailable.');
+      this._setStatus(this.text.unavailable);
       return Promise.resolve();
     }
-    this._setStatus('Loading crop catalog...');
+    this._setStatus(this.text.loading);
     return Promise.all([
       api.listCrops({ page_size: 500 }).catch(function () { return []; }),
       api.listCultivationMethods().catch(function () { return []; }),
-      api.categoryTree({}).catch(function () { return { domains: [] }; })
+      api.categoryTree({}).catch(function () { return { categories: [], domains: [] }; })
     ]).then(function (results) {
+      var tree = results[2] || {};
       self.crops = results[0] || [];
       self.methods = results[1] || [];
-      self.domains = (results[2] && results[2].domains) || [];
+      self.domains = tree.domains || [];
+      // Flat category list, used to expand a parent node into its children.
+      self.categories = (self.domains.reduce(function (acc, d) {
+        return acc.concat(d.categories || []);
+      }, [])).concat(tree.categories || []);
       self._renderDomainOptions();
       self._renderCategoryOptions();
       self._renderMethodFilter();
       self._renderCropOptions();
       self._renderMethodField();
       self._setStatus(self.crops.length
-        ? self.crops.length + ' crops available'
-        : 'No crops available yet.');
+        ? t(self.text, 'available', self.crops.length)
+        : self.text.noCrops);
       return self;
     });
   };
@@ -213,7 +385,7 @@
   CropSelector.prototype._renderDomainOptions = function () {
     var select = this.domainSelect;
     clear(select);
-    select.appendChild(new Option('All domains', ''));
+    select.appendChild(new Option(this.text.allDomains, ''));
     (this.domains || []).forEach(function (d) {
       select.appendChild(new Option(d.domain + ' (' + (d.crop_count || 0) + ')', d.domain));
     });
@@ -222,7 +394,7 @@
   CropSelector.prototype._renderCategoryOptions = function () {
     var select = this.categorySelect;
     clear(select);
-    select.appendChild(new Option('All categories', ''));
+    select.appendChild(new Option(this.text.allCategories, ''));
     var domain = this.domainSelect.value;
     (this.domains || []).forEach(function (d) {
       if (domain && d.domain !== domain) return;
@@ -236,10 +408,35 @@
   CropSelector.prototype._renderMethodFilter = function () {
     var select = this.methodSelect;
     clear(select);
-    select.appendChild(new Option('Any cultivation', ''));
+    select.appendChild(new Option(this.text.anyMethod, ''));
     (this.methods || []).forEach(function (m) {
       select.appendChild(new Option(m.name, m.code));
     });
+  };
+
+  /**
+   * Category codes that satisfy the selected filter.
+   *
+   * Selecting a parent node such as `horticulture.vegetables` must include the
+   * crops filed under its subcategories, exactly as the API's `category_code`
+   * filter does. Comparing only `crop.category_code` matched nothing and hid
+   * whole categories from the UI.
+   */
+  CropSelector.prototype._categoryScope = function () {
+    var wanted = this._filters.category_code;
+    if (!wanted) return null;
+
+    var node = (this.categories || []).filter(function (c) {
+      return c.code === wanted;
+    })[0];
+    // An explicit leaf node matches only itself.
+    if (!node || node.subcategory) return [wanted];
+
+    // A parent node also matches its subcategories' crops, as the API does.
+    var children = (this.categories || []).filter(function (c) {
+      return c.domain === node.domain && c.category === node.category;
+    }).map(function (c) { return c.code; });
+    return [wanted].concat(children);
   };
 
   CropSelector.prototype._matches = function (crop) {
@@ -249,20 +446,24 @@
       var supported = crop.suitable_cultivation_methods || [];
       if (supported.indexOf(f.cultivation_method) === -1) return false;
     }
-    if (f.category_code && crop.category_code !== f.category_code) return false;
+    var scope = this._categoryScope();
+    if (scope && scope.indexOf(crop.category_code) === -1) return false;
     if (f.q) {
       var needle = f.q.trim().toLowerCase();
       if (!needle) return true;
       var haystack = [
-        crop.name,
-        crop.scientific_name,
-        crop.crop_id,
-        crop.market_type,
-        crop.variety
+          crop.name,
+          crop.scientific_name,
+          crop.crop_id,
+          crop.domain,
+          crop.category,
+          crop.subcategory,
+          crop.market_type,
+          crop.variety
       ].concat(Object.keys(crop.local_names || {}).map(function (k) {
         return crop.local_names[k];
       })).join(' ').toLowerCase();
-      return haystack.indexOf(needle) !== -1;
+    return haystack.indexOf(needle) !== -1;
     }
     return true;
   };
@@ -276,7 +477,7 @@
     if (!matching.length) {
       select.appendChild(new Option(this.emptyText, ''));
       select.disabled = true;
-      this._setStatus(this.emptyText + '. Try a different search, or add the crop manually.');
+      this._setStatus(t(this.text, 'emptyHint', this.emptyText));
       return;
     }
     select.disabled = false;
@@ -304,7 +505,9 @@
     if (previous && matching.some(function (c) { return c.id === previous; })) {
       select.value = previous;
     }
-    this._setStatus(matching.length + ' crop' + (matching.length === 1 ? '' : 's') + ' shown');
+    this._setStatus(matching.length === 1
+      ? this.text.shownOne
+      : t(this.text, 'shownMany', matching.length));
   };
 
   CropSelector.prototype._supportedMethods = function () {
@@ -321,7 +524,7 @@
     var select = this.methodField;
     var previous = select.value;
     clear(select);
-    select.appendChild(new Option('Cultivation method', ''));
+    select.appendChild(new Option(this.text.methodLabel, ''));
     this._supportedMethods().forEach(function (m) {
       select.appendChild(new Option(m.name, m.code));
     });
@@ -331,17 +534,35 @@
   CropSelector.prototype._renderVarietyField = function () {
     var select = this.varietySelect;
     clear(select);
-    select.appendChild(new Option('Variety (optional)', ''));
+    select.appendChild(new Option(this.text.varietyOptional, ''));
     this.varieties.forEach(function (v) {
-      select.appendChild(new Option(v.name, v.id));
+      // A variety's local_name is free text in a single language, so it is not
+      // safe to substitute for the canonical name. The language-independent
+      // `name` stays the label and `local_name` is shown alongside it when set.
+      var text_ = v.name;
+      if (v.local_name && v.local_name !== v.name) {
+        text_ = v.name + ' · ' + v.local_name;
+      }
+      select.appendChild(new Option(text_, v.id));
     });
-    if (this.allowCustom) select.appendChild(new Option('＋ Add another variety', '__new__'));
+    if (this.allowCustom) select.appendChild(new Option(this.text.addVariety, '__new__'));
+
+    // A variety requested by select() may only now exist in the list.
+    var pending = this._pendingVarietyId;
+    if (pending) {
+      this._pendingVarietyId = null;
+      if (select.querySelector('option[value="' + pending + '"]')) {
+        select.value = pending;
+        this._emit();
+      }
+    }
   };
 
   CropSelector.prototype._onCropChange = function () {
     var id = this.cropSelect.value;
     this.selected = null;
     this.varieties = [];
+    this._pendingVarietyId = null;
     if (!id) {
       this._renderVarietyField();
       this._renderMethodField();
@@ -376,15 +597,16 @@
       this.hint.textContent = '';
       return;
     }
+    var text = this.text;
     var parts = [];
     if (crop.life_cycle_type) parts.push(crop.life_cycle_type);
-    if (crop.suitable_seasons) parts.push('season: ' + crop.suitable_seasons);
-    if (crop.suitable_climate) parts.push('climate: ' + crop.suitable_climate);
-    if (crop.suitable_soil_types) parts.push('soil: ' + crop.suitable_soil_types);
-    if (crop.water_requirement) parts.push('water: ' + crop.water_requirement);
-    if (crop.growth_duration_days) parts.push(crop.growth_duration_days + ' days');
+    if (crop.suitable_seasons) parts.push(text.season + ': ' + crop.suitable_seasons);
+    if (crop.suitable_climate) parts.push(text.climate + ': ' + crop.suitable_climate);
+    if (crop.suitable_soil_types) parts.push(text.soil + ': ' + crop.suitable_soil_types);
+    if (crop.water_requirement) parts.push(text.water + ': ' + crop.water_requirement);
+    if (crop.growth_duration_days) parts.push(crop.growth_duration_days + ' ' + text.days);
     var stages = crop.lifecycle_stages || [];
-    if (stages.length) parts.push('stages: ' + stages.join(' → '));
+    if (stages.length) parts.push(text.stages + ': ' + stages.join(' → '));
     this.hint.textContent = parts.join(' · ');
   };
 
@@ -398,13 +620,13 @@
       self.varietySelect.value = variety.id;
       self._emit();
     }).catch(function (err) {
-      self._setStatus((err && err.detail) || 'Could not add that variety.');
+      self._setStatus((err && err.detail) || self.text.varietyFailed);
     });
   };
 
   CropSelector.prototype._addCustomCrop = function () {
     if (!api) return;
-    var name = global.prompt ? global.prompt('Name of the crop') : null;
+    var name = global.prompt ? global.prompt(this.text.cropPrompt) : null;
     if (!name || !name.trim()) return;
     var self = this;
     api.createCrop({ name: name.trim() }).then(function (crop) {
@@ -413,7 +635,7 @@
       self.cropSelect.value = crop.id;
       self._onCropChange();
     }).catch(function (err) {
-      self._setStatus((err && err.detail) || 'Could not add that crop.');
+      self._setStatus((err && err.detail) || self.text.cropFailed);
     });
   };
 
@@ -456,16 +678,15 @@
       this._renderCategoryOptions();
       this._renderCropOptions();
     }
+    // Varieties arrive asynchronously, so remember the request and apply it
+    // once the crop's list has rendered. `varietyId` used to be dropped
+    // entirely whenever no `methodCode` was passed, because `self` was only
+    // assigned inside the `if (methodCode)` branch.
     this.cropSelect.value = cropId;
     this._onCropChange();
-    if (methodCode) {
-      var self = this;
-      global.setTimeout(function () { self.methodField.value = methodCode; }, 0);
-    }
-    if (varietyId) {
-      var apply = function () { self.varietySelect.value = varietyId; };
-      global.setTimeout(apply, 0);
-    }
+    this._pendingVarietyId = varietyId || null;
+    if (methodCode) this.methodField.value = methodCode;
+    this._emit();
   };
 
   global.CropSelector = {

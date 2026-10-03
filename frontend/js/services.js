@@ -165,6 +165,27 @@ Backend: FastAPI served from the same origin (port 8000).
     localStorage.removeItem('user-role');
   }
 
+  /*
+   * Roles as the backend reports them. The value is never chosen by the page --
+   * it is copied from the response, and the backend re-checks it on every
+   * request. These constants only keep the strings consistent.
+   */
+  var ROLE_FARMER = 'farmer';
+  var ROLE_CUSTOMER = 'customer';
+
+  function persistSession(data) {
+    if (!data || !data.access_token) return;
+    localStorage.setItem('fa-auth-token', data.access_token);
+    localStorage.setItem('fa-current-user-data', JSON.stringify(data.user));
+    localStorage.setItem('fa-auth', 'true');
+    localStorage.setItem('user-logged-in', 'true');
+    localStorage.setItem('user-name', data.user.full_name || 'Farmer');
+    // Stored only so the UI can pick the right dashboard immediately. It is a
+    // convenience copy; the server never reads it and re-checks the real role.
+    localStorage.setItem('user-role', data.user.role || ROLE_FARMER);
+    if (data.customer_id) localStorage.setItem('customer-id', data.customer_id);
+  }
+
   var AuthService = {
     register: function (payload) {
       return http('POST', '/auth/register', {
@@ -208,22 +229,86 @@ Backend: FastAPI served from the same origin (port 8000).
     login: function (payload) {
       return http('POST', '/auth/login', payload, true).then(function (res) {
         var data = unwrap(res);
-        if (data && data.access_token) {
-          localStorage.setItem('fa-auth-token', data.access_token);
-          localStorage.setItem('fa-current-user-data', JSON.stringify(data.user));
-          localStorage.setItem('fa-auth', 'true');
-          localStorage.setItem('user-logged-in', 'true');
-          localStorage.setItem('user-name', data.user.full_name || 'Farmer');
-          localStorage.setItem('user-role', data.user.role || 'farmer');
-        }
+        persistSession(data);
         return data;
       });
     },
-    sendOtp: function (phone, email) {
+    /*
+     * Customer signup posts only what a customer needs -- name, phone, optional
+     * email and a delivery address. No land, soil, crop or farm fields are
+     * collected or sent, and the Customer ID comes back from the server.
+     */
+    registerCustomer: function (payload) {
+      return http('POST', '/auth/register/customer', {
+        full_name: payload.full_name,
+        phone_number: payload.phone_number,
+        email: payload.email || null,
+        pin: payload.pin,
+        password: payload.password || payload.pin,
+        date_of_birth: payload.date_of_birth || null,
+        gender: payload.gender || null,
+        preferred_language: payload.preferred_language || 'en',
+        address_line: payload.address_line || null,
+        city: payload.city || null,
+        village: payload.village || null,
+        mandal: payload.mandal || null,
+        district: payload.district || null,
+        state: payload.state || null,
+        pincode: payload.pincode || null,
+        latitude: payload.latitude,
+        longitude: payload.longitude
+      }, true).then(function (res) {
+        var data = unwrap(res);
+        persistSession(data);
+        return data;
+      });
+    },
+    /*
+     * The Customer ID is the primary credential. `role` is sent so the server can
+     * refuse a Farmer ID typed here with a message that names the right form --
+     * it is a hint to the server, never a claim about who the caller is.
+     */
+    loginCustomer: function (customerId, pin) {
+      return this.login({
+        customer_id: customerId,
+        pin: pin,
+        login_method: 'customer_id',
+        role: ROLE_CUSTOMER
+      });
+    },
+    loginFarmer: function (farmerId, pin) {
+      return this.login({
+        farmer_id: farmerId,
+        pin: pin,
+        login_method: 'farmer_id',
+        role: ROLE_FARMER
+      });
+    },
+    /*
+     * Phone and email are offered as an alternative inside the customer form as
+     * well as the farmer's; `role` keeps them from resolving to a farmer.
+     */
+    loginCustomerByContact: function (field, value, pin) {
+      var body = { pin: pin, role: ROLE_CUSTOMER, login_method: field === 'email' ? 'email' : 'phone' };
+      body[field] = value;
+      return this.login(body);
+    },
+    sendOtp: function (phone, email, role) {
       var body = {};
       if (phone) body.phone_number = phone;
       if (email) body.email = email;
+      if (role) body.role = role;
       return http('POST', '/auth/send-otp', body, true).then(unwrap);
+    },
+    sendCustomerOtp: function (customerId, channel) {
+      return http('POST', '/auth/send-customer-otp', { customer_id: customerId, channel: channel || 'phone' }, true).then(unwrap);
+    },
+    verifyCustomerOtp: function (customerId, channel, otp) {
+      return http('POST', '/auth/verify-customer-otp', { customer_id: customerId, channel: channel || 'phone', otp_code: otp }, true).then(function (res) {
+        var data = unwrap(res);
+        persistSession(data);
+        return data;
+      });
     },
     sendFarmerOtp: function (farmerId, channel) {
       return http('POST', '/auth/send-farmer-otp', { farmer_id: farmerId, channel: channel || 'phone' }, true).then(unwrap);
@@ -231,29 +316,18 @@ Backend: FastAPI served from the same origin (port 8000).
     verifyFarmerOtp: function (farmerId, channel, otp) {
       return http('POST', '/auth/verify-farmer-otp', { farmer_id: farmerId, channel: channel || 'phone', otp_code: otp }, true).then(function (res) {
         var data = unwrap(res);
-        if (data && data.access_token) {
-          localStorage.setItem('fa-auth-token', data.access_token);
-          localStorage.setItem('fa-current-user-data', JSON.stringify(data.user));
-          localStorage.setItem('fa-auth', 'true');
-          localStorage.setItem('user-logged-in', 'true');
-          localStorage.setItem('user-name', data.user.full_name || 'Farmer');
-        }
+        persistSession(data);
         return data;
       });
     },
-    verifyOtp: function (phone, email, otp) {
+    verifyOtp: function (phone, email, otp, role) {
       var body = { otp_code: otp };
       if (phone) body.phone_number = phone;
       if (email) body.email = email;
+      if (role) body.role = role;
       return http('POST', '/auth/verify-otp', body, true).then(function (res) {
         var data = unwrap(res);
-        if (data && data.access_token) {
-          localStorage.setItem('fa-auth-token', data.access_token);
-          localStorage.setItem('fa-current-user-data', JSON.stringify(data.user));
-          localStorage.setItem('fa-auth', 'true');
-          localStorage.setItem('user-logged-in', 'true');
-          localStorage.setItem('user-name', data.user.full_name || 'Farmer');
-        }
+        persistSession(data);
         return data;
       });
     },
@@ -263,11 +337,13 @@ Backend: FastAPI served from the same origin (port 8000).
       if (email) body.email = email;
       return http('POST', '/auth/forgot-pin', body, true).then(unwrap);
     },
-    lookupProfile: function (phone, email, farmerId) {
+    lookupProfile: function (phone, email, farmerId, customerId, role) {
       var body = {};
       if (phone) body.phone_number = phone;
       if (email) body.email = email;
       if (farmerId) body.farmer_id = farmerId;
+      if (customerId) body.customer_id = customerId;
+      if (role) body.role = role;
       return http('POST', '/auth/lookup-profile', body, true).then(unwrap);
     },
     logout: function () {
@@ -932,11 +1008,18 @@ Backend: FastAPI served from the same origin (port 8000).
     createOrder: function (data) {
       return http('POST', '/orders', data).then(unwrap);
     },
-    listOrders: function () {
-      return http('GET', '/orders').then(unwrap);
+    /* `params` is optional: { page, limit, status }. Omit it for the default page. */
+    listOrders: function (params) {
+      return http('GET', '/orders' + buildQuery(params || {})).then(unwrap);
     },
     getOrder: function (id) {
-      return http('GET', '/orders/' + id).then(unwrap);
+      return http('GET', '/orders/' + encodeURIComponent(id)).then(unwrap);
+    },
+    getOrderTracking: function (id) {
+      return http('GET', '/orders/' + encodeURIComponent(id) + '/tracking').then(unwrap);
+    },
+    confirmOrderReceived: function (id) {
+      return http('POST', '/orders/' + encodeURIComponent(id) + '/confirm-received').then(unwrap);
     },
     updateOrder: function (id, data) {
       return http('PUT', '/orders/' + id, data).then(unwrap);
@@ -2809,10 +2892,66 @@ Backend: FastAPI served from the same origin (port 8000).
     }
   };
 
+  /*
+   * Customer account data.
+   *
+   * Every method here is a plain call with no customer identifier in the URL or
+   * the query string. The backend works out which customer is calling from the
+   * bearer token, so a customer physically cannot request another customer's
+   * profile, addresses, points or plants by editing the request.
+   */
+  var CustomerService = {
+    getMe: function () {
+      return http('GET', '/customers/me').then(unwrap);
+    },
+    updateMe: function (data) {
+      return http('PUT', '/customers/me', data).then(unwrap);
+    },
+    getDashboard: function () {
+      return http('GET', '/customers/me/dashboard').then(unwrap);
+    },
+    getAddresses: function () {
+      return http('GET', '/customers/me/addresses').then(unwrap);
+    },
+    addAddress: function (address) {
+      return http('POST', '/customers/me/addresses', address).then(unwrap);
+    },
+    updateAddress: function (addressId, address) {
+      return http('PUT', '/customers/me/addresses/' + encodeURIComponent(addressId), address).then(unwrap);
+    },
+    deleteAddress: function (addressId) {
+      return http('DELETE', '/customers/me/addresses/' + encodeURIComponent(addressId)).then(unwrap);
+    },
+    getPoints: function (limit) {
+      return http('GET', '/customers/me/points' + (limit ? '?limit=' + limit : '')).then(unwrap);
+    },
+    getSettings: function () {
+      return http('GET', '/customers/me/settings').then(unwrap);
+    },
+    updateSettings: function (settings) {
+      return http('PUT', '/customers/me/settings', settings).then(unwrap);
+    },
+    /* `status` is one of growing / harvested / removed; omit it for all. */
+    getPlants: function (status) {
+      var qs = status ? '?status_filter=' + encodeURIComponent(status) : '';
+      return http('GET', '/customers/me/plants' + qs).then(unwrap);
+    },
+    addPlant: function (plant) {
+      return http('POST', '/customers/me/plants', plant).then(unwrap);
+    },
+    updatePlant: function (plantId, plant) {
+      return http('PUT', '/customers/me/plants/' + encodeURIComponent(plantId), plant).then(unwrap);
+    },
+    deletePlant: function (plantId) {
+      return http('DELETE', '/customers/me/plants/' + encodeURIComponent(plantId)).then(unwrap);
+    }
+  };
+
   global.API = {
     config: Config,
     Storage: Storage,
     Auth: AuthService,
+    Customer: CustomerService,
     Locations: LocationService,
     Profile: ProfileService,
     Farm: FarmService,
@@ -2863,6 +3002,7 @@ Backend: FastAPI served from the same origin (port 8000).
   };
 
   global.AuthService = AuthService;
+  global.CustomerService = CustomerService;
   global.LocationService = LocationService;
   global.FarmService = FarmService;
   global.CropService = CropService;

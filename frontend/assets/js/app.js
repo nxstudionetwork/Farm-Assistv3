@@ -118,21 +118,51 @@
       return;
     }
 
+    /*
+     * Send each account to the dashboard that belongs to it.
+     *
+     * This is a convenience, not a security control: the role is read from the
+     * server's answer for /auth/me below and the backend enforces access on
+     * every request regardless of what this decides.
+     */
+    var role = storedRole();
+    if (role === 'customer' && currentPage() === 'index.html') {
+      window.location.href = 'customer.html';
+      return;
+    }
+
     initPersistentSession();
     hydrateUserDisplay();
     updateStreak();
 
     if (window.API && window.API.Auth) {
-      window.API.Auth.getMe().catch(function(err) {
+      window.API.Auth.getMe().then(function (me) {
+        if (!me || !me.role) return;
+        // Trust the server's role over the cached one, then correct the cache.
+        if (window.UserStore && UserStore.setSession) UserStore.setSession(me);
+        if (me.role === 'customer' && currentPage() === 'index.html') {
+          window.location.href = 'customer.html';
+        }
+      }).catch(function(err) {
         if (err && err.isAuthError) {
           localStorage.removeItem('fa-auth-token');
           localStorage.removeItem('fa-auth');
           localStorage.removeItem('fa-current-user-data');
           localStorage.removeItem('user-logged-in');
+          localStorage.removeItem('user-role');
+          localStorage.removeItem('customer-id');
           window.location.href = 'login.html';
         }
       });
     }
+  }
+
+  /* The cached role, used only to choose which dashboard to open. */
+  function storedRole() {
+    try {
+      if (window.UserStore && UserStore.getRole) return UserStore.getRole();
+    } catch (e) { /* fall through */ }
+    return localStorage.getItem('user-role') || 'farmer';
   }
 
   function hydrateUserDisplay() {

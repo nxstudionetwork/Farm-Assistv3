@@ -169,6 +169,15 @@ def serialize_service(s: AgriculturalService) -> dict:
         "location_coverage": s.location_coverage,
         "rating": s.rating,
         "is_active": s.is_active,
+        # Capacity facts. `None` on services that do not store produce, so the
+        # frontend can tell a storage service from an advisory one.
+        "is_storage": bool(s.storage_type),
+        "storage_type": s.storage_type,
+        "capacity_quintal": s.capacity_quintal,
+        "available_capacity_quintal": s.available_capacity_quintal,
+        "temperature_controlled": bool(s.temperature_controlled),
+        "min_duration_days": s.min_duration_days,
+        "supported_produce": [p.strip() for p in (s.supported_produce or "").split(",") if p.strip()],
     }
 
 
@@ -210,6 +219,9 @@ def list_agricultural_services(
     category: Optional[str] = None,
     search: Optional[str] = None,
     availability: Optional[str] = None,
+    location: Optional[str] = None,
+    storage_only: bool = False,
+    min_capacity: Optional[float] = None,
     db: Session = Depends(get_db),
 ):
     """Retrieve catalog of agricultural services with category and search filtering."""
@@ -224,6 +236,24 @@ def list_agricultural_services(
     if availability and availability.lower() != "all":
         q = q.filter(AgriculturalService.availability == availability.lower())
 
+    if location and location.strip():
+        # Only the provider's real coverage text is searched - nothing is
+        # invented and no hardcoded location list is involved.
+        loc = f"%{location.strip()}%"
+        q = q.filter(
+            AgriculturalService.location_coverage.ilike(loc)
+            | AgriculturalService.provider_name.ilike(loc)
+        )
+
+    if storage_only:
+        q = q.filter(AgriculturalService.storage_type.isnot(None))
+
+    if min_capacity is not None:
+        q = q.filter(
+            AgriculturalService.available_capacity_quintal >= min_capacity,
+            AgriculturalService.available_capacity_quintal.isnot(None),
+        )
+
     if search and search.strip():
         term = f"%{search.strip()}%"
         q = q.filter(
@@ -231,6 +261,7 @@ def list_agricultural_services(
             | AgriculturalService.category.ilike(term)
             | AgriculturalService.description.ilike(term)
             | AgriculturalService.provider_name.ilike(term)
+            | AgriculturalService.supported_produce.ilike(term)
         )
 
     total = q.count()

@@ -43,17 +43,14 @@ def build_app() -> FastAPI:
     its own app instead of importing the full application. That keeps these tests
     fast and independent of unrelated router modules.
     """
+    # The router already carries the "/api/v1" prefix (like every other router in
+    # the app), so it is mounted as-is - same as main.py does.
     test_app = FastAPI(title="crop-system-tests")
-    test_app.include_router(crops_router, prefix="/api/v1")
+    test_app.include_router(crops_router)
     return test_app
 
 
 client = TestClient(build_app())
-
-# Build the schema once at import time. Several seeder modules are imported
-# lazily, so creating tables from a fixture can race with them.
-Base.metadata.create_all(bind=engine)
-run_additive_migrations(os.environ["DATABASE_URL"])
 
 #: Every agricultural domain the crop system has to cover.
 REQUIRED_DOMAINS = {
@@ -84,6 +81,8 @@ def _wipe_rows() -> None:
 @pytest.fixture(scope="module")
 def catalog():
     """Seed the catalog once and return an open session for direct assertions."""
+    Base.metadata.create_all(bind=engine)
+    run_additive_migrations(os.environ["DATABASE_URL"])
     _wipe_rows()
     db = SessionLocal()
     try:
@@ -129,14 +128,22 @@ def headers(farmer):
 
 
 @pytest.fixture
-def farm(headers):
-    r = client.post(
-        "/api/v1/farms",
-        json={"farm_name": "Taxonomy Farm", "total_area": 3, "area_unit": "Acres"},
-        headers=headers,
-    )
-    assert r.status_code == 201, r.text
-    return r.json()["data"]
+def farm(headers, farmer):
+    """The farmer's farm.
+
+    Inserted with the ORM rather than through POST /farms, because this suite
+    deliberately mounts only the crop router. The crop router just needs an
+    active farm owned by the current user.
+    """
+    db = SessionLocal()
+    try:
+        farm = Farm(farm_name="Taxonomy Farm", user_id=farmer.id, total_area=3, area_unit="Acres")
+        db.add(farm)
+        db.commit()
+        db.refresh(farm)
+        yield {"id": farm.id, "farm_name": farm.farm_name}
+    finally:
+        db.close()
 
 
 # ==================== catalog ====================
@@ -193,9 +200,32 @@ def test_seeding_twice_changes_nothing(catalog):
     assert catalog.query(CropVariety).count() == varieties
 
 
+#: The columns :func:`seed_crops` rewrites when it classifies a crop in place.
+#: The catalog is seeded once for the whole module and every later test reads it,
+#: so the test that exercises classification has to put these back afterwards.
+CLASSIFIED_FIELDS = (
+    "name", "variety", "category", "season", "growth_duration_days", "domain",
+    "category_id", "subcategory", "scientific_name", "local_names",
+    "life_cycle_type", "suitable_seasons", "suitable_climate",
+    "suitable_soil_types", "water_requirement", "harvest_type",
+    "production_unit", "market_type", "lifecycle_stages",
+    "suitable_cultivation_methods", "hydroponic_targets", "is_catalog",
+    "is_archived",
+)
+
+
 def test_existing_farmer_crops_are_classified_not_duplicated(catalog):
-    """A pre-existing 'Paddy (Rice)' row is folded into the catalog row."""
+    """A pre-existing 'Paddy (Rice)' row is classified in place, not duplicated.
+
+    Seeding matches the legacy row on its synonym and applies the Rice catalog
+    entry to it, so the farmer keeps their crop id and their cycle never has to
+    move. Mapping existing crops onto the taxonomy means re-classifying the
+    row that is already there, not archiving it in favour of a second one.
+    """
     db = SessionLocal()
+    legacy_id = None
+    before = None
+    catalog_rice_id = None
     try:
         farmer = User(
             full_name="Legacy Farmer",
@@ -214,16 +244,27 @@ def test_existing_farmer_crops_are_classified_not_duplicated(catalog):
         db.commit()
         db.refresh(farm)
 
+        # The catalog row consolidation is going to set aside: it loses to the
+        # farmer's row, which holds a cycle.
+        catalog_rice = (
+            db.query(Crop)
+            .filter(Crop.name == "Rice", Crop.is_catalog.is_(True), Crop.is_archived.is_(False))
+            .first()
+        )
+        assert catalog_rice is not None
+        catalog_rice_id = catalog_rice.id
+
         legacy = Crop(crop_id="FA-CRP-999999", name="Paddy (Rice)", variety="BPT 5204")
         db.add(legacy)
         db.commit()
         db.refresh(legacy)
+        legacy_id = legacy.id
+        before = {field: getattr(legacy, field) for field in CLASSIFIED_FIELDS}
 
         cycle = CropCycle(cycle_id="FA-CYC-999999", farm_id=farm.id, crop_id=legacy.id)
         db.add(cycle)
         db.commit()
         cycle_id = cycle.id
-        legacy_id = legacy.id
         db.close()
 
         seed_crops(db)
@@ -231,22 +272,33 @@ def test_existing_farmer_crops_are_classified_not_duplicated(catalog):
         db = SessionLocal()
         try:
             merged = db.query(Crop).filter(Crop.name == "Rice", Crop.is_archived.is_(False)).all()
+            # One Rice row, and it is the farmer's own row: same id, canonical
+            # name, catalog metadata, not archived.
             assert len(merged) == 1
+            assert merged[0].id == legacy_id
             assert merged[0].is_catalog
-            # The farmer's cycle moved to the surviving row; nothing is deleted.
+            assert merged[0].is_archived is False
+            # The farmer's cycle never had to move.
             moved = db.query(CropCycle).filter(CropCycle.id == cycle_id).first()
             assert moved is not None
-            assert moved.crop_id == merged[0].id
-            archived = db.query(Crop).filter(Crop.id == legacy_id).first()
-            assert archived is not None and archived.is_archived
-            # The farmer's variety travelled with the crop.
+            assert moved.crop_id == legacy_id
+            # The legacy free-text variety is a real variety row now.
             assert "BPT 5204" in [v.name for v in merged[0].varieties]
         finally:
             db.close()
     finally:
+        # Put the shared catalog back exactly as it was. Deleting the legacy row
+        # here would delete the catalog's Rice entry too, because seeding made
+        # that row the entry.
         db = SessionLocal()
         try:
-            db.query(Crop).filter(Crop.crop_id == "FA-CRP-999999").delete()
+            if legacy_id is not None:
+                db.query(CropVariety).filter(CropVariety.crop_id == legacy_id).delete()
+                db.query(Crop).filter(Crop.id == legacy_id).update(before)
+            if catalog_rice_id is not None:
+                db.query(Crop).filter(Crop.id == catalog_rice_id).update(
+                    {"is_archived": False, "is_catalog": True}
+                )
             db.query(CropCycle).filter(CropCycle.cycle_id == "FA-CYC-999999").delete()
             db.query(Farm).filter(Farm.farm_name == "Legacy Farm").delete()
             db.query(User).filter(User.phone_number == "9000000222").delete()
@@ -293,7 +345,9 @@ def test_list_crops_supports_search_and_filters(headers):
     assert len(veggies["data"]) > len(leafy["data"])
 
     # Search reaches the multilingual local name, not just the English name.
-    local = client.get("/api/v1/crops?q=" + "%E0%B0%9F%E0%B0%AE%E0%B0%BE%E0%B0%9F%E0%B1%86", headers=headers).json()
+    # The catalog stores Tomato's Telugu name as "టమాటా" (టమాటా), so the
+    # search term has to be that exact spelling.
+    local = client.get("/api/v1/crops?q=" + "%E0%B0%9F%E0%B0%AE%E0%B0%BE%E0%B0%9F%E0%B0%BE", headers=headers).json()
     assert any(c["name"] == "Tomato" for c in local["data"])
 
     english = client.get("/api/v1/crops?q=grape", headers=headers).json()
@@ -647,6 +701,17 @@ def test_consolidation_re_points_health_checks(headers, farmer):
         db.refresh(keep)
         db.refresh(dup)
 
+        # The catalog already has a Sorghum row, and consolidation keeps the
+        # row holding the health check, so the catalog row gets archived. Its id
+        # is captured so the cleanup can put the catalog back exactly as it was.
+        catalog_row = (
+            db.query(Crop)
+            .filter(Crop.name == "Sorghum", Crop.is_catalog.is_(True), Crop.is_archived.is_(False))
+            .first()
+        )
+        assert catalog_row is not None
+        catalog_id = catalog_row.id
+
         check = CropHealthCheck(
             check_id="FA-CHK-HC-1",
             user_id=farmer.id,
@@ -687,6 +752,12 @@ def test_consolidation_re_points_health_checks(headers, farmer):
         try:
             db.query(CropHealthCheck).filter(CropHealthCheck.check_id == "FA-CHK-HC-1").delete()
             db.query(Crop).filter(Crop.crop_id.in_(["FA-CRP-HC-1", "FA-CRP-HC-2"])).delete()
+            # Consolidation archived the catalog row in favour of the row holding
+            # the health check. Restore it so this test does not remove Sorghum
+            # from the shared catalog for every test that runs after it.
+            db.query(Crop).filter(Crop.id == catalog_id).update(
+                {"is_archived": False, "is_catalog": True}
+            )
             db.query(Farm).filter(Farm.farm_name == "Health Check Farm").delete()
             db.commit()
         finally:

@@ -193,13 +193,26 @@
 
 <script src="js/services.js"></script>
 <script src="js/userStore.js"></script>
+<script src="js/crop-selector.js"></script>
 <script src="assets/js/navigation.js"></script>
 <script src="assets/js/app.js"></script>
+<style>
+  /* Shared crop selector (js/crop-selector.js), scoped to the modal body. */
+  .crop-selector{display:flex;flex-direction:column;gap:8px}
+  .crop-selector__input,.crop-selector__select{width:100%;padding:9px 10px;border:1px solid #d7e2d4;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;color:inherit;box-sizing:border-box}
+  .crop-selector__input:focus,.crop-selector__select:focus{outline:2px solid #0288d1;outline-offset:1px}
+  .crop-selector__filters,.crop-selector__row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .crop-selector__select--crop{grid-column:1 / -1}
+  .crop-selector__hint,.crop-selector__status{margin:0;font-size:11px;color:#6b7a6b;line-height:1.5}
+  .crop-selector__custom{align-self:flex-start;font:inherit;padding:6px 10px;border:1px solid #d7e2d4;border-radius:8px;background:#fff;cursor:pointer;color:#0288d1}
+</style>
 <script>
 (function () {
   'use strict';
 
   var UNIT_STATUSES = ['planning', 'active', 'maintenance', 'completed', 'inactive'];
+  // Fallback only. The API returns each crop's own lifecycle stages, which is
+  // what every stage dropdown and progress bar uses.
   var STAGE_KEYS = ['germination', 'seedling', 'vegetative', 'flowering', 'harvest'];
   var SEVERITIES = ['low', 'medium', 'high'];
   var QUALITY_GRADES = ['Premium', 'Grade A', 'Grade B', 'Local sale'];
@@ -307,7 +320,9 @@
     return list.map(function (item) {
       var value = item.value !== undefined ? item.value : item;
       var label = item.label !== undefined ? item.label : item;
-      var isSel = String(selected) === String(value) ? ' selected' : '';
+      // Case-insensitive so a catalog stage ("Germination") still matches a
+      // legacy stored value ("germination").
+      var isSel = String(selected).trim().toLowerCase() === String(value).trim().toLowerCase() ? ' selected' : '';
       return '<option value="' + esc(value) + '"' + isSel + '>' + esc(label) + '</option>';
     }).join('');
   }
@@ -338,6 +353,15 @@
     return 'hyd' + key.replace(/(^|_)([a-z])/g, function (m, sep, ch) {
       return ch.toUpperCase();
     });
+  }
+
+  function indexOfStage(stages, stage) {
+    if (!stage) return -1;
+    var needle = String(stage).trim().toLowerCase();
+    for (var i = 0; i < (stages || []).length; i++) {
+      if (String(stages[i]).trim().toLowerCase() === needle) return i;
+    }
+    return -1;
   }
 
   function readValues(ids) {
@@ -607,14 +631,19 @@
     }
     var html = '<div class="hyd-grid two">';
     state.crops.forEach(function (crop) {
-      var stageIndex = STAGE_KEYS.indexOf(crop.current_stage);
+      // Progress runs against the crop's own lifecycle, matched case
+      // insensitively because the catalog stores "Germination" while older
+      // soilless-only rows stored "germination".
+      var stages = crop.lifecycle_stages || STAGE_KEYS;
+      var stageIndex = indexOfStage(stages, crop.current_stage);
+      var pct = Math.round(((stageIndex + 1) / Math.max(stages.length, 1)) * 100);
       html += '<div class="hyd-card"><div class="hyd-card-head">' +
         '<h3><i class="fas fa-seedling" style="color:var(--hyd)"></i> ' + esc(crop.crop_name) + '</h3>' +
         '<span class="hyd-badge ' + badgeForStatus(crop.status) + '">' + esc(crop.status || 'active') + '</span></div>' +
         '<p class="hyd-sub">' + esc(crop.cycle_id) + (crop.unit ? ' &middot; ' + esc(crop.unit.name) : '') +
         (crop.variety ? ' &middot; ' + esc(crop.variety) : '') + '</p>';
       html += '<div class="hyd-meter"><span class="' + (stageIndex >= 0 ? 'ok' : '') + '" style="width:' +
-        (((stageIndex + 1) / STAGE_KEYS.length) * 100) + '%"></span></div>';
+        pct + '%"></span></div>';
       html += '<p class="hyd-hint">Stage: ' + esc(crop.current_stage || 'not set') + '</p>';
       html += '<div class="hyd-kv" style="margin-top:11px">' +
         '<div class="hyd-kv-item"><div class="k">Planted</div><div class="v">' + esc(crop.planting_date || '-') + '</div></div>' +
@@ -961,16 +990,19 @@
     }
   }
 
+  // Crops are chosen through the shared catalog selector (js/crop-selector.js),
+  // so hydroponics never carries its own crop list and the cycle it creates is
+  // the same Crop/CropCycle the rest of the app uses. Locked to hydroponics,
+  // because a cycle in a soilless unit is by definition hydroponic.
+  var cropSelector = null;
+
   function openCropForm(unitId) {
     var resolved = unitId || firstUnitId();
     if (!resolved) { toast('Add a hydroponic unit first', 'error'); return; }
-    var body = '<div class="hyd-field"><label class="hyd-label" for="hydCropName">Crop</label>' +
-      '<input class="hyd-input" id="hydCropName" list="hydCropList" placeholder="e.g. Lettuce, Tomato, Basil">' +
-      '<datalist id="hydCropList">' + ((state.catalog && state.catalog.crop_targets) || []).map(function (c) {
-        return '<option value="' + esc(c.crop) + '">';
-      }).join('') + '</datalist>' +
+    var body = '<div class="hyd-field"><label class="hyd-label" for="hydCropSelector">Crop, variety &amp; cultivation method</label>' +
+      '<div id="hydCropSelector"></div><input type="hidden" id="hydCropName">' +
       '<span class="hyd-hint">A crop cycle is created in your existing crop system, so tasks, yield and profit all stay in one place.</span></div>' +
-      '<div class="hyd-field"><label class="hyd-label" for="hydVariety">Variety</label><input class="hyd-input" id="hydVariety"></div>' +
+      '<div class="hyd-field"><label class="hyd-label" for="hydVariety">Variety (if not listed above)</label><input class="hyd-input" id="hydVariety"></div>' +
       '<div class="hyd-field"><label class="hyd-label" for="hydPlanting">Planting date</label><input class="hyd-input" type="date" id="hydPlantingDate" value="' + today() + '"></div>' +
       '<div class="hyd-field"><label class="hyd-label" for="hydHarvest">Expected harvest</label><input class="hyd-input" type="date" id="hydExpectedHarvestDate">' +
       '<span class="hyd-hint">Leave blank to use the standard duration for the crop.</span></div>' +
@@ -987,15 +1019,37 @@
     var foot = '<button class="hyd-btn" onclick="HydApp.closeModal()">Cancel</button>' +
       '<button class="hyd-btn primary" onclick="HydApp.saveCrop(\'' + resolved + '\')"><i class="fas fa-check"></i> Start cycle</button>';
     openModal('<i class="fas fa-seedling" style="color:var(--hyd)"></i> Start a crop cycle', body, foot);
+
+    // Mounted after the modal body exists in the DOM.
+    cropSelector = CropSelector.mount({
+      mount: '#hydCropSelector',
+      required: true,
+      onChange: function (crop) {
+        var hidden = document.getElementById('hydCropName');
+        if (hidden) hidden.value = crop ? crop.id : '';
+      }
+    });
+    // Only crops that the catalog records as soilless-capable.
+    if (cropSelector) {
+      cropSelector.methodSelect.value = 'hydroponic';
+      cropSelector._filters.cultivation_method = 'hydroponic';
+      cropSelector._renderCropOptions();
+    }
   }
 
   function saveCrop(unitId) {
-    var name = document.getElementById('hydCropName').value.trim();
-    if (!name) { toast('Enter a crop name', 'error'); return; }
-    var values = readValues(['variety', 'planting_date', 'expected_harvest_date', 'plants_count', 'growing_area', 'expected_yield', 'yield_unit']);
+    var cropId = (document.getElementById('hydCropName') || {}).value || '';
+    var selection = cropSelector ? cropSelector.value() : {};
+    var typed = (document.getElementById('hydVariety') || {}).value || '';
+    var name = selection.crop_name || '';
+    if (!cropId && !name) { toast('Choose a crop from the catalog', 'error'); return; }
+    var values = readValues(['planting_date', 'expected_harvest_date', 'plants_count', 'growing_area', 'expected_yield', 'yield_unit']);
     var payload = {
+      crop_id: cropId || null,
       crop_name: name,
-      variety: values.variety,
+      // A variety picked in the selector wins; the free-text field is the
+      // fallback for a variety the catalog does not list yet.
+      variety: selection.variety_name || (typed.trim() || null),
       planting_date: values.planting_date,
       expected_harvest_date: values.expected_harvest_date,
       plants_count: values.plants_count,
@@ -1006,14 +1060,17 @@
     API.Hydroponics.createCrop(unitId, payload).then(function () {
       toast('Crop cycle started', 'success');
       closeModal();
+      cropSelector = null;
       load();
     }).catch(function (err) { toast((err && err.message) || 'Could not start the cycle', 'error'); });
   }
 
   function openCropStageForm(cycleId) {
     var crop = state.crops.filter(function (c) { return c.cycle_id === cycleId; })[0] || {};
+    // The crop's real lifecycle, so a tomato cycle offers the tomato stages.
+    var stages = crop.lifecycle_stages || STAGE_KEYS;
     var body = '<div class="hyd-field"><label class="hyd-label" for="hydCurrentStage">Growth stage</label><select class="hyd-select" id="hydCurrentStage">' +
-      options(STAGE_KEYS, crop.current_stage || 'germination') + '</select></div>' +
+      options(stages, crop.current_stage || stages[0] || 'germination') + '</select></div>' +
       '<div class="hyd-field"><label class="hyd-label" for="hydExpectedHarvestDate">Expected harvest date</label><input class="hyd-input" type="date" id="hydExpectedHarvestDate" value="' + esc(crop.expected_harvest_date || '') + '"></div>' +
       '<div class="hyd-field"><label class="hyd-label" for="hydActualYield">Actual yield so far</label><input class="hyd-input" type="number" step="0.01" id="hydActualYield" value="' + (crop.actual_yield || '') + '"></div>' +
       '<div class="hyd-field"><label class="hyd-label" for="hydNotes">Notes</label><textarea class="hyd-textarea" id="hydNotes">' + esc(crop.notes || '') + '</textarea></div>';

@@ -113,3 +113,17 @@ def start_market_price_scheduler() -> None:
     except RuntimeError:
         _task = None
         logger.warning("Market price scheduler could not start (no running event loop).")
+
+
+async def stop_market_price_scheduler() -> None:
+    """Cancel and await the background sync loop during application shutdown."""
+    global _task
+    task = _task
+    _task = None
+    if task is None:
+        return
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass

@@ -27,11 +27,24 @@
     @media(min-width:900px){.login-panel{flex:1 1 50%;align-items:center;padding:40px 32px}}
     .login-panel-inner{width:100%;max-width:440px;margin:0 auto}
     .auth-body{padding:0}
-    .auth-tabs{display:flex;background:#f3f7f2;border-radius:12px;padding:4px;margin-bottom:24px;gap:4px}
+    /* ---- Role choice: Farmer or Customer ---- */
+    .role-tabs{display:flex;gap:10px;margin-bottom:20px}
+    .role-tab{flex:1;padding:14px 10px;border:1.5px solid #e0e8e0;border-radius:14px;background:#fafcfa;cursor:pointer;text-align:center;transition:all .2s ease;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+    .role-tab i{font-size:19px;color:#7a9f7a;transition:color .2s ease}
+    .role-tab .role-name{font-size:13.5px;font-weight:700;color:#2d3e2d}
+    .role-tab .role-hint{font-size:10.5px;color:#8a9f8a;line-height:1.3}
+    .role-tab.active{border-color:#4caf50;background:#fff;box-shadow:0 4px 14px rgba(76,175,80,.14)}
+    .role-tab.active i{color:#2e7d32}
+    /* ---- Which credential to use inside the chosen role ---- */
+    .auth-tabs{display:flex;background:#f3f7f2;border-radius:12px;padding:4px;margin-bottom:8px;gap:4px}
     .auth-tab{flex:1;border:none;background:transparent;padding:10px 0;border-radius:9px;font-size:12px;font-weight:600;color:#7a8f7a;cursor:pointer;transition:all .25s ease;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit}
     .auth-tab i{font-size:13px}
     .auth-tab.active{background:#fff;color:#1a3c2a;box-shadow:0 2px 8px rgba(0,0,0,.06)}
     .auth-tab:hover:not(.active){color:#2d5a3e}
+    /* The ID is the primary credential for both roles; phone and email are the
+       alternative offered inside the same form. */
+    .auth-tab.primary-tab{color:#1a3c2a;font-weight:700}
+    .method-note{font-size:11.5px;color:#8a9f8a;text-align:center;margin:0 0 18px;line-height:1.5}
     .auth-form{display:none}
     .auth-form.active{display:block;animation:fadeUp .3s ease}
     @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -121,14 +134,34 @@
     <main class="login-panel">
       <div class="login-panel-inner">
     <div class="auth-body">
-      <div class="auth-tabs">
-        <button class="auth-tab active" data-tab="phone" onclick="switchTab('phone')"><i class="fas fa-mobile-screen"></i> Phone</button>
-        <button class="auth-tab" data-tab="email" onclick="switchTab('email')"><i class="fas fa-envelope"></i> Email</button>
-        <button class="auth-tab" data-tab="farmerid" onclick="switchTab('farmerid')"><i class="fas fa-id-card"></i> Farmer ID</button>
+      <!--
+        The first question is always *which kind of account*, because the two
+        have different IDs and different dashboards. Farmer ID and Customer ID
+        are the primary credentials; phone and email are offered as an
+        alternative inside whichever form is selected.
+      -->
+      <div class="role-tabs" role="tablist" aria-label="Account type">
+        <button class="role-tab active" data-role="farmer" onclick="switchRole('farmer')" type="button">
+          <i class="fas fa-tractor"></i>
+          <span class="role-name">Farmer Login</span>
+          <span class="role-hint">Farm &amp; crop tools</span>
+        </button>
+        <button class="role-tab" data-role="customer" onclick="switchRole('customer')" type="button">
+          <i class="fas fa-shopping-basket"></i>
+          <span class="role-name">Customer Login</span>
+          <span class="role-hint">Shop, grow &amp; community</span>
+        </button>
       </div>
 
-      <!-- Phone Login -->
-      <div class="auth-form active" id="form-phone">
+      <div class="auth-tabs">
+        <button class="auth-tab primary-tab active" data-tab="id" onclick="switchMethod('id')"><i class="fas fa-id-card"></i> <span id="id-tab-label">Farmer ID</span></button>
+        <button class="auth-tab" data-tab="phone" onclick="switchMethod('phone')"><i class="fas fa-mobile-screen"></i> Phone</button>
+        <button class="auth-tab" data-tab="email" onclick="switchMethod('email')"><i class="fas fa-envelope"></i> Email</button>
+      </div>
+      <p class="method-note" id="method-note">Sign in with your Farmer ID. You can also use your phone number or email below.</p>
+
+      <!-- Phone Login (shared: the selected role decides which account it may reach) -->
+      <div class="auth-form" id="form-phone">
         <div id="phone-step1">
           <p style="text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:16px;">Enter your registered phone number</p>
           <div class="form-group">
@@ -233,13 +266,16 @@
         </div>
       </div>
 
-      <!-- Farmer ID Login -->
-      <div class="auth-form" id="form-farmerid">
+      <!--
+        ID Login. The ID field and the surrounding copy switch between the two
+        namespaces; the PIN/OTP machinery below is the same for both.
+      -->
+      <div class="auth-form active" id="form-id">
         <div id="fid-step1">
-          <p style="text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:16px;">Enter your Farmer ID</p>
+          <p style="text-align:center;font-size:13px;color:#5a7a5a;margin-bottom:16px;" id="fid-prompt">Enter your Farmer ID</p>
           <div class="form-group">
             <div class="fid-input-wrap">
-              <span class="fid-prefix"><i class="fas fa-id-card"></i> FA-AS-</span>
+              <span class="fid-prefix"><i class="fas fa-id-card"></i> <span id="fid-prefix-text">FA-AS-</span></span>
               <input type="text" id="fid-input" placeholder="00000001" autocomplete="off" oninput="formatFidInput(this)" inputmode="numeric">
             </div>
           </div>
@@ -256,7 +292,7 @@
           </div>
           <div class="profile-preview fid-notfound" id="fid-notfound">
             <i class="fas fa-user-times"></i>
-            <p>We couldn't find a farmer with this ID.<br>Check the number and try again, or create a new account.</p>
+            <p id="fid-notfound-text">We couldn't find a farmer with this ID.<br>Check the number and try again, or create a new account.</p>
             <div class="fid-notfound-actions">
               <button class="btn-outline" onclick="retryFarmerId()"><i class="fas fa-redo"></i> Try Again</button>
             </div>
@@ -304,7 +340,7 @@
 
       <div class="auth-divider"><span>New to Farm Assist?</span></div>
       <div class="auth-footer">
-        <a href="signup.html" class="btn-outline" style="flex:1"><i class="fas fa-user-plus"></i> Create Account</a>
+        <a href="signup.html" class="btn-outline" style="flex:1" id="signup-link"><i class="fas fa-user-plus"></i> <span id="signup-link-label">Create Farmer Account</span></a>
       </div>
     </div>
       </div>
@@ -326,11 +362,139 @@
       _toastTimer = setTimeout(function(){ t.remove(); }, 3500);
     }
 
+    /*
+     * Which account type is being signed in to.
+     *
+     * This only decides what the form *offers* and which identifier namespace it
+     * uses. It is never treated as proof of anything: every request below also
+     * sends `role`, and the server compares that against the role stored on the
+     * account it found before issuing anything.
+     */
+    var ROLE_FARMER = 'farmer';
+    var ROLE_CUSTOMER = 'customer';
+    var currentRole = ROLE_FARMER;
+
+    var ID_CONFIG = {
+      farmer: {
+        prefix: 'FA-AS-',
+        idField: 'farmer_id',
+        placeholder: '00000001',
+        tabLabel: 'Farmer ID',
+        prompt: 'Enter your Farmer ID',
+        notFound: "We couldn't find a farmer with this ID.<br>Check the number and try again, or create a new account.",
+        signupLabel: 'Create Farmer Account'
+      },
+      customer: {
+        prefix: 'FA-CS-',
+        idField: 'customer_id',
+        placeholder: '000001',
+        tabLabel: 'Customer ID',
+        prompt: 'Enter your Customer ID',
+        notFound: "We couldn't find a customer with this ID.<br>Check the number and try again, or create a new account.",
+        signupLabel: 'Create Customer Account'
+      }
+    };
+
+    function idConfig() { return ID_CONFIG[currentRole]; }
+
+    function switchRole(role) {
+      if (role !== ROLE_FARMER && role !== ROLE_CUSTOMER) return;
+      currentRole = role;
+
+      document.querySelectorAll('.role-tab').forEach(function (t) {
+        t.classList.toggle('active', t.getAttribute('data-role') === role);
+      });
+
+      var cfg = idConfig();
+      document.getElementById('id-tab-label').textContent = cfg.tabLabel;
+      document.getElementById('method-note').textContent =
+        'Sign in with your ' + cfg.tabLabel + '. You can also use your phone number or email below.';
+      document.getElementById('fid-prefix-text').textContent = cfg.prefix;
+      document.getElementById('fid-prompt').textContent = cfg.prompt;
+      document.getElementById('fid-notfound-text').innerHTML = cfg.notFound;
+      document.getElementById('signup-link-label').textContent = cfg.signupLabel;
+      // Carry the choice across so signup opens on the matching account type.
+      document.getElementById('signup-link').href =
+        'signup.html?role=' + (role === ROLE_CUSTOMER ? 'customer' : 'farmer');
+
+      var fidInput = document.getElementById('fid-input');
+      fidInput.value = '';
+      fidInput.placeholder = cfg.placeholder;
+
+      // Anything half-filled belongs to the other role, so start this one clean.
+      resetIdFlow();
+      document.getElementById('phone-input').value = '';
+      document.getElementById('email-input').value = '';
+      resetContactFlow('phone');
+      resetContactFlow('email');
+
+      switchMethod('id');
+      try {
+        sessionStorage.setItem('fa-login-role', role);
+      } catch (e) {}
+    }
+
+    function switchMethod(method) {
+      var forms = { id: 'form-id', phone: 'form-phone', email: 'form-email' };
+      document.querySelectorAll('.auth-form').forEach(function (f) { f.classList.remove('active'); });
+      var target = document.getElementById(forms[method] || 'form-id');
+      if (target) target.classList.add('active');
+      document.querySelectorAll('.auth-tab').forEach(function (t) {
+        t.classList.toggle('active', t.getAttribute('data-tab') === method);
+      });
+    }
+
+    /* Kept for the farmer's own links from elsewhere in the app. */
     function switchTab(mode) {
-      document.querySelectorAll('.auth-form').forEach(function(f){ f.classList.remove('active'); });
-      document.getElementById('form-' + mode).classList.add('active');
-      document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
-      document.querySelector('.auth-tab[data-tab="' + mode + '"]').classList.add('active');
+      if (mode === 'farmerid') return switchRole(ROLE_FARMER), switchMethod('id');
+      if (mode === 'customerid') return switchRole(ROLE_CUSTOMER), switchMethod('id');
+      switchMethod(mode);
+    }
+
+    /* Return the ID form to its first step, discarding a previous lookup. */
+    function resetIdFlow() {
+      _fidLookupResult = null;
+      _fidOtpSent = false;
+      document.getElementById('fid-profile').classList.remove('show');
+      document.getElementById('fid-notfound').classList.remove('show');
+      var step1 = document.getElementById('fid-step1');
+      var step2 = document.getElementById('fid-step2');
+      if (step1) step1.style.display = 'block';
+      if (step2) step2.style.display = 'none';
+      var btn = document.getElementById('fid-lookup-btn');
+      btn.disabled = false;
+      btn.innerHTML = 'Continue <i class="fas fa-arrow-right"></i>';
+      for (var i = 1; i <= 4; i++) {
+        var pin = document.getElementById('fid-pin-' + i);
+        if (pin) pin.value = '';
+      }
+      clearOtpInputs('fid-otp');
+      var area = document.getElementById('fid-otp-input-area');
+      if (area) area.style.display = 'none';
+    }
+
+    function resetContactFlow(kind) {
+      document.getElementById(kind + '-profile').classList.remove('show');
+      document.getElementById(kind + '-step1').style.display = 'block';
+      document.getElementById(kind + '-step2').style.display = 'none';
+      document.getElementById(kind + '-pin-section').style.display = 'none';
+      clearOtpInputs(kind + '-otp');
+      for (var i = 1; i <= 4; i++) {
+        var pin = document.getElementById(kind + '-pin-' + i);
+        if (pin) pin.value = '';
+      }
+    }
+
+    /*
+     * A login sent through the wrong form is answered by the server with a
+     * message naming the right one. Show exactly what it said rather than
+     * replacing it with a generic failure.
+     */
+    function showLoginError(err, fallback) {
+      var msg = (err && err.message) || fallback || 'Something went wrong';
+      if (/belongs to a (Farmer|Customer) account/i.test(msg)) return showToast(msg, 'info');
+      if (err && (err.status === 401 || err.status === 403)) return showToast(msg, 'danger');
+      return showToast(msg, 'danger');
     }
 
     function showDevOtp(result) {
@@ -347,19 +511,37 @@
       }
     }
 
-    function goToDashboard() {
+    /*
+     * After a successful login, go to the dashboard that matches the role the
+     * server reported on the account -- not the tab that was clicked, and not
+     * anything in the URL.
+     */
+    function goToDashboard(role) {
       var params = new URLSearchParams(window.location.search);
       var redirect = params.get('redirect');
-      if (redirect && /^(https?:\/\/[^/]+)?\//.test(redirect)) {
+      if (redirect && /^(https?:\/\/[^/]+)?\//.test(redirect) && !/customer\.html/i.test(redirect)) {
         window.location.href = redirect;
         return;
       }
-      window.location.href = 'index.html';
+      window.location.href = role === ROLE_CUSTOMER ? 'customer.html' : 'index.html';
+    }
+
+    function roleFromLogin(data) {
+      if (!data) return currentRole;
+      if (data.user && data.user.role) return data.user.role;
+      if (data.customer_id) return ROLE_CUSTOMER;
+      return currentRole;
     }
 
     if (window.UserStore && window.UserStore.isLoggedIn()) {
-      goToDashboard();
+      goToDashboard(UserStore.getRole());
     }
+
+    // Pick up the role the signup page ended on, so the two screens agree.
+    try {
+      var preselect = sessionStorage.getItem('fa-login-role');
+      if (preselect === ROLE_CUSTOMER) switchRole(ROLE_CUSTOMER);
+    } catch (e) {}
 
     /* ---- Phone OTP Flow ---- */
     var _phoneOtpSent = false;
@@ -374,17 +556,17 @@
       document.getElementById('phone-loading').classList.add('show');
       document.getElementById('phone-profile').classList.remove('show');
 
-      AuthService.lookupProfile(phone).then(function(profile) {
+      AuthService.lookupProfile(phone, null, null, null, currentRole).then(function(profile) {
         document.getElementById('phone-loading').classList.remove('show');
         if (profile) {
           var pp = document.getElementById('phone-profile');
           document.getElementById('phone-avatar').src = profile.profile_image || UserStore.avatarFor({full_name: profile.full_name});
           document.getElementById('phone-name').textContent = profile.full_name;
-          document.getElementById('phone-farmer-id').textContent = profile.farmer_id;
+          document.getElementById('phone-farmer-id').textContent = profile.customer_id || profile.farmer_id || '';
           document.getElementById('phone-masked').textContent = profile.phone_masked || '';
           pp.classList.add('show');
         }
-        return AuthService.sendOtp(phone);
+        return AuthService.sendOtp(phone, null, currentRole);
       }).then(function(result) {
         _phoneOtpSent = true;
         _phoneVerifiedPhone = phone;
@@ -397,7 +579,9 @@
         document.getElementById('phone-loading').classList.remove('show');
         btn.disabled = false;
         btn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
-        if (err.status === 401 || err.message.includes('not found')) {
+        if (err && err.status === 403) {
+          showLoginError(err);
+        } else if (err.status === 401 || (err.message && err.message.includes('not found'))) {
           showToast('Phone number not registered. Please sign up first.', 'danger');
         } else {
           showToast(err.message || 'Failed to send OTP', 'danger');
@@ -432,10 +616,10 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
 
-      AuthService.login({ phone_number: _phoneVerifiedPhone, pin: pin, login_method: 'phone' }).then(function(data) {
+      AuthService.loginCustomerByContact('phone_number', _phoneVerifiedPhone, pin).then(function(data) {
         if (data && data.access_token) {
           showToast('Login successful!', 'success');
-          setTimeout(goToDashboard, 600);
+          setTimeout(function() { goToDashboard(roleFromLogin(data)); }, 600);
         } else {
           showToast('Invalid PIN', 'danger');
           btn.disabled = false;
@@ -446,7 +630,7 @@
       }).catch(function(err) {
         btn.disabled = false;
         btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
-        showToast(err.message || 'Invalid PIN', 'danger');
+        showLoginError(err, 'Invalid PIN');
         for (var i = 1; i <= 4; i++) document.getElementById('phone-pin-' + i).value = '';
         document.getElementById('phone-pin-1').focus();
       });
@@ -475,21 +659,21 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
 
-      AuthService.verifyOtp(_phoneVerifiedPhone, null, otp).then(function(data) {
+      AuthService.verifyOtp(_phoneVerifiedPhone, null, otp, currentRole).then(function(data) {
         if (data && data.access_token) {
           showToast('Login successful!', 'success');
-          setTimeout(goToDashboard, 600);
+          setTimeout(function() { goToDashboard(roleFromLogin(data)); }, 600);
         } else if (data && data.is_existing_user === false) {
           showToast('Phone not registered. Redirecting to signup...', 'info');
           setTimeout(function(){ window.location.href = 'signup.html?phone=' + _phoneVerifiedPhone; }, 1000);
         } else {
           showToast('OTP verified. Logging in...', 'success');
-          setTimeout(goToDashboard, 600);
+          setTimeout(function() { goToDashboard(roleFromLogin(data)); }, 600);
         }
       }).catch(function(err) {
         btn.disabled = false;
         btn.innerHTML = 'Verify OTP <i class="fas fa-check"></i>';
-        showToast(err.message || 'Invalid OTP', 'danger');
+        showLoginError(err, 'Invalid OTP');
         clearOtpInputs('phone-otp');
         document.getElementById('phone-otp-1').focus();
       });
@@ -497,7 +681,7 @@
 
     function resendPhoneOtp() {
       if (!_phoneVerifiedPhone) return;
-      AuthService.sendOtp(_phoneVerifiedPhone).then(function(result) {
+      AuthService.sendOtp(_phoneVerifiedPhone, null, currentRole).then(function(result) {
         showDevOtp(result);
         showToast('OTP resent!', 'success');
       }).catch(function(err) {
@@ -518,17 +702,17 @@
       document.getElementById('email-loading').classList.add('show');
       document.getElementById('email-profile').classList.remove('show');
 
-      AuthService.lookupProfile(null, email).then(function(profile) {
+      AuthService.lookupProfile(null, email, null, null, currentRole).then(function(profile) {
         document.getElementById('email-loading').classList.remove('show');
         if (profile) {
           var pp = document.getElementById('email-profile');
           document.getElementById('email-avatar').src = profile.profile_image || UserStore.avatarFor({full_name: profile.full_name});
           document.getElementById('email-name').textContent = profile.full_name;
-          document.getElementById('email-farmer-id').textContent = profile.farmer_id;
+          document.getElementById('email-farmer-id').textContent = profile.customer_id || profile.farmer_id || '';
           document.getElementById('email-masked').textContent = profile.email_masked || '';
           pp.classList.add('show');
         }
-        return AuthService.sendOtp(null, email);
+        return AuthService.sendOtp(null, email, currentRole);
       }).then(function(result) {
         _emailOtpSent = true;
         _emailVerifiedEmail = email;
@@ -541,7 +725,9 @@
         document.getElementById('email-loading').classList.remove('show');
         btn.disabled = false;
         btn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
-        if (err.status === 401 || err.message.includes('not found')) {
+        if (err && err.status === 403) {
+          showLoginError(err);
+        } else if (err.status === 401 || (err.message && err.message.includes('not found'))) {
           showToast('Email not registered. Please sign up first.', 'danger');
         } else {
           showToast(err.message || 'Failed to send OTP', 'danger');
@@ -576,10 +762,10 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
 
-      AuthService.login({ email: _emailVerifiedEmail, pin: pin, login_method: 'email' }).then(function(data) {
+      AuthService.loginCustomerByContact('email', _emailVerifiedEmail, pin).then(function(data) {
         if (data && data.access_token) {
           showToast('Login successful!', 'success');
-          setTimeout(goToDashboard, 600);
+          setTimeout(function() { goToDashboard(roleFromLogin(data)); }, 600);
         } else {
           showToast('Invalid PIN', 'danger');
           btn.disabled = false;
@@ -590,7 +776,7 @@
       }).catch(function(err) {
         btn.disabled = false;
         btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
-        showToast(err.message || 'Invalid PIN', 'danger');
+        showLoginError(err, 'Invalid PIN');
         for (var i = 1; i <= 4; i++) document.getElementById('email-pin-' + i).value = '';
         document.getElementById('email-pin-1').focus();
       });
@@ -619,21 +805,21 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
 
-      AuthService.verifyOtp(null, _emailVerifiedEmail, otp).then(function(data) {
+      AuthService.verifyOtp(null, _emailVerifiedEmail, otp, currentRole).then(function(data) {
         if (data && data.access_token) {
           showToast('Login successful!', 'success');
-          setTimeout(goToDashboard, 600);
+          setTimeout(function() { goToDashboard(roleFromLogin(data)); }, 600);
         } else if (data && data.is_existing_user === false) {
           showToast('Email not registered. Redirecting to signup...', 'info');
           setTimeout(function(){ window.location.href = 'signup.html?email=' + encodeURIComponent(_emailVerifiedEmail); }, 1000);
         } else {
           showToast('OTP verified. Logging in...', 'success');
-          setTimeout(goToDashboard, 600);
+          setTimeout(function() { goToDashboard(roleFromLogin(data)); }, 600);
         }
       }).catch(function(err) {
         btn.disabled = false;
         btn.innerHTML = 'Verify OTP <i class="fas fa-check"></i>';
-        showToast(err.message || 'Invalid OTP', 'danger');
+        showLoginError(err, 'Invalid OTP');
         clearOtpInputs('email-otp');
         document.getElementById('email-otp-1').focus();
       });
@@ -641,7 +827,7 @@
 
     function resendEmailOtp() {
       if (!_emailVerifiedEmail) return;
-      AuthService.sendOtp(null, _emailVerifiedEmail).then(function(result) {
+      AuthService.sendOtp(null, _emailVerifiedEmail, currentRole).then(function(result) {
         showDevOtp(result);
         showToast('OTP resent!', 'success');
       }).catch(function() {
@@ -658,11 +844,18 @@
       el.value = el.value.replace(/[^0-9]/g, '');
     }
 
+    /* The identifier as the server should see it, for the selected role. */
+    function currentTypedId() {
+      var raw = document.getElementById('fid-input').value.trim();
+      if (!raw) return '';
+      return idConfig().prefix + raw;
+    }
+
     function handleFarmerIdLookup() {
-      var raw = document.getElementById('fid-input').value;
-      var fid = 'FA-AS-' + raw;
-      if (!raw.trim() || raw.trim().length === 0) {
-        showToast('Enter your Farmer ID', 'danger');
+      var raw = document.getElementById('fid-input').value.trim();
+      var id = currentTypedId();
+      if (!raw) {
+        showToast('Enter your ' + idConfig().tabLabel, 'danger');
         return;
       }
       var btn = document.getElementById('fid-lookup-btn');
@@ -672,14 +865,27 @@
       document.getElementById('fid-profile').classList.remove('show');
       document.getElementById('fid-notfound').classList.remove('show');
 
-      AuthService.lookupProfile(null, null, fid).then(function(profile) {
+      var cfg = idConfig();
+      // The typed ID has to go in the slot for the role being logged into.
+      // Passing it only as customerId meant a Farmer lookup sent no identifier
+      // at all, so the server correctly answered "No account found" and the
+      // page reported a valid Farmer ID as not found.
+      AuthService.lookupProfile(
+        null,
+        null,
+        currentRole === ROLE_FARMER ? id : null,
+        currentRole === ROLE_CUSTOMER ? id : null,
+        currentRole
+      )
+        .then(function(profile) {
         document.getElementById('fid-loading').classList.remove('show');
         if (profile) {
           _fidLookupResult = profile;
           var pp = document.getElementById('fid-profile');
           document.getElementById('fid-avatar').src = profile.profile_image || UserStore.avatarFor({full_name: profile.full_name});
           document.getElementById('fid-name').textContent = profile.full_name;
-          document.getElementById('fid-display-id').textContent = profile.farmer_id;
+          // Show whichever ID this account actually has.
+          document.getElementById('fid-display-id').textContent = profile[cfg.idField] || id;
           document.getElementById('fid-masked').textContent = profile.phone_masked || profile.email_masked || '';
           pp.classList.add('show');
           _fidOtpSent = false;
@@ -692,7 +898,7 @@
           }, 800);
         } else {
           document.getElementById('fid-notfound').classList.add('show');
-          showToast('Farmer ID not found', 'danger');
+          showToast(cfg.tabLabel + ' not found', 'danger');
         }
         btn.disabled = false;
         btn.innerHTML = 'Continue <i class="fas fa-arrow-right"></i>';
@@ -700,11 +906,16 @@
         document.getElementById('fid-loading').classList.remove('show');
         btn.disabled = false;
         btn.innerHTML = 'Continue <i class="fas fa-arrow-right"></i>';
+        if (err && err.status === 403) {
+          // The server recognised the ID and named the form that owns it.
+          showLoginError(err);
+          return;
+        }
         if (err && err.message && /network|fetch|fail/i.test(err.message)) {
           showToast('Connection issue. Please try again.', 'danger');
         } else {
           document.getElementById('fid-notfound').classList.add('show');
-          showToast(err.message || 'Farmer ID not found', 'danger');
+          showLoginError(err, cfg.tabLabel + ' not found');
         }
       });
     }
@@ -717,14 +928,8 @@
     }
 
     function goBackFarmerId() {
-      document.getElementById('fid-step1').style.display = 'block';
-      document.getElementById('fid-step2').style.display = 'none';
-      document.getElementById('fid-lookup-btn').disabled = false;
-      document.getElementById('fid-lookup-btn').innerHTML = 'Continue <i class="fas fa-arrow-right"></i>';
-      for (var i = 1; i <= 4; i++) document.getElementById('fid-pin-' + i).value = '';
-      clearOtpInputs('fid-otp');
-      _fidLookupResult = null;
-      _fidOtpSent = false;
+      resetIdFlow();
+      document.getElementById('fid-input').focus();
     }
 
     function switchFidAuth(mode) {
@@ -748,12 +953,17 @@
 
     function sendFarmerOtp(resend) {
       if (!_fidLookupResult) return;
-      var fid = _fidLookupResult.farmer_id;
+      var cfg = idConfig();
+      var id = _fidLookupResult[cfg.idField] || currentTypedId();
       var btn = document.getElementById('fid-otp-send-btn');
       if (btn.disabled) return;
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-      AuthService.sendFarmerOtp(fid, _fidChannel).then(function(result) {
+      // Same OTP service for both roles; only the endpoint differs.
+      var request = currentRole === ROLE_CUSTOMER
+        ? AuthService.sendCustomerOtp(id, _fidChannel)
+        : AuthService.sendFarmerOtp(id, _fidChannel);
+      request.then(function(result) {
         btn.disabled = false;
         btn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
         _fidOtpSent = true;
@@ -765,7 +975,7 @@
       }).catch(function(err) {
         btn.disabled = false;
         btn.innerHTML = 'Send OTP <i class="fas fa-paper-plane"></i>';
-        showToast(err.message || 'Failed to send OTP', 'danger');
+        showLoginError(err, 'Failed to send OTP');
       });
     }
 
@@ -773,14 +983,18 @@
       var otp = getOtpValue('fid-otp');
       if (otp.length < 4) return;
       if (!_fidLookupResult) return;
-      var fid = _fidLookupResult.farmer_id;
+      var cfg = idConfig();
+      var id = _fidLookupResult[cfg.idField] || currentTypedId();
       var btn = document.getElementById('fid-otp-verify-btn');
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
-      AuthService.verifyFarmerOtp(fid, _fidChannel, otp).then(function(data) {
+      var request = currentRole === ROLE_CUSTOMER
+        ? AuthService.verifyCustomerOtp(id, _fidChannel, otp)
+        : AuthService.verifyFarmerOtp(id, _fidChannel, otp);
+      request.then(function(data) {
         if (data && data.access_token) {
           showToast('Login successful!', 'success');
-          setTimeout(goToDashboard, 600);
+          setTimeout(function() { goToDashboard(roleFromLogin(data)); }, 600);
         } else {
           showToast('Invalid OTP', 'danger');
           btn.disabled = false;
@@ -791,7 +1005,7 @@
       }).catch(function(err) {
         btn.disabled = false;
         btn.innerHTML = 'Verify OTP <i class="fas fa-check"></i>';
-        showToast(err.message || 'Invalid OTP', 'danger');
+        showLoginError(err, 'Invalid OTP');
         clearOtpInputs('fid-otp');
         document.getElementById('fid-otp-1').focus();
       });
@@ -807,16 +1021,21 @@
       var pin = '';
       for (var i = 1; i <= 4; i++) pin += document.getElementById('fid-pin-' + i).value;
       if (pin.length < 4) { showToast('Enter complete PIN', 'danger'); return; }
-      var raw = document.getElementById('fid-input').value;
-      var fid = 'FA-AS-' + raw;
+      var id = currentTypedId();
       var btn = document.getElementById('fid-login-btn');
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
 
-      AuthService.login({ farmer_id: fid, pin: pin, login_method: 'farmer_id' }).then(function(data) {
+      // The ID type selected here decides which endpoint is used; the server
+      // still re-checks the account's real role before issuing a token.
+      var request = currentRole === ROLE_CUSTOMER
+        ? AuthService.loginCustomer(id, pin)
+        : AuthService.loginFarmer(id, pin);
+
+      request.then(function(data) {
         if (data && data.access_token) {
           showToast('Login successful!', 'success');
-          setTimeout(goToDashboard, 600);
+          setTimeout(function() { goToDashboard(roleFromLogin(data)); }, 600);
         } else {
           showToast('Invalid PIN', 'danger');
           btn.disabled = false;
@@ -827,7 +1046,7 @@
       }).catch(function(err) {
         btn.disabled = false;
         btn.innerHTML = 'Log In <i class="fas fa-sign-in-alt"></i>';
-        showToast(err.message || 'Invalid PIN', 'danger');
+        showLoginError(err, 'Invalid PIN');
         for (var i = 1; i <= 4; i++) document.getElementById('fid-pin-' + i).value = '';
         document.getElementById('fid-pin-1').focus();
       });

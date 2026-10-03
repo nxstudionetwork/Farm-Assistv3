@@ -70,3 +70,17 @@ def start_worker_booking_scheduler() -> None:
     except RuntimeError:
         _task = None
         logger.warning("Worker booking scheduler could not start (no running event loop).")
+
+
+async def stop_worker_booking_scheduler() -> None:
+    """Cancel and await the background overdue sweep during application shutdown."""
+    global _task
+    task = _task
+    _task = None
+    if task is None:
+        return
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass

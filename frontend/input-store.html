@@ -285,6 +285,8 @@
     .s-unit{font-size:11px;color:var(--text-muted);font-weight:600}
     .s-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
     .s-meta span{font-size:10px;font-weight:600;color:var(--text-secondary);background:var(--bg-card-soft);border:1px solid var(--border-light);padding:2px 8px;border-radius:10px}
+/* Crop facts on a Sell Crop listing card. */
+.s-meta-crop .s-meta-i{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--text-secondary);background:var(--soft-green,#E8F5E9);border:1px solid var(--border-light);padding:2px 8px;border-radius:10px}
     .s-avail{font-size:11px;font-weight:600;color:var(--text-muted);margin-top:5px}
     .s-avail b{color:var(--text-primary)}
     .s-actions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px 14px;border-top:1px solid var(--border-light);margin-top:auto;background:var(--bg-card-soft)}
@@ -550,7 +552,7 @@ var profile={full_name:'Farmer', phone_number:''};
 var wishlistIds=new Set();
 
 /* Stock (farmer marketplace) filter state — separate from product state S */
-var SS={page:1,limit:12,total:0,totalPages:0,search:'',catId:'',group:'',minPrice:null,maxPrice:null,avail:'',location:''};
+var SS={page:1,limit:12,total:0,totalPages:0,search:'',catId:'',group:'',minPrice:null,maxPrice:null,avail:'',location:'',harvest:'',farming:''};
 var stockCats={produce:[],items:[]};
 var _stockCatsLoaded=false;
 
@@ -825,8 +827,25 @@ function stockStatus(l){
   if(/low|limited|nearly|few/i.test(txt)||rem<10)return{cls:'low',label:'Low Stock'};
   return{cls:'in',label:'In Stock'};
 }
+/* Harvest stage wording, shared by the card and the detail sheet. The values
+   come from the backend so a new stage only has to be added there. */
+var HARVEST_LABEL={expected:'Expected',ready:'Ready now',harvested:'Harvested',partially_harvested:'Partly harvested'};
+function cropFacts(l){
+  var c=l&&l.crop;
+  if(!c)return'';
+  var bits=[];
+  if(c.variety_name)bits.push('<span class="s-meta-i"><i class="fas fa-dna"></i>'+esc(c.variety_name)+'</span>');
+  if(c.harvest_status)bits.push('<span class="s-meta-i"><i class="far fa-calendar-check"></i>'+esc(HARVEST_LABEL[c.harvest_status]||c.harvest_status)+'</span>');
+  if(c.is_organic)bits.push('<span class="s-meta-i"><i class="fas fa-leaf"></i>Organic</span>');
+  if(c.farming_method&&!c.is_organic)bits.push('<span class="s-meta-i"><i class="fas fa-tractor"></i>'+esc(c.farming_method)+'</span>');
+  if(c.bulk_order_available)bits.push('<span class="s-meta-i"><i class="fas fa-layer-group"></i>Bulk orders</span>');
+  if(c.delivery_available)bits.push('<span class="s-meta-i"><i class="fas fa-truck-fast"></i>Delivery</span>');
+  return bits.length?'<div class="s-meta s-meta-crop">'+bits.join('')+'</div>':'';
+}
 function stockMatch(txt,row){if(!txt)return!0;txt=txt.toLowerCase();
-  return ['title','name','description','location','quality_grade','brand','model','unit'].concat(row&&row.category?['category.name']:[]).some(function(k){
+  return ['title','name','description','location','quality_grade','brand','model','unit',
+          'crop.crop_name','crop.variety_name','crop.crop_category','crop.crop_domain','crop.harvest_status']
+    .concat(row&&row.category?['category.name']:[]).some(function(k){
     var v=row;var parts=k.split('.');
     for(var i=0;i<parts.length;i++){if(v==null)return false;v=v[parts[i]];}
     return (v+'').toLowerCase().indexOf(txt)>-1;});
@@ -851,7 +870,7 @@ function renderStockCard(l){
     +(img?'<img loading="lazy" src="'+img+'" alt="'+esc(l.title||'')+'" onerror="this.outerHTML=window.imgFallback()">':imgFallback())+'</div>'
     +'<div class="s-body"><div class="s-name">'+esc(l&&(l.title||l.name)||'Listing')+'</div>'
     +(seller?'<div class="s-seller"><i class="fas fa-store"></i>'+esc(seller)+'</div>':'')
-    +'<div class="s-price-row">'+(price?'<span class="s-price">'+price+'</span>':'')+unit+'</div>'+meta
+    +'<div class="s-price-row">'+(price?'<span class="s-price">'+price+'</span>':'')+unit+'</div>'+meta+cropFacts(l)
     +(loc?'<div class="s-loc"><i class="fas fa-location-dot"></i>'+esc(loc)+'</div>':'')
     +'<div class="s-avail">'+(out?'<span>Out of stock</span>':'Available: <b>'+remaining+'</b>'+(l&&l.unit?' '+esc(l.unit):''))+'</div>'
     +'</div>'
@@ -1175,6 +1194,8 @@ function loadStockListings(){
   if(SS.maxPrice!=null&&SS.maxPrice!=='')params.push('max_price='+SS.maxPrice);
   if(SS.location)params.push('location='+encodeURIComponent(SS.location));
   if(SS.avail)params.push('availability='+encodeURIComponent(SS.avail));
+  if(SS.harvest)params.push('harvest_status='+encodeURIComponent(SS.harvest));
+  if(SS.farming)params.push('farming_method='+encodeURIComponent(SS.farming));
   var sortKey=stockSortKey();
   if(sortKey)params.push('sort='+sortKey);
   params.push('page='+(SS.page||1));
@@ -1241,11 +1262,25 @@ function stockCatChips(){
     return'<button class="f-chip'+(SS.catId===c.id?' active':'')+'" data-role="cat" data-val="'+c.id+'">'+icon+esc(c.name)+'</button>';
   }).join('');
 }
+function stockHarvestChips(){
+  var opts=[['','Any harvest stage'],['ready','Ready now'],['expected','Expected'],['harvested','Harvested'],['partially_harvested','Partly harvested']];
+  return opts.map(function(o){
+    return'<button class="f-chip'+(SS.harvest===o[0]?' active':'')+'" data-role="harvest" data-val="'+o[0]+'">'+esc(o[1])+'</button>';
+  }).join('');
+}
+function stockMethodChips(){
+  var opts=[['','Any method'],['organic','Organic'],['conventional','Conventional']];
+  return opts.map(function(o){
+    return'<button class="f-chip'+(SS.farming===o[0]?' active':'')+'" data-role="farming" data-val="'+o[0]+'">'+esc(o[1])+'</button>';
+  }).join('');
+}
 function stockFilterPanelHTML(sheet){
   var suf=sheet?'-s':'';
   return '<div class="filter-group"><h4>Type of Stock</h4><div class="filter-chips">'+stockGroupChips()+'</div></div>'
     +'<div class="filter-group"><h4>Category</h4><div class="filter-chips">'+stockCatChips()+'</div>'+(stockCatChips()===''?'<div class="wk-note warn" style="margin-top:6px;padding:7px 10px;font-size:11px"><i class="fas fa-store"></i> Categories are loading…</div>':'')+'</div>'
     +'<div class="filter-group"><h4>Availability</h4><div class="filter-chips">'+stockAvailChips()+'</div></div>'
+    +'<div class="filter-group"><h4>Harvest Stage</h4><div class="filter-chips">'+stockHarvestChips()+'</div></div>'
+    +'<div class="filter-group"><h4>Farming Method</h4><div class="filter-chips">'+stockMethodChips()+'</div></div>'
     +'<div class="filter-group"><h4>Price Range (₹ / unit)</h4><div class="f-price-row"><input id="sk-min'+suf+'" type="number" min="0" step="any" placeholder="Min" value="'+(SS.minPrice==null?'':SS.minPrice)+'"><span style="color:var(--text-muted)">–</span><input id="sk-max'+suf+'" type="number" min="0" step="any" placeholder="Max" value="'+(SS.maxPrice==null?'':SS.maxPrice)+'"></div></div>'
     +'<div class="filter-group"><h4>Location</h4><input id="sk-loc'+suf+'" type="text" placeholder="Village, district or state" value="'+esc(SS.location)+'" style="width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--is-radius-sm);font-size:12px;background:var(--bg-card-soft);color:var(--text-primary);outline:none"></div>';
 }
@@ -1260,6 +1295,8 @@ function stockChipApply(role,val){
     if(val&&val.toLowerCase()===String(SS.avail||'').toLowerCase())SS.avail='';else SS.avail=val;
   }
   else if(role==='cat')SS.catId=SS.catId===val?'':val;
+  else if(role==='harvest')SS.harvest=SS.harvest===val?'':val;
+  else if(role==='farming')SS.farming=SS.farming===val?'':val;
   SS.page=1;
   loadStockListings();
   renderStockFilterPanel();
@@ -1295,6 +1332,8 @@ function renderStockAppliedFilters(){
   }
   if(SS.group)chips.push({label:SS.group==='produce'?'Group: Produce':'Group: Items',clear:function(){SS.group=''}});
   if(SS.avail)chips.push({label:'Availability: '+SS.avail,clear:function(){SS.avail=''}});
+  if(SS.harvest)chips.push({label:'Harvest: '+(HARVEST_LABEL[SS.harvest]||SS.harvest),clear:function(){SS.harvest=''}});
+  if(SS.farming)chips.push({label:'Method: '+(SS.farming==='organic'?'Organic':'Conventional'),clear:function(){SS.farming=''}});
   if(SS.minPrice!=null&&SS.minPrice!=='')chips.push({label:'Min: ₹'+SS.minPrice,clear:function(){SS.minPrice=null}});
   if(SS.maxPrice!=null&&SS.maxPrice!=='')chips.push({label:'Max: ₹'+SS.maxPrice,clear:function(){SS.maxPrice=null}});
   if(SS.location)chips.push({label:'Location: '+SS.location,clear:function(){SS.location=''}});
@@ -1345,6 +1384,40 @@ function openBrowseListing(id){
     if(l.quality_grade)specs.push(['Quality Grade',l.quality_grade]);
     if(l.harvest_date)specs.push(['Harvest Date',shortDate(l.harvest_date)]);
     if(l.condition_type)specs.push(['Condition',l.condition_type==='used'?('Used'+(l.age_year?' · '+l.age_year+' yr':'')):l.condition_type]);
+    /* Produce facts, so a buyer sees the real harvest rather than only a
+       generic listing. Only present on Sell Crop listings. */
+    var crop=l.crop;
+    if(crop){
+      if(crop.crop_name)specs.push(['Crop',crop.crop_name]);
+      if(crop.variety_name)specs.push(['Variety',crop.variety_name]);
+      if(crop.crop_category)specs.push(['Crop category',crop.crop_category]);
+      if(crop.crop_domain)specs.push(['Crop domain',crop.crop_domain]);
+      if(crop.harvest_status)specs.push(['Harvest status',HARVEST_LABEL[crop.harvest_status]||crop.harvest_status]);
+      if(crop.growing_season)specs.push(['Growing season',crop.growing_season]);
+      if(crop.expected_harvest_date)specs.push(['Expected harvest',shortDate(crop.expected_harvest_date)]);
+      if(crop.actual_harvest_date)specs.push(['Harvested on',shortDate(crop.actual_harvest_date)]);
+      if(crop.harvest_quantity!=null&&crop.harvest_quantity!=='')specs.push(['Total harvest',crop.harvest_quantity+(crop.harvest_unit?' '+crop.harvest_unit:'')]);
+      if(crop.is_advance_sale)specs.push(['Listing type','Advance sale (pre-harvest booking)']);
+      if(crop.farming_method)specs.push(['Farming method',crop.is_organic?'Organic':'Conventional']);
+      if(crop.certification)specs.push(['Certification',crop.certification]);
+      if(crop.quality_grade)specs.push(['Quality grade',crop.quality_grade]);
+      if(crop.size_grade)specs.push(['Size / weight grade',crop.size_grade]);
+      if(crop.freshness)specs.push(['Freshness',crop.freshness]);
+      if(crop.moisture_percentage!=null&&crop.moisture_percentage!=='')specs.push(['Moisture',crop.moisture_percentage+'%']);
+      if(crop.produce_condition)specs.push(['Produce condition',crop.produce_condition]);
+      if(crop.storage_condition)specs.push(['Storage condition',crop.storage_condition]);
+      if(crop.packaging_type)specs.push(['Packaging',crop.packaging_type]);
+      if(crop.packaging_size)specs.push(['Packaging size',crop.packaging_size]);
+      if(crop.price_unit)specs.push(['Price unit',crop.price_unit]);
+      if(crop.min_order_quantity!=null&&crop.min_order_quantity!=='')specs.push(['Minimum order',crop.min_order_quantity+(crop.price_unit?' '+crop.price_unit:'')]);
+      if(crop.max_order_quantity!=null&&crop.max_order_quantity!=='')specs.push(['Maximum order',crop.max_order_quantity+(crop.price_unit?' '+crop.price_unit:'')]);
+      if(crop.bulk_order_available)specs.push(['Bulk orders','Available']);
+      if(crop.pickup_available)specs.push(['Pickup','Available']);
+      if(crop.delivery_available)specs.push(['Delivery','Available']);
+      if(crop.delivery_radius)specs.push(['Delivery radius',crop.delivery_radius]);
+      if(crop.pickup_instructions)specs.push(['Pickup instructions',crop.pickup_instructions]);
+      if(crop.preferred_buyer_location)specs.push(['Preferred buyer market',crop.preferred_buyer_location]);
+    }
     var ownNote=(l.is_owner)?'<div class="wk-note ok"><i class="fas fa-circle-check"></i> This is your own listing.</div>':'';
     var remaining=Number(l.remaining_quantity!=null?l.remaining_quantity:(l.quantity||0))||0;
     var out=st.cls==='out'||remaining<=0;
@@ -1372,7 +1445,7 @@ function openBrowseListing(id){
       +((seller&&seller.full_name&&seller.id)?'<div class="prod-seller"><i class="fas fa-store"></i><div class="prod-seller-info"><strong>'+esc(seller.full_name)+'</strong><span>'+(l.location?'Location: '+esc(l.location):'Farmer listing')+'</span></div></div>':'')
       +(l.location?'<div class="prod-delivery"><i class="fas fa-location-dot"></i><span>'+esc(l.location)+'</span></div>':'')
       +'<div class="prod-desc">'+esc(desc)+'</div>'
-      +(specs.length?'<div class="prod-specs"><h4>Listing Details</h4><dl class="spec-grid">'+specs.map(function(s){return'<dt>'+esc(s[0])+'</dt><dd>'+esc(s[1])+'</dd>'}).join('')+'</dl></div>':'')
+      +(specs.length?'<div class="prod-specs"><h4>'+(crop?'Harvest &amp; Listing Details':'Listing Details')+'</h4><dl class="spec-grid">'+specs.map(function(s){return'<dt>'+esc(s[0])+'</dt><dd>'+esc(s[1])+'</dd>'}).join('')+'</dl></div>':'')
       +buyHTML+ownNote+actionHTML
       +'</div></div>';
     document.getElementById('prod-modal').classList.add('open');

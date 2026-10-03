@@ -189,6 +189,43 @@ def _stage_boundaries(duration: Optional[float]) -> list:
     return [0, int(total * 0.15), int(total * 0.45), int(total * 0.70), int(total * 0.90)]
 
 
+def _crop_stage_plan(crop: Optional[Crop]) -> Optional[list]:
+    """The crop's own lifecycle, read from the shared crop catalog.
+
+    Grapes, roses and coconut do not share one seedling -> harvest sequence, so a
+    crop that carries ``lifecycle_stages`` is described by those stages instead
+    of the generic five-stage model. Returns ``None`` when the crop has no
+    lifecycle of its own, which is what keeps the generic model as the fallback
+    for crops the catalog does not describe.
+    """
+    if not crop:
+        return None
+    plan = []
+    seen = set()
+    for raw in (crop.lifecycle_stages or []):
+        label = str(raw or "").strip()
+        if not label:
+            continue
+        key = label.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        plan.append({"key": key, "label": label})
+    return plan or None
+
+
+def _plan_boundaries(count: int, duration: Optional[float]) -> list:
+    """Day offsets at which each of ``count`` catalog stages begins."""
+    if not count:
+        return []
+    if not duration or duration <= 0:
+        # No duration on record. Reporting every stage as starting today keeps
+        # the timeline renderable instead of inventing dates.
+        return [0] * count
+    total = float(duration)
+    return [int(total * i / count) for i in range(count)]
+
+
 def _expected_stage(days: Optional[int], duration: Optional[float]) -> Optional[str]:
     if days is None:
         return None
@@ -471,48 +508,86 @@ def _stage_info(cycle: Optional[CropCycle], crop: Optional[Crop]) -> dict:
     duration = crop.growth_duration_days if crop else None
     days = (today - sow).days if sow else None
 
-    explicit = _normalize_stage(cycle.current_stage) if cycle else None
-    expected = _expected_stage(days, duration)
-    current = explicit or expected
+    # The crop's own lifecycle wins over the generic model when the catalog has
+    # one, so grapes are tracked through Dormancy/Pruning/Bud break instead of
+    # being forced into a seedling -> harvest sequence they do not have.
+    plan = _crop_stage_plan(crop)
+    if plan:
+        order = [p["key"] for p in plan]
+        labels = {p["key"]: p["label"] for p in plan}
+        boundaries = _plan_boundaries(len(order), duration)
+    else:
+        order = list(STAGE_ORDER)
+        labels = dict(STAGE_LABELS)
+        boundaries = _stage_boundaries(duration)
 
-    boundaries = _stage_boundaries(duration)
+    def _match(raw) -> Optional[str]:
+        if not raw:
+            return None
+        key = str(raw).strip().lower()
+        if key in labels:
+            return key
+        # Stages recorded before the catalog described this crop still resolve
+        # through the shared agronomy aliases.
+        generic = _normalize_stage(raw)
+        if generic and generic in labels:
+            return generic
+        return None
+
+    explicit = _match(cycle.current_stage) if cycle else None
+
+    expected = None
+    if days is not None and order:
+        index = 0
+        for i, start in enumerate(boundaries):
+            if days >= start:
+                index = i
+        expected = order[min(index, len(order) - 1)]
+
+    current = explicit or expected
+    current_index = order.index(current) if current in order else None
+
     progress = None
     if days is not None and duration and duration > 0:
         progress = max(0.0, min(1.0, days / float(duration)))
 
     next_stage = None
     to_next = None
-    if days is not None and current in STAGE_ORDER:
-        index = STAGE_ORDER.index(current)
-        if index + 1 < len(STAGE_ORDER):
-            next_stage = STAGE_ORDER[index + 1]
-            to_next = max(0, boundaries[index + 1] - days)
+    if days is not None and current_index is not None:
+        if current_index + 1 < len(order):
+            next_stage = order[current_index + 1]
+            nxt = current_index + 1
+            to_next = max(0, (boundaries[nxt] if nxt < len(boundaries) else 0) - days)
 
     return {
         "sowing_date": sow.isoformat() if sow else None,
         "days_since_sowing": days,
         "growth_duration_days": duration,
         "current_stage": current,
-        "current_stage_label": STAGE_LABELS.get(current) if current else None,
+        "current_stage_label": labels.get(current) if current else None,
         "stage_recorded": bool(explicit),
         "expected_stage": expected,
-        "expected_stage_label": STAGE_LABELS.get(expected) if expected else None,
+        "expected_stage_label": labels.get(expected) if expected else None,
         "expected_harvest_date": cycle.expected_harvest_date if cycle else None,
         "actual_harvest_date": cycle.actual_harvest_date if cycle else None,
         "next_stage": next_stage,
-        "next_stage_label": STAGE_LABELS.get(next_stage) if next_stage else None,
+        "next_stage_label": labels.get(next_stage) if next_stage else None,
         "days_to_next_stage": to_next,
         "progress_pct": round(progress * 100) if progress is not None else None,
+        # The resolved plan travels with the payload so the factors below score
+        # "behind schedule" against the same stages the farmer sees.
+        "custom_lifecycle": bool(plan),
+        "order": order,
+        "labels": labels,
         "stages": [
             {
                 "key": key,
-                "label": STAGE_LABELS[key],
-                "start_day": boundaries[i],
+                "label": labels[key],
+                "start_day": boundaries[i] if i < len(boundaries) else None,
                 "is_current": key == current,
-                "is_past": current is not None
-                and STAGE_ORDER.index(key) < STAGE_ORDER.index(current),
+                "is_past": current_index is not None and i < current_index,
             }
-            for i, key in enumerate(STAGE_ORDER)
+            for i, key in enumerate(order)
         ],
     }
 
@@ -542,20 +617,23 @@ def _growth_factor(cycle: Optional[CropCycle], stage: dict) -> dict:
                        f"{duration:g} days. Check maturity and plan harvest.", updated, True)
 
     if current and expected:
-        behind = STAGE_ORDER.index(expected) - STAGE_ORDER.index(current)
-        if behind >= 2:
-            return _factor("growth", label, "attention", STAGE_LABELS[current],
-                           f"Growth appears slower than expected on day {days}. "
-                           f"The crop is showing {STAGE_LABELS[current].lower()} while "
-                           f"{STAGE_LABELS[expected].lower()} is typical at this age.",
+        order = stage.get("order") or STAGE_ORDER
+        labels = stage.get("labels") or STAGE_LABELS
+        if current in order and expected in order:
+            behind = order.index(expected) - order.index(current)
+            if behind >= 2:
+                return _factor("growth", label, "attention", labels.get(current, current),
+                               f"Growth appears slower than expected on day {days}. "
+                               f"The crop is showing {str(labels.get(current, current)).lower()} while "
+                               f"{str(labels.get(expected, expected)).lower()} is typical at this age.",
+                               updated, True)
+            if behind == 1:
+                return _factor("growth", label, "good", labels.get(current, current),
+                               f"Slightly behind the typical stage on day {days}, "
+                               "but development is continuing normally.", updated, True)
+            return _factor("growth", label, "good", labels.get(current, current),
+                           f"Development matches the expected {str(labels.get(expected, expected)).lower()} stage.",
                            updated, True)
-        if behind == 1:
-            return _factor("growth", label, "good", STAGE_LABELS[current],
-                           f"Slightly behind the typical stage on day {days}, "
-                           "but development is continuing normally.", updated, True)
-        return _factor("growth", label, "good", STAGE_LABELS[current],
-                       f"Development matches the expected {STAGE_LABELS[expected].lower()} stage.",
-                       updated, True)
 
     return _factor("growth", label, "good",
                    stage["current_stage_label"] or "Recorded",
@@ -1669,13 +1747,31 @@ def _companion_sections(db: Session, ctx: dict) -> dict:
     days = stage.get("days_since_sowing")
     duration = stage.get("growth_duration_days")
 
-    # Cycle timeline (10 canonical stages).
+    # Cycle timeline. The crop's own lifecycle is passed through so grapes,
+    # roses and perennial plantation crops are tracked through their real
+    # stages rather than a generic seedling -> harvest sequence.
+    lifecycle_stages = (crop.lifecycle_stages or []) if crop else None
     cycle_timeline = guidance.build_cycle(
-        crop_name, days if days is not None else None, duration, canonical_current
+        crop_name,
+        days if days is not None else None,
+        duration,
+        canonical_current or stage.get("current_stage"),
+        lifecycle_stages=lifecycle_stages,
     )
 
-    # Watch-for-this for the current stage.
-    watch_stage = canonical_current or cycle_timeline.get("current_stage") or "vegetative"
+    # Watch-for-this and the plan are looked up by the agronomy bucket, not by the
+    # crop's own stage label, so a grape's "Pruning" still retrieves the pruning
+    # activities and watch items from the knowledge base.
+    current_entry = next(
+        (s for s in (cycle_timeline.get("stages") or []) if s.get("state") == "current"),
+        None,
+    )
+    watch_stage = (
+        canonical_current
+        or (current_entry or {}).get("bucket")
+        or cycle_timeline.get("current_stage")
+        or "vegetative"
+    )
     watch = guidance.build_watch(crop_name, watch_stage)
 
     # Your Crop Health Plan (data + knowledge driven).
@@ -1697,18 +1793,40 @@ def _companion_sections(db: Session, ctx: dict) -> dict:
     checks = _check_history(db, cycle, [ctx["plot"].id] if ctx["plot"] else [])
 
     # Per-stage clickable detail (activities + watch) for the whole timeline.
+    # Keys mirror whatever the timeline actually rendered, so clicking a grape's
+    # "Pruning" opens its own detail instead of silently doing nothing.
     profile, _ = guidance.get_crop_profile(crop_name)
     stage_details = {}
+    for entry in cycle_timeline.get("stages") or []:
+        if entry.get("bucket"):
+            bucket = entry["bucket"]
+            stage_details[entry["key"]] = {
+                "label": entry.get("label") or bucket,
+                "icon": entry.get("icon") or guidance.STAGE_ICONS.get(bucket, "fa-leaf"),
+                "meaning": guidance.STAGE_MEANINGS.get(
+                    bucket, "General reference for this crop stage."
+                ),
+                "bucket": bucket,
+                "activities": guidance._activity_items(profile, bucket)[:4],
+                "watch": guidance.build_watch(crop_name, bucket),
+            }
+    # Keep the canonical buckets available too, so a client that still asks for
+    # "flowering" or "harvest" keeps working after the crop gained its own
+    # lifecycle.
     for key in guidance.STAGE_KEYS:
-        stage_details[key] = {
-            "label": guidance.STAGE_LABELS.get(key, key),
-            "icon": guidance.STAGE_ICONS.get(key, "fa-leaf"),
-            "meaning": (
-                guidance.STAGE_MEANINGS.get(key, "General reference for this crop stage.")
-            ),
-            "activities": guidance._activity_items(profile, key)[:4],
-            "watch": guidance.build_watch(crop_name, key),
-        }
+        stage_details.setdefault(
+            key,
+            {
+                "label": guidance.STAGE_LABELS.get(key, key),
+                "icon": guidance.STAGE_ICONS.get(key, "fa-leaf"),
+                "meaning": (
+                    guidance.STAGE_MEANINGS.get(key, "General reference for this crop stage.")
+                ),
+                "bucket": key,
+                "activities": guidance._activity_items(profile, key)[:4],
+                "watch": guidance.build_watch(crop_name, key),
+            },
+        )
 
     harvest = guidance.build_harvest_preparation(
         crop_name,

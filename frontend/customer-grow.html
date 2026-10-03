@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="customer-grow">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - My Growing</title>
+  <meta name="api-base-url" content="/api/v1">
+  <script>window._API_BASE_URL = '/api/v1';</script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .plant-card{display:flex;gap:12px;align-items:flex-start;padding:13px;border:1px solid var(--border-light);border-radius:14px;margin-bottom:10px;background:#fff}
+    .plant-icon{width:42px;height:42px;border-radius:13px;background:var(--soft-green);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto}
+    .plant-body{flex:1;min-width:0}
+    .plant-name{font-size:14px;font-weight:700}
+    .plant-crop{font-size:11.5px;color:var(--text-muted);margin-top:2px}
+    .plant-meta{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap}
+    .plant-meta span{font-size:11px;color:var(--text-secondary);background:var(--soft-green);padding:3px 8px;border-radius:999px}
+    .plant-actions{display:flex;gap:7px;margin-top:10px}
+    .filter-row{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+    .filter-chip{padding:7px 14px;border-radius:999px;border:1px solid var(--border-light);background:#fff;font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;white-space:nowrap;font-family:inherit}
+    .filter-chip.active{background:var(--primary-green);color:#fff;border-color:var(--primary-green)}
+  </style>
+</head>
+<body>
+  <main class="page-container">
+    <div class="page-header" style="margin-bottom:14px">
+      <h1 style="font-size:19px;font-weight:800"><i class="fas fa-seedling" style="color:var(--primary-green)"></i> My Growing</h1>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:2px">
+        What you are growing at home. Choose from the Farm Assist crop catalogue.
+      </p>
+    </div>
+
+    <div class="filter-row" id="grow-filters">
+      <button class="filter-chip active" data-status="">All</button>
+      <button class="filter-chip" data-status="growing">Growing</button>
+      <button class="filter-chip" data-status="harvested">Harvested</button>
+      <button class="filter-chip" data-status="removed">Removed</button>
+    </div>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h3 style="font-size:15px"><i class="fas fa-spa" style="color:var(--primary-green);margin-right:6px"></i> Plants</h3>
+        <button class="mini-btn" id="grow-add-toggle" type="button">+ Add Plant</button>
+      </div>
+
+      <div id="grow-form-wrap" style="display:none;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border-light)">
+        <div class="form-group" style="margin-bottom:11px">
+          <label for="grow-crop-search">Search the crop catalogue</label>
+          <input type="text" id="grow-crop-search" placeholder="Tomato, Chilli, Spinach...">
+        </div>
+        <div id="grow-crop-results" style="max-height:190px;overflow-y:auto;border:1px solid var(--border-light);border-radius:11px;margin-bottom:11px"></div>
+        <div id="grow-selected" style="display:none;margin-bottom:11px;padding:10px 12px;background:var(--soft-green);border-radius:11px;font-size:12.5px;font-weight:600"></div>
+        <input type="hidden" id="grow-crop-id">
+        <div class="form-group" style="margin-bottom:11px">
+          <label for="grow-nickname">Nickname (optional)</label>
+          <input type="text" id="grow-nickname" placeholder="Balcony tomato">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
+          <div class="form-group" style="margin:0">
+            <label for="grow-quantity">Quantity</label>
+            <input type="number" id="grow-quantity" value="1" min="1">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label for="grow-planted">Planted on</label>
+            <input type="date" id="grow-planted">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label for="grow-harvest">Expected harvest (optional)</label>
+          <input type="date" id="grow-harvest">
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label for="grow-notes">Notes (optional)</label>
+          <input type="text" id="grow-notes" placeholder="Pot size, location...">
+        </div>
+        <div style="display:flex;gap:9px">
+          <button class="btn-submit" style="flex:1" id="grow-save" type="button">Add to Grow List</button>
+          <button class="btn-secondary" style="flex:0 0 auto" id="grow-cancel" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <div id="grow-list"><div class="loading-shimmer"></div><div class="loading-shimmer" style="width:70%"></div></div>
+    </section>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <h3 style="font-size:15px;margin-bottom:8px"><i class="fas fa-lightbulb" style="color:#E9B640;margin-right:6px"></i> Growing Tips</h3>
+      <p style="font-size:12.5px;color:var(--text-secondary);line-height:1.6">
+        Pick a crop from the catalogue above to see its full growing guide &mdash;
+        sowing season, spacing, water needs and harvest window &mdash; in the
+        <a href="techniques.html" style="color:var(--primary-green);font-weight:700">crop techniques library</a>.
+      </p>
+    </section>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    /*
+     * Customer "Grow".
+     *
+     * This is the customer's own list of plants at home, not the farmer's farm
+     * module: there is no land area, soil type or irrigation channel here. A
+     * plant points at a row in the existing `crops` catalogue, so the crop names
+     * shown are the catalogue's own and stay in step with it.
+     */
+    (function guardRole() {
+      var role = (window.UserStore && UserStore.getRole) ? UserStore.getRole() : 'farmer';
+      if (role !== 'customer') window.location.replace('index.html');
+    })();
+
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function shortDate(v) {
+      if (!v) return null;
+      var d = new Date(v);
+      return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function toast(msg, type) {
+      if (window.showToast) return showToast(msg, type);
+      console.log(msg);
+    }
+
+    var statusFilter = '';
+
+    function renderPlants(plants) {
+      var host = document.getElementById('grow-list');
+      if (!plants || !plants.length) {
+        host.innerHTML = '<div class="empty-state" style="padding:18px 0">' +
+          '<i class="fas fa-seedling"></i>' +
+          '<p>Nothing here yet. Add your first plant to start tracking it.</p></div>';
+        return;
+      }
+      host.innerHTML = plants.map(function (p) {
+        var meta = [];
+        if (p.quantity) meta.push('<span><i class="fas fa-box"></i> ' + p.quantity + ' unit(s)</span>');
+        var planted = shortDate(p.planted_on);
+        if (planted) meta.push('<span><i class="fas fa-calendar"></i> Planted ' + planted + '</span>');
+        var harvest = shortDate(p.expected_harvest_on);
+        if (harvest) meta.push('<span><i class="fas fa-basket"></i> Harvest ~' + harvest + '</span>');
+        if (p.status) meta.push('<span><i class="fas fa-circle"></i> ' + esc(p.status) + '</span>');
+        return '<div class="plant-card">' +
+          '<span class="plant-icon"><i class="fas fa-seedling"></i></span>' +
+          '<div class="plant-body">' +
+            '<div class="plant-name">' + esc(p.nickname || p.crop_name || 'Plant') + '</div>' +
+            '<div class="plant-crop">' +
+              esc([p.crop_name, p.crop_variety].filter(Boolean).join(' - ')) +
+              (p.plant_id ? ' &middot; ' + esc(p.plant_id) : '') +
+            '</div>' +
+            (p.notes ? '<div class="plant-crop">' + esc(p.notes) + '</div>' : '') +
+            '<div class="plant-meta">' + meta.join('') + '</div>' +
+            '<div class="plant-actions">' +
+              // Only offer the transition that still makes sense, so a harvested
+              // plant is not still offering to be harvested.
+              (p.status && p.status !== 'growing'
+                ? ''
+                : '<button class="mini-btn" data-plant-status="' + esc(p.plant_id) + '" data-value="harvested">Mark Harvested</button>') +
+              '<button class="mini-btn danger" data-plant-delete="' + esc(p.plant_id) + '">Remove</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function loadPlants() {
+      API.Customer.getPlants(statusFilter || undefined).then(function (data) {
+        renderPlants(data ? (data.plants || []) : []);
+      }).catch(function (err) {
+        var msg = (err && err.status === 403) ? 'This account is not a customer account.'
+          : 'Could not load your plants.';
+        document.getElementById('grow-list').innerHTML =
+          '<div class="empty-state" style="padding:18px 0"><i class="fas fa-triangle-exclamation"></i><p>' + esc(msg) + '</p></div>';
+      });
+    }
+
+    /* Crops come from the shared catalogue, searched as the customer types. */
+    var searchTimer = null;
+    function searchCrops(term) {
+      var host = document.getElementById('grow-crop-results');
+      if (!term || term.length < 2) { host.innerHTML = ''; return; }
+      API.Crop.listCrops({ q: term, page_size: 12 }).then(function (crops) {
+        if (!crops || !crops.length) {
+          host.innerHTML = '<div style="padding:11px;font-size:12px;color:var(--text-muted)">No crop matches "' + esc(term) + '".</div>';
+          return;
+        }
+        host.innerHTML = crops.map(function (c) {
+          return '<button type="button" class="mini-btn" style="display:block;width:100%;text-align:left;margin-bottom:5px;border-radius:9px" ' +
+            'data-crop-id="' + esc(c.id) + '" data-crop-name="' + esc(c.name) + '">' +
+            esc(c.name) + (c.variety ? ' <span style="font-weight:400;color:var(--text-muted)">&middot; ' + esc(c.variety) + '</span>' : '') +
+          '</button>';
+        }).join('');
+      }).catch(function () {
+        host.innerHTML = '<div style="padding:11px;font-size:12px;color:var(--danger)">Could not search the crop catalogue.</div>';
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      loadPlants();
+
+      document.getElementById('grow-filters').addEventListener('click', function (e) {
+        var chip = e.target.closest('.filter-chip');
+        if (!chip) return;
+        document.querySelectorAll('.filter-chip').forEach(function (c) { c.classList.remove('active'); });
+        chip.classList.add('active');
+        statusFilter = chip.getAttribute('data-status');
+        loadPlants();
+      });
+
+      var form = document.getElementById('grow-form-wrap');
+      document.getElementById('grow-add-toggle').addEventListener('click', function () {
+        var open = form.style.display !== 'none';
+        form.style.display = open ? 'none' : 'block';
+        this.textContent = open ? '+ Add Plant' : 'Close';
+        if (!open) document.getElementById('grow-crop-search').focus();
+      });
+      document.getElementById('grow-cancel').addEventListener('click', function () {
+        form.style.display = 'none';
+        document.getElementById('grow-add-toggle').textContent = '+ Add Plant';
+      });
+
+      document.getElementById('grow-crop-search').addEventListener('input', function () {
+        var term = this.value.trim();
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () { searchCrops(term); }, 280);
+      });
+
+      document.getElementById('grow-crop-results').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-crop-id]');
+        if (!btn) return;
+        document.getElementById('grow-crop-id').value = btn.getAttribute('data-crop-id');
+        var box = document.getElementById('grow-selected');
+        box.style.display = 'block';
+        box.textContent = 'Selected: ' + btn.getAttribute('data-crop-name');
+        document.getElementById('grow-crop-results').innerHTML = '';
+      });
+
+      document.getElementById('grow-save').addEventListener('click', function () {
+        var cropId = document.getElementById('grow-crop-id').value;
+        if (!cropId) { toast('Choose a crop from the catalogue first', 'danger'); return; }
+        var quantity = parseInt(document.getElementById('grow-quantity').value, 10);
+        var btn = this;
+        btn.disabled = true;
+        API.Customer.addPlant({
+          // Crop primary keys are strings in this schema, so this must not be
+          // run through Number(): a UUID would become NaN and the plant would be
+          // saved with no crop at all.
+          crop_id: cropId,
+          nickname: document.getElementById('grow-nickname').value.trim() || null,
+          quantity: isNaN(quantity) ? 1 : quantity,
+          planted_on: document.getElementById('grow-planted').value || null,
+          expected_harvest_on: document.getElementById('grow-harvest').value || null,
+          notes: document.getElementById('grow-notes').value.trim() || null
+        }).then(function () {
+          btn.disabled = false;
+          toast('Added to your Grow list', 'success');
+          form.style.display = 'none';
+          document.getElementById('grow-add-toggle').textContent = '+ Add Plant';
+          ['grow-crop-search', 'grow-nickname', 'grow-planted', 'grow-harvest', 'grow-notes']
+            .forEach(function (id) { document.getElementById(id).value = ''; });
+          document.getElementById('grow-crop-id').value = '';
+          document.getElementById('grow-selected').style.display = 'none';
+          document.getElementById('grow-quantity').value = '1';
+          loadPlants();
+        }).catch(function (err) {
+          btn.disabled = false;
+          toast((err && err.message) || 'Could not add that plant', 'danger');
+        });
+      });
+
+      document.getElementById('grow-list').addEventListener('click', function (e) {
+        var mark = e.target.getAttribute('data-plant-status');
+        var del = e.target.getAttribute('data-plant-delete');
+        if (mark) {
+          API.Customer.updatePlant(mark, { status: 'harvested' }).then(function () {
+            toast('Marked as harvested', 'success');
+            loadPlants();
+          }).catch(function (err) { toast((err && err.message) || 'Could not update', 'danger'); });
+        } else if (del) {
+          if (!confirm('Remove this plant from your Grow list?')) return;
+          API.Customer.deletePlant(del).then(function () {
+            toast('Plant removed', 'success');
+            loadPlants();
+          }).catch(function (err) { toast((err && err.message) || 'Could not remove', 'danger'); });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

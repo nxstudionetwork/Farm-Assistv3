@@ -1,4 +1,5 @@
 import asyncio
+import json
 import re
 from datetime import datetime, date, timedelta
 from typing import Optional, List
@@ -6,7 +7,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import or_, case, func
+from sqlalchemy import or_, case, func, cast, select, Text
 
 from app.database.connection import get_db
 from app.models.user import User
@@ -211,6 +212,10 @@ def _category_dict(node: CropCategory, crop_count: int = 0) -> dict:
         "icon": node.icon,
         "sort_order": node.sort_order,
         "crop_count": crop_count,
+        #: True when this node is a parent category whose crops are filed under
+        #: its subcategories. Clients that filter locally need this to include
+        #: the whole slice, matching the API's own ``category_code`` behaviour.
+        "is_parent": node.subcategory is None,
     }
 
 
@@ -248,6 +253,7 @@ def _crop_dict(crop: Crop, include_varieties: bool = False) -> dict:
         "storage_notes": crop.storage_notes,
         "lifecycle_stages": crop.lifecycle_stages or [],
         "suitable_cultivation_methods": crop.suitable_cultivation_methods or [],
+        "hydroponic_targets": crop.hydroponic_targets,
         # --- bookkeeping -----------------------------------------------------
         "is_catalog": bool(crop.is_catalog),
         "is_archived": bool(crop.is_archived),
@@ -352,6 +358,19 @@ def _verify_cycle_ownership(db: Session, cycle_id: str, user_id: str) -> CropCyc
     return cycle
 
 
+def _find_crop(db: Session, crop_ref: str) -> Optional[Crop]:
+    """Look a crop up by either its internal id or its public ``crop_id``.
+
+    Every crop endpoint accepts both forms; resolving one way only is what let
+    a cycle be created with the wrong crop (or fail outright) depending on which
+    reference the client happened to hold.
+    """
+    if not crop_ref or not str(crop_ref).strip():
+        return None
+    ref = str(crop_ref).strip()
+    return db.query(Crop).filter(or_(Crop.id == ref, Crop.crop_id == ref)).first()
+
+
 def _resolve_category(db: Session, category_code: Optional[str]):
     if not category_code:
         return None
@@ -453,6 +472,24 @@ def _validate_stage(crop: Crop, stage: Optional[str]) -> Optional[str]:
     return stage
 
 
+def _json_search_patterns(value: str) -> List[str]:
+    """LIKE patterns that can match a JSON text column for this search term.
+
+    ``local_names`` is a JSON object written through ``json.dumps``, which
+    escapes every non-ASCII character, so a Telugu name is on disk as
+    ``\\u0c2f...``. Substring matching the raw text can therefore never find it.
+    Databases that keep JSON as real UTF-8 (PostgreSQL) need the raw form
+    instead, so both are searched and whichever one the column actually holds
+    wins.
+    """
+    text_value = str(value).strip()
+    patterns = ["%%%s%%" % text_value]
+    escaped = json.dumps(text_value, ensure_ascii=True)[1:-1]
+    if escaped != text_value:
+        patterns.append("%%%s%%" % escaped)
+    return patterns
+
+
 @router.get("/crops", response_model=dict)
 def list_crops(
     q: Optional[str] = None,
@@ -482,7 +519,6 @@ def list_crops(
 
     if q and str(q).strip():
         term = "%%%s%%" % str(q).strip()
-        local = "%%%s%%" % str(q).strip()
         qry = qry.filter(
             or_(
                 Crop.name.ilike(term),
@@ -490,10 +526,27 @@ def list_crops(
                 Crop.crop_id.ilike(term),
                 Crop.market_type.ilike(term),
                 Crop.variety.ilike(term),
+                Crop.category.ilike(term),
+                Crop.domain.ilike(term),
+                Crop.subcategory.ilike(term),
+                # ``local_names`` is a JSON object such as {"te": "టమాటో"}.
+                # Casting to text lets the serialised value be substring
+                # matched, which is what makes a Telugu/Hindi search reach the
+                # crop instead of returning nothing. Without this the whole OR
+                # above evaluated false for a local name and the search died.
+                # Both the raw and the JSON-escaped spelling are tried, because
+                # how the text is stored depends on the database.
+                *[
+                    cast(Crop.local_names, Text).ilike(pattern)
+                    for pattern in _json_search_patterns(q)
+                ],
+                # A variety name is a row of its own, so a variety search has to
+                # reach back to the crop that owns it.
+                Crop.id.in_(
+                    select(CropVariety.crop_id).where(CropVariety.name.ilike(term))
+                ),
             )
         )
-        # JSON local names are matched in Python because SQLite has no JSON
-        # text search operator; the catalog is small and already paged.
     if domain:
         qry = qry.filter(Crop.domain == domain)
     if category:
@@ -521,6 +574,16 @@ def list_crops(
         qry = qry.filter(Crop.life_cycle_type == life_cycle_type)
     if season:
         qry = qry.filter(Crop.suitable_seasons.ilike("%%%s%%" % str(season).strip()))
+    if cultivation_method and str(cultivation_method).strip():
+        # ``suitable_cultivation_methods`` is a JSON array, so it is matched as
+        # a quoted token against the serialised value. Quoting both sides keeps
+        # "soil" from matching "open_field". This has to happen in SQL: doing it
+        # after the page window silently dropped matches and made `meta.total`
+        # disagree with `data`.
+        wanted = str(cultivation_method).strip()
+        qry = qry.filter(
+            cast(Crop.suitable_cultivation_methods, Text).ilike('%%"%s"%%' % wanted)
+        )
 
     total = qry.count()
     rows = (
@@ -529,14 +592,6 @@ def list_crops(
         .limit(page_size)
         .all()
     )
-
-    if cultivation_method:
-        wanted = str(cultivation_method).strip()
-        rows = [c for c in rows if wanted in (c.suitable_cultivation_methods or [])]
-
-    if q and str(q).strip():
-        needle = str(q).strip().lower()
-        rows = [c for c in rows if _matches_local_name(c, needle)]
 
     return {
         "status": "success",
@@ -552,13 +607,6 @@ def list_crops(
 
 def _empty_meta(page: int, page_size: int) -> dict:
     return {"page": page, "page_size": page_size, "total": 0, "pages": 0}
-
-
-def _matches_local_name(crop: Crop, needle: str) -> bool:
-    for value in (crop.local_names or {}).values():
-        if value and needle in str(value).lower():
-            return True
-    return False
 
 
 @router.get("/crops/categories", response_model=dict)
@@ -930,7 +978,7 @@ def create_crop_cycle(
     if not farm:
         raise HTTPException(status_code=404, detail="Farm not found")
 
-    crop = db.query(Crop).filter(Crop.id == payload.crop_id).first()
+    crop = _find_crop(db, payload.crop_id)
     if not crop:
         raise HTTPException(status_code=404, detail="Crop not found")
 
@@ -953,7 +1001,10 @@ def create_crop_cycle(
         cycle_id=cycle_id,
         farm_id=payload.farm_id,
         plot_id=payload.plot_id,
-        crop_id=payload.crop_id,
+        # The resolved row's internal id, not the caller's reference: a cycle
+        # created with the public `crop_id` used to store that value in a
+        # foreign key that points at `crops.id`.
+        crop_id=crop.id,
         sowing_date=payload.sowing_date,
         expected_harvest_date=payload.expected_harvest_date,
         seed_quantity=payload.seed_quantity,
@@ -1001,7 +1052,7 @@ def update_crop_cycle(
 
     crop = None
     if "crop_id" in update_data and update_data["crop_id"] != cycle.crop_id:
-        crop = db.query(Crop).filter(Crop.id == update_data["crop_id"]).first()
+        crop = _find_crop(db, update_data["crop_id"])
         if not crop:
             raise HTTPException(status_code=404, detail="Crop not found")
         update_data["crop_id"] = crop.id
@@ -1289,7 +1340,12 @@ def _cycle_stage(cycle: CropCycle, crop: Crop) -> str:
     """
     if cycle.current_stage:
         return cycle.current_stage.strip()
-    sowing = cycle.sowing_date or cycle.created_at.strftime("%Y-%m-%d") if cycle.created_at else None
+    # Parentheses matter here: `a or b if c else d` parses as `(a or b) if c
+    # else d`, which threw away a real sowing_date whenever created_at was
+    # missing. Sowing date first, creation date only as the fallback.
+    sowing = cycle.sowing_date or (
+        cycle.created_at.strftime("%Y-%m-%d") if cycle.created_at else None
+    )
     if not sowing:
         stages = (crop.lifecycle_stages or []) if crop else []
         return stages[0] if stages else "vegetative"

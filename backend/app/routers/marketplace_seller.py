@@ -28,16 +28,48 @@ from app.models.marketplace import (
     MarketplaceCategory,
     MarketplaceListing,
     MarketplaceListingImage,
+    MarketplaceCropListing,
     MarketplaceEnquiry,
     MarketplaceSale,
     MarketplaceBuyerRecommendation,
     MarketplaceSellerSettings,
 )
 from app.models.messages import Conversation, ConversationParticipant, Message
+from app.models.crop import Crop, CropVariety, CropCycle
+from app.models.farm import Farm, FarmPlot
 
 router = APIRouter(prefix="/api/v1/marketplace", tags=["Marketplace - Seller"])
 
-LISTING_STATUSES = ["active", "pending", "sold", "paused", "expired", "cancelled"]
+#: The single listing lifecycle. The spec's eight states map onto these rather
+#: than into a second, competing status column:
+#:
+#: ===================  ===========================================
+#: Spec state           Stored state
+#: ===================  ===========================================
+#: Draft                ``draft``
+#: Published / Active   ``active`` (the browse-visible state)
+#: Reserved             ``reserved`` (held for a buyer, still visible)
+#: Partially Sold       ``active`` + ``sold_quantity`` > 0
+#: Sold Out             ``sold`` (set automatically, see below)
+#: Cancelled            ``cancelled``
+#: Expired              ``expired``
+#: ===================  ===========================================
+#:
+#: "Partially Sold" and "Sold Out" are derived from the quantity that the cart,
+#: purchase and cancellation paths already maintain, so there is no second
+#: quantity to keep in step.
+LISTING_STATUSES = [
+    "active",
+    "pending",
+    "draft",
+    "reserved",
+    "sold",
+    "paused",
+    "expired",
+    "cancelled",
+]
+#: States a buyer is allowed to see in the browse feed.
+PUBLIC_LISTING_STATUSES = ("active", "reserved")
 SALE_STATUSES = ["pending", "confirmed", "completed", "cancelled"]
 PAYMENT_STATUSES = ["pending", "partial", "paid"]
 DELIVERY_STATUSES = ["pending", "pickup", "delivered"]
@@ -47,14 +79,86 @@ UNITS = ["kg", "g", "quintal", "tonne", "bag", "pack", "bundle", "piece", "set",
 PRICING_TYPES = ["fixed", "negotiable"]
 CONTACT_METHODS = ["in-app", "phone", "whatsapp"]
 ENQUIRY_STATUSES = ["new", "replied", "negotiating", "accepted", "completed", "closed", "rejected"]
-LISTING_TYPES = ["sell", "rent"]
+LISTING_TYPES = ["sell", "sell_crop", "rent"]
+#: A "Sell Crop" listing is still a sale, so every existing "sell" filter has to
+#: include it - otherwise crop produce would silently vanish from the Sell tab.
+SELL_TYPES = ("sell", "sell_crop")
 RENTAL_PERIODS = ["day", "week", "month"]
 DELIVERY_OPTIONS = ["delivery", "pickup", "both"]
+
+#: How far along the harvest is. ``ready`` means it can be bought right now.
+HARVEST_STATUSES = ["expected", "ready", "harvested", "partially_harvested"]
+FARMING_METHODS = ["organic", "conventional"]
 
 
 # ---------------------------------------------------------------------------
 # Pydantic payloads
 # ---------------------------------------------------------------------------
+class CropListingFields(BaseModel):
+    """Crop-specific detail for a "Sell Crop" listing.
+
+    The crop, variety and cycle ids point at Farm Assist's existing crop system,
+    so a listing is always connected to a real crop - there is no second crop
+    list. Everything else is optional produce information a buyer may want.
+    """
+
+    crop_id: Optional[str] = None
+    variety_id: Optional[str] = Field(None, max_length=36)
+    crop_cycle_id: Optional[str] = Field(None, max_length=36)
+    farm_id: Optional[str] = Field(None, max_length=36)
+    plot_id: Optional[str] = Field(None, max_length=36)
+
+    harvest_status: Optional[str] = "expected"
+    expected_harvest_date: Optional[str] = Field(None, max_length=20)
+    actual_harvest_date: Optional[str] = Field(None, max_length=20)
+    harvest_quantity: Optional[float] = Field(None, ge=0)
+    harvest_unit: Optional[str] = Field(None, max_length=20)
+    is_advance_sale: Optional[bool] = False
+
+    quality_grade: Optional[str] = Field(None, max_length=60)
+    size_grade: Optional[str] = Field(None, max_length=60)
+    freshness: Optional[str] = Field(None, max_length=60)
+    farming_method: Optional[str] = None
+    certification: Optional[str] = Field(None, max_length=120)
+    moisture_percentage: Optional[float] = Field(None, ge=0, le=100)
+    packaging_type: Optional[str] = Field(None, max_length=80)
+    packaging_size: Optional[str] = Field(None, max_length=80)
+    produce_condition: Optional[str] = Field(None, max_length=120)
+    storage_condition: Optional[str] = Field(None, max_length=120)
+    quality_notes: Optional[str] = Field(None, max_length=2000)
+
+    price_unit: Optional[str] = Field(None, max_length=20)
+    min_order_quantity: Optional[float] = Field(None, ge=0)
+    max_order_quantity: Optional[float] = Field(None, ge=0)
+    bulk_order_available: Optional[bool] = False
+
+    pickup_available: Optional[bool] = True
+    delivery_available: Optional[bool] = False
+    pickup_instructions: Optional[str] = Field(None, max_length=500)
+    delivery_radius: Optional[str] = Field(None, max_length=200)
+    preferred_buyer_location: Optional[str] = Field(None, max_length=200)
+
+    @field_validator("harvest_status")
+    @classmethod
+    def _harvest_status(cls, v):
+        if v is not None and v not in HARVEST_STATUSES:
+            raise ValueError(f"Invalid harvest status. Must be one of: {', '.join(HARVEST_STATUSES)}")
+        return v
+
+    @field_validator("farming_method")
+    @classmethod
+    def _farming_method(cls, v):
+        if v is not None and v not in FARMING_METHODS:
+            raise ValueError(f"Invalid farming method. Must be one of: {', '.join(FARMING_METHODS)}")
+        return v
+
+    @field_validator("price_unit", "harvest_unit")
+    @classmethod
+    def _crop_unit(cls, v):
+        if v is not None and v not in UNITS:
+            raise ValueError(f"Invalid unit. Must be one of: {', '.join(UNITS)}")
+        return v
+
 class ListingCreate(BaseModel):
     title: str = Field(..., min_length=2, max_length=200)
     category_id: str = Field(..., min_length=1)
@@ -78,6 +182,9 @@ class ListingCreate(BaseModel):
     notes: Optional[str] = Field(None, max_length=2000)
     status: str = "active"
     images: List[str] = []
+
+    # Crop produce detail - required for Sell Crop listings, ignored otherwise.
+    crop: Optional[CropListingFields] = None
 
     # Rental requirements (Rent listings only; ignored for Sell).
     rental_period: Optional[str] = None
@@ -146,6 +253,7 @@ class ListingCreate(BaseModel):
         return v
 
 
+
 class ListingUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=2, max_length=200)
     category_id: Optional[str] = None
@@ -169,6 +277,11 @@ class ListingUpdate(BaseModel):
     notes: Optional[str] = Field(None, max_length=2000)
     status: Optional[str] = None
     images: Optional[List[str]] = None
+
+    # Crop produce detail. Send ``null`` to drop it when the listing stops
+    # being a Sell Crop listing; omit the key to leave the crop detail as is.
+    crop: Optional[CropListingFields] = None
+    clear_crop: bool = False
 
     # Rental requirements (Rent listings only; ignored/cleared for Sell).
     rental_period: Optional[str] = None
@@ -282,6 +395,191 @@ def _rental_values(payload, listing_type: str) -> dict:
     }
 
 
+def _resolve_crop_detail(
+    db: Session,
+    listing: MarketplaceListing,
+    crop: Optional[CropListingFields],
+    detail: Optional[MarketplaceCropListing] = None,
+    owner_user_id: Optional[str] = None,
+) -> Optional[MarketplaceCropListing]:
+    """Build (or update) the normalised crop-detail row for a Sell Crop listing.
+
+    Every crop/variety/cycle id is validated against Farm Assist's existing crop
+    system so a listing can never point at a crop that does not exist. The crop
+    name is snapshotted onto the row so a buyer still sees the produce after the
+    crop is re-classified.
+
+    ``crop`` is ``None`` for a plain Sell listing, in which case the existing
+    detail row (if any) is left untouched - callers decide whether to clear it.
+    """
+    if crop is None:
+        return detail
+
+    crop_row = None
+    if crop.crop_id:
+        crop_row = db.query(Crop).filter(Crop.id == crop.crop_id).first()
+        if not crop_row:
+            raise HTTPException(status_code=400, detail="Select a valid crop")
+
+    variety_row = None
+    if crop.variety_id:
+        variety_row = db.query(CropVariety).filter(CropVariety.id == crop.variety_id).first()
+        if not variety_row:
+            raise HTTPException(status_code=400, detail="Select a valid crop variety")
+        if crop_row and variety_row.crop_id != crop_row.id:
+            raise HTTPException(
+                status_code=400, detail="The selected variety does not belong to the selected crop"
+            )
+
+    if crop.crop_cycle_id:
+        cycle = db.query(CropCycle).filter(CropCycle.id == crop.crop_cycle_id).first()
+        if not cycle:
+            raise HTTPException(status_code=400, detail="Select a valid crop cycle")
+        if crop_row and cycle.crop_id != crop_row.id:
+            raise HTTPException(
+                status_code=400, detail="The selected crop cycle does not belong to the selected crop"
+            )
+        # The cycle already knows its farm/plot; do not let the body disagree.
+        if crop.farm_id and cycle.farm_id and crop.farm_id != cycle.farm_id:
+            raise HTTPException(
+                status_code=400, detail="The selected farm does not match the crop cycle"
+            )
+
+    # A farm/plot is only ever the seller's own. Without this a listing could
+    # name somebody else's field, which both leaks that it exists and shows the
+    # buyer a location the seller does not control.
+    if crop.farm_id and owner_user_id:
+        farm = (
+            db.query(Farm.id)
+            .filter(Farm.id == crop.farm_id, Farm.user_id == owner_user_id)
+            .first()
+        )
+        if not farm:
+            raise HTTPException(status_code=403, detail="You can only list produce from your own farm")
+        if crop.plot_id:
+            plot = (
+                db.query(FarmPlot.id)
+                .filter(FarmPlot.id == crop.plot_id, FarmPlot.farm_id == crop.farm_id)
+                .first()
+            )
+            if not plot:
+                raise HTTPException(
+                    status_code=400, detail="The selected field does not belong to the selected farm"
+                )
+
+    if detail is None:
+        detail = MarketplaceCropListing(listing_id=listing.id)
+
+    detail.crop_id = crop.crop_id
+    detail.variety_id = crop.variety_id
+    detail.crop_cycle_id = crop.crop_cycle_id
+    detail.farm_id = crop.farm_id
+    detail.plot_id = crop.plot_id
+    detail.harvest_status = crop.harvest_status or "expected"
+    detail.expected_harvest_date = crop.expected_harvest_date
+    detail.actual_harvest_date = crop.actual_harvest_date
+    detail.harvest_quantity = crop.harvest_quantity
+    detail.harvest_unit = crop.harvest_unit or detail.harvest_unit
+    detail.is_advance_sale = bool(crop.is_advance_sale)
+    detail.quality_grade = crop.quality_grade
+    detail.size_grade = crop.size_grade
+    detail.freshness = crop.freshness
+    detail.farming_method = crop.farming_method
+    detail.certification = crop.certification
+    detail.moisture_percentage = crop.moisture_percentage
+    detail.packaging_type = crop.packaging_type
+    detail.packaging_size = crop.packaging_size
+    detail.produce_condition = crop.produce_condition
+    detail.storage_condition = crop.storage_condition
+    detail.quality_notes = crop.quality_notes
+    detail.price_unit = crop.price_unit
+    detail.min_order_quantity = crop.min_order_quantity
+    detail.max_order_quantity = crop.max_order_quantity
+    detail.bulk_order_available = bool(crop.bulk_order_available)
+    detail.pickup_available = True if crop.pickup_available is None else bool(crop.pickup_available)
+    detail.delivery_available = bool(crop.delivery_available)
+    detail.pickup_instructions = crop.pickup_instructions
+    detail.delivery_radius = crop.delivery_radius
+    detail.preferred_buyer_location = crop.preferred_buyer_location
+
+    # Snapshots taken from the catalogue.
+    if crop_row:
+        detail.crop_name = crop_row.name
+        detail.crop_category = crop_row.category
+        detail.crop_domain = crop_row.domain
+    if variety_row:
+        detail.variety_name = variety_row.name
+    return detail
+
+
+def _sale_state(listing: MarketplaceListing) -> dict:
+    """Derived quantity state for a listing.
+
+    ``MarketplaceListing.quantity`` is the single source of truth for the
+    sellable amount and ``sold_quantity`` is maintained by the cart, purchase
+    and cancellation paths, so "Partially Sold" and "Sold Out" are read off
+    those two columns instead of being stored as competing statuses.
+    """
+    sold = float(listing.sold_quantity or 0)
+    remaining = max(float(listing.quantity or 0) - sold, 0)
+    return {
+        "sold_quantity": sold,
+        "remaining_quantity": remaining,
+        "is_partially_sold": sold > 0 and remaining > 0,
+        "is_sold_out": remaining <= 0,
+    }
+
+
+def _crop_detail_payload(db: Session, detail: Optional[MarketplaceCropListing]) -> Optional[dict]:
+    """Buyer/farmer facing view of a Sell Crop listing's produce detail."""
+    if not detail:
+        return None
+    crop = db.query(Crop).filter(Crop.id == detail.crop_id).first()
+    variety = db.query(CropVariety).filter(CropVariety.id == detail.variety_id).first()
+    return {
+        "id": detail.id,
+        "crop_listing_id": detail.crop_listing_id,
+        "crop_id": detail.crop_id,
+        "crop_name": detail.crop_name or (crop.name if crop else None),
+        "crop_code": crop.code if crop else None,
+        "crop_category": detail.crop_category,
+        "crop_domain": detail.crop_domain,
+        "variety_id": detail.variety_id,
+        "variety_name": detail.variety_name or (variety.name if variety else None),
+        "crop_cycle_id": detail.crop_cycle_id,
+        "farm_id": detail.farm_id,
+        "plot_id": detail.plot_id,
+        "growing_season": detail.growing_season,
+        "harvest_status": detail.harvest_status or "expected",
+        "expected_harvest_date": detail.expected_harvest_date,
+        "actual_harvest_date": detail.actual_harvest_date,
+        "harvest_quantity": detail.harvest_quantity,
+        "harvest_unit": detail.harvest_unit,
+        "is_advance_sale": bool(detail.is_advance_sale),
+        "quality_grade": detail.quality_grade,
+        "size_grade": detail.size_grade,
+        "freshness": detail.freshness,
+        "farming_method": detail.farming_method,
+        "is_organic": detail.farming_method == "organic",
+        "certification": detail.certification,
+        "moisture_percentage": detail.moisture_percentage,
+        "packaging_type": detail.packaging_type,
+        "packaging_size": detail.packaging_size,
+        "produce_condition": detail.produce_condition,
+        "storage_condition": detail.storage_condition,
+        "quality_notes": detail.quality_notes,
+        "price_unit": detail.price_unit,
+        "min_order_quantity": detail.min_order_quantity,
+        "max_order_quantity": detail.max_order_quantity,
+        "bulk_order_available": bool(detail.bulk_order_available),
+        "pickup_available": bool(detail.pickup_available),
+        "delivery_available": bool(detail.delivery_available),
+        "pickup_instructions": detail.pickup_instructions,
+        "delivery_radius": detail.delivery_radius,
+        "preferred_buyer_location": detail.preferred_buyer_location,
+    }
+
+
 def _listing_payload(db: Session, listing: MarketplaceListing) -> dict:
     sold_quantity = float(listing.sold_quantity or 0)
     remaining = max(float(listing.quantity or 0) - sold_quantity, 0)
@@ -304,6 +602,8 @@ def _listing_payload(db: Session, listing: MarketplaceListing) -> dict:
         "title": listing.title,
         "description": listing.description,
         "listing_type": listing.listing_type or "sell",
+        "is_crop_listing": bool(getattr(listing, "crop_detail", None)),
+        **_sale_state(listing),
         "category": _category_payload(listing.category),
         "category_id": listing.category_id,
         "quantity": listing.quantity,
@@ -342,6 +642,7 @@ def _listing_payload(db: Session, listing: MarketplaceListing) -> dict:
         "sold_at": str(listing.sold_at) if listing.sold_at else None,
         "created_at": str(listing.created_at) if listing.created_at else None,
         "updated_at": str(listing.updated_at) if listing.updated_at else None,
+        "crop": _crop_detail_payload(db, getattr(listing, "crop_detail", None)),
     }
 
 
@@ -814,9 +1115,12 @@ def list_listings(
     location: Optional[str] = None,
     condition_type: Optional[str] = None,
     availability: Optional[str] = None,
-    listing_type: Optional[str] = Query(None, pattern="^(sell|rent)$"),
+    listing_type: Optional[str] = Query(None, pattern="^(sell|sell_crop|rent)$"),
     group: Optional[str] = Query(None, pattern="^(produce|items)$"),
     sort: Optional[str] = Query(None, pattern="^(newest|price_asc|price_desc)$"),
+    crop_id: Optional[str] = Query(None),
+    harvest_status: Optional[str] = Query(None, pattern="^(expected|ready|harvested|partially_harvested)$"),
+    farming_method: Optional[str] = Query(None, pattern="^(organic|conventional)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -857,12 +1161,29 @@ def list_listings(
         q = q.filter(MarketplaceListing.availability.ilike(f"%{availability}%"))
     if listing_type:
         # Legacy rows predate the column, so fall back to "sell" when NULL.
+        # A Sell Crop listing is still a sale, so it belongs to "sell" too.
         if listing_type == "sell":
             q = q.filter(
-                or_(MarketplaceListing.listing_type == "sell", MarketplaceListing.listing_type.is_(None))
+                or_(
+                    MarketplaceListing.listing_type.in_(SELL_TYPES),
+                    MarketplaceListing.listing_type.is_(None),
+                )
             )
         else:
             q = q.filter(MarketplaceListing.listing_type == listing_type)
+    if crop_id:
+        # Crop filters run against the normalised crop-detail child table.
+        q = q.join(MarketplaceCropListing, MarketplaceCropListing.listing_id == MarketplaceListing.id).filter(
+            MarketplaceCropListing.crop_id == crop_id
+        )
+    if harvest_status:
+        q = q.join(MarketplaceCropListing, MarketplaceCropListing.listing_id == MarketplaceListing.id).filter(
+            MarketplaceCropListing.harvest_status == harvest_status
+        )
+    if farming_method:
+        q = q.join(MarketplaceCropListing, MarketplaceCropListing.listing_id == MarketplaceListing.id).filter(
+            MarketplaceCropListing.farming_method == farming_method
+        )
     if group:
         q = q.join(MarketplaceCategory, MarketplaceListing.category_id == MarketplaceCategory.id).filter(
             MarketplaceCategory.group == group
@@ -901,6 +1222,11 @@ def create_listing(
     rental = _rental_values(payload, payload.listing_type)
     _validate_rent_requirements({"listing_type": payload.listing_type, **rental})
 
+    # A Sell Crop listing must name the crop it sells - that is what connects it
+    # to the farm's crop cycle and makes it searchable by crop.
+    if payload.listing_type == "sell_crop" and not (payload.crop and payload.crop.crop_id):
+        raise HTTPException(status_code=400, detail="Sell Crop listings require a crop")
+
     listing_id = generate_id("FA-LST", db, MarketplaceListing)
     listing = MarketplaceListing(
         listing_id=listing_id,
@@ -936,6 +1262,18 @@ def create_listing(
 
     for idx, url in enumerate(payload.images[:MAX_IMAGES]):
         db.add(MarketplaceListingImage(listing_id=listing.id, image_url=url, sort_order=idx))
+
+    if payload.listing_type == "sell_crop":
+        crop_listing_id = generate_id("FA-CLP", db, MarketplaceCropListing)
+        detail = _resolve_crop_detail(db, listing, payload.crop, owner_user_id=current_user.id)
+        detail.crop_listing_id = crop_listing_id
+        # The sellable quantity on the listing is what the cart decrements, so
+        # the total harvest is only recorded as the reference figure.
+        if detail.harvest_quantity is None:
+            detail.harvest_quantity = payload.quantity
+        if not detail.harvest_unit:
+            detail.harvest_unit = payload.unit
+        db.add(detail)
 
     db.commit()
     db.refresh(listing)
@@ -1037,6 +1375,23 @@ def update_listing(
         db.query(MarketplaceListingImage).filter(MarketplaceListingImage.listing_id == listing.id).delete()
         for idx, url in enumerate(payload.images[:MAX_IMAGES]):
             db.add(MarketplaceListingImage(listing_id=listing.id, image_url=url, sort_order=idx))
+
+    # Crop detail follows the listing type: a Sell Crop listing always has one,
+    # and a listing that stops being a Sell Crop listing must not keep stale
+    # produce information.
+    existing_detail = getattr(listing, "crop_detail", None)
+    if payload.clear_crop:
+        if existing_detail:
+            db.delete(existing_detail)
+    elif listing_type == "sell_crop":
+        if payload.crop is not None:
+            _resolve_crop_detail(
+                db, listing, payload.crop, existing_detail, owner_user_id=current_user.id
+            )
+        elif existing_detail is None:
+            raise HTTPException(status_code=400, detail="Sell Crop listings require a crop")
+    elif existing_detail is not None:
+        db.delete(existing_detail)
 
     listing.updated_at = datetime.utcnow()
     db.commit()

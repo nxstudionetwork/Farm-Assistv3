@@ -191,6 +191,112 @@
       font-size: 13px;
     }
 
+    /* --- Storage / location filter row --- */
+    .svc-filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+    }
+    .svc-filter-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 190px;
+    }
+    .svc-filter-field label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-muted);
+    }
+    .svc-filter-field input {
+      padding: 8px 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border-light);
+      background: var(--bg-card-soft);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .svc-filter-field input:focus {
+      outline: none;
+      border-color: var(--primary-green);
+    }
+    .svc-cap-field { min-width: 150px; }
+    .svc-cap-wrap { position: relative; display: flex; align-items: center; }
+    .svc-cap-wrap input { width: 100%; padding-right: 56px; }
+    .svc-cap-unit {
+      position: absolute;
+      right: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .svc-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border-light);
+      background: var(--bg-card-soft);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      user-select: none;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .svc-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .svc-toggle-box {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1px solid var(--border-light);
+      background: var(--bg-card);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: transparent;
+      font-size: 9px;
+      transition: all 0.15s ease;
+    }
+    .svc-toggle input:checked ~ .svc-toggle-box {
+      background: var(--primary-green);
+      border-color: var(--primary-green);
+      color: #ffffff;
+    }
+    .svc-toggle:has(input:checked) {
+      border-color: var(--primary-green);
+      color: var(--primary-green);
+      background: var(--soft-green);
+    }
+    .svc-filter-clear {
+      margin-left: auto;
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border-light);
+      background: var(--bg-card-soft);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .svc-filter-clear:hover { border-color: var(--primary-green); color: var(--primary-green); }
+    @media (max-width: 720px) {
+      .svc-filter-field { min-width: 100%; }
+      .svc-filter-clear { margin-left: 0; width: 100%; }
+    }
+
     .svc-active-banner {
       background: linear-gradient(135deg, var(--soft-green) 0%, #f0faf4 100%);
       border: 1px solid var(--medium-green);
@@ -347,6 +453,29 @@
       padding-top: 10px;
       border-top: 1px dashed var(--border-light);
       margin-bottom: 14px;
+    }
+    /* Storage capacity facts - only rendered for services that hold produce. */
+    .svc-storage-facts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: -6px 0 12px;
+    }
+    .svc-fact {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 10px;
+      background: var(--soft-green);
+      color: var(--primary-green, #1B5E3F);
+    }
+    .svc-fact-wide {
+      flex-basis: 100%;
+      font-weight: 500;
+      line-height: 1.4;
     }
     .svc-status-pill {
       font-size: 10px;
@@ -663,6 +792,31 @@
     </button>
   </div>
 
+  <!-- Storage & location filters. Backed by the /services query params
+       (storage_only, min_capacity, location) - no filtering is done in JS, so
+       the result count and paging stay correct. -->
+  <div class="svc-filter-row">
+    <div class="svc-filter-field">
+      <label for="svc-location-filter"><i class="fas fa-location-dot"></i> Location</label>
+      <input type="text" id="svc-location-filter" placeholder="District or provider name" autocomplete="off" oninput="svcOnFilterInput()">
+    </div>
+    <div class="svc-filter-field svc-cap-field">
+      <label for="svc-capacity-filter"><i class="fas fa-warehouse"></i> Min. capacity</label>
+      <div class="svc-cap-wrap">
+        <input type="number" id="svc-capacity-filter" min="0" step="1" placeholder="Any" oninput="svcOnFilterInput()">
+        <span class="svc-cap-unit">quintal</span>
+      </div>
+    </div>
+    <label class="svc-toggle" for="svc-storage-toggle">
+      <input type="checkbox" id="svc-storage-toggle" onchange="svcOnFilterInput()">
+      <span class="svc-toggle-box"><i class="fas fa-check"></i></span>
+      <span class="svc-toggle-text"><i class="fas fa-warehouse"></i> Storage &amp; post-harvest only</span>
+    </label>
+    <button type="button" class="svc-filter-clear" id="svc-filter-clear" onclick="svcClearFilters()" style="display:none">
+      <i class="fas fa-rotate-left"></i> Reset filters
+    </button>
+  </div>
+
   <div id="svc-active-banner"></div>
 
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -845,6 +999,7 @@
   var selectedRequestDetailId = null;
   var currentSelectedRating = 5;
   var searchDebounceTimer = null;
+  var filterDebounceTimer = null;
   var activeRequestTab = 'active';
   var backendCategories = {};
 
@@ -1047,6 +1202,44 @@
     resetCatalogPaginationAndLoad();
   }
 
+  // Storage / location filters. These are sent to the server rather than
+  // applied in JS, so the catalog count and "Load more" paging stay correct.
+  window.svcOnFilterInput = function() {
+    syncFilterClearButton();
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(function() {
+      resetCatalogPaginationAndLoad();
+    }, 300);
+  };
+
+  window.svcClearFilters = function() {
+    document.getElementById('svc-location-filter').value = '';
+    document.getElementById('svc-capacity-filter').value = '';
+    document.getElementById('svc-storage-toggle').checked = false;
+    syncFilterClearButton();
+    resetCatalogPaginationAndLoad();
+  };
+
+  /** Show "Reset filters" only when something other than category/search is set. */
+  function syncFilterClearButton() {
+    var loc = document.getElementById('svc-location-filter').value.trim();
+    var cap = document.getElementById('svc-capacity-filter').value.trim();
+    var storage = document.getElementById('svc-storage-toggle').checked;
+    document.getElementById('svc-filter-clear').style.display =
+      (loc || cap || storage) ? 'inline-flex' : 'none';
+  }
+
+  /** Collect the filter row into the /services query params. */
+  function collectFilterParams(params) {
+    var loc = document.getElementById('svc-location-filter').value.trim();
+    var capRaw = document.getElementById('svc-capacity-filter').value.trim();
+    var cap = capRaw === '' ? NaN : Number(capRaw);
+    if (loc) params.location = loc;
+    if (!isNaN(cap) && cap > 0) params.min_capacity = cap;
+    if (document.getElementById('svc-storage-toggle').checked) params.storage_only = true;
+    return params;
+  }
+
   // === CATALOG PAGINATION STATE ===
   var PAGE_SIZE = 24;
   var catalogPage = 1;
@@ -1055,6 +1248,72 @@
   function resetCatalogPaginationAndLoad() {
     catalogPage = 1;
     loadCatalogServices();
+  }
+
+  var STORAGE_TYPE_LABEL = {
+    grain: 'Grain storage',
+    cold_storage: 'Cold storage',
+    produce: 'Produce storage',
+    warehouse: 'Warehouse'
+  };
+
+  /**
+   * Capacity facts for a storage service, so a farmer can tell what a provider
+   * can actually hold before requesting it. Nothing is shown for the advisory
+   * services, which have no capacity.
+   */
+  function storageFacts(s) {
+    if (!s.is_storage || !s.storage_type) return '';
+    var facts = ['<span class="svc-fact"><i class="fas fa-snowflake"></i> ' +
+      esc(STORAGE_TYPE_LABEL[s.storage_type] || s.storage_type) + '</span>'];
+    if (s.capacity_quintal) {
+      facts.push('<span class="svc-fact"><i class="fas fa-warehouse"></i> ' +
+        esc(qtyLabel(s.available_capacity_quintal) + ' of ' + qtyLabel(s.capacity_quintal) + ' free') +
+        '</span>');
+    }
+    if (s.temperature_controlled) {
+      facts.push('<span class="svc-fact"><i class="fas fa-temperature-low"></i> Temperature controlled</span>');
+    }
+    if (s.min_duration_days) {
+      facts.push('<span class="svc-fact"><i class="far fa-calendar"></i> Min ' + esc(s.min_duration_days) + ' days</span>');
+    }
+    if (s.supported_produce && s.supported_produce.length) {
+      facts.push('<span class="svc-fact svc-fact-wide"><i class="fas fa-seedling"></i> ' +
+        esc(s.supported_produce.join(', ')) + '</span>');
+    }
+    return '<div class="svc-storage-facts">' + facts.join('') + '</div>';
+  }
+
+  function qtyLabel(v) {
+    var n = Number(v) || 0;
+    return n.toLocaleString('en-IN') + ' quintal';
+  }
+
+  /**
+   * Capacity rows inside the service detail modal. A farmer checking where to
+   * store a harvest needs the real numbers, so they are shown here rather than
+   * only on the card. Empty string for non-storage services.
+   */
+  function storageDetailRows(s) {
+    if (!s.is_storage || !s.storage_type) return '';
+    var rows = [
+      ['Storage type', STORAGE_TYPE_LABEL[s.storage_type] || s.storage_type],
+      ['Total capacity', qtyLabel(s.capacity_quintal)],
+      ['Available now', qtyLabel(s.available_capacity_quintal)],
+      ['Temperature controlled', s.temperature_controlled ? 'Yes' : 'No'],
+      ['Minimum storage period', (s.min_duration_days || 0) + ' days']
+    ];
+    var out = '<div style="background:var(--bg-card-soft);padding:14px;border-radius:var(--radius-sm);font-size:12px;display:flex;flex-direction:column;gap:8px;margin-top:12px">' +
+      '<div style="font-weight:700;color:var(--text-primary);margin-bottom:2px">' +
+        '<i class="fas fa-warehouse" style="margin-right:6px"></i>Storage capacity</div>';
+    rows.forEach(function (r) {
+      out += '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">' + esc(r[0]) + '</span><span style="font-weight:600">' + esc(r[1]) + '</span></div>';
+    });
+    if (s.supported_produce && s.supported_produce.length) {
+      out += '<div style="margin-top:4px"><span style="color:var(--text-muted)">Produce accepted</span>' +
+        '<div style="font-weight:600;margin-top:2px">' + esc(s.supported_produce.join(', ')) + '</div></div>';
+    }
+    return out + '</div>';
   }
 
   function renderServiceCard(s) {
@@ -1072,6 +1331,7 @@
         '</div>' +
       '</div>' +
       '<p class="svc-card-desc">' + esc(s.description) + '</p>' +
+      storageFacts(s) +
       '<div class="svc-card-details-row">' +
         '<span class="svc-status-pill ' + dotClass + '"><i class="fas fa-circle" style="font-size:6px"></i> ' + esc(s.availability) + '</span>' +
         '<span><i class="far fa-clock"></i> ' + esc(s.response_time || '24 hrs') + '</span>' +
@@ -1108,6 +1368,7 @@
     var params = { page: catalogPage, limit: PAGE_SIZE };
     if (currentSelectedCategory !== 'all') params.category = currentSelectedCategory;
     if (queryVal) params.search = queryVal;
+    collectFilterParams(params);
 
     if (!appendMode) {
       grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">' +
@@ -1208,7 +1469,8 @@
         '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Service Coverage</span><span style="font-weight:600">' + esc(s.location_coverage || 'All Districts') + '</span></div>' +
         (s.service_duration ? '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Duration</span><span style="font-weight:600">' + esc(s.service_duration) + '</span></div>' : '') +
         '<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">User Rating</span><span style="font-weight:600"><i class="fas fa-star" style="color:#F9A825"></i> ' + (s.rating || 4.8) + ' / 5.0</span></div>' +
-      '</div>';
+      '</div>' +
+      storageDetailRows(s);
 
     var sid = s.service_id || s.id;
     document.getElementById('dtl-request-btn').onclick = function() {

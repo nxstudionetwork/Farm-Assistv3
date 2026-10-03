@@ -354,6 +354,13 @@ class MarketplaceListing(Base):
     enquiries = relationship("MarketplaceEnquiry", back_populates="listing", cascade="all, delete-orphan")
     sales = relationship("MarketplaceSale", back_populates="listing", cascade="all, delete-orphan")
     rental_requests = relationship("MarketplaceRentalRequest", back_populates="listing", cascade="all, delete-orphan")
+    #: Set only for "Sell Crop" listings; None for every other listing type.
+    crop_detail = relationship(
+        "MarketplaceCropListing",
+        back_populates="listing",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
 
 class MarketplaceListingImage(Base):
@@ -366,6 +373,94 @@ class MarketplaceListingImage(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     listing = relationship("MarketplaceListing", back_populates="images")
+
+
+class MarketplaceCropListing(Base):
+    """Crop-specific detail for a "Sell Crop" listing.
+
+    A crop listing is still a :class:`MarketplaceListing` - it reuses the same
+    category, images, enquiries, sales, purchase and notification flow - so the
+    crop-only facts live here in one normalised, one-to-one child table rather
+    than as thirty columns on the shared listing row. A listing without a row in
+    this table is a normal equipment/produce listing.
+
+    ``crop_id``/``variety_id``/``crop_cycle_id`` point at Farm Assist's existing
+    crop system (crop catalogue, varieties, crop cycles) - there is no second
+    crop list anywhere. ``crop_name``/``variety_name`` are snapshots so a buyer
+    sees the produce even if the crop row is later re-classified.
+
+    Quantity: ``MarketplaceListing.quantity`` stays the single source of truth
+    for what is still sellable (the cart, purchase and sold-out logic already
+    maintain it), while ``harvest_quantity`` records the total harvest the
+    farmer is selling from.
+    """
+
+    __tablename__ = "marketplace_crop_listings"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    crop_listing_id = Column(String(20), unique=True, index=True)
+    listing_id = Column(
+        String(36), ForeignKey("marketplace_listings.id"), nullable=False, unique=True, index=True
+    )
+
+    # --- Farm Assist crop chain: Farm -> Plot -> Crop -> Variety -> Cycle ---
+    farm_id = Column(String(36), ForeignKey("farms.id"), nullable=True, index=True)
+    plot_id = Column(String(36), ForeignKey("farm_plots.id"), nullable=True, index=True)
+    crop_id = Column(String(36), ForeignKey("crops.id"), nullable=True, index=True)
+    variety_id = Column(String(36), ForeignKey("crop_varieties.id"), nullable=True, index=True)
+    crop_cycle_id = Column(String(36), ForeignKey("crop_cycles.id"), nullable=True, index=True)
+
+    #: Snapshots for the buyer-facing card and for search.
+    crop_name = Column(String(100), nullable=True, index=True)
+    variety_name = Column(String(150), nullable=True)
+    crop_category = Column(String(50), nullable=True, index=True)
+    crop_domain = Column(String(80), nullable=True, index=True)
+    growing_season = Column(String(120), nullable=True)
+
+    # --- Harvest ----------------------------------------------------------
+    #: expected | ready | harvested | partially_harvested
+    harvest_status = Column(String(30), default="expected", index=True)
+    expected_harvest_date = Column(String(20), nullable=True)
+    actual_harvest_date = Column(String(20), nullable=True)
+    harvest_quantity = Column(Float, nullable=True)
+    harvest_unit = Column(String(20), nullable=True)
+    #: True when the produce is not harvested yet and this is an advance sale.
+    is_advance_sale = Column(Boolean, default=False)
+
+    # --- Quality / produce details ---------------------------------------
+    quality_grade = Column(String(60), nullable=True, index=True)
+    size_grade = Column(String(60), nullable=True)
+    freshness = Column(String(60), nullable=True)
+    #: organic | conventional
+    farming_method = Column(String(30), nullable=True, index=True)
+    certification = Column(String(120), nullable=True)
+    moisture_percentage = Column(Float, nullable=True)
+    packaging_type = Column(String(80), nullable=True)
+    packaging_size = Column(String(80), nullable=True)
+    produce_condition = Column(String(120), nullable=True)
+    storage_condition = Column(String(120), nullable=True)
+    quality_notes = Column(Text, nullable=True)
+
+    # --- Pricing ----------------------------------------------------------
+    price_unit = Column(String(20), nullable=True)
+    min_order_quantity = Column(Float, nullable=True)
+    max_order_quantity = Column(Float, nullable=True)
+    bulk_order_available = Column(Boolean, default=False)
+
+    # --- Location / fulfilment -------------------------------------------
+    pickup_available = Column(Boolean, default=True)
+    delivery_available = Column(Boolean, default=False)
+    pickup_instructions = Column(String(500), nullable=True)
+    delivery_radius = Column(String(200), nullable=True)
+    preferred_buyer_location = Column(String(200), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    listing = relationship("MarketplaceListing", back_populates="crop_detail")
+    crop = relationship("Crop")
+    variety = relationship("CropVariety")
+    crop_cycle = relationship("CropCycle")
 
 
 class MarketplaceEnquiry(Base):

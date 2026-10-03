@@ -200,7 +200,7 @@ def build_service(data: dict, idx: int) -> dict:
     meta = CATEGORY_META[data["category"]]
     details = get_service_details(data)
     availability = data.get("availability") or AVAILABILITY_CYCLE[idx % len(AVAILABILITY_CYCLE)]
-    return {
+    row = {
         "service_id": data["service_id"],
         "name": data["name"],
         "category": data["category"],
@@ -220,6 +220,25 @@ def build_service(data: dict, idx: int) -> dict:
         "rating": data.get("rating", 4.8),
         "is_active": True,
     }
+    # Capacity facts, carried only by the services that actually hold produce.
+    # Absent keys are not passed to the model, so services without them are
+    # unaffected.
+    for key in STORAGE_FIELDS:
+        if key in data:
+            row[key] = data[key]
+    return row
+
+
+#: Storage capacity columns on :class:`AgriculturalService`. Present so a farmer
+#: can see what a storage provider can actually hold before requesting it.
+STORAGE_FIELDS = (
+    "storage_type",
+    "capacity_quintal",
+    "available_capacity_quintal",
+    "temperature_controlled",
+    "min_duration_days",
+    "supported_produce",
+)
 
 
 SERVICES_CATALOG = [
@@ -314,6 +333,76 @@ SERVICES_CATALOG = [
     {"service_id": "FA-SVC-000088", "name": "Packhouse & Grading Line Labour", "description": "Labour for sorting, grading, cleaning, and packing produce at packhouse stations.", "category": "farm-labour", "price_info": "₹550 / day", "rating": 4.3},
     {"service_id": "FA-SVC-000089", "name": "Emergency Surge-Labor Dispatch", "description": "Rapid dispatch of extra labour teams during peak planting or harvest windows on short notice.", "category": "farm-labour", "price_info": "₹700 / day", "rating": 4.4},
     {"service_id": "FA-SVC-000090", "name": "Cow & Livestock Caretaker Service", "description": "Reliable caretaker and labourer for daily livestock feeding, cleaning, and basic health observation.", "category": "farm-labour", "price_info": "₹9,000 / month", "rating": 4.2},
+    # --- Storage capacity details (Part 20) -------------------------------
+    # The storage services below carry the capacity/availability facts the
+    # Services page needs to show a farmer what a provider can actually hold.
+    {
+        "service_id": "FA-SVC-000249",
+        "name": "Grain Storage Facility (Wheat, Rice, Maize)",
+        "description": "Dry grain storage for wheat, rice, maize and pulses with moisture-controlled stacking, periodic aeration and stock reporting.",
+        "category": "storage-warehousing",
+        "price_info": "₹45 / quintal / month",
+        "rating": 4.5,
+        "storage_type": "grain",
+        "capacity_quintal": 2500,
+        "available_capacity_quintal": 640,
+        "temperature_controlled": False,
+        "min_duration_days": 30,
+        "supported_produce": "Wheat, Rice, Maize, Chickpea, Sorghum",
+    },
+    {
+        "service_id": "FA-SVC-000250",
+        "name": "Cold Storage for Fruits & Vegetables",
+        "description": "Temperature-controlled storage for perishables with pre-cooling, humidity management and reduced postharvest loss.",
+        "category": "storage-warehousing",
+        "price_info": "₹110 / quintal / month",
+        "rating": 4.6,
+        "storage_type": "cold_storage",
+        "capacity_quintal": 900,
+        "available_capacity_quintal": 210,
+        "temperature_controlled": True,
+        "min_duration_days": 14,
+        "supported_produce": "Tomato, Mango, Grapes, Carrot, leafy greens",
+    },
+    {
+        "service_id": "FA-SVC-000251",
+        "name": "Produce Storage for Vegetables & Tubers",
+        "description": "Shaded, ventilated storage for root and tuber crops plus non-perishable vegetables with palletised stacking.",
+        "category": "storage-warehousing",
+        "price_info": "₹60 / quintal / month",
+        "rating": 4.4,
+        "storage_type": "produce",
+        "capacity_quintal": 1400,
+        "available_capacity_quintal": 520,
+        "temperature_controlled": False,
+        "min_duration_days": 21,
+        "supported_produce": "Potato, Onion, Carrot, Beetroot, Yam",
+    },
+    # --- Protected / modern farming (Part 19) -----------------------------
+    {
+        "service_id": "FA-SVC-000252",
+        "name": "Hydroponic Setup & Commissioning",
+        "description": "Design and commissioning of a soilless hydroponic system with nutrient dosing, level control and crop planning for leafy and fruiting crops.",
+        "category": "agri-technology",
+        "price_info": "₹12,000 / system",
+        "rating": 4.7,
+    },
+    {
+        "service_id": "FA-SVC-000253",
+        "name": "Hydroponic System Maintenance & Nutrient Management",
+        "description": "Routine maintenance of hydroponic systems including nutrient solution correction, pH and EC monitoring, channel cleaning and crop health checks.",
+        "category": "agri-technology",
+        "price_info": "₹1,800 / month",
+        "rating": 4.6,
+    },
+    {
+        "service_id": "FA-SVC-000254",
+        "name": "Hydroponic Grower Training & Crop Planning",
+        "description": "Hands-on training for soilless crop production covering nutrient recipes, spacing, lighting, and harvest planning for lettuce, tomato and leafy greens.",
+        "category": "agri-technology",
+        "price_info": "₹2,500 / programme",
+        "rating": 4.6,
+    },
     {"service_id": "FA-SVC-000091", "name": "Manual Harvesting Support", "description": "Human-directed manual harvesting of grains and pulses with sheaving and bundle tying.", "category": "harvesting", "price_info": "₹1,300 / acre", "rating": 4.4},
     {"service_id": "FA-SVC-000092", "name": "Paddy & Wheat Combine Harvesting", "description": "Combine harvesting with straw management and grain bagging for paddy and wheat.", "category": "harvesting", "price_info": "₹2,000 / acre", "rating": 4.7},
     {"service_id": "FA-SVC-000093", "name": "Fruit & Vegetable Picking Service", "description": "Careful selective picking, sorting, and crating of fruits and vegetables to protect market quality.", "category": "harvesting", "price_info": "₹80 / hour", "rating": 4.6},

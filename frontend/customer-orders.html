@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="customer-orders">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - My Orders</title>
+  <meta name="api-base-url" content="/api/v1">
+  <script>window._API_BASE_URL = '/api/v1';</script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* ------------------------------------------------------------------
+       Customer Orders.
+       Palette comes from the shared design tokens in assets/css/style.css so
+       this page stays recognisably Farm Assist. The accent set is deliberately
+       small: green carries meaning, blue/amber/purple only separate shipping
+       stages, and every colour is always paired with an icon and a word.
+       ------------------------------------------------------------------ */
+    .co-page{max-width:1080px}
+    .co-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+    /* Header */
+    .co-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+    .co-head h1{font-size:22px;font-weight:800;letter-spacing:-.3px;margin:0;display:flex;align-items:center;gap:9px}
+    .co-head h1 i{color:var(--primary-green)}
+    .co-head p{font-size:12.5px;color:var(--text-muted);margin:5px 0 0;max-width:46ch;line-height:1.55}
+    .co-counts{list-style:none;display:flex;gap:8px;margin:0;padding:0;flex-wrap:wrap}
+    .co-counts li{display:flex;align-items:baseline;gap:5px;background:var(--soft-green);border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:600;color:var(--primary-dark-green)}
+    .co-counts b{font-size:13px;font-weight:800}
+
+    /* Search */
+    .co-search{position:relative;display:flex;align-items:center;margin-bottom:12px}
+    .co-search>i{position:absolute;left:14px;color:var(--text-muted);font-size:13px;pointer-events:none}
+    .co-search input{width:100%;min-height:44px;padding:11px 44px 11px 38px;border:1px solid var(--border-medium);border-radius:14px;background:var(--bg-card);color:var(--text-primary);font-size:13.5px;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+    .co-search input::-webkit-search-cancel-button{display:none}
+    .co-search input::placeholder{color:var(--text-muted)}
+    .co-search input:focus{outline:none;border-color:var(--primary-green);box-shadow:0 0 0 3px rgba(27,94,63,.12)}
+    .co-search-clear{position:absolute;right:6px;width:32px;height:32px;border:none;border-radius:9px;background:transparent;color:var(--text-muted);cursor:pointer;font-size:13px}
+    .co-search-clear:hover{background:var(--light-gray);color:var(--text-primary)}
+
+    /* Filters */
+    .co-filters{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .co-filters::-webkit-scrollbar{display:none}
+    .co-filter{flex:0 0 auto;min-height:38px;padding:8px 16px;border:1px solid var(--border-medium);border-radius:999px;background:var(--bg-card);color:var(--text-secondary);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:background .18s,color .18s,border-color .18s}
+    .co-filter:hover{border-color:var(--primary-green);color:var(--primary-green)}
+    .co-filter[aria-pressed="true"]{background:var(--primary-green);border-color:var(--primary-green);color:#fff}
+
+    /* Sections */
+    .co-section{margin-bottom:22px}
+    .co-section-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin:0 0 11px}
+    .co-section-title i{color:var(--primary-green)}
+
+    /* Shared surfaces */
+    .co-card{position:relative;background:var(--bg-card);border:1px solid var(--border-light);border-radius:18px;padding:16px;box-shadow:var(--shadow-sm);transition:transform .18s,box-shadow .18s,border-color .18s}
+    .co-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--border-medium)}
+    /* One stretched link makes the whole card open the order, while the action
+       buttons below sit on top of it and stay independently clickable. */
+    .co-card-link{position:absolute;inset:0;border-radius:18px;z-index:1}
+    .co-card-link:focus-visible{outline:2px solid var(--primary-green);outline-offset:2px}
+
+    /* Product collage */
+    .co-collage{display:flex;gap:6px;flex-wrap:wrap}
+    .co-thumb{width:46px;height:46px;border-radius:11px;overflow:hidden;background:var(--light-gray);border:1px solid var(--border-light);flex:0 0 auto;display:block}
+    .co-collage.single .co-thumb{width:56px;height:56px;border-radius:13px}
+    .co-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .25s}
+    .co-card:hover .co-thumb img{transform:scale(1.07)}
+    .co-thumb-fb{display:flex;align-items:center;justify-content:center;color:var(--medium-green);font-size:17px}
+    .co-collage.single .co-thumb-fb{font-size:20px}
+    .co-thumb-more{display:flex;align-items:center;justify-content:center;background:var(--soft-green);color:var(--primary-dark-green);font-size:11.5px;font-weight:800;border-color:transparent}
+
+    /* Status + payment chips (always icon + word, never colour alone) */
+    .co-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+    .co-chip-st-placed{background:#FFF7E6;color:#8A5D00}
+    .co-chip-st-processing{background:#EFF4F0;color:#3F6350}
+    .co-chip-st-shipped{background:#F1ECFB;color:#5B3BB0}
+    .co-chip-st-out_for_delivery{background:#E4F0FB;color:#12508F}
+    .co-chip-st-received{background:var(--soft-green);color:#14603C}
+    .co-chip-st-cancelled{background:#FCECEA;color:#A32316}
+    .co-chip-pay-pending{background:#FFF7E6;color:#8A5D00}
+    .co-chip-pay-paid{background:var(--soft-green);color:#14603C}
+    .co-chip-pay-failed{background:#FCECEA;color:#A32316}
+    .co-chip-pay-refunded{background:#EEF1F6;color:#4A5B75}
+    .co-chip-pay{background:var(--light-gray);color:var(--text-secondary)}
+
+    /* Arriving / active hero */
+    .co-live{position:relative;border-radius:20px;padding:18px;background:linear-gradient(160deg,#0F2E1E 0%,#1B5E3F 100%);color:#fff;box-shadow:var(--shadow-md);overflow:hidden}
+    .co-live::after{content:"";position:absolute;right:-56px;top:-56px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(82,183,136,.28) 0%,rgba(82,183,136,0) 70%);pointer-events:none}
+    .co-live>*{position:relative;z-index:1}
+    .co-live:focus-within{outline:2px solid var(--medium-green);outline-offset:2px}
+    .co-live-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .co-live-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;background:rgba(255,255,255,.14);font-size:12.5px;font-weight:700}
+    .co-live-badge.pulsing i{animation:coPulse 2.4s ease-in-out infinite}
+    @keyframes coPulse{0%,100%{opacity:1;transform:translateX(0)}50%{opacity:.55;transform:translateX(3px)}}
+    .co-live-sub{margin:9px 0 0;font-size:12.5px;line-height:1.55;color:rgba(255,255,255,.82);max-width:44ch}
+    .co-live-main{display:flex;gap:14px;align-items:center;margin:16px 0 4px;flex-wrap:wrap}
+    .co-live-main .co-collage .co-thumb{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.1)}
+    .co-live-main .co-thumb-fb{color:rgba(255,255,255,.75)}
+    .co-live-main .co-thumb-more{background:rgba(255,255,255,.2);color:#fff}
+    .co-live-main .co-collage.single .co-thumb{width:62px;height:62px}
+    .co-live-info{flex:1 1 190px;min-width:0}
+    .co-live-info h3{margin:0;font-size:15.5px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+    .co-live-facts{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;font-size:11.5px;color:rgba(255,255,255,.8)}
+    .co-live-facts span{display:inline-flex;align-items:center;gap:5px}
+    .co-live-side{text-align:right;margin-left:auto}
+    .co-live-total{font-size:19px;font-weight:800;letter-spacing:-.4px}
+    .co-live-oid{font-size:11px;color:rgba(255,255,255,.72);margin-top:3px}
+    .co-live-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.14)}
+    .co-live-dest{display:flex;align-items:flex-start;gap:6px;font-size:11.5px;color:rgba(255,255,255,.82);max-width:100%;min-width:0}
+    .co-live-dest i{margin-top:2px;flex:0 0 auto}
+
+    /* Delivery progress */
+    .co-flow{list-style:none;display:flex;align-items:flex-start;margin:16px 0 0;padding:0}
+    .co-flow-node{flex:1 1 0;display:flex;flex-direction:column;align-items:center;min-width:0}
+    .co-flow-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.2);flex:0 0 auto}
+    .co-flow-node.done .co-flow-dot{background:var(--medium-green);border-color:var(--medium-green);color:#fff}
+    .co-flow-node.current .co-flow-dot{background:#fff;border-color:#fff;color:var(--primary-green);box-shadow:0 0 0 4px rgba(255,255,255,.22)}
+    .co-flow-label{margin-top:7px;font-size:10px;font-weight:600;text-align:center;color:rgba(255,255,255,.62);line-height:1.3}
+    .co-flow-node.done .co-flow-label,.co-flow-node.current .co-flow-label{color:#fff}
+    .co-flow-line{flex:0 0 16px;height:2px;margin-top:12px;background:rgba(255,255,255,.2)}
+    .co-flow-line.filled{background:var(--medium-green)}
+
+    /* Buttons */
+    .co-btn{position:relative;z-index:2;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:9px 15px;border:1px solid var(--border-medium);border-radius:12px;background:var(--bg-card);color:var(--text-primary);font-family:inherit;font-size:12.5px;font-weight:700;text-decoration:none;cursor:pointer;transition:background .15s,border-color .15s,color .15s,transform .12s}
+    .co-btn:hover{border-color:var(--primary-green);color:var(--primary-green)}
+    .co-btn:active{transform:translateY(1px)}
+    .co-btn:focus-visible{outline:2px solid var(--primary-green);outline-offset:2px}
+    .co-btn.primary{background:var(--primary-green);border-color:var(--primary-green);color:#fff}
+    .co-btn.primary:hover{background:var(--primary-dark-green);border-color:var(--primary-dark-green);color:#fff}
+    .co-btn.on-dark{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);color:#fff}
+    .co-btn.on-dark:hover{background:#fff;border-color:#fff;color:var(--primary-dark-green)}
+    .co-actions{position:relative;z-index:2;display:flex;gap:8px;flex-wrap:wrap}
+
+    /* Order cards */
+    .co-grid{display:flex;flex-direction:column;gap:12px}
+    .co-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .co-oid{font-size:13px;font-weight:800;letter-spacing:-.1px;display:flex;align-items:center;gap:6px}
+    .co-oid i{color:var(--medium-green);font-size:12px}
+    .co-when{font-size:11px;color:var(--text-muted);margin-top:3px;display:flex;align-items:center;gap:5px}
+    .co-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+    .co-card-body{display:flex;gap:13px;align-items:center;margin:14px 0}
+    .co-card-info{flex:1;min-width:0}
+    .co-card-info h3{margin:0;font-size:14px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+    .co-facts{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px;color:var(--text-secondary)}
+    .co-facts li{display:flex;align-items:center;gap:5px;min-width:0}
+    .co-facts i{color:var(--text-muted);font-size:10.5px}
+    .co-facts .more{font-weight:700;color:var(--primary-green)}
+    .co-seller{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11.5px;color:var(--text-secondary);min-width:0}
+    .co-seller i{color:var(--medium-green);font-size:10.5px;flex:0 0 auto}
+    .co-seller span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .co-card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:13px;border-top:1px solid var(--border-light)}
+    .co-price{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .co-total{font-size:16px;font-weight:800;color:var(--primary-dark-green);letter-spacing:-.3px}
+    .co-delivered{margin-top:11px;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-secondary)}
+    .co-delivered i{color:var(--medium-green)}
+    .co-cancelled{margin-top:12px;display:flex;align-items:flex-start;gap:8px;padding:11px 13px;border-radius:12px;background:#FCECEA;color:#8F2216;font-size:11.5px;line-height:1.5}
+    .co-cancelled i{margin-top:2px;flex:0 0 auto}
+
+    /* Skeletons */
+    .co-skel-hero{height:270px;border-radius:20px;background:var(--light-gray)}
+    .co-skel-card{height:158px;border-radius:18px;background:var(--light-gray)}
+    .co-skel-line{height:11px;border-radius:6px;background:var(--light-gray)}
+    .co-skel-line.w60{width:60%}
+    .co-skel-line.w40{width:40%}
+    .co-skel-thumb{width:46px;height:46px;border-radius:11px;background:var(--light-gray);flex:0 0 auto}
+    .co-skel-thumb.big{width:56px;height:56px;border-radius:13px}
+    .co-shimmer{position:relative;overflow:hidden}
+    .co-shimmer::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.6) 50%,rgba(255,255,255,0) 100%);animation:coShimmer 1.3s infinite}
+    @keyframes coShimmer{100%{transform:translateX(100%)}}
+
+    /* Empty / error states */
+    .co-state{text-align:center;padding:52px 22px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:18px}
+    .co-state-mark{width:74px;height:74px;border-radius:24px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;font-size:29px;background:var(--soft-green);color:var(--primary-green)}
+    .co-state-mark.warn{background:#FCECEA;color:#A32316}
+    .co-state h2{margin:0 0 7px;font-size:17px;font-weight:800;letter-spacing:-.2px}
+    .co-state p{margin:0 auto 20px;font-size:13px;color:var(--text-muted);max-width:42ch;line-height:1.6}
+    .co-state-actions{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+
+    .co-fade{animation:coFade .28s ease both}
+    @keyframes coFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+    /* Tablet */
+    @media(min-width:640px){
+      .co-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+      .co-head h1{font-size:25px}
+      .co-head p{font-size:13px}
+      .co-card{padding:18px}
+    }
+    /* Desktop */
+    @media(min-width:1000px){
+      .co-page{max-width:1120px}
+      .co-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .co-live-main{flex-wrap:nowrap}
+      .co-live-side{margin-left:0}
+    }
+    /* Mobile */
+    @media(max-width:420px){
+      .co-card,.co-live{padding:14px}
+      .co-side-total{display:block}
+      .co-live-side{text-align:left;margin-left:0}
+      .co-live-foot .co-actions{width:100%}
+      .co-live-foot .co-actions .co-btn{flex:1 1 auto}
+      .co-flow-label{font-size:9px}
+      .co-actions{width:100%}
+      .co-card-foot .co-actions .co-btn{flex:1 1 auto}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .co-shimmer::after,.co-live-badge.pulsing i{animation:none}
+      .co-card:hover{transform:none}
+      .co-thumb img{transition:none}
+      .co-fade{animation:none}
+    }
+  </style>
+</head>
+<body>
+  <main class="page-container co-page">
+    <!--
+      The customer header (Notifications / Points / Profile) and the five-item
+      bottom nav (Home | Shop | Grow | Community | Orders) are injected by
+      assets/js/navigation.js, which detects a customer session.
+    -->
+
+    <header class="co-head">
+      <div>
+        <h1><i class="fas fa-box-open" aria-hidden="true"></i> Orders</h1>
+        <p>Track your purchases and see everything you have ordered from Farm Assist.</p>
+      </div>
+      <ul class="co-counts" id="co-counts" hidden></ul>
+    </header>
+
+    <div class="co-search">
+      <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+      <label class="co-sr" for="co-search-input">Search your orders</label>
+      <input id="co-search-input" type="search" placeholder="Search your orders" autocomplete="off">
+      <button type="button" id="co-search-clear" class="co-search-clear" hidden aria-label="Clear search">
+        <i class="fas fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="co-filters" id="co-filters" role="group" aria-label="Filter orders">
+      <button type="button" class="co-filter" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" class="co-filter" data-filter="active" aria-pressed="false">Active</button>
+      <button type="button" class="co-filter" data-filter="received" aria-pressed="false">Delivered</button>
+      <button type="button" class="co-filter" data-filter="cancelled" aria-pressed="false">Cancelled</button>
+    </div>
+
+    <p class="co-sr" id="co-live-region" role="status" aria-live="polite"></p>
+
+    <section class="co-section" id="co-active-wrap" hidden>
+      <h2 class="co-section-title"><i class="fas fa-truck-fast" aria-hidden="true"></i> On the way</h2>
+      <div class="co-grid" id="co-active-list"></div>
+    </section>
+
+    <section class="co-section" id="co-list-wrap" hidden>
+      <h2 class="co-section-title" id="co-list-title">Previous orders</h2>
+      <div class="co-grid" id="co-list" aria-busy="false"></div>
+    </section>
+
+    <div id="co-state"></div>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    /* ------------------------------------------------------------------
+       Customer-only gate.
+       This page belongs to customer accounts. The role below is read purely to
+       route someone who landed here by mistake; the backend independently
+       derives the buyer from the bearer token on every request, so editing
+       localStorage gains nothing.
+       ------------------------------------------------------------------ */
+    var role = (window.UserStore && UserStore.getRole) ? UserStore.getRole() : 'farmer';
+    if (role !== 'customer') { window.location.replace('index.html'); return; }
+
+    var $ = function (id) { return document.getElementById(id); };
+    var PAGE_LIMIT = 100;
+    var MAX_PAGES = 20;
+
+    /* The backend's canonical order lifecycle (ORDER_STATUS_FLOW in
+       backend/app/routers/marketplace.py). An unrecognised status degrades to
+       "placed" rather than rendering an empty chip. */
+    var STATUS_FLOW = ['placed', 'processing', 'shipped', 'out_for_delivery', 'received'];
+
+    var ST = {
+      placed:           { label: 'Placed',           icon: 'fa-receipt',        live: 'Order placed',       hint: 'We have your order and are waiting for the seller to confirm it.' },
+      processing:       { label: 'Processing',       icon: 'fa-box-open',       live: 'Preparing your order', hint: 'The seller is getting your items ready.' },
+      shipped:          { label: 'Shipped',          icon: 'fa-truck',          live: 'Shipped',            hint: 'Your items have left the seller and are on the move.' },
+      out_for_delivery: { label: 'Out for Delivery', icon: 'fa-truck-ramp-box', live: 'On the way',        hint: 'Your order is out for delivery.' },
+      received:         { label: 'Delivered',        icon: 'fa-circle-check' },
+      cancelled:        { label: 'Cancelled',        icon: 'fa-circle-xmark' }
+    };
+    var PAY = {
+      pending:  { label: 'Payment pending', icon: 'fa-clock' },
+      paid:     { label: 'Paid',           icon: 'fa-circle-check' },
+      failed:   { label: 'Payment failed', icon: 'fa-circle-exclamation' },
+      refunded: { label: 'Refunded',       icon: 'fa-arrow-rotate-left' }
+    };
+    var PAY_METHOD = { cod: 'Cash on delivery', wallet: 'Farm Assist Wallet' };
+    /* One sentence per filter, so an empty tab still explains itself. */
+    var FILTER_EMPTY = {
+      all:       { title: 'Your next farm-fresh order starts here', body: 'Explore vegetables, fruits and everything else from Farm Assist sellers.', cta: 'Explore Shop', href: 'marketplace.html' },
+      active:    { title: 'Nothing in transit yet',                body: 'Orders that are being packed or delivered will show up here.', cta: 'Browse Shop', href: 'marketplace.html' },
+      received:  { title: 'Nothing here yet',                      body: 'Your completed orders will appear here once they are delivered.', cta: 'Browse Shop', href: 'marketplace.html' },
+      cancelled: { title: 'Nothing here yet',                      body: 'You have not cancelled any orders.', cta: 'Browse Shop', href: 'marketplace.html' }
+    };
+
+    var S = { orders: [], filter: 'all', query: '', loading: false, failed: false };
+
+    /* ── helpers ── */
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function money(v) { return '₹' + Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
+    function parseDate(v) {
+      if (!v) return null;
+      var d = new Date(String(v).replace(' ', 'T'));
+      return isNaN(d.getTime()) ? null : d;
+    }
+    function fmtDate(v) {
+      var d = parseDate(v);
+      return d ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : (v ? String(v) : '');
+    }
+    function fmtDateTime(v) {
+      var d = parseDate(v);
+      if (!d) return v ? String(v) : '';
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) +
+        ' · ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    }
+    function normStatus(s) {
+      s = String(s == null ? '' : s).toLowerCase();
+      return ST[s] ? s : 'placed';
+    }
+    function isActive(o) {
+      var s = normStatus(o.status);
+      return s !== 'received' && s !== 'cancelled';
+    }
+    function shortAddr(a) {
+      if (!a) return '';
+      var one = String(a).replace(/\s+/g, ' ').trim();
+      return one.length > 52 ? one.slice(0, 52).trim() + '…' : one;
+    }
+    /* "Arriving today" is only claimed when the backend estimate says so. */
+    function etaText(o) {
+      if (!o.estimated_delivery) return '';
+      var d = parseDate(o.estimated_delivery);
+      if (!d) return String(o.estimated_delivery);
+      var now = new Date();
+      var sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+      return sameDay ? 'Arriving today' : 'Arriving ' + fmtDate(o.estimated_delivery);
+    }
+    function countLabel(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+    function orderHref(o, focus) {
+      return 'customer-order-detail.html?order=' + encodeURIComponent(o.order_id || '') + (focus ? '&focus=' + focus : '');
+    }
+
+    /* ── chips ── */
+    function statusChip(o) {
+      var s = normStatus(o.status);
+      var m = ST[s];
+      return '<span class="co-chip co-chip-st-' + s + '"><i class="fas ' + m.icon + '" aria-hidden="true"></i>' + esc(m.label) + '</span>';
+    }
+    function payChip(o) {
+      var p = String(o.payment_status || '').toLowerCase();
+      var m = PAY[p] || { label: p || 'Payment status unknown', icon: 'fa-circle-question' };
+      return '<span class="co-chip ' + (PAY[p] ? 'co-chip-pay-' + p : 'co-chip-pay') + '"><i class="fas ' + m.icon + '" aria-hidden="true"></i>' + esc(m.label) + '</span>';
+    }
+    function methodLabel(o) {
+      var m = String(o.payment_method || '').toLowerCase();
+      return PAY_METHOD[m] || (o.payment_method ? String(o.payment_method) : '');
+    }
+
+    /* ── product collage ── */
+    function collage(o, big) {
+      var urls = (o.images && o.images.length)
+        ? o.images.slice()
+        : ((o.summary && o.summary.image_url) ? [o.summary.image_url] : []);
+      var total = Number(o.items_count || 0) || 1;
+      var extra = Math.max(0, total - urls.length);
+      /* Leave one tile for the "+N" badge so the stack never overflows. */
+      var shown = extra > 0 ? urls.slice(0, 3) : urls.slice(0, 4);
+      if (!shown.length) {
+        return '<div class="co-collage single"><span class="co-thumb' + (big ? '' : '') + ' co-thumb-fb">' +
+          '<i class="fa-solid fa-basket-shopping" aria-hidden="true"></i></span></div>';
+      }
+      var html = '<div class="co-collage' + (shown.length === 1 ? ' single' : '') + '">';
+      shown.forEach(function (u) {
+        html += '<span class="co-thumb"><img class="co-img" src="' + esc(u) + '" alt="" loading="lazy"></span>';
+      });
+      if (extra > 0) {
+        html += '<span class="co-thumb co-thumb-more" aria-label="' + extra + ' more item' + (extra === 1 ? '' : 's') + '">+' + extra + '</span>';
+      }
+      return html + '</div>';
+    }
+
+    /* A product photo that fails to load becomes the same neutral basket tile,
+       so one broken URL never leaves a hole in the card. */
+    document.addEventListener('error', function (e) {
+      var img = e.target;
+      if (!img || img.tagName !== 'IMG' || !img.classList || !img.classList.contains('co-img')) return;
+      var fb = document.createElement('span');
+      fb.className = 'co-thumb co-thumb-fb';
+      fb.innerHTML = '<i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>';
+      if (img.parentNode) img.parentNode.replaceChild(fb, img);
+    }, true);
+
+    /* ── delivery progress ── */
+    function timeline(status) {
+      var idx = Math.max(0, STATUS_FLOW.indexOf(status));
+      var html = '<ol class="co-flow" aria-label="Delivery progress">';
+      for (var i = 0; i < STATUS_FLOW.length; i++) {
+        var key = STATUS_FLOW[i];
+        var m = ST[key];
+        var state = i < idx ? 'done' : (i === idx ? 'current' : 'todo');
+        html += '<li class="co-flow-node ' + state + '"' + (state === 'current' ? ' aria-current="step"' : '') + '>' +
+          '<span class="co-flow-dot"><i class="fas ' + (state === 'done' ? 'fa-check' : m.icon) + '" aria-hidden="true"></i></span>' +
+          '<span class="co-flow-label">' + esc(m.label) + '</span></li>';
+        if (i < STATUS_FLOW.length - 1) {
+          html += '<li class="co-flow-line' + (i < idx ? ' filled' : '') + '" aria-hidden="true"></li>';
+        }
+      }
+      return html + '</ol>';
+    }
+
+    /* ── arriving / active card ── */
+    function liveCard(o) {
+      var s = normStatus(o.status);
+      var m = ST[s];
+      var eta = etaText(o);
+      var headline = (s === 'out_for_delivery' && eta) ? eta : (m.live || m.label);
+      var sum = o.summary || {};
+      var total = Number(o.items_count || 0) || 1;
+      var extra = Math.max(0, total - 1);
+      var addr = shortAddr(o.delivery_address);
+      return '<article class="co-live">' +
+        '<a class="co-card-link" href="' + esc(orderHref(o)) + '"><span class="co-sr">View order ' + esc(o.order_id) + '</span></a>' +
+        '<div class="co-live-top">' +
+          '<span class="co-live-badge' + (s === 'out_for_delivery' ? ' pulsing' : '') + '">' +
+            '<i class="fas ' + m.icon + '" aria-hidden="true"></i>' + esc(headline) + '</span>' +
+          statusChip(o) +
+        '</div>' +
+        '<p class="co-live-sub">' + esc(m.hint || '') + '</p>' +
+        '<div class="co-live-main">' +
+          collage(o, true) +
+          '<div class="co-live-info">' +
+            '<h3>' + esc(sum.product_name || ('Order ' + (o.order_id || ''))) + '</h3>' +
+            '<div class="co-live-facts">' +
+              (extra > 0 ? '<span><i class="fas fa-layer-group" aria-hidden="true"></i>' + countLabel(extra, 'more item', 'more items') + '</span>' : '') +
+              (sum.quantity ? '<span><i class="fas fa-weight-hanging" aria-hidden="true"></i>Qty ' + esc(sum.quantity) + '</span>' : '') +
+              (o.seller_name ? '<span><i class="fas fa-store" aria-hidden="true"></i>' + esc(o.seller_name) + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="co-live-side">' +
+            '<div class="co-live-total">' + money(o.total_amount) + '</div>' +
+            '<div class="co-live-oid">Order ' + esc(o.order_id) + '</div>' +
+          '</div>' +
+        '</div>' +
+        timeline(s) +
+        '<div class="co-live-foot">' +
+          (addr ? '<div class="co-live-dest"><i class="fas fa-location-dot" aria-hidden="true"></i><span>' + esc(addr) + '</span></div>' : '<div></div>') +
+          '<div class="co-actions">' +
+            '<a class="co-btn on-dark" href="' + esc(orderHref(o, 'tracking')) + '">Track Order <i class="fas fa-arrow-right" aria-hidden="true"></i></a>' +
+            '<a class="co-btn primary" href="' + esc(orderHref(o)) + '">View Order</a>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+    }
+
+    /* ── order card ── */
+    function orderCard(o) {
+      var s = normStatus(o.status);
+      var sum = o.summary || {};
+      var total = Number(o.items_count || 0) || 1;
+      var extra = Math.max(0, total - 1);
+      var seller = o.seller_name
+        ? o.seller_name + (Number(o.seller_count || 0) > 1 ? ' +' + (Number(o.seller_count) - 1) + ' more' : '')
+        : '';
+      var foot = '';
+      if (s === 'received') {
+        foot = '<div class="co-delivered"><i class="fas fa-circle-check" aria-hidden="true"></i>' +
+          (o.received_at ? 'Delivered on ' + esc(fmtDate(o.received_at)) : 'Delivered') + '</div>';
+      } else if (s !== 'cancelled' && o.estimated_delivery) {
+        foot = '<div class="co-delivered"><i class="far fa-calendar" aria-hidden="true"></i>Expected by ' + esc(fmtDate(o.estimated_delivery)) + '</div>';
+      }
+      return '<article class="co-card co-fade">' +
+        '<a class="co-card-link" href="' + esc(orderHref(o)) + '"><span class="co-sr">View order ' + esc(o.order_id) + '</span></a>' +
+        '<div class="co-card-top">' +
+          '<div>' +
+            '<div class="co-oid"><i class="fas fa-receipt" aria-hidden="true"></i>' + esc(o.order_id) + '</div>' +
+            '<div class="co-when"><i class="far fa-calendar" aria-hidden="true"></i>' + esc(fmtDateTime(o.created_at)) + '</div>' +
+          '</div>' +
+          '<div class="co-chips">' + statusChip(o) + '</div>' +
+        '</div>' +
+        '<div class="co-card-body">' +
+          collage(o) +
+          '<div class="co-card-info">' +
+            '<h3>' + esc(sum.product_name || ('Order ' + (o.order_id || ''))) + '</h3>' +
+            '<ul class="co-facts">' +
+              (extra > 0 ? '<li class="more"><i class="fas fa-layer-group" aria-hidden="true"></i>+' + extra + ' more item' + (extra === 1 ? '' : 's') + '</li>' : '') +
+              (sum.quantity ? '<li><i class="fas fa-weight-hanging" aria-hidden="true"></i>Qty ' + esc(sum.quantity) + '</li>' : '') +
+            '</ul>' +
+            (seller ? '<div class="co-seller"><i class="fas fa-store" aria-hidden="true"></i><span>' + esc(seller) + '</span></div>' : '') +
+          '</div>' +
+        '</div>' +
+        (s === 'cancelled'
+          ? '<div class="co-cancelled"><i class="fas fa-circle-xmark" aria-hidden="true"></i><span>This order was cancelled' +
+            (o.cancelled_at ? ' on ' + esc(fmtDate(o.cancelled_at)) : '') +
+            (o.payment_status && String(o.payment_status).toLowerCase() === 'refunded' ? '. Refund completed.' : '') + '</span></div>'
+          : '') +
+        '<div class="co-card-foot">' +
+          '<div class="co-price">' +
+            '<div class="co-total">' + money(o.total_amount) + '</div>' +
+            '<div class="co-chips" style="justify-content:flex-start">' + payChip(o) + '</div>' +
+          '</div>' +
+          '<div class="co-actions">' +
+            '<a class="co-btn" href="' + esc(orderHref(o, 'tracking')) + '"><i class="fas fa-truck-fast" aria-hidden="true"></i> Track Order</a>' +
+            '<a class="co-btn primary" href="' + esc(orderHref(o)) + '">View Order</a>' +
+          '</div>' +
+        '</div>' +
+        foot +
+      '</article>';
+    }
+
+    /* ── skeletons / states ── */
+    function skeletonHero() {
+      var row = '<div class="co-card-body"><span class="co-skel-thumb big co-shimmer"></span>' +
+        '<div style="flex:1"><div class="co-skel-line co-shimmer w60" style="height:14px"></div>' +
+        '<div class="co-skel-line co-shimmer w40" style="margin-top:9px"></div></div></div>';
+      return '<div class="co-skel-hero co-shimmer">' + row + '</div>';
+    }
+    function skeletonCard() {
+      return '<div class="co-card" aria-hidden="true">' +
+        '<div class="co-card-top"><div style="flex:1"><div class="co-skel-line co-shimmer w60" style="height:13px"></div>' +
+        '<div class="co-skel-line co-shimmer w40" style="margin-top:8px"></div></div>' +
+        '<div class="co-skel-line co-shimmer" style="width:74px;height:22px;border-radius:999px"></div></div>' +
+        '<div class="co-card-body"><span class="co-skel-thumb co-shimmer"></span>' +
+        '<div style="flex:1"><div class="co-skel-line co-shimmer w60"></div>' +
+        '<div class="co-skel-line co-shimmer w40" style="margin-top:9px"></div></div></div>' +
+        '<div class="co-card-foot"><div class="co-skel-line co-shimmer w40" style="height:14px"></div>' +
+        '<div class="co-skel-line co-shimmer" style="width:120px;height:34px;border-radius:12px"></div></div>' +
+      '</div>';
+    }
+    function renderLoading() {
+      $('co-active-wrap').hidden = true;
+      $('co-list-wrap').hidden = true;
+      $('co-counts').hidden = true;
+      var hero = '', list = '';
+      for (var i = 0; i < 3; i++) list += skeletonCard();
+      $('co-state').innerHTML = '<div class="co-section"><h2 class="co-section-title"><i class="fas fa-truck-fast" aria-hidden="true"></i> On the way</h2>' +
+        skeletonHero() + '</div><h2 class="co-section-title">Previous orders</h2>' +
+        '<div class="co-grid">' + list + '</div>';
+      $('co-live-region').textContent = 'Loading your orders.';
+    }
+    function stateBox(mark, markClass, title, body, actions) {
+      return '<div class="co-state co-fade">' +
+        '<div class="co-state-mark' + (markClass ? ' ' + markClass : '') + '"><i class="fas ' + mark + '" aria-hidden="true"></i></div>' +
+        '<h2>' + esc(title) + '</h2><p>' + esc(body) + '</p>' +
+        (actions ? '<div class="co-state-actions">' + actions + '</div>' : '') +
+      '</div>';
+    }
+    function renderEmptyState() {
+      var e = FILTER_EMPTY[S.filter] || FILTER_EMPTY.all;
+      return stateBox('fa-seedling', '', e.title, e.body,
+        '<a class="co-btn primary" href="' + e.href + '"><i class="fas fa-store" aria-hidden="true"></i>' + esc(e.cta) + '</a>');
+    }
+    function renderSearchEmpty() {
+      return stateBox('fa-magnifying-glass', '', 'No matching orders',
+        'Try another order ID or product name.',
+        '<button type="button" class="co-btn primary" id="co-state-clear"><i class="fas fa-xmark" aria-hidden="true"></i> Clear Search</button>');
+    }
+    function renderErrorState() {
+      /* The customer sees a plain retry. The technical detail stays in the
+         console so no backend internals leak into the page. */
+      console.error('[Customer Orders] Failed to load orders', S.lastError || '');
+      return stateBox('fa-cloud-arrow-down', 'warn', 'We couldn’t load your orders',
+        'Please try again.',
+        '<button type="button" class="co-btn primary" id="co-state-retry"><i class="fas fa-rotate-right" aria-hidden="true"></i> Retry</button>');
+    }
+
+    /* ── rendering ── */
+    function visibleOrders() {
+      var list = S.orders.slice();
+      if (S.filter === 'active') list = list.filter(isActive);
+      else if (S.filter === 'received') list = list.filter(function (o) { return normStatus(o.status) === 'received'; });
+      else if (S.filter === 'cancelled') list = list.filter(function (o) { return normStatus(o.status) === 'cancelled'; });
+      var q = S.query.trim().toLowerCase();
+      if (q) {
+        list = list.filter(function (o) {
+          var sum = o.summary || {};
+          return [o.order_id, sum.product_name, o.seller_name].some(function (v) {
+            return v && String(v).toLowerCase().indexOf(q) !== -1;
+          });
+        });
+      }
+      return list;
+    }
+
+    function renderCounts() {
+      var el = $('co-counts');
+      var active = S.orders.filter(isActive).length;
+      var delivered = S.orders.filter(function (o) { return normStatus(o.status) === 'received'; }).length;
+      var cancelled = S.orders.filter(function (o) { return normStatus(o.status) === 'cancelled'; }).length;
+      if (!S.orders.length) { el.hidden = true; return; }
+      el.hidden = false;
+      el.innerHTML =
+        '<li><b>' + active + '</b> Active</li>' +
+        '<li><b>' + delivered + '</b> Delivered</li>' +
+        '<li><b>' + cancelled + '</b> Cancelled</li>';
+    }
+
+    function render() {
+      var overview = S.filter === 'all' && !S.query.trim();
+      var active = overview ? S.orders.filter(isActive) : [];
+      var rows = visibleOrders().filter(function (o) { return active.indexOf(o) === -1; });
+
+      renderCounts();
+
+      /* Active hero section: only on the unfiltered overview, so the emphasis
+         never competes with what the customer explicitly asked to see. */
+      $('co-active-wrap').hidden = active.length === 0;
+      if (active.length) $('co-active-list').innerHTML = active.map(liveCard).join('');
+
+      $('co-list-wrap').hidden = rows.length === 0;
+      if (rows.length) {
+        $('co-list-title').textContent = overview ? 'Previous orders' : 'Orders';
+        $('co-list').innerHTML = rows.map(orderCard).join('');
+      }
+
+      var state = '';
+      if (S.query.trim() && !visibleOrders().length) state = renderSearchEmpty();
+      else if (!visibleOrders().length) state = renderEmptyState();
+      $('co-state').innerHTML = state;
+
+      if (S.query.trim()) {
+        $('co-live-region').textContent = visibleOrders().length
+          ? visibleOrders().length + ' matching order' + (visibleOrders().length === 1 ? '' : 's')
+          : 'No matching orders.';
+      } else {
+        $('co-live-region').textContent = S.orders.length
+          ? S.orders.length + ' order' + (S.orders.length === 1 ? '' : 's') + ' loaded'
+          : 'No orders yet.';
+      }
+    }
+
+    /* ── data ── */
+    function load(keepQuery) {
+      if (S.loading) return;
+      S.loading = true;
+      S.failed = false;
+      if (!keepQuery) S.query = '';
+      $('co-search-input').value = S.query;
+      $('co-search-clear').hidden = !S.query;
+      renderLoading();
+
+      var all = [];
+      var page = 1;
+      function fetchPage() {
+        return API.Marketplace.listOrders({ page: page, limit: PAGE_LIMIT }).then(function (d) {
+          var items = (d && d.items) || [];
+          all = all.concat(items);
+          var total = (d && d.total) || 0;
+          if (all.length < total && page < MAX_PAGES) { page++; return fetchPage(); }
+          S.orders = all;
+          S.loading = false;
+          render();
+        });
+      }
+      fetchPage().catch(function (err) {
+        S.loading = false;
+        S.failed = true;
+        S.lastError = err;
+        S.orders = [];
+        $('co-active-wrap').hidden = true;
+        $('co-list-wrap').hidden = true;
+        $('co-counts').hidden = true;
+        $('co-state').innerHTML = renderErrorState();
+        $('co-live-region').textContent = 'Your orders could not be loaded.';
+      });
+    }
+    function retry() { load(true); }
+
+    /* ── events ── */
+    function setFilter(value) {
+      if (S.filter === value) return;
+      S.filter = value;
+      Array.prototype.forEach.call($('co-filters').querySelectorAll('.co-filter'), function (b) {
+        b.setAttribute('aria-pressed', b.dataset.filter === value ? 'true' : 'false');
+      });
+      render();
+    }
+
+    function bind() {
+      $('co-filters').addEventListener('click', function (e) {
+        var b = e.target.closest('.co-filter');
+        if (b) setFilter(b.dataset.filter);
+      });
+
+      var input = $('co-search-input');
+      var clear = $('co-search-clear');
+      input.addEventListener('input', function () {
+        S.query = input.value;
+        clear.hidden = !S.query;
+        render();
+      });
+      function clearSearch() {
+        S.query = '';
+        input.value = '';
+        clear.hidden = true;
+        render();
+        input.focus();
+      }
+      clear.addEventListener('click', clearSearch);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && S.query) { e.preventDefault(); clearSearch(); }
+      });
+
+      /* Retry and clear-search live in markup that is re-rendered, so they are
+         handled by delegation on the state container. */
+      $('co-state').addEventListener('click', function (e) {
+        if (e.target.closest('#co-state-retry')) { retry(); return; }
+        if (e.target.closest('#co-state-clear')) { clearSearch(); }
+      });
+    }
+
+    bind();
+    load(false);
+  })();
+  </script>
+</body>
+</html>

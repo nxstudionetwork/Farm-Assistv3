@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="customer-dashboard">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Customer Dashboard</title>
+  <meta name="description" content="Your Farm Assist customer dashboard - shop, orders, growing and community">
+  <meta name="api-base-url" content="/api/v1">
+  <script>window._API_BASE_URL = '/api/v1';</script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Farm Assist">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* Customer-only accents. Farmer pages keep their own palette untouched. */
+    .cust-hero{background:linear-gradient(135deg,#0A2417 0%,#123A26 45%,#1B5E3F 100%)}
+    .cust-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.2px}
+    .cust-chip.pending{background:rgba(255,255,255,.16);color:#FFE8A3}
+    .cust-chip.verified{background:rgba(129,199,132,.24);color:#C8F0C9}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .section-head h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px}
+    .section-head a{font-size:11.5px;font-weight:700;color:var(--primary-green);text-decoration:none}
+    .cust-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border-light)}
+    .cust-row:last-child{border-bottom:0}
+    .cust-row .cr-icon{width:36px;height:36px;border-radius:11px;background:var(--soft-green);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto}
+    .cust-row .cr-body{flex:1;min-width:0}
+    .cust-row .cr-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cust-row .cr-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .cust-row .cr-end{font-size:11.5px;font-weight:700;color:var(--text-secondary);white-space:nowrap}
+  </style>
+</head>
+<body>
+  <main class="page-container">
+
+    <!--
+      Header (Notifications / Points / Profile) and the five-item bottom nav
+      (Home | Shop | Grow | Community | Orders) are injected at runtime by
+      assets/js/navigation.js, which detects a customer session. They are not
+      written here so there is only one definition of either.
+    -->
+
+    <section class="hero-dashboard cust-hero">
+      <div class="hero-header">
+        <div class="hero-welcome">
+          <h2 id="cust-name">Customer</h2>
+          <p id="cust-subtitle">Loading your account...</p>
+        </div>
+        <div style="text-align:right;color:#fff">
+          <div style="font-size:12px;font-weight:700" id="cust-id-display">FA-CS-000000</div>
+          <div style="font-size:9px;opacity:.8">Customer ID</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;position:relative;z-index:1;flex-wrap:wrap">
+        <span class="cust-chip pending" id="cust-verification-chip"><i class="fas fa-hourglass-half"></i> <span id="cust-verification-text">Verification pending</span></span>
+        <span class="cust-chip verified"><i class="fas fa-star"></i> <span id="cust-points-chip">0 points</span></span>
+      </div>
+    </section>
+
+    <section class="stats-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      <a class="stat-box" href="customer-orders.html" style="text-decoration:none">
+        <i class="fas fa-box-open" style="color:var(--primary-green)"></i>
+        <div class="stat-box-num" id="stat-orders">0</div>
+        <div class="stat-box-label">Orders</div>
+      </a>
+      <a class="stat-box" href="marketplace.html#wishlist" style="text-decoration:none">
+        <i class="fas fa-heart" style="color:#E2574C"></i>
+        <div class="stat-box-num" id="stat-wishlist">0</div>
+        <div class="stat-box-label">Wishlist</div>
+      </a>
+      <a class="stat-box" href="customer-grow.html" style="text-decoration:none">
+        <i class="fas fa-seedling" style="color:#3E9B41"></i>
+        <div class="stat-box-num" id="stat-growing">0</div>
+        <div class="stat-box-label">Growing</div>
+      </a>
+      <a class="stat-box" href="customer-profile.html#points" style="text-decoration:none">
+        <i class="fas fa-star" style="color:#E9B640"></i>
+        <div class="stat-box-num" id="stat-points">0</div>
+        <div class="stat-box-label">Points</div>
+      </a>
+    </section>
+
+    <!-- Delivery address, so the customer can see where orders will go. -->
+    <section class="card-premium" style="margin-bottom:16px">
+      <div class="section-head">
+        <h3><i class="fas fa-location-dot" style="color:var(--primary-green)"></i> Delivering To</h3>
+        <a href="customer-profile.html#addresses">Manage</a>
+      </div>
+      <div id="cust-address-block">
+        <div class="empty-state" style="padding:14px 0">
+          <i class="fas fa-map-marker-alt"></i>
+          <p>No delivery address saved yet.</p>
+          <a href="customer-profile.html#addresses" class="btn-outline" style="display:inline-block;margin-top:8px">Add Address</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <div class="section-head">
+        <h3><i class="fas fa-receipt" style="color:#7c3aed"></i> Recent Orders</h3>
+        <a href="customer-orders.html">View All</a>
+      </div>
+      <div id="cust-orders-block">
+        <div class="loading-shimmer"></div>
+        <div class="loading-shimmer" style="width:70%"></div>
+      </div>
+    </section>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <div class="section-head">
+        <h3><i class="fas fa-seedling" style="color:#3E9B41"></i> Growing Now</h3>
+        <a href="customer-grow.html">Manage</a>
+      </div>
+      <div id="cust-grow-block">
+        <div class="loading-shimmer"></div>
+      </div>
+    </section>
+
+    <section class="card-premium" style="margin-bottom:16px">
+      <div class="section-head">
+        <h3><i class="fas fa-store" style="color:#FF9800"></i> Shop</h3>
+        <a href="marketplace.html">Browse All</a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+        <a href="marketplace.html" class="cust-row" style="text-decoration:none;margin:0;padding:12px;background:var(--soft-green);border-radius:12px">
+          <span class="cr-icon"><i class="fas fa-basket-shopping"></i></span>
+          <span class="cr-body"><span class="cr-title">Buy Products</span><span class="cr-sub">Seeds, tools, inputs</span></span>
+        </a>
+        <a href="customer-orders.html" class="cust-row" style="text-decoration:none;margin:0;padding:12px;background:var(--soft-green);border-radius:12px">
+          <span class="cr-icon"><i class="fas fa-truck-fast"></i></span>
+          <span class="cr-body"><span class="cr-title">Track Order</span><span class="cr-sub">Delivery status</span></span>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/pwa.js"></script>
+  <script>
+    /*
+     * Customer Dashboard.
+     *
+     * Everything on this screen comes from /api/v1/customers/me/dashboard, which
+     * resolves the customer from the bearer token. No customer identifier is
+     * sent from the page, so there is nothing here that could show another
+     * customer's orders, address or points.
+     */
+
+    /* Only customers belong here. A farmer arriving on this URL is sent to the
+       farmer dashboard; the backend would refuse these calls regardless. */
+    (function guardRole() {
+      var role = (window.UserStore && UserStore.getRole) ? UserStore.getRole() : 'farmer';
+      if (role !== 'customer') window.location.replace('index.html');
+    })();
+
+    function money(amount) {
+      if (amount == null || isNaN(amount)) return 'Ã¢â€šÂ¹0';
+      return 'Ã¢â€šÂ¹' + Number(amount).toLocaleString('en-IN');
+    }
+
+    function esc(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function timeAgo(value) {
+      if (!value) return '';
+      var diff = Date.now() - new Date(value).getTime();
+      if (isNaN(diff)) return '';
+      var mins = Math.floor(diff / 60000);
+      if (mins < 60) return mins + 'm ago';
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      return Math.floor(hrs / 24) + 'd ago';
+    }
+
+    function renderAddress(address) {
+      if (!address) {
+        return '<div class="empty-state" style="padding:14px 0">' +
+          '<i class="fas fa-map-marker-alt"></i><p>No delivery address saved yet.</p>' +
+          '<a href="customer-profile.html#addresses" class="btn-outline" style="display:inline-block;margin-top:8px">Add Address</a></div>';
+      }
+      var lines = [address.address_line, address.city || address.village, address.district, address.state, address.pincode];
+      return '<div class="cust-row">' +
+        '<span class="cr-icon"><i class="fas fa-house"></i></span>' +
+        '<span class="cr-body">' +
+          '<span class="cr-title">' + esc(lines.filter(Boolean)[0] || 'Primary address') + '</span>' +
+          '<span class="cr-sub">' + esc(lines.filter(Boolean).slice(1).join(', ')) + '</span>' +
+        '</span>' +
+        (address.is_primary ? '<span class="cr-end">Primary</span>' : '') +
+      '</div>';
+    }
+
+    function renderOrders(orders) {
+      if (!orders || !orders.length) {
+        return '<div class="empty-state" style="padding:14px 0">' +
+          '<i class="fas fa-box-open"></i><p>No orders yet.</p>' +
+          '<a href="marketplace.html" class="btn-outline" style="display:inline-block;margin-top:8px">Start Shopping</a></div>';
+      }
+      return orders.map(function (o) {
+        return '<div class="cust-row">' +
+          '<span class="cr-icon"><i class="fas fa-receipt"></i></span>' +
+          '<span class="cr-body">' +
+            '<span class="cr-title">' + esc(o.order_id || 'Order') + '</span>' +
+            '<span class="cr-sub">' + esc(o.status || 'placed') + ' &middot; ' + esc(timeAgo(o.created_at)) + '</span>' +
+          '</span>' +
+          '<span class="cr-end">' + esc(money(o.total_amount)) + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderGrowing(plants) {
+      if (!plants || !plants.length) {
+        return '<div class="empty-state" style="padding:14px 0">' +
+          '<i class="fas fa-seedling"></i><p>Nothing growing right now.</p>' +
+          '<a href="customer-grow.html" class="btn-outline" style="display:inline-block;margin-top:8px">Add a Plant</a></div>';
+      }
+      return plants.map(function (p) {
+        return '<div class="cust-row">' +
+          '<span class="cr-icon"><i class="fas fa-seedling"></i></span>' +
+          '<span class="cr-body">' +
+            '<span class="cr-title">' + esc(p.nickname || p.crop_name || 'Plant') + '</span>' +
+            '<span class="cr-sub">' + esc(p.crop_name || '') + (p.quantity ? ' &middot; ' + p.quantity + ' unit(s)' : '') + '</span>' +
+          '</span>' +
+          '<span class="cr-end">' + esc(p.status || 'growing') + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    function loadCustomerDashboard() {
+      if (!window.API || !API.Customer) return;
+      API.Customer.getDashboard().then(function (data) {
+        if (!data) return;
+        var stats = data.stats || {};
+
+        document.getElementById('cust-name').textContent = data.full_name || 'Customer';
+        document.getElementById('cust-id-display').textContent = data.customer_id || 'FA-CS-000000';
+        document.getElementById('cust-subtitle').textContent =
+          'Customer account Ã‚Â· ' + (stats.orders || 0) + ' order(s)';
+
+        var verified = data.verification_status === 'verified';
+        var chip = document.getElementById('cust-verification-chip');
+        chip.classList.toggle('verified', verified);
+        chip.classList.toggle('pending', !verified);
+        chip.innerHTML = verified
+          ? '<i class="fas fa-circle-check"></i> <span>Verified</span>'
+          : '<i class="fas fa-hourglass-half"></i> <span>' + esc(data.verification_status || 'pending') + '</span>';
+
+        var points = data.points_balance || 0;
+        document.getElementById('cust-points-chip').textContent = points + ' points';
+        document.getElementById('stat-orders').textContent = stats.orders || 0;
+        document.getElementById('stat-wishlist').textContent = stats.wishlist || 0;
+        document.getElementById('stat-growing').textContent = (data.growing || []).length;
+        document.getElementById('stat-points').textContent = points;
+
+        document.getElementById('cust-address-block').innerHTML = renderAddress(data.default_address);
+        document.getElementById('cust-orders-block').innerHTML = renderOrders(data.recent_orders);
+        document.getElementById('cust-grow-block').innerHTML = renderGrowing(data.growing);
+
+        // Keep the header's points badge in step with the loaded balance.
+        try {
+          var user = UserStore.getCurrentUser() || {};
+          user.points_balance = points;
+          UserStore.setSession(user);
+        } catch (e) {}
+      }).catch(function (err) {
+        var message = (err && err.status === 403)
+          ? 'This account cannot open the customer dashboard.'
+          : 'Could not load your dashboard. Pull to refresh or try again.';
+        document.getElementById('cust-orders-block').innerHTML =
+          '<div class="empty-state" style="padding:14px 0"><i class="fas fa-triangle-exclamation"></i><p>' + esc(message) + '</p></div>';
+        document.getElementById('cust-address-block').innerHTML = '';
+        document.getElementById('cust-grow-block').innerHTML = '';
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      loadCustomerDashboard();
+    });
+  </script>
+</body>
+</html>

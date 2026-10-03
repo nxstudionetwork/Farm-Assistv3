@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="customer-order-detail">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Order Details</title>
+  <meta name="api-base-url" content="/api/v1">
+  <script>window._API_BASE_URL = '/api/v1';</script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* The Orders page is what this task builds. This screen exists so "View
+       Order" and "Track Order" land somewhere real: it shows the order the
+       customer asked for, its confirmed progress and its real items. The
+       full order-details experience is a separate piece of work. */
+    .cod-page{max-width:720px}
+    .cod-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+    .cod-back{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--primary-green);text-decoration:none;margin-bottom:14px;min-height:36px}
+    .cod-back:hover{color:var(--primary-dark-green)}
+    .cod-back:focus-visible{outline:2px solid var(--primary-green);outline-offset:2px;border-radius:6px}
+
+    .cod-head{position:relative;border-radius:20px;padding:18px;background:linear-gradient(160deg,#0F2E1E 0%,#1B5E3F 100%);color:#fff;box-shadow:var(--shadow-md);overflow:hidden;margin-bottom:16px}
+    .cod-head::after{content:"";position:absolute;right:-56px;top:-56px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(82,183,136,.28) 0%,rgba(82,183,136,0) 70%);pointer-events:none}
+    .cod-head>*{position:relative;z-index:1}
+    .cod-oid{font-size:17px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .cod-when{font-size:11.5px;color:rgba(255,255,255,.74);margin-top:5px}
+    .cod-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+
+    .cod-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;font-size:11px;font-weight:700}
+    .cod-chip-st-placed{background:#FFF7E6;color:#8A5D00}
+    .cod-chip-st-processing{background:#EFF4F0;color:#3F6350}
+    .cod-chip-st-shipped{background:#F1ECFB;color:#5B3BB0}
+    .cod-chip-st-out_for_delivery{background:#E4F0FB;color:#12508F}
+    .cod-chip-st-received{background:#D9EFE0;color:#0F4C2E}
+    .cod-chip-st-cancelled{background:#FBDDD8;color:#8F2216}
+    .cod-chip-light{background:rgba(255,255,255,.16);color:#fff}
+
+    .cod-flow{list-style:none;display:flex;align-items:flex-start;margin:18px 0 0;padding:0}
+    .cod-flow-node{flex:1 1 0;display:flex;flex-direction:column;align-items:center;min-width:0}
+    .cod-flow-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.22);flex:0 0 auto}
+    .cod-flow-node.done .cod-flow-dot{background:var(--medium-green);border-color:var(--medium-green);color:#fff}
+    .cod-flow-node.current .cod-flow-dot{background:#fff;border-color:#fff;color:var(--primary-green);box-shadow:0 0 0 4px rgba(255,255,255,.22)}
+    .cod-flow-label{margin-top:7px;font-size:10px;font-weight:600;text-align:center;color:rgba(255,255,255,.66);line-height:1.3}
+    .cod-flow-node.done .cod-flow-label,.cod-flow-node.current .cod-flow-label{color:#fff}
+    .cod-flow-line{flex:0 0 14px;height:2px;margin-top:12px;background:rgba(255,255,255,.2)}
+    .cod-flow-line.filled{background:var(--medium-green)}
+
+    .cod-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:18px;padding:16px;box-shadow:var(--shadow-sm);margin-bottom:14px}
+    .cod-card>h2{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin:0 0 12px}
+    .cod-card>h2 i{color:var(--primary-green)}
+
+    .cod-item{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border-light)}
+    .cod-item:last-child{border-bottom:none;padding-bottom:0}
+    .cod-thumb{width:52px;height:52px;border-radius:12px;flex:0 0 auto;overflow:hidden;background:var(--light-gray);border:1px solid var(--border-light)}
+    .cod-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .cod-thumb-fb{display:flex;align-items:center;justify-content:center;color:var(--medium-green);font-size:18px}
+    .cod-item-body{flex:1;min-width:0}
+    .cod-item-name{font-size:13.5px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+    .cod-item-sub{font-size:11.5px;color:var(--text-muted);margin-top:3px}
+    .cod-item-price{font-size:13.5px;font-weight:800;white-space:nowrap;color:var(--text-primary)}
+
+    .cod-kv{display:flex;justify-content:space-between;gap:16px;font-size:13px;padding:7px 0;color:var(--text-secondary)}
+    .cod-kv>span:first-child{color:var(--text-muted)}
+    .cod-kv>span:last-child{text-align:right;color:var(--text-primary);overflow-wrap:anywhere}
+    .cod-kv.total{border-top:1px solid var(--border-light);margin-top:6px;padding-top:12px;font-size:15px;font-weight:800}
+    .cod-kv.total>span:last-child{color:var(--primary-dark-green);font-size:17px}
+
+    .cod-track{position:relative;padding-left:2px}
+    .cod-track-row{display:flex;gap:12px;position:relative;padding-bottom:16px}
+    .cod-track-row:last-child{padding-bottom:0}
+    .cod-track-mark{flex:0 0 26px;display:flex;flex-direction:column;align-items:center}
+    .cod-track-dot{width:26px;height:26px;border-radius:50%;background:var(--soft-green);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:10.5px;flex:0 0 auto;z-index:1}
+    .cod-track-line{flex:1;width:2px;background:var(--border-light);margin-top:3px}
+    .cod-track-row:last-child .cod-track-line{display:none}
+    .cod-track-body{flex:1;min-width:0;padding-top:2px}
+    .cod-track-status{font-size:12.5px;font-weight:700;color:var(--text-primary)}
+    .cod-track-note{font-size:12px;color:var(--text-secondary);margin-top:3px;line-height:1.55}
+    .cod-track-meta{font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap}
+
+    .cod-note{font-size:11.5px;color:var(--text-muted);margin:0;line-height:1.6;display:flex;gap:8px;align-items:flex-start}
+    .cod-note i{margin-top:2px;flex:0 0 auto}
+
+    .cod-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:4px}
+    .cod-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:10px 17px;border:1px solid var(--border-medium);border-radius:12px;background:var(--bg-card);color:var(--text-primary);font-family:inherit;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer;transition:background .15s,border-color .15s,color .15s,transform .12s}
+    .cod-btn:hover{border-color:var(--primary-green);color:var(--primary-green)}
+    .cod-btn:active{transform:translateY(1px)}
+    .cod-btn:focus-visible{outline:2px solid var(--primary-green);outline-offset:2px}
+    .cod-btn.primary{background:var(--primary-green);border-color:var(--primary-green);color:#fff}
+    .cod-btn.primary:hover{background:var(--primary-dark-green);border-color:var(--primary-dark-green);color:#fff}
+
+    .cod-state{text-align:center;padding:52px 22px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:18px}
+    .cod-state-mark{width:74px;height:74px;border-radius:24px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;font-size:29px;background:var(--soft-green);color:var(--primary-green)}
+    .cod-state-mark.warn{background:#FCECEA;color:#A32316}
+    .cod-state h1{font-size:17px;font-weight:800;margin:0 0 7px}
+    .cod-state p{font-size:13px;color:var(--text-muted);margin:0 auto 20px;max-width:42ch;line-height:1.6}
+
+    .cod-skel{height:16px;border-radius:8px;background:var(--light-gray);margin-bottom:12px}
+    .cod-skel-hero{height:190px;border-radius:20px;background:var(--light-gray)}
+    .cod-skel-thumb{width:52px;height:52px;border-radius:12px;background:var(--light-gray);flex:0 0 auto}
+    .cod-shimmer{position:relative;overflow:hidden}
+    .cod-shimmer::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.6) 50%,rgba(255,255,255,0) 100%);animation:codShimmer 1.3s infinite}
+    @keyframes codShimmer{100%{transform:translateX(100%)}}
+    .cod-fade{animation:codFade .28s ease both}
+    @keyframes codFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+    @media(max-width:420px){
+      .cod-card,.cod-head{padding:14px}
+      .cod-actions{width:100%}
+      .cod-actions .cod-btn{flex:1 1 auto}
+      .cod-flow-label{font-size:9px}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .cod-shimmer::after{animation:none}
+      .cod-fade{animation:none}
+    }
+  </style>
+</head>
+<body>
+  <main class="page-container cod-page">
+    <a class="cod-back" href="customer-orders.html"><i class="fas fa-arrow-left" aria-hidden="true"></i> All orders</a>
+
+    <p class="cod-sr" id="cod-live-region" role="status" aria-live="polite"></p>
+    <div id="cod-body"></div>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    /* Customer-only page. The role is read only to route a visitor who
+       arrived by mistake; ownership of the order itself is decided by the
+       backend from the bearer token. */
+    var role = (window.UserStore && UserStore.getRole) ? UserStore.getRole() : 'farmer';
+    if (role !== 'customer') { window.location.replace('index.html'); return; }
+
+    var $ = function (id) { return document.getElementById(id); };
+
+    /* The order to show comes from the query string, but it is only ever an
+       identifier: the server resolves it against the signed-in customer and
+       answers 404 for anything that is not theirs. */
+    var params = new URLSearchParams(window.location.search);
+    var orderId = (params.get('order') || '').trim();
+    var focusTracking = params.get('focus') === 'tracking';
+
+    var STATUS_FLOW = ['placed', 'processing', 'shipped', 'out_for_delivery', 'received'];
+    var ST = {
+      placed:           { label: 'Placed',           icon: 'fa-receipt' },
+      processing:       { label: 'Processing',       icon: 'fa-box-open' },
+      shipped:          { label: 'Shipped',          icon: 'fa-truck' },
+      out_for_delivery: { label: 'Out for Delivery', icon: 'fa-truck-ramp-box' },
+      received:         { label: 'Delivered',        icon: 'fa-circle-check' },
+      cancelled:        { label: 'Cancelled',        icon: 'fa-circle-xmark' }
+    };
+    var PAY = {
+      pending:  { label: 'Payment pending', icon: 'fa-clock' },
+      paid:     { label: 'Paid',           icon: 'fa-circle-check' },
+      failed:   { label: 'Payment failed', icon: 'fa-circle-exclamation' },
+      refunded: { label: 'Refunded',       icon: 'fa-arrow-rotate-left' }
+    };
+    var PAY_METHOD = { cod: 'Cash on delivery', wallet: 'Farm Assist Wallet' };
+
+    var S = { order: null, failed: false };
+
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function money(v) { return '₹' + Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
+    function parseDate(v) {
+      if (!v) return null;
+      var d = new Date(String(v).replace(' ', 'T'));
+      return isNaN(d.getTime()) ? null : d;
+    }
+    function fmtDate(v) {
+      var d = parseDate(v);
+      return d ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : (v ? String(v) : '');
+    }
+    function fmtDateTime(v) {
+      var d = parseDate(v);
+      if (!d) return v ? String(v) : '';
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) +
+        ' · ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    }
+    function normStatus(s) {
+      s = String(s == null ? '' : s).toLowerCase();
+      return ST[s] ? s : 'placed';
+    }
+
+    document.addEventListener('error', function (e) {
+      var img = e.target;
+      if (!img || img.tagName !== 'IMG' || !img.classList || !img.classList.contains('cod-img')) return;
+      var fb = document.createElement('span');
+      fb.className = 'cod-thumb cod-thumb-fb';
+      fb.innerHTML = '<i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>';
+      if (img.parentNode) img.parentNode.replaceChild(fb, img);
+    }, true);
+
+    function statusChip(o) {
+      var s = normStatus(o.status);
+      return '<span class="cod-chip cod-chip-st-' + s + '"><i class="fas ' + ST[s].icon + '" aria-hidden="true"></i>' + esc(ST[s].label) + '</span>';
+    }
+    function payChip(o) {
+      var p = String(o.payment_status || '').toLowerCase();
+      var m = PAY[p] || { label: p || 'Unknown', icon: 'fa-circle-question' };
+      return '<span class="cod-chip cod-chip-light"><i class="fas ' + m.icon + '" aria-hidden="true"></i>' + esc(m.label) + '</span>';
+    }
+
+    function timeline(status) {
+      var idx = Math.max(0, STATUS_FLOW.indexOf(status));
+      var html = '<ol class="cod-flow" aria-label="Delivery progress">';
+      for (var i = 0; i < STATUS_FLOW.length; i++) {
+        var m = ST[STATUS_FLOW[i]];
+        var state = i < idx ? 'done' : (i === idx ? 'current' : 'todo');
+        html += '<li class="cod-flow-node ' + state + '"' + (state === 'current' ? ' aria-current="step"' : '') + '>' +
+          '<span class="cod-flow-dot"><i class="fas ' + (state === 'done' ? 'fa-check' : m.icon) + '" aria-hidden="true"></i></span>' +
+          '<span class="cod-flow-label">' + esc(m.label) + '</span></li>';
+        if (i < STATUS_FLOW.length - 1) {
+          html += '<li class="cod-flow-line' + (i < idx ? ' filled' : '') + '" aria-hidden="true"></li>';
+        }
+      }
+      return html + '</ol>';
+    }
+
+    function itemsHTML(o) {
+      var items = o.items || [];
+      if (!items.length) {
+        return '<p class="cod-note"><i class="fas fa-circle-info" aria-hidden="true"></i>No items are recorded on this order.</p>';
+      }
+      return items.map(function (it) {
+        var line = Number(it.total_price != null ? it.total_price : (it.unit_price || 0) * (it.quantity || 0));
+        var thumb = it.image_url
+          ? '<span class="cod-thumb"><img class="cod-img" src="' + esc(it.image_url) + '" alt="" loading="lazy"></span>'
+          : '<span class="cod-thumb cod-thumb-fb"><i class="fa-solid fa-basket-shopping" aria-hidden="true"></i></span>';
+        return '<div class="cod-item">' + thumb +
+          '<div class="cod-item-body">' +
+            '<div class="cod-item-name">' + esc(it.product_name || 'Item') + '</div>' +
+            '<div class="cod-item-sub">Qty ' + esc(it.quantity != null ? it.quantity : 1) +
+              (it.unit_price != null ? ' · ' + money(it.unit_price) + ' each' : '') + '</div>' +
+          '</div>' +
+          '<div class="cod-item-price">' + money(line) + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function trackingHTML(o) {
+      var rows = o.tracking || [];
+      if (!rows.length) {
+        return '<p class="cod-note"><i class="fas fa-inbox" aria-hidden="true"></i>' +
+          'No tracking updates have been posted for this order yet. The status above is the latest confirmed stage.</p>';
+      }
+      return '<div class="cod-track">' + rows.slice().reverse().map(function (r) {
+        return '<div class="cod-track-row">' +
+          '<div class="cod-track-mark"><span class="cod-track-dot"><i class="fas fa-check" aria-hidden="true"></i></span><span class="cod-track-line"></span></div>' +
+          '<div class="cod-track-body">' +
+            '<div class="cod-track-status">' + esc(r.status_label || normStatus(r.status)) + '</div>' +
+            (r.notes ? '<div class="cod-track-note">' + esc(r.notes) + '</div>' : '') +
+            '<div class="cod-track-meta">' +
+              (r.location ? '<span><i class="fas fa-location-dot" aria-hidden="true"></i> ' + esc(r.location) + '</span>' : '') +
+              (r.timestamp ? '<span><i class="far fa-calendar" aria-hidden="true"></i> ' + esc(fmtDateTime(r.timestamp)) + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+
+    function render() {
+      var o = S.order;
+      var s = normStatus(o.status);
+      var payKey = String(o.payment_status || '').toLowerCase();
+      var method = PAY_METHOD[String(o.payment_method || '').toLowerCase()] || (o.payment_method || '');
+      var eta = o.expected_delivery || o.estimated_delivery;
+
+      var html = '<section class="cod-head cod-fade">' +
+        '<div class="cod-oid"><i class="fas fa-receipt" aria-hidden="true"></i>' + esc(o.order_id) + '</div>' +
+        '<div class="cod-when">Placed ' + esc(fmtDateTime(o.created_at)) + '</div>' +
+        '<div class="cod-chips">' + statusChip(o) + payChip(o) + '</div>' +
+        (s === 'cancelled' ? '' : timeline(s)) +
+      '</section>';
+
+      if (s === 'cancelled') {
+        html += '<section class="cod-card cod-fade"><div class="cod-cancelled-note">' +
+          '<p class="cod-note" style="color:#8F2216"><i class="fas fa-circle-xmark" aria-hidden="true"></i>This order was cancelled' +
+          (o.cancelled_at ? ' on ' + esc(fmtDate(o.cancelled_at)) : '') + '.' +
+          (payKey === 'refunded' ? ' The refund has been completed.' : '') + '</p></div></section>';
+      }
+
+      html += '<section class="cod-card cod-fade">' +
+        '<h2><i class="fas fa-basket-shopping" aria-hidden="true"></i> Products</h2>' +
+        itemsHTML(o) +
+        '<div style="margin-top:14px">' +
+          '<div class="cod-kv"><span>Subtotal</span><span>' + money(o.total_amount) + '</span></div>' +
+          '<div class="cod-kv total"><span>Total paid</span><span>' + money(o.total_amount) + '</span></div>' +
+        '</div>' +
+      '</section>';
+
+      html += '<section class="cod-card cod-fade">' +
+        '<h2><i class="fas fa-circle-info" aria-hidden="true"></i> Order summary</h2>' +
+        '<div class="cod-kv"><span>Order ID</span><span>' + esc(o.order_id) + '</span></div>' +
+        '<div class="cod-kv"><span>Items</span><span>' + esc(o.items_count != null ? o.items_count : (o.items || []).length) + '</span></div>' +
+        '<div class="cod-kv"><span>Order date</span><span>' + esc(fmtDateTime(o.created_at)) + '</span></div>' +
+        (method ? '<div class="cod-kv"><span>Payment method</span><span>' + esc(method) + '</span></div>' : '') +
+        '<div class="cod-kv"><span>Payment status</span><span>' + esc((PAY[payKey] || {}).label || o.payment_status || 'Unknown') + '</span></div>' +
+        (s === 'received' && o.received_at ? '<div class="cod-kv"><span>Delivered on</span><span>' + esc(fmtDate(o.received_at)) + '</span></div>' : '') +
+        (s !== 'received' && s !== 'cancelled' && eta ? '<div class="cod-kv"><span>Expected delivery</span><span>' + esc(fmtDate(eta)) + '</span></div>' : '') +
+        (o.seller_name ? '<div class="cod-kv"><span>Seller</span><span>' + esc(o.seller_name) + '</span></div>' : '') +
+      '</section>';
+
+      html += '<section class="cod-card cod-fade">' +
+        '<h2><i class="fas fa-location-dot" aria-hidden="true"></i> Delivery address</h2>' +
+        (o.delivery_name ? '<div class="cod-kv"><span>Name</span><span>' + esc(o.delivery_name) + '</span></div>' : '') +
+        (o.delivery_phone ? '<div class="cod-kv"><span>Phone</span><span>' + esc(o.delivery_phone) + '</span></div>' : '') +
+        '<div class="cod-kv"><span>Address</span><span>' + esc(o.delivery_address || 'No address was saved on this order') + '</span></div>' +
+        (o.notes ? '<div class="cod-kv"><span>Notes</span><span>' + esc(o.notes) + '</span></div>' : '') +
+      '</section>';
+
+      html += '<section class="cod-card cod-fade" id="tracking-section">' +
+        '<h2><i class="fas fa-truck-fast" aria-hidden="true"></i> Tracking</h2>' +
+        trackingHTML(o) +
+      '</section>';
+
+      var actions = '<a class="cod-btn" href="customer-orders.html"><i class="fas fa-arrow-left" aria-hidden="true"></i> All orders</a>';
+      if (o.can_confirm_received) {
+        actions += '<button type="button" class="cod-btn primary" id="cod-confirm"><i class="fas fa-circle-check" aria-hidden="true"></i> Confirm received</button>';
+      }
+      html += '<div class="cod-actions cod-fade">' + actions + '</div>';
+
+      $('cod-body').innerHTML = html;
+      $('cod-live-region').textContent = 'Order ' + (o.order_id || '') + ', status ' + ST[s].label + '.';
+    }
+
+    function stateBox(mark, markClass, title, body, actions) {
+      return '<div class="cod-state cod-fade">' +
+        '<div class="cod-state-mark' + (markClass ? ' ' + markClass : '') + '"><i class="fas ' + mark + '" aria-hidden="true"></i></div>' +
+        '<h1>' + esc(title) + '</h1><p>' + esc(body) + '</p>' +
+        (actions ? '<div class="cod-actions" style="justify-content:center">' + actions + '</div>' : '') +
+      '</div>';
+    }
+
+    function renderMissing() {
+      /* Covers both "no order in the URL" and the backend's 404, which is also
+         what a customer gets when they try to open somebody else's order. */
+      $('cod-body').innerHTML = stateBox('fa-box-open', 'warn', 'We couldn’t find that order',
+        'This order is not available on your account. It may belong to another customer, or the link may be incomplete.',
+        '<a class="cod-btn primary" href="customer-orders.html"><i class="fas fa-arrow-left" aria-hidden="true"></i> All orders</a>');
+      $('cod-live-region').textContent = 'Order not found.';
+    }
+    function renderError() {
+      console.error('[Customer Order Detail] Failed to load order', S.lastError || '');
+      $('cod-body').innerHTML = stateBox('fa-cloud-arrow-down', 'warn', 'We couldn’t load this order',
+        'Please try again.',
+        '<button type="button" class="cod-btn primary" id="cod-retry"><i class="fas fa-rotate-right" aria-hidden="true"></i> Retry</button>');
+      $('cod-live-region').textContent = 'The order could not be loaded.';
+    }
+    function renderLoading() {
+      $('cod-body').innerHTML = '<div class="cod-skel-hero cod-shimmer" style="margin-bottom:16px"></div>' +
+        '<div class="cod-card cod-shimmer"><div class="cod-skel w60"></div><div class="cod-skel w40"></div>' +
+        '<div class="cod-item" style="margin-top:6px"><span class="cod-skel-thumb"></span>' +
+        '<div style="flex:1"><div class="cod-skel w60"></div><div class="cod-skel w40"></div></div></div></div>' +
+        '<div class="cod-card cod-shimmer"><div class="cod-skel w40"></div><div class="cod-skel w60"></div></div>';
+      $('cod-live-region').textContent = 'Loading your order.';
+    }
+
+    function toast(msg, type) {
+      if (window.showToast) { showToast(msg, type); return; }
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#1B2E21;color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;z-index:99999;box-shadow:0 6px 18px rgba(0,0,0,.2);max-width:84vw;text-align:center';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 3200);
+    }
+
+    function confirmReceived() {
+      var btn = $('cod-confirm');
+      if (!btn) return;
+      btn.disabled = true;
+      API.Marketplace.confirmOrderReceived(orderId).then(function (updated) {
+        S.order = updated || S.order;
+        render();
+        toast('Order marked as received. Thank you!', 'success');
+      }).catch(function (err) {
+        btn.disabled = false;
+        toast(err && err.message ? err.message : 'Could not mark the order as received', 'error');
+      });
+    }
+
+    function load() {
+      S.failed = false;
+      renderLoading();
+      if (!orderId) { renderMissing(); return; }
+      API.Marketplace.getOrder(orderId).then(function (o) {
+        if (!o || !o.order_id) { renderMissing(); return; }
+        S.order = o;
+        render();
+        /* "Track Order" arrives with ?focus=tracking: bring that section into
+           view instead of dumping the customer at the top of the page. */
+        if (focusTracking) {
+          var target = $('tracking-section');
+          if (target && target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }).catch(function (err) {
+        S.lastError = err;
+        if (err && err.status === 404) { renderMissing(); return; }
+        S.failed = true;
+        renderError();
+      });
+    }
+
+    document.getElementById('cod-body').addEventListener('click', function (e) {
+      if (e.target.closest('#cod-retry')) { load(); return; }
+      if (e.target.closest('#cod-confirm')) { confirmReceived(); }
+    });
+
+    load();
+  })();
+  </script>
+</body>
+</html>

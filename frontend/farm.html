@@ -1177,6 +1177,28 @@
       .mf-kpis { grid-template-columns: 1fr; }
     }
   </style>
+  <style>
+    /* Shared crop selector (js/crop-selector.js) and the grouped farming
+       activity chips (js/farming-activities.js). */
+    .crop-selector{display:flex;flex-direction:column;gap:8px}
+    .crop-selector__search{position:relative}
+    .crop-selector__input{width:100%;padding:10px 12px;border:1px solid #d7e2d4;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;color:inherit}
+    .crop-selector__input:focus{outline:2px solid #2e7d32;outline-offset:1px;border-color:#2e7d32}
+    .crop-selector__filters,.crop-selector__row{display:flex;gap:8px;flex-wrap:wrap}
+    .crop-selector__row .crop-selector__select{flex:1 1 140px;min-width:120px}
+    .crop-selector__select{flex:1 1 120px;padding:9px 10px;border:1px solid #d7e2d4;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;color:inherit}
+    .crop-selector__select:focus{outline:2px solid #2e7d32;outline-offset:1px}
+    .crop-selector__select--crop{flex:1 1 100%}
+    .crop-selector__hint,.crop-selector__status{margin:0;font-size:12px;color:var(--text-muted,#6b7a6b);line-height:1.5}
+    .crop-selector__status[role="status"]{min-height:1em}
+    .crop-selector__custom{align-self:flex-start}
+    @media (prefers-color-scheme:dark){
+      .crop-selector__input,.crop-selector__select{background:#1b241c;border-color:#33402f;color:#e8efe6}
+    }
+    .farming-activity-group{margin-bottom:10px}
+    .farming-activity-group__label{margin:0 0 5px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--pf-green,#2e7d32)}
+    .farming-activity-group__chips{display:flex;flex-wrap:wrap;gap:6px}
+  </style>
 </head>
 <body>
 
@@ -2158,10 +2180,14 @@
           <option value="">Select plot</option>
         </select>
 
-        <label class="form-label" for="crop-crop" style="margin-top:10px;">Crop Variety *</label>
-        <select class="form-input" id="crop-crop" required>
-          <option value="">Select crop</option>
-        </select>
+        <!-- Shared searchable crop selector (window.CropSelector): catalog crop,
+             variety and cultivation method. Never a hardcoded crop list. -->
+        <label class="form-label" for="cropSelectorField" style="margin-top:10px;">Crop, Variety &amp; Cultivation Method *</label>
+        <div id="cropSelectorField"></div>
+        <input type="hidden" id="crop-crop">
+        <p id="cropSelectorError" style="display:none;color:var(--danger,#c62828);font-size:12px;margin-top:6px;">
+          Please select a crop from the catalog.
+        </p>
 
         <div class="mf-form-grid-2" style="margin-top:10px;">
           <div>
@@ -2228,6 +2254,7 @@
   <!-- DEPENDENCIES -->
   <script src="js/services.js"></script>
   <script src="js/userStore.js"></script>
+  <script src="js/crop-selector.js"></script>
   <script src="assets/js/navigation.js"></script>
   <script src="assets/js/app.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -2308,6 +2335,8 @@
       mapPlots: [],
       mapFarms: [],
       selectedFarmId: localStorage.getItem('fa-selected-farm-id') || '',
+      cropSelector: null,
+      selectedCrop: null,
       isLoading: false
     };
 
@@ -2440,7 +2469,10 @@
     }
 
     function loadCropsCatalog() {
-      return API.Crop.listCrops().then(function (d) {
+      // Without an explicit page_size the API returns a single 200-row page,
+      // which silently hid most of the catalog from the picker and every
+      // filter built on it.
+      return API.Crop.listCrops({ page_size: 500 }).then(function (d) {
         state.cropsCatalog = toArray(d);
       });
     }
@@ -3495,7 +3527,9 @@
       box.innerHTML = '<div class="mf-item-list">' + cycles.map(function (c) {
         var cropObj = state.cropsCatalog.find(function (x) { return x.id === c.crop_id || x.crop_id === c.crop_id; });
         var cropName = c.crop_name || (cropObj ? cropObj.name : 'Crop');
-        var variety = c.variety || (cropObj ? cropObj.variety : '');
+        // Cycles serialise the variety as `variety_name`; `c.variety` is always
+        // undefined, so the variety never showed for normalised cycles.
+        var variety = c.variety_name || c.variety || (cropObj ? cropObj.variety : '');
         var plotObj = (farm.plots || []).find(function (p) { return p.id === c.plot_id; });
         var plotName = plotObj ? plotObj.plot_name : 'Field Plot';
         var stage = c.current_stage || c.stage || 'Vegetative';
@@ -4515,13 +4549,22 @@
         plotSel.appendChild(opt);
       });
 
-      var cropSel = $id('crop-crop');
-      cropSel.innerHTML = '<option value="">Select crop variety</option>';
-      state.cropsCatalog.forEach(function (c) {
-        var opt = document.createElement('option');
-        opt.value = c.id || c.crop_id;
-        opt.textContent = c.name + (c.variety ? ' (' + c.variety + ')' : '');
-        cropSel.appendChild(opt);
+      // One shared selector for crop, variety and cultivation method. The
+      // flat crop dropdown was replaced because it could not express varieties
+      // or cultivation methods, and it silently listed only the crops that had
+      // a legacy free-text variety.
+      $id('crop-crop').value = '';
+      $id('cropSelectorError').style.display = 'none';
+      state.cropSelector = CropSelector.mount({
+        mount: '#cropSelectorField',
+        required: true,
+        onChange: function (crop, variety, method, selector) {
+          var hidden = $id('crop-crop');
+          if (hidden) hidden.value = crop ? crop.id : '';
+          state.selectedCrop = selector ? selector.value() : null;
+          var err = $id('cropSelectorError');
+          if (err && crop) err.style.display = 'none';
+        }
       });
 
       openModal('modal-add-crop');
@@ -4536,13 +4579,17 @@
       var plotId = $id('crop-plot').value;
       if (!cropId || !plotId) {
         toast('Please select both a plot and a crop variety.', 'warning');
+        if (!cropId) $id('cropSelectorError').style.display = 'block';
         return;
       }
 
+      var selection = state.cropSelector ? state.cropSelector.value() : {};
       var payload = {
         farm_id: farm.id || farm.farm_id,
         plot_id: plotId,
         crop_id: cropId,
+        variety_id: selection.variety_id || null,
+        cultivation_method: selection.cultivation_method || null,
         sowing_date: $id('crop-sowing').value || null,
         expected_harvest_date: $id('crop-harvest').value || null,
         notes: $id('crop-notes').value.trim() || null

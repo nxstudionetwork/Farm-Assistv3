@@ -32,6 +32,16 @@ class AgriculturalService(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # --- Storage capacity (only set for services that hold produce) --------
+    #: grain | cold_storage | produce | warehouse
+    storage_type = Column(String(30), nullable=True, index=True)
+    capacity_quintal = Column(Float, nullable=True)
+    available_capacity_quintal = Column(Float, nullable=True)
+    temperature_controlled = Column(Boolean, default=False)
+    min_duration_days = Column(Integer, nullable=True)
+    #: Comma separated produce this provider accepts.
+    supported_produce = Column(String(500), nullable=True)
+
     requests = relationship("ServiceRequest", back_populates="service")
 
 

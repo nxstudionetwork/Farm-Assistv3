@@ -2,13 +2,13 @@ import os
 import re
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Type
+from typing import Optional, Dict, Iterable, List, Type
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 
 from app.config import settings
 from app.database.connection import get_db
@@ -135,6 +135,229 @@ def generate_farmer_id(db: Session) -> str:
     raise RuntimeError("Unable to allocate a unique Farmer ID")
 
 
+# --------------------------------------------------------------------------- #
+# Roles
+# --------------------------------------------------------------------------- #
+# The role is always read back from the database via ``get_current_user``. It is
+# deliberately never taken from a JWT claim, a query string, a form field or
+# anything the browser can edit, so editing the token or the URL cannot change
+# what an account is allowed to reach.
+ROLE_FARMER = "farmer"
+ROLE_CUSTOMER = "customer"
+VALID_ROLES = (ROLE_FARMER, ROLE_CUSTOMER)
+
+# Farmer ID and Customer ID live in different namespaces with different
+# shapes, so a value typed into the wrong login form is recognisable and can be
+# answered with a useful message instead of a generic "not found".
+FARMER_ID_RE = re.compile(r"^FA-AS-\d+$")
+CUSTOMER_ID_RE = re.compile(r"^FA-CS-\d+$")
+
+
+def normalise_role(value: Optional[str]) -> Optional[str]:
+    """Return a canonical role, or None when the value names no known role."""
+    if value is None:
+        return None
+    role = str(value).strip().lower().replace("-", "_").replace(" ", "_")
+    return role if role in VALID_ROLES else None
+
+
+def user_role(user: Optional[User]) -> str:
+    """The effective role of a user row.
+
+    Rows created before the customer role existed carry no explicit role, so
+    they are treated as farmers: that is what every one of them already was,
+    and defaulting the other way would lock legacy accounts out of their own
+    farm.
+    """
+    if user is None:
+        return ""
+    role = normalise_role(getattr(user, "role", None))
+    return role or ROLE_FARMER
+
+
+def is_customer(user: Optional[User]) -> bool:
+    return user_role(user) == ROLE_CUSTOMER
+
+
+def is_farmer(user: Optional[User]) -> bool:
+    return user_role(user) == ROLE_FARMER
+
+
+def require_roles(*roles: str) -> Type:
+    """Build a dependency that authenticates *and* enforces an account role.
+
+    ``get_current_user`` alone proves who is calling; this additionally proves
+    what they are allowed to call. Because the role is read from the users
+    table on every request, a customer cannot reach a farmer-only endpoint by
+    editing the URL or replaying a token, and a farmer cannot reach
+    customer-only endpoints either.
+    """
+    wanted = tuple(normalise_role(r) or r for r in roles)
+    descriptions = ", ".join(f"a {r} account" for r in wanted)
+
+    async def _role_dependency(
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        if user_role(current_user) not in wanted:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"This action requires {descriptions}.",
+            )
+        return current_user
+
+    return _role_dependency
+
+
+# --------------------------------------------------------------------------- #
+# Customer ID
+# --------------------------------------------------------------------------- #
+CUSTOMER_ID_PREFIX = "FA-CS-"
+CUSTOMER_ID_WIDTH = 6
+CUSTOMER_ID_SCOPE = "customer_id"
+SEQUENCE_SCOPE_CUSTOMER_ID = CUSTOMER_ID_SCOPE
+
+
+def normalize_customer_id(raw_id: Optional[str]) -> str:
+    """Return the canonical ``FA-CS-######`` form of ``raw_id``.
+
+    Returns an empty string when the input cannot be a customer ID at all,
+    which lets callers tell "malformed" apart from "well formed but unknown"
+    and answer each with the right message.
+
+    A customer typing the bare number ("1234"), a differently-cased prefix
+    ("fa-cs-1234") or stray spaces ("FA - CS - 1234") is accepted, because that
+    is a formatting slip rather than a wrong identity. Whitespace is removed
+    outright since it can never change which account is meant. Anything with a
+    non-numeric remainder -- including a Farmer ID -- is rejected.
+    """
+    if raw_id is None:
+        return ""
+    # Strip every space before comparing: "FA - CS - 1" and "FA-CS-1" can only
+    # ever refer to the same account, so there is nothing to disambiguate.
+    text = re.sub(r"\s+", "", str(raw_id)).upper()
+    if not text:
+        return ""
+
+    if text.startswith(CUSTOMER_ID_PREFIX):
+        remainder = text[len(CUSTOMER_ID_PREFIX):]
+    else:
+        remainder = text
+
+    if not remainder.isdigit():
+        return ""
+
+    digits = remainder.lstrip("0") or "0"
+    if len(digits) > CUSTOMER_ID_WIDTH:
+        return ""
+    return f"{CUSTOMER_ID_PREFIX}{digits.zfill(CUSTOMER_ID_WIDTH)}"
+
+
+def is_customer_id_shape(raw_id: Optional[str]) -> bool:
+    """True only for a strictly formatted ``FA-CS-######``."""
+    return bool(CUSTOMER_ID_RE.match(str(raw_id or "").strip().upper()))
+
+
+def allocate_sequence_value(db: Session, scope: str) -> int:
+    """Atomically bump the ``scope`` counter and return its new value.
+
+    The read, the increment and the result all happen inside a single
+    statement, so two callers racing for the same number are serialised by the
+    database on the counter row rather than by luck in Python. That holds for
+    simultaneous registrations, retried requests and several server processes
+    pointed at one database.
+
+    Engines without ``RETURNING`` (SQLite older than 3.35) take the second
+    path. The ``UPDATE ... last_value = last_value + 1`` is the atomic part
+    there; reading the row back in the same transaction returns our own value.
+    """
+    now = datetime.utcnow()
+    upsert_returning = text(
+        "INSERT INTO id_sequences (scope, last_value, updated_at) "
+        "VALUES (:scope, 1, :now) "
+        "ON CONFLICT(scope) DO UPDATE SET "
+        "last_value = id_sequences.last_value + 1, updated_at = :now "
+        "RETURNING last_value"
+    )
+    try:
+        row = db.execute(upsert_returning, {"scope": scope, "now": now}).first()
+        if row is not None:
+            return int(row[0])
+    except Exception:
+        # No RETURNING support (or no table yet). Start a clean transaction and
+        # fall through to the update-then-read path.
+        db.rollback()
+
+    db.execute(
+        text(
+            "INSERT INTO id_sequences (scope, last_value) VALUES (:scope, 0) "
+            "ON CONFLICT(scope) DO NOTHING"
+        ),
+        {"scope": scope},
+    )
+    db.execute(
+        text("UPDATE id_sequences SET last_value = last_value + 1 WHERE scope = :scope"),
+        {"scope": scope},
+    )
+    row = db.execute(
+        text("SELECT last_value FROM id_sequences WHERE scope = :scope"),
+        {"scope": scope},
+    ).first()
+    if row is None:
+        raise RuntimeError(f"Unable to allocate a value from sequence '{scope}'")
+    return int(row[0])
+
+
+def seed_sequence_from_max(db: Session, scope: str, table: str, column: str, prefix: str) -> None:
+    """Raise the ``scope`` counter to the highest value already stored.
+
+    Called before the first allocation so that a database which somehow
+    already holds customer rows (a restore from backup, a partial import) never
+    re-issues an ID that is taken. It only ever moves the counter forward, so
+    running it on every registration is harmless.
+    """
+    best = 0
+    try:
+        for value in db.execute(
+            text(f"SELECT {column} FROM {table} WHERE {column} LIKE :prefix"),
+            {"prefix": f"{prefix}%"},
+        ):
+            digits = re.sub(r"\D", "", str(value[0] or ""))
+            if digits:
+                best = max(best, int(digits))
+    except Exception:
+        db.rollback()
+        return
+
+    if best <= 0:
+        return
+    try:
+        db.execute(
+            text(
+                "INSERT INTO id_sequences (scope, last_value) VALUES (:scope, :value) "
+                "ON CONFLICT(scope) DO UPDATE SET "
+                "last_value = CASE WHEN id_sequences.last_value < :value "
+                "THEN :value ELSE id_sequences.last_value END"
+            ),
+            {"scope": scope, "value": best},
+        )
+    except Exception:
+        db.rollback()
+
+
+def generate_customer_id(db: Session) -> str:
+    """Allocate the next unused ``FA-CS-######`` Customer ID.
+
+    The six-digit section comes from the ``id_sequences`` table, never from the
+    frontend, a random source or a timestamp. Uniqueness is therefore a
+    property of the database rather than of the request that happened to arrive
+    first, and the unique index on ``customers.customer_id`` is the final
+    authority if anything ever goes wrong anyway.
+    """
+    seed_sequence_from_max(db, SEQUENCE_SCOPE_CUSTOMER_ID, "customers", "customer_id", CUSTOMER_ID_PREFIX)
+    value = allocate_sequence_value(db, SEQUENCE_SCOPE_CUSTOMER_ID)
+    return f"{CUSTOMER_ID_PREFIX}{value:0{CUSTOMER_ID_WIDTH}d}"
+
+
 ID_COLUMN_MAP: Dict[str, str] = {
     "Farm": "farm_id",
     "FarmPlot": "plot_id",
@@ -245,6 +468,13 @@ ID_COLUMN_MAP: Dict[str, str] = {
     "HydroponicWaterLog": "log_id",
     "HydroponicHealthRecord": "record_id",
     "HydroponicProductionRecord": "production_id",
+    # Customer-side tables. Without these, generate_id() cannot find the column,
+    # silently falls back to "always return 000001" and the second row to be
+    # created collides with the unique index on the first.
+    "CustomerPointsEntry": "entry_id",
+    "CustomerPlant": "plant_id",
+    "CustomerSettings": "id",
+    "Customer": "customer_id",
 }
 
 
@@ -358,3 +588,36 @@ async def get_optional_user(
         return await get_current_user(credentials, db)
     except HTTPException:
         return None
+
+
+# Ready-made role gates. ``get_current_farmer`` and ``get_current_customer``
+# authenticate the bearer token, load the user from the database and then check
+# the role stored on that row -- in that order, and always against the database
+# rather than against anything the caller supplied.
+get_current_farmer = require_roles(ROLE_FARMER)
+get_current_customer = require_roles(ROLE_CUSTOMER)
+
+
+def assert_role_matches_selection(user: Optional[User], selected_role: Optional[str]) -> None:
+    """Reject a login attempt made through the wrong role's form.
+
+    The login page offers a Farmer form and a Customer form. Whichever one the
+    person used is sent along, and it has to match the account that was
+    actually found. Without this, a Farmer ID typed into the Customer form would
+    authenticate a farmer and drop them on the wrong dashboard.
+    """
+    wanted = normalise_role(selected_role)
+    if not wanted or user is None:
+        return
+    actual = user_role(user)
+    if actual == wanted:
+        return
+    if actual == ROLE_FARMER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This ID belongs to a Farmer account. Please use Farmer Login.",
+        )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="This ID belongs to a Customer account. Please use Customer Login.",
+    )

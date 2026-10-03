@@ -6,6 +6,7 @@ ADD COLUMN`` operations for the columns introduced after an install, so existing
 databases are upgraded in place without requiring Alembic.
 """
 
+import json
 import logging
 import sqlite3
 
@@ -83,6 +84,13 @@ ADDITIVE_COLUMNS = {
         ("eligibility", "VARCHAR(300)"),
         ("service_duration", "VARCHAR(100)"),
         ("required_documents", "VARCHAR(300)"),
+        # Storage capacity facts (see the storage section in ADDITIVE_COLUMNS).
+        ("storage_type", "VARCHAR(30)"),
+        ("capacity_quintal", "FLOAT"),
+        ("available_capacity_quintal", "FLOAT"),
+        ("temperature_controlled", "BOOLEAN DEFAULT 0"),
+        ("min_duration_days", "INTEGER"),
+        ("supported_produce", "VARCHAR(500)"),
     ],
     "government_schemes": [
         ("department", "VARCHAR(300)"),
@@ -300,6 +308,7 @@ ADDITIVE_COLUMNS = {
         ("market_type", "VARCHAR(80)"),
         ("lifecycle_stages", "JSON"),
         ("suitable_cultivation_methods", "JSON"),
+        ("hydroponic_targets", "JSON"),
         ("is_catalog", "BOOLEAN DEFAULT 0"),
         ("is_archived", "BOOLEAN DEFAULT 0"),
     ],
@@ -320,6 +329,266 @@ def run_additive_migrations(database_url: str) -> None:
         _migrate_sqlite(database_url)
     elif database_url.startswith("postgresql"):
         _migrate_postgres(database_url)
+
+
+#: Customer authentication adds three tables and touches none of the existing
+#: ones, so this is a pure additive migration: existing Farmer rows, Farmer IDs
+#: and every other table are left exactly as they are.
+#:
+#: ``customers`` is created alongside ``farmer_profiles``, not in place of it.
+#: ``user_id`` is unique, so one authenticated user resolves to at most one
+#: customer profile, and ``customer_id`` carries a UNIQUE index so the public
+#: ``FA-CS-######`` identifier can never be duplicated or forged onto a second
+#: account.
+#:
+#: ``id_sequences`` holds the database-owned counter the Customer ID is drawn
+#: from. It is created and primed here so the very first registration on an
+#: existing database starts from the right number rather than from 1.
+CUSTOMER_IDENTITY_SQLITE_DDL = """
+CREATE TABLE IF NOT EXISTS customers (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    customer_id VARCHAR(20) NOT NULL,
+    full_name VARCHAR(200) NOT NULL,
+    phone_number VARCHAR(15),
+    email VARCHAR(200),
+    date_of_birth VARCHAR(10),
+    gender VARCHAR(10),
+    verification_status VARCHAR(30) DEFAULT 'pending',
+    phone_verified BOOLEAN DEFAULT 0,
+    email_verified BOOLEAN DEFAULT 0,
+    points_balance INTEGER DEFAULT 0,
+    preferred_language VARCHAR(10) DEFAULT 'en',
+    bio TEXT,
+    created_at DATETIME,
+    updated_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customers_user_id ON customers (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customers_customer_id ON customers (customer_id);
+CREATE INDEX IF NOT EXISTS ix_customers_phone_number ON customers (phone_number);
+CREATE INDEX IF NOT EXISTS ix_customers_email ON customers (email);
+
+CREATE TABLE IF NOT EXISTS customer_points_entries (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    entry_id VARCHAR(20),
+    customer_pk VARCHAR(36) NOT NULL,
+    customer_id VARCHAR(20) NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
+    points INTEGER NOT NULL,
+    reason VARCHAR(60) NOT NULL,
+    balance_after INTEGER DEFAULT 0,
+    reference_type VARCHAR(40),
+    reference_id VARCHAR(64),
+    created_at DATETIME,
+    FOREIGN KEY (customer_pk) REFERENCES customers (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customer_points_entries_entry_id ON customer_points_entries (entry_id);
+CREATE INDEX IF NOT EXISTS ix_customer_points_entries_customer_pk ON customer_points_entries (customer_pk);
+CREATE INDEX IF NOT EXISTS ix_customer_points_entries_customer_id ON customer_points_entries (customer_id);
+CREATE INDEX IF NOT EXISTS ix_customer_points_entries_user_id ON customer_points_entries (user_id);
+
+CREATE TABLE IF NOT EXISTS id_sequences (
+    scope VARCHAR(40) NOT NULL PRIMARY KEY,
+    last_value INTEGER NOT NULL DEFAULT 0,
+    updated_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS customer_settings (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    notif_orders BOOLEAN DEFAULT 1,
+    notif_products BOOLEAN DEFAULT 1,
+    notif_grow BOOLEAN DEFAULT 1,
+    notif_community BOOLEAN DEFAULT 1,
+    notif_points BOOLEAN DEFAULT 1,
+    shopping_default_address_id VARCHAR(36),
+    shopping_preferences JSON,
+    grow_reminders BOOLEAN DEFAULT 1,
+    plant_care_reminders BOOLEAN DEFAULT 1,
+    community_notifications BOOLEAN DEFAULT 1,
+    community_privacy JSON,
+    language VARCHAR(10) DEFAULT 'en',
+    theme VARCHAR(20) DEFAULT 'system',
+    text_size VARCHAR(20) DEFAULT 'medium',
+    reduce_motion BOOLEAN DEFAULT 0,
+    created_at DATETIME,
+    updated_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customer_settings_user_id ON customer_settings (user_id);
+
+CREATE TABLE IF NOT EXISTS customer_plants (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    plant_id VARCHAR(20),
+    customer_pk VARCHAR(36) NOT NULL,
+    customer_id VARCHAR(20) NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
+    crop_id VARCHAR(36),
+    nickname VARCHAR(120),
+    planted_on VARCHAR(10),
+    expected_harvest_on VARCHAR(10),
+    quantity INTEGER,
+    status VARCHAR(30) DEFAULT 'growing',
+    notes TEXT,
+    created_at DATETIME,
+    updated_at DATETIME,
+    FOREIGN KEY (customer_pk) REFERENCES customers (id),
+    FOREIGN KEY (customer_id) REFERENCES customers (customer_id),
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (crop_id) REFERENCES crops (id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customer_plants_plant_id ON customer_plants (plant_id);
+CREATE INDEX IF NOT EXISTS ix_customer_plants_customer_pk ON customer_plants (customer_pk);
+CREATE INDEX IF NOT EXISTS ix_customer_plants_customer_id ON customer_plants (customer_id);
+CREATE INDEX IF NOT EXISTS ix_customer_plants_user_id ON customer_plants (user_id);
+CREATE INDEX IF NOT EXISTS ix_customer_plants_crop_id ON customer_plants (crop_id);
+"""
+
+CUSTOMER_IDENTITY_POSTGRES_DDL = """
+CREATE TABLE IF NOT EXISTS customers (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users (id),
+    customer_id VARCHAR(20) NOT NULL,
+    full_name VARCHAR(200) NOT NULL,
+    phone_number VARCHAR(15),
+    email VARCHAR(200),
+    date_of_birth VARCHAR(10),
+    gender VARCHAR(10),
+    verification_status VARCHAR(30) DEFAULT 'pending',
+    phone_verified BOOLEAN DEFAULT FALSE,
+    email_verified BOOLEAN DEFAULT FALSE,
+    points_balance INTEGER DEFAULT 0,
+    preferred_language VARCHAR(10) DEFAULT 'en',
+    bio TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customers_user_id ON customers (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customers_customer_id ON customers (customer_id);
+CREATE INDEX IF NOT EXISTS ix_customers_phone_number ON customers (phone_number);
+CREATE INDEX IF NOT EXISTS ix_customers_email ON customers (email);
+
+CREATE TABLE IF NOT EXISTS customer_points_entries (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    entry_id VARCHAR(20),
+    customer_pk VARCHAR(36) NOT NULL REFERENCES customers (id),
+    customer_id VARCHAR(20) NOT NULL REFERENCES customers (customer_id),
+    user_id VARCHAR(36) NOT NULL REFERENCES users (id),
+    points INTEGER NOT NULL,
+    reason VARCHAR(60) NOT NULL,
+    balance_after INTEGER DEFAULT 0,
+    reference_type VARCHAR(40),
+    reference_id VARCHAR(64),
+    created_at TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customer_points_entries_entry_id ON customer_points_entries (entry_id);
+CREATE INDEX IF NOT EXISTS ix_customer_points_entries_customer_pk ON customer_points_entries (customer_pk);
+CREATE INDEX IF NOT EXISTS ix_customer_points_entries_customer_id ON customer_points_entries (customer_id);
+CREATE INDEX IF NOT EXISTS ix_customer_points_entries_user_id ON customer_points_entries (user_id);
+
+CREATE TABLE IF NOT EXISTS id_sequences (
+    scope VARCHAR(40) NOT NULL PRIMARY KEY,
+    last_value INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS customer_settings (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users (id),
+    notif_orders BOOLEAN DEFAULT TRUE,
+    notif_products BOOLEAN DEFAULT TRUE,
+    notif_grow BOOLEAN DEFAULT TRUE,
+    notif_community BOOLEAN DEFAULT TRUE,
+    notif_points BOOLEAN DEFAULT TRUE,
+    shopping_default_address_id VARCHAR(36),
+    shopping_preferences JSON,
+    grow_reminders BOOLEAN DEFAULT TRUE,
+    plant_care_reminders BOOLEAN DEFAULT TRUE,
+    community_notifications BOOLEAN DEFAULT TRUE,
+    community_privacy JSON,
+    language VARCHAR(10) DEFAULT 'en',
+    theme VARCHAR(20) DEFAULT 'system',
+    text_size VARCHAR(20) DEFAULT 'medium',
+    reduce_motion BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customer_settings_user_id ON customer_settings (user_id);
+
+CREATE TABLE IF NOT EXISTS customer_plants (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    plant_id VARCHAR(20),
+    customer_pk VARCHAR(36) NOT NULL REFERENCES customers (id),
+    customer_id VARCHAR(20) NOT NULL REFERENCES customers (customer_id),
+    user_id VARCHAR(36) NOT NULL REFERENCES users (id),
+    crop_id VARCHAR(36) REFERENCES crops (id),
+    nickname VARCHAR(120),
+    planted_on VARCHAR(10),
+    expected_harvest_on VARCHAR(10),
+    quantity INTEGER,
+    status VARCHAR(30) DEFAULT 'growing',
+    notes TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_customer_plants_plant_id ON customer_plants (plant_id);
+CREATE INDEX IF NOT EXISTS ix_customer_plants_customer_pk ON customer_plants (customer_pk);
+CREATE INDEX IF NOT EXISTS ix_customer_plants_customer_id ON customer_plants (customer_id);
+CREATE INDEX IF NOT EXISTS ix_customer_plants_user_id ON customer_plants (user_id);
+CREATE INDEX IF NOT EXISTS ix_customer_plants_crop_id ON customer_plants (crop_id);
+"""
+
+
+def _prime_customer_id_sequence_sqlite(conn) -> None:
+    """Start the Customer ID counter above every ID already in the table.
+
+    Only ever raises the counter. On a database that has never issued a Customer
+    ID this inserts the seed row and does nothing else; on one that somehow
+    already holds customers, it makes sure the next allocation cannot collide
+    with them. Safe to run on every boot.
+    """
+    try:
+        highest = 0
+        for row in conn.execute(
+            "SELECT customer_id FROM customers WHERE customer_id LIKE 'FA-CS-%'"
+        ).fetchall():
+            digits = "".join(ch for ch in str(row[0] or "") if ch.isdigit())
+            if digits:
+                highest = max(highest, int(digits))
+        conn.execute(
+            "INSERT INTO id_sequences (scope, last_value, updated_at) "
+            "VALUES ('customer_id', ?, CURRENT_TIMESTAMP) "
+            "ON CONFLICT(scope) DO UPDATE SET "
+            "last_value = CASE WHEN id_sequences.last_value < ? "
+            "THEN ? ELSE id_sequences.last_value END",
+            (highest, highest, highest),
+        )
+        logger.info("Customer ID sequence primed at %s", highest)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("Customer ID sequence priming failed: %s", exc)
+
+
+def _ensure_customer_role_sqlite(conn) -> None:
+    """Give every pre-customer row an explicit ``farmer`` role.
+
+    Rows created before the customer role existed have ``role IS NULL`` and the
+    rest of the application already treats them as farmers, so this records
+    that explicitly instead of leaving it to a default. It never touches a row
+    that already has a role.
+    """
+    try:
+        # TRIM is SQLite's spelling of Postgres' BTRIM. Using btrim here made
+        # the whole statement fail, which the catch below swallowed -- the
+        # backfill then silently never ran.
+        cursor = conn.execute(
+            "UPDATE users SET role = 'farmer' WHERE role IS NULL OR TRIM(role) = ''"
+        )
+        if cursor.rowcount:
+            logger.info("Backfilled role='farmer' for %s existing users", cursor.rowcount)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("Role backfill failed: %s", exc)
 
 
 #: Indexes that accelerate case-insensitive filters. The API filters with a
@@ -424,6 +693,53 @@ CREATE INDEX IF NOT EXISTS ix_crop_varieties_crop_id ON crop_varieties (crop_id)
 CREATE INDEX IF NOT EXISTS ix_crops_domain ON crops (domain);
 CREATE INDEX IF NOT EXISTS ix_crops_category_id ON crops (category_id);
 CREATE INDEX IF NOT EXISTS ix_crops_is_catalog ON crops (is_catalog);
+CREATE TABLE IF NOT EXISTS marketplace_crop_listings (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,
+    crop_listing_id VARCHAR(20) UNIQUE,
+    listing_id VARCHAR(36) NOT NULL UNIQUE REFERENCES marketplace_listings (id) ON DELETE CASCADE,
+    farm_id VARCHAR(36) REFERENCES farms (id),
+    plot_id VARCHAR(36) REFERENCES farm_plots (id),
+    crop_id VARCHAR(36) REFERENCES crops (id),
+    variety_id VARCHAR(36) REFERENCES crop_varieties (id),
+    crop_cycle_id VARCHAR(36) REFERENCES crop_cycles (id),
+    crop_name VARCHAR(100),
+    variety_name VARCHAR(150),
+    crop_category VARCHAR(50),
+    crop_domain VARCHAR(80),
+    growing_season VARCHAR(120),
+    harvest_status VARCHAR(30) DEFAULT 'expected',
+    expected_harvest_date VARCHAR(20),
+    actual_harvest_date VARCHAR(20),
+    harvest_quantity FLOAT,
+    harvest_unit VARCHAR(20),
+    is_advance_sale BOOLEAN DEFAULT 0,
+    quality_grade VARCHAR(60),
+    size_grade VARCHAR(60),
+    freshness VARCHAR(60),
+    farming_method VARCHAR(30),
+    certification VARCHAR(120),
+    moisture_percentage FLOAT,
+    packaging_type VARCHAR(80),
+    packaging_size VARCHAR(80),
+    produce_condition VARCHAR(120),
+    storage_condition VARCHAR(120),
+    quality_notes TEXT,
+    price_unit VARCHAR(20),
+    min_order_quantity FLOAT,
+    max_order_quantity FLOAT,
+    bulk_order_available BOOLEAN DEFAULT 0,
+    pickup_available BOOLEAN DEFAULT 1,
+    delivery_available BOOLEAN DEFAULT 0,
+    pickup_instructions VARCHAR(500),
+    delivery_radius VARCHAR(200),
+    preferred_buyer_location VARCHAR(200),
+    created_at DATETIME,
+    updated_at DATETIME
+);
+CREATE INDEX IF NOT EXISTS ix_marketplace_crop_listings_listing_id ON marketplace_crop_listings (listing_id);
+CREATE INDEX IF NOT EXISTS ix_marketplace_crop_listings_crop_id ON marketplace_crop_listings (crop_id);
+CREATE INDEX IF NOT EXISTS ix_marketplace_crop_listings_crop_name ON marketplace_crop_listings (crop_name);
+CREATE INDEX IF NOT EXISTS ix_marketplace_crop_listings_harvest_status ON marketplace_crop_listings (harvest_status);
 """
 
 
@@ -466,6 +782,42 @@ def _backfill_crop_varieties_sqlite(conn) -> None:
         )
     except Exception as exc:  # pragma: no cover - defensive
         logger.error("Crop variety backfill failed: %s", exc)
+
+
+def _backfill_hydroponic_targets_sqlite(conn) -> None:
+    """Seed ``crops.hydroponic_targets`` for the crops that support soilless work.
+
+    Runs before the catalog seeder on an upgraded database, so hydroponics has
+    nutrient targets even if the seeder has not yet repopulated the crop rows.
+    Crops already carrying targets are never overwritten, so a farmer-adjusted
+    value survives a restart.
+    """
+    try:
+        from app.database.seed_crops import HYDROPONIC_TARGETS
+
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        if "crops" not in tables:
+            return
+        columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(crops)").fetchall()
+        }
+        if "hydroponic_targets" not in columns or "name" not in columns:
+            return
+        for name, targets in HYDROPONIC_TARGETS.items():
+            conn.execute(
+                """
+                UPDATE crops
+                   SET hydroponic_targets = ?
+                 WHERE hydroponic_targets IS NULL
+                   AND lower(trim(name)) = lower(trim(?))
+                """,
+                (json.dumps(targets), name),
+            )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("Hydroponic target backfill failed: %s", exc)
 
 
 def _backfill_cycle_farms_sqlite(conn) -> None:
@@ -577,6 +929,7 @@ def _migrate_sqlite(database_url: str) -> None:
                         logger.info("Added column %s.%s", table, column)
             conn.executescript(MARKET_PRICE_LATEST_SQLITE_DDL)
             conn.executescript(CROP_TAXONOMY_SQLITE_DDL)
+            conn.executescript(CUSTOMER_IDENTITY_SQLITE_DDL)
             for table, index_names in MARKET_PRICE_LC_INDEXES.items():
                 if table not in present:
                     continue
@@ -596,12 +949,37 @@ def _migrate_sqlite(database_url: str) -> None:
                     )
             _backfill_cycle_farms_sqlite(conn)
             _backfill_crop_varieties_sqlite(conn)
+            _backfill_hydroponic_targets_sqlite(conn)
             _rename_production_unit_sqlite(conn)
+            _ensure_customer_role_sqlite(conn)
+            _prime_customer_id_sequence_sqlite(conn)
             conn.commit()
         finally:
             conn.close()
     except Exception as exc:  # pragma: no cover - defensive
         logger.error("SQLite additive migrations failed: %s", exc)
+
+
+def _backfill_hydroponic_targets_postgres(cur) -> None:
+    """Postgres counterpart of :func:`_backfill_hydroponic_targets_sqlite`."""
+    try:
+        from app.database.seed_crops import HYDROPONIC_TARGETS
+
+        cur.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'crops'"
+        )
+        columns = {row[0] for row in cur.fetchall()}
+        if not {"crops"}.issubset(columns) or "hydroponic_targets" not in columns:
+            return
+        for name, targets in HYDROPONIC_TARGETS.items():
+            cur.execute(
+                "UPDATE crops SET hydroponic_targets = %s "
+                "WHERE hydroponic_targets IS NULL AND lower(trim(name)) = lower(trim(%s))",
+                (json.dumps(targets), name),
+            )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("Hydroponic target backfill failed (postgres): %s", exc)
 
 
 def _migrate_postgres(database_url: str) -> None:
@@ -655,6 +1033,7 @@ def _migrate_postgres(database_url: str) -> None:
                         "WHERE quantity_unit IS NULL AND unit IS NOT NULL"
                     )
                 logger.info("Added column hydroponic_production_records.quantity_unit")
+            _backfill_hydroponic_targets_postgres(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS crop_categories (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -726,7 +1105,66 @@ def _migrate_postgres(database_url: str) -> None:
                           WHERE v.crop_id = c.id AND lower(btrim(v.name)) = lower(btrim(c.variety))
                       )
                 """)
+            # ---- Marketplace "Sell Crop" listing detail (additive) ----
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS marketplace_crop_listings (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    crop_listing_id VARCHAR(20) UNIQUE,
+                    listing_id VARCHAR(36) NOT NULL UNIQUE
+                        REFERENCES marketplace_listings (id) ON DELETE CASCADE,
+                    farm_id VARCHAR(36) REFERENCES farms (id),
+                    plot_id VARCHAR(36) REFERENCES farm_plots (id),
+                    crop_id VARCHAR(36) REFERENCES crops (id),
+                    variety_id VARCHAR(36) REFERENCES crop_varieties (id),
+                    crop_cycle_id VARCHAR(36) REFERENCES crop_cycles (id),
+                    crop_name VARCHAR(100),
+                    variety_name VARCHAR(150),
+                    crop_category VARCHAR(50),
+                    crop_domain VARCHAR(80),
+                    growing_season VARCHAR(120),
+                    harvest_status VARCHAR(30) DEFAULT 'expected',
+                    expected_harvest_date VARCHAR(20),
+                    actual_harvest_date VARCHAR(20),
+                    harvest_quantity FLOAT,
+                    harvest_unit VARCHAR(20),
+                    is_advance_sale BOOLEAN DEFAULT FALSE,
+                    quality_grade VARCHAR(60),
+                    size_grade VARCHAR(60),
+                    freshness VARCHAR(60),
+                    farming_method VARCHAR(30),
+                    certification VARCHAR(120),
+                    moisture_percentage FLOAT,
+                    packaging_type VARCHAR(80),
+                    packaging_size VARCHAR(80),
+                    produce_condition VARCHAR(120),
+                    storage_condition VARCHAR(120),
+                    quality_notes TEXT,
+                    price_unit VARCHAR(20),
+                    min_order_quantity FLOAT,
+                    max_order_quantity FLOAT,
+                    bulk_order_available BOOLEAN DEFAULT FALSE,
+                    pickup_available BOOLEAN DEFAULT TRUE,
+                    delivery_available BOOLEAN DEFAULT FALSE,
+                    pickup_instructions VARCHAR(500),
+                    delivery_radius VARCHAR(200),
+                    preferred_buyer_location VARCHAR(200),
+                    created_at TIMESTAMP,
+                    updated_at TIMESTAMP
+                )
+            """)
+            for idx_sql in (
+                "CREATE INDEX IF NOT EXISTS ix_marketplace_crop_listings_listing_id "
+                "ON marketplace_crop_listings (listing_id)",
+                "CREATE INDEX IF NOT EXISTS ix_marketplace_crop_listings_crop_id "
+                "ON marketplace_crop_listings (crop_id)",
+                "CREATE INDEX IF NOT EXISTS ix_marketplace_crop_listings_crop_name "
+                "ON marketplace_crop_listings (crop_name)",
+                "CREATE INDEX IF NOT EXISTS ix_marketplace_crop_listings_harvest_status "
+                "ON marketplace_crop_listings (harvest_status)",
+            ):
+                cur.execute(idx_sql)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS market_price_latest (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     price_id VARCHAR(20),
                     variety_key VARCHAR(120),
@@ -775,6 +1213,29 @@ def _migrate_postgres(database_url: str) -> None:
                         f"CREATE INDEX IF NOT EXISTS {index_name} "
                         f"ON {table} (lower({cols[marker]}))"
                     )
+            # ---- Customer authentication (additive; farmers untouched) ----
+            cur.execute(CUSTOMER_IDENTITY_POSTGRES_DDL)
+            cur.execute(
+                "UPDATE users SET role = 'farmer' WHERE role IS NULL OR btrim(role) = ''"
+            )
+            cur.execute("""
+                INSERT INTO id_sequences (scope, last_value, updated_at)
+                VALUES (
+                    'customer_id',
+                    COALESCE((
+                        SELECT MAX(substring(customer_id from '[0-9]+')::int)
+                        FROM customers
+                        WHERE customer_id LIKE 'FA-CS-%'
+                    ), 0),
+                    CURRENT_TIMESTAMP
+                )
+                ON CONFLICT (scope) DO UPDATE SET
+                    last_value = CASE
+                        WHEN id_sequences.last_value < EXCLUDED.last_value
+                        THEN EXCLUDED.last_value
+                        ELSE id_sequences.last_value
+                    END
+            """)
             conn.commit()
         finally:
             conn.close()

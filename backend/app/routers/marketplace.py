@@ -125,6 +125,40 @@ def _order_item_payload(oi: OrderItem) -> dict:
     }
 
 
+#: How many product thumbnails an order card is allowed to show. The UI draws a
+#: compact stack and turns anything beyond this into a "+N more" tile.
+ORDER_CARD_IMAGES = 4
+
+
+def _order_card_extras(order: MarketplaceOrder) -> dict:
+    """The card-level facts that a single ``summary`` item cannot express.
+
+    ``_order_first_item`` only ever describes one line, which is enough for a
+    table but not for an order card: those need to know how many items are
+    really on the order, show a small stack of the real product photos, and name
+    the farm the produce came from. Everything here is read off rows already
+    attached to the order, so nothing is stored or duplicated -- these are the
+    same products, order items and sellers the rest of the marketplace uses.
+    """
+    items = order.items or []
+    images: List[str] = []
+    sellers: List[str] = []
+    for oi in items:
+        product = oi.product
+        url = product.image_url if product else None
+        if url and url not in images:
+            images.append(url)
+        shop = product.seller.shop_name if (product and product.seller) else None
+        if shop and shop not in sellers:
+            sellers.append(shop)
+    return {
+        "items_count": len(items),
+        "images": images[:ORDER_CARD_IMAGES],
+        "seller_name": sellers[0] if sellers else None,
+        "seller_count": len(sellers),
+    }
+
+
 def _order_slim(order: MarketplaceOrder) -> dict:
     st = _norm_order_status(order.status)
     return {
@@ -140,6 +174,11 @@ def _order_slim(order: MarketplaceOrder) -> dict:
         "created_at": str(order.created_at) if order.created_at else None,
         "notes": order.notes,
         "summary": _order_first_item(order),
+        **_order_card_extras(order),
+        # Snapshots taken when the order was placed. Safe to show on a card
+        # because they are the buyer's own address on their own order.
+        "delivery_address": order.delivery_address,
+        "cancelled_at": str(order.cancelled_at) if order.cancelled_at else None,
         "can_cancel": st not in ("received", "cancelled"),
         "can_reorder": st == "received",
         "order_type": "product",
@@ -177,6 +216,7 @@ def _sale_as_order(sale: MarketplaceSale, listing=None) -> dict:
         note = note if isinstance(note, dict) else {}
     except (TypeError, ValueError):
         note = {}
+    thumb = getattr(listing, "image_url", None) if listing is not None else None
     return {
         "id": sale.id,
         "order_id": sale.sale_id,
@@ -195,9 +235,17 @@ def _sale_as_order(sale: MarketplaceSale, listing=None) -> dict:
             "product_name": title,
             "quantity": sale.quantity,
             "unit_price": sale.unit_price,
-            "image_url": getattr(listing, "image_url", None) if listing is not None else None,
+            "image_url": thumb,
             "unit": unit,
         },
+        # A stock purchase is a single listing, so it always has exactly one
+        # item and no seller is attached to a buyer-visible order card.
+        "items_count": 1,
+        "images": [thumb] if thumb else [],
+        "seller_name": None,
+        "seller_count": 0,
+        "delivery_address": None,
+        "cancelled_at": None,
         "can_cancel": st not in ("received", "cancelled"),
         "can_reorder": st == "received",
         "order_type": "listing",
@@ -208,10 +256,8 @@ def _order_detail(order: MarketplaceOrder) -> dict:
     st = _norm_order_status(order.status)
     return {
         **_order_slim(order),
-        "delivery_address": order.delivery_address,
         "delivery_name": order.delivery_name,
         "delivery_phone": order.delivery_phone,
-        "cancelled_at": str(order.cancelled_at) if order.cancelled_at else None,
         "items": [_order_item_payload(oi) for oi in order.items],
         "tracking": [_serialize_tracking(t) for t in order.tracking],
         "expected_delivery": order.estimated_delivery,

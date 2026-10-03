@@ -15,14 +15,17 @@ knowledge base a GENERIC profile is used and flagged with ``is_generic`` so the
 UI can honestly label the guidance as general rather than pretending it is
 crop-specific. No item ever claims a disease diagnosis.
 
-The crop catalogue (backend/app/database/seed_crops.py) defines 18 crops:
-Paddy (Rice), Wheat, Maize, Cotton, Sugarcane, Groundnut, Soybean, Chickpea,
-Green Gram, Tomato, Chilli, Onion, Potato, Brinjal, Okra (Ladies Finger),
-Cabbage, Sunflower and Mustard.
+The crop catalogue (backend/app/database/seed_crops.py) is far larger than this
+knowledge base and keeps growing. That is fine: :func:`build_cycle` accepts the
+crop's own ``lifecycle_stages`` and renders those, mapping each stage onto a
+canonical bucket below so a crop the knowledge base has never heard of still
+gets relevant activities and watch items instead of a generic seedling-to-harvest
+sequence.
 """
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -1519,6 +1522,109 @@ def normalize_crop_name(name: Optional[str]) -> str:
     return (name or "").strip().lower()
 
 
+# ---------------------------------------------------------------------------
+# Catalog lifecycles -> canonical guidance buckets
+# ---------------------------------------------------------------------------
+#: Ordered substring rules mapping a catalog lifecycle label onto the agronomy
+#: bucket whose activities and watch list apply to it. Longest / most specific
+#: concepts are listed first so "flower cutting" resolves to harvest rather than
+#: to flowering. This is what lets a grape's "Pruning" or a rose's "Flower
+#: cutting" reuse the existing guidance content without a hand written profile
+#: for every crop in the catalog.
+LIFECYCLE_BUCKET_RULES: List[Tuple[str, str]] = [
+    ("land preparation", "land_prep"),
+    ("soil preparation", "land_prep"),
+    ("hardening", "land_prep"),
+    ("pruning", "land_prep"),
+    ("dormancy", "land_prep"),
+    ("seed selection", "seed_selection"),
+    ("nursery", "germination"),
+    ("germination", "germination"),
+    ("sprouting", "germination"),
+    ("sprout", "germination"),
+    ("seedling", "germination"),
+    ("transplanting", "sowing"),
+    ("transplant", "sowing"),
+    ("planting", "sowing"),
+    ("sowing", "sowing"),
+    ("bud break", "vegetative"),
+    ("juvenile", "vegetative"),
+    ("shoot growth", "vegetative"),
+    ("regrowth", "vegetative"),
+    ("establishment", "vegetative"),
+    ("maintenance", "vegetative"),
+    ("vegetative", "vegetative"),
+    ("growth", "vegetative"),
+    ("tillering", "vegetative"),
+    ("thinning", "vegetative"),
+    ("squaring", "vegetative"),
+    ("flower bud initiation", "flowering"),
+    ("flowering", "flowering"),
+    ("flower", "flowering"),
+    ("bloom", "flowering"),
+    ("fruit set", "flowering"),
+    ("pod formation", "fruiting"),
+    ("fruit development", "fruiting"),
+    ("berry development", "fruiting"),
+    ("pod development", "fruiting"),
+    ("grain filling", "fruiting"),
+    ("seed filling", "fruiting"),
+    ("tuber bulking", "fruiting"),
+    ("tuber initiation", "fruiting"),
+    ("bulking", "fruiting"),
+    ("rhizome", "fruiting"),
+    ("bearing", "fruiting"),
+    ("fruiting", "fruiting"),
+    ("ripening", "maturity"),
+    ("maturity", "maturity"),
+    ("loose flower harvest", "harvest"),
+    ("flower cutting", "harvest"),
+    ("first cutting", "harvest"),
+    ("repeat cutting", "harvest"),
+    ("repeat cycle", "harvest"),
+    ("cutting", "harvest"),
+    ("harvest", "harvest"),
+    ("ready for transplant", "post_harvest"),
+    ("dispatch", "post_harvest"),
+    ("post-harvest", "post_harvest"),
+]
+
+
+def bucket_for_lifecycle(label: Optional[str]) -> str:
+    """Map one catalog lifecycle stage onto a canonical guidance bucket."""
+    key = normalize_crop_name(label)
+    if not key:
+        return "vegetative"
+    if key in STAGE_KEYS:
+        return key
+    for token, bucket in LIFECYCLE_BUCKET_RULES:
+        if token in key:
+            return bucket
+    return "vegetative"
+
+
+def lifecycle_slug(label: Optional[str], index: int) -> str:
+    """Stable, language-independent key for a catalog lifecycle label."""
+    base = re.sub(r"[^a-z0-9]+", "_", normalize_crop_name(label)).strip("_")
+    return base or "stage_%d" % index
+
+
+def normalize_lifecycle(stages: Optional[List[Any]]) -> List[Dict[str, str]]:
+    """Deduplicate a crop's ``lifecycle_stages`` into key/label/bucket rows."""
+    rows: List[Dict[str, str]] = []
+    seen = set()
+    for raw in stages or []:
+        label = str(raw or "").strip()
+        if not label:
+            continue
+        key = lifecycle_slug(label, len(rows))
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append({"key": key, "label": label, "bucket": bucket_for_lifecycle(label)})
+    return rows
+
+
 def get_crop_profile(name: Optional[str]) -> Tuple[Dict[str, Any], bool]:
     """Return (profile, is_generic). Matches by crop name keywords."""
     normalized = normalize_crop_name(name)
@@ -1575,25 +1681,41 @@ def build_cycle(
     days_since_sowing: Optional[int],
     total_days: Optional[float],
     current_stage: Optional[str] = None,
+    lifecycle_stages: Optional[List[Any]] = None,
 ) -> Dict[str, Any]:
     """
     Build a full crop-cycle timeline with per-stage dates and state.
     Used by the Crop Health overview.
+
+    ``lifecycle_stages`` is the crop's own lifecycle from the shared catalog.
+    When it is supplied the timeline is rendered from those stages - so grapes
+    are tracked through Dormancy / Pruning / Bud break and roses through
+    Establishment / Flower cutting - instead of the generic ten-stage sequence.
+    Each stage still carries a ``bucket`` so activities and watch items are
+    looked up from the existing knowledge base.
     """
     profile, is_generic = get_crop_profile(crop_name)
     bounds = stage_bounds(profile)
     labels = dict(STAGE_LABELS, **(profile.get("stage_labels") or {}))
-    stages = []
     today = _now()
 
     effective_days = int(days_since_sowing) if days_since_sowing is not None else 0
+    sown = today - timedelta(days=effective_days)
+    catalog = normalize_lifecycle(lifecycle_stages)
+
+    if catalog:
+        return _build_catalog_cycle(
+            crop_name, is_generic, catalog, current_stage,
+            effective_days, total_days, sown,
+        )
+
+    stages = []
     effective_state = compute_stage_state(profile, float(effective_days), total_days)
     if current_stage and current_stage in STAGE_KEYS:
         effective_state = current_stage
 
     current_idx = STAGE_KEYS.index(effective_state) if effective_state in STAGE_KEYS else 6
     current_pct = bounds.get(effective_state, 0.5)
-    sown = today - timedelta(days=effective_days)
 
     for idx, key in enumerate(STAGE_KEYS):
         start_pct = _stage_start_pct(bounds, key)
@@ -1634,11 +1756,105 @@ def build_cycle(
         "crop": crop_name or "This crop",
         "crop_name_slug": normalize_crop_name(crop_name or ""),
         "is_generic": is_generic,
+        "custom_lifecycle": False,
         "total_days": total_days,
         "days_since_sowing": effective_days,
         "current_stage": effective_state,
         "current_label": labels.get(effective_state, STAGE_LABELS.get(effective_state, effective_state)),
         "current_icon": STAGE_ICONS.get(effective_state, "fa-leaf"),
+        "next_stage": next_stage,
+        "previous_stage": previous_stage,
+        "overall_pct": overall,
+        "stages": stages,
+    }
+
+
+def _build_catalog_cycle(
+    crop_name: Optional[str],
+    is_generic: bool,
+    catalog: List[Dict[str, str]],
+    current_stage: Optional[str],
+    effective_days: int,
+    total_days: Optional[float],
+    sown: date,
+) -> Dict[str, Any]:
+    """Timeline built from the crop's own ``lifecycle_stages``."""
+    count = len(catalog)
+
+    current_idx = None
+    if current_stage:
+        key = lifecycle_slug(current_stage, 0)
+        for i, row in enumerate(catalog):
+            if row["key"] == key:
+                current_idx = i
+                break
+        if current_idx is None:
+            # The recorded stage is one of the crop's stages but was stored
+            # before the catalog slug was agreed (or typed by hand).
+            for i, row in enumerate(catalog):
+                if row["label"].strip().lower() == str(current_stage).strip().lower():
+                    current_idx = i
+                    break
+
+    if current_idx is None:
+        # Fall back to elapsed time, spreading the duration evenly across the
+        # crop's real stages.
+        if effective_days <= 0:
+            current_idx = 0
+        elif not total_days or total_days <= 0:
+            current_idx = min(count - 1, int(effective_days / 45.0))
+        else:
+            fraction = max(0.0, min(1.0, effective_days / float(total_days)))
+            current_idx = min(count - 1, int(fraction * count))
+
+    stages = []
+    for idx, row in enumerate(catalog):
+        if total_days and total_days > 0:
+            start_day = int(round(total_days * idx / count))
+            end_day = int(round(total_days * (idx + 1) / count)) - 1
+        else:
+            start_day, end_day = None, None
+        if idx < current_idx:
+            state = "completed"
+        elif idx == current_idx:
+            state = "current"
+        else:
+            state = "upcoming"
+        stages.append({
+            "key": row["key"],
+            "label": row["label"],
+            "icon": STAGE_ICONS.get(row["bucket"], "fa-leaf"),
+            "index": idx,
+            "state": state,
+            "bucket": row["bucket"],
+            "start_day": start_day,
+            "end_day": end_day,
+            "start_date": _fmt(sown + timedelta(days=start_day)) if (total_days and start_day is not None) else None,
+            "end_date": _fmt(sown + timedelta(days=end_day)) if (total_days and end_day is not None) else None,
+        })
+
+    # Progress is expressed as "how many of this crop's own stages are done",
+    # which stays meaningful for a perennial crop that has no fixed duration.
+    overall = int(round(100.0 * (current_idx + 1) / count))
+
+    next_stage = None
+    previous_stage = None
+    if current_idx < count - 1:
+        next_stage = {"key": catalog[current_idx + 1]["key"], "label": catalog[current_idx + 1]["label"]}
+    if current_idx > 0:
+        previous_stage = {"key": catalog[current_idx - 1]["key"], "label": catalog[current_idx - 1]["label"]}
+
+    current = catalog[current_idx]
+    return {
+        "crop": crop_name or "This crop",
+        "crop_name_slug": normalize_crop_name(crop_name or ""),
+        "is_generic": is_generic,
+        "custom_lifecycle": True,
+        "total_days": total_days,
+        "days_since_sowing": effective_days,
+        "current_stage": current["key"],
+        "current_label": current["label"],
+        "current_icon": STAGE_ICONS.get(current["bucket"], "fa-leaf"),
         "next_stage": next_stage,
         "previous_stage": previous_stage,
         "overall_pct": overall,

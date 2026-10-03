@@ -24,7 +24,7 @@ from .utils.exceptions import AppException
 import app.models
 
 from .routers import (
-    auth, users, farms, crops, finance, workers,
+    auth, users, customers, farms, crops, finance, workers,
     marketplace, government, community, notifications,
     weather, maps, ai, ai_chat,
     loans, loan_products, sensors, storage, news, translation, qrcode, analytics,
@@ -66,6 +66,7 @@ if settings.RATE_LIMIT_ENABLED:
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(customers.router)
 app.include_router(farms.router)
 app.include_router(crops.router)
 app.include_router(finance.router)
@@ -111,7 +112,6 @@ app.include_router(soil_irrigation.router)
 app.include_router(crop_health.router)
 app.include_router(sustainability.router)
 app.include_router(hydroponics.router)
-
 
 
 @app.exception_handler(AppException)
@@ -397,6 +397,15 @@ async def startup():
         )
     if input_summary:
         print(f"Seeded Input Store catalogue: {input_summary['products']} products in {input_summary['categories']} categories.")
+
+
+@app.on_event("shutdown")
+async def shutdown_background_tasks():
+    from app.market_scheduler import stop_market_price_scheduler
+    from app.worker_booking_scheduler import stop_worker_booking_scheduler
+
+    await stop_market_price_scheduler()
+    await stop_worker_booking_scheduler()
 
 
 

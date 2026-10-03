@@ -86,6 +86,56 @@
     { label: 'Services', icon: 'fa-concierge-bell', href: 'services.html' }
   ];
 
+  /*
+   * The customer's own navigation.
+   *
+   * A different set from the farmer's on purpose: exactly five destinations,
+   * with Profile deliberately absent because it lives in the header. The farmer
+   * list above is untouched and still used for every farmer page.
+   */
+  var CUSTOMER_BOTTOM_NAV = [
+    { label: 'Home', icon: 'fa-house', href: 'customer.html', center: true },
+    { label: 'Shop', icon: 'fa-store', href: 'marketplace.html' },
+    { label: 'Grow', icon: 'fa-seedling', href: 'customer-grow.html' },
+    { label: 'Community', icon: 'fa-users', href: 'community.html' },
+    { label: 'Orders', icon: 'fa-box-open', href: 'customer-orders.html' }
+  ];
+
+  /* The farmer sidebar is built around managing land, soil and selling crops.
+     None of that applies to a customer, so they get a short, accurate list. */
+  var CUSTOMER_NAV = [
+    { type: 'header', label: 'MAIN' },
+    { type: 'item', label: 'Customer Home', icon: 'fa-house', href: 'customer.html' },
+    { type: 'item', label: 'Shop', icon: 'fa-store', href: 'marketplace.html' },
+    { type: 'item', label: 'My Orders', icon: 'fa-box-open', href: 'customer-orders.html' },
+    { type: 'item', label: 'My Growing', icon: 'fa-seedling', href: 'customer-grow.html' },
+    { type: 'item', label: 'Wishlist', icon: 'fa-heart', href: 'marketplace.html#wishlist' },
+    { type: 'separator' },
+    { type: 'header', label: 'COMMUNITY' },
+    { type: 'item', label: 'Community', icon: 'fa-users', href: 'community.html' },
+    { type: 'item', label: 'FarmBuzz', icon: 'fa-clapperboard', href: 'farmbuzz.html' },
+    { type: 'item', label: 'Notifications', icon: 'fa-bell', href: 'notifications.html' },
+    { type: 'separator' },
+    { type: 'header', label: 'ACCOUNT' },
+    { type: 'item', label: 'My Profile', icon: 'fa-user', href: 'customer-profile.html' },
+    { type: 'item', label: 'Settings', icon: 'fa-gear', href: 'customer-settings.html' },
+    { type: 'item', label: 'Help & Support', icon: 'fa-circle-question', href: 'help.html' }
+  ];
+
+  /* Is the signed-in account a customer? Read for display only -- the server
+     enforces the role on every request regardless of what this returns. */
+  function isCustomerSession() {
+    try {
+      var u = window.UserStore && UserStore.getCurrentUser ? UserStore.getCurrentUser() : null;
+      if (u && u.role) return u.role === 'customer';
+      return localStorage.getItem('user-role') === 'customer';
+    } catch (e) { return false; }
+  }
+
+  function currentNavItems() {
+    return isCustomerSession() ? CUSTOMER_NAV : NAV;
+  }
+
   /* ------------------------------------------------------------------
      NOTIFICATION DATA (fetched from backend, no mock data)
      ------------------------------------------------------------------ */
@@ -123,6 +173,7 @@
           fullName: u.full_name || u.fullName || 'Farmer',
           email: u.email || '',
           farmer_id: u.farmer_id || u.farmerId || '',
+          customer_id: u.customer_id || (u.customer && u.customer.customer_id) || '',
           role: u.role || 'farmer',
           profile_image: u.profile_image || u.photo || ''
         };
@@ -157,9 +208,35 @@
           if (d && d.status === 'success' && d.data) {
             _unreadCount = d.data.unread_count || 0;
             updateInboxBadge();
+            updateCustomerBadges();
           }
         }).catch(function () {});
     } catch (e) {}
+  }
+
+  /* The customer's header badges: unread notifications and the points balance,
+     both read from the customer's own data. */
+  function updateCustomerBadges() {
+    var notifBadge = document.getElementById('cust-notif-badge');
+    if (notifBadge) {
+      if (_unreadCount > 0) {
+        notifBadge.textContent = _unreadCount > 99 ? '99+' : String(_unreadCount);
+        notifBadge.style.display = '';
+      } else {
+        notifBadge.style.display = 'none';
+      }
+    }
+    var pts = document.getElementById('cust-points-value');
+    if (pts) {
+      var balance = null;
+      try {
+        var u = window.UserStore && UserStore.getCurrentUser ? UserStore.getCurrentUser() : null;
+        if (u && u.points_balance != null) balance = u.points_balance;
+      } catch (e) {}
+      if (balance == null) return;
+      pts.textContent = String(balance);
+      pts.style.display = '';
+    }
   }
 
   function isLoginPage() {
@@ -208,6 +285,40 @@
      ------------------------------------------------------------------ */
   function injectTopBar() {
     if (document.querySelector('header.top-bar')) return;
+
+    /* A customer's header carries Notifications, Points and Profile -- and
+       nothing else. Messages, the farm map and the digital wallet belong to the
+       farmer experience and are deliberately not offered here. */
+    if (isCustomerSession()) {
+      var custHeader = document.createElement('header');
+      custHeader.className = 'top-bar';
+      custHeader.innerHTML =
+        '<div class="top-bar-left">' +
+          '<button class="hamburger-btn" id="menu-btn" aria-label="Toggle Navigation Drawer" aria-expanded="false">' +
+            '<i class="fas fa-bars"></i>' +
+          '</button>' +
+          '<a href="customer.html" class="app-logo">' +
+            '<img src="assets/icons/icon.svg" alt="" width="28" height="28" style="margin-right:8px;">' +
+            '<span class="app-logo-text">Farm Assist</span>' +
+          '</a>' +
+        '</div>' +
+        '<div class="top-bar-right">' +
+          '<a href="notifications.html" class="top-btn" id="cust-notif-btn" aria-label="Notifications" title="Notifications">' +
+            '<i class="fas fa-bell"></i>' +
+            '<span class="badge" id="cust-notif-badge" style="display:none">0</span>' +
+          '</a>' +
+          '<a href="customer-profile.html#points" class="top-btn" id="cust-points-btn" aria-label="Points" title="Points">' +
+            '<i class="fas fa-star"></i>' +
+            '<span class="badge points" id="cust-points-value" style="display:none">0</span>' +
+          '</a>' +
+          '<a href="customer-profile.html" class="profile-avatar top-bar-avatar" id="nav-profile-avatar" aria-label="Profile">' +
+            '<img data-user-avatar src="' + AVATAR_URL + '" alt="Profile">' +
+          '</a>' +
+        '</div>';
+      document.body.insertBefore(custHeader, document.body.firstChild);
+      return;
+    }
+
     var farmSelectHtml = '';
     var farmOptions = getFarmOptions();
     if (farmOptions.length > 1) {
@@ -271,7 +382,7 @@
     var user = getUserData();
 
     var menuHtml = '';
-    NAV.forEach(function (n) {
+    currentNavItems().forEach(function (n) {
       if (n.type === 'item') {
         menuHtml += buildSidebarItem(n, page);
       } else if (n.type === 'separator') {
@@ -301,7 +412,7 @@
         '<img data-user-avatar src="' + AVATAR_URL + '" alt="Profile" class="sidebar-user-avatar">' +
         '<div class="sidebar-user-info">' +
           '<h4 id="sidebar-name">' + escapeHtml(user.full_name || user.fullName || 'Farmer') + '</h4>' +
-          '<p>' + escapeHtml(user.farmer_id || user.email || user.role || 'farmer') + '</p>' +
+          '<p>' + escapeHtml(user.customer_id || user.farmer_id || user.email || user.role || 'farmer') + '</p>' +
         '</div>' +
       '</div>' +
       '<nav class="sidebar-menu" id="sidebar-menu" aria-label="Main navigation">' +
@@ -336,8 +447,9 @@
   function injectBottomNav() {
     if (document.querySelector('nav.bottom-nav')) return;
     var page = currentPage();
+    var items = isCustomerSession() ? CUSTOMER_BOTTOM_NAV : BOTTOM_NAV;
     var html = '';
-    BOTTOM_NAV.forEach(function (item) {
+    items.forEach(function (item) {
       var active = item.href === page ? ' active' : '';
       var cls = 'bottom-nav-item' + active + (item.center ? ' home-highlight' : '');
       html += '<a href="' + item.href + '" class="' + cls + '" aria-label="' + escapeHtml(item.label) + '">';
@@ -430,19 +542,27 @@
     menu.className = 'profile-dropdown';
     menu.id = 'profile-dropdown';
     menu.setAttribute('role', 'menu');
+
+    /* A customer's dropdown points at the customer profile and settings, not
+       at farms and documents, which do not exist for this account type. */
+    var profileItems = isCustomerSession()
+      ? '<a href="customer-profile.html" class="pd-item" role="menuitem"><i class="fas fa-user"></i> My Profile</a>' +
+        '<a href="customer-settings.html" class="pd-item" role="menuitem"><i class="fas fa-gear"></i> Settings</a>'
+      : '<a href="profile.html" class="pd-item" role="menuitem"><i class="fas fa-user"></i> My Profile</a>' +
+        '<a href="farm.html" class="pd-item" role="menuitem"><i class="fas fa-tractor"></i> My Farms</a>' +
+        '<a href="settings.html" class="pd-item" role="menuitem"><i class="fas fa-gear"></i> Settings</a>' +
+        '<a href="documents.html" class="pd-item" role="menuitem"><i class="fas fa-folder"></i> Documents</a>';
+
     menu.innerHTML =
       '<div class="pd-head">' +
         '<img src="' + avatar + '" alt="avatar" class="pd-avatar">' +
         '<div class="pd-head-info">' +
           '<h5>' + escapeHtml(user.full_name || user.fullName || 'Farmer') + '</h5>' +
-          '<p>' + escapeHtml(user.farmer_id || user.email || user.role || 'farmer') + '</p>' +
+          '<p>' + escapeHtml(user.customer_id || user.farmer_id || user.email || user.role || 'farmer') + '</p>' +
         '</div>' +
       '</div>' +
       '<div class="pd-divider"></div>' +
-      '<a href="profile.html" class="pd-item" role="menuitem"><i class="fas fa-user"></i> My Profile</a>' +
-      '<a href="farm.html" class="pd-item" role="menuitem"><i class="fas fa-tractor"></i> My Farms</a>' +
-      '<a href="settings.html" class="pd-item" role="menuitem"><i class="fas fa-gear"></i> Settings</a>' +
-      '<a href="documents.html" class="pd-item" role="menuitem"><i class="fas fa-folder"></i> Documents</a>' +
+      profileItems +
       '<a href="help.html" class="pd-item" role="menuitem"><i class="fas fa-circle-question"></i> Help</a>' +
       '<div class="pd-divider"></div>' +
       '<button type="button" class="pd-item pd-logout" id="nav-pd-logout" role="menuitem"><i class="fas fa-right-from-bracket"></i> Logout</button>';
@@ -558,6 +678,7 @@
             localStorage.removeItem('user-logged-in');
             localStorage.removeItem('user-name');
             localStorage.removeItem('user-role');
+            localStorage.removeItem('customer-id');
             localStorage.removeItem('session-last-activity');
           } catch (e) {}
           window.location.href = 'login.html';
@@ -1062,7 +1183,11 @@
     injectBackdrop();
     injectSidebar();
     injectBottomNav();
-    injectInboxDropdown();
+    // Messages is a farmer feature. A customer's header has no #inbox-btn to
+    // open it, so injecting the dropdown would only leave unreachable markup
+    // carrying an "Inbox" heading on a page that is supposed to offer
+    // Notifications, Points and Profile.
+    if (!isCustomerSession()) injectInboxDropdown();
     injectProfileDropdown();
     injectCommandPalette();
     injectToastContainer();

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, date, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database.connection import get_db
 from app.models.user import User, UserSettings
 from app.models.farm import Farm, FarmPlot
-from app.models.crop import Crop, CropCycle, CropTask
+from app.models.crop import Crop, CropCycle, CropTask, CropVariety, CultivationMethod
 from app.models.finance import Expense
 from app.models.hydroponics import (
     HydroponicUnit,
@@ -134,19 +135,12 @@ GROWTH_STAGES = [
     },
 ]
 
-CROP_TARGETS = {
-    "lettuce": {"ph": (5.5, 6.5), "ec": (0.8, 1.6), "days": 45, "category": "Leafy"},
-    "spinach": {"ph": (5.5, 6.5), "ec": (1.2, 2.0), "days": 40, "category": "Leafy"},
-    "basil": {"ph": (5.5, 6.5), "ec": (1.0, 1.8), "days": 55, "category": "Herb"},
-    "mint": {"ph": (5.5, 6.5), "ec": (1.0, 1.8), "days": 60, "category": "Herb"},
-    "coriander": {"ph": (5.5, 6.5), "ec": (0.8, 1.6), "days": 45, "category": "Herb"},
-    "pak choi": {"ph": (5.5, 6.5), "ec": (1.0, 1.8), "days": 45, "category": "Leafy"},
-    "tomato": {"ph": (5.5, 6.5), "ec": (2.0, 3.5), "days": 90, "category": "Fruiting"},
-    "cucumber": {"ph": (5.5, 6.5), "ec": (1.8, 2.8), "days": 80, "category": "Fruiting"},
-    "capsicum": {"ph": (5.5, 6.5), "ec": (1.8, 2.8), "days": 85, "category": "Fruiting"},
-    "brinjal": {"ph": (5.5, 6.5), "ec": (1.8, 2.8), "days": 85, "category": "Fruiting"},
-    "strawberry": {"ph": (5.5, 6.0), "ec": (1.0, 1.8), "days": 70, "category": "Fruiting"},
-}
+#: Soilless nutrient targets are catalog data, not a hydroponics-owned crop list.
+#: Every soilless crop is a normal :class:`Crop` carrying ``hydroponic_targets``
+#: (seeded by :mod:`app.database.seed_crops`), so one crop record drives
+#: hydroponics, tasks, crop health and the marketplace together. Crops without
+#: targets fall back to :data:`DEFAULT_PH_RANGE` / :data:`DEFAULT_EC_RANGE`.
+#: Resolved per request from the catalog by :func:`_crop_target`.
 
 NUTRIENT_REFERENCE = [
     {
@@ -456,20 +450,69 @@ def _unit_map(db: Session, unit_ids: List[str]) -> dict:
 def _crop_map(db: Session, crop_ids: List[str]) -> dict:
     if not crop_ids:
         return {}
-    rows = db.query(Crop.id, Crop.name, Crop.variety).filter(Crop.id.in_(crop_ids)).all()
-    return {row[0]: {"name": row[1], "variety": row[2]} for row in rows}
+    rows = (
+        db.query(Crop.id, Crop.name, Crop.variety, Crop.lifecycle_stages, Crop.growth_duration_days)
+        .filter(Crop.id.in_(crop_ids))
+        .all()
+    )
+    return {
+        row[0]: {
+            "name": row[1],
+            "variety": row[2],
+            "lifecycle_stages": row[3] or [],
+            "growth_duration_days": row[4],
+        }
+        for row in rows
+    }
 
 
-def _crop_target(crop_name: Optional[str]) -> dict:
-    if not crop_name:
+def _ensure_crop_catalog(db: Session) -> None:
+    """Make sure the shared crop catalog is present before reading from it.
+
+    The soilless targets live on :class:`Crop` rows, so a database whose crops
+    were never seeded has nothing to report. ``seed_crops`` is idempotent and
+    only re-runs when the catalog is actually empty, matching how
+    ``/services`` re-seeds its own catalog on read.
+    """
+    from app.database.seed_crops import seed_crops
+
+    if db.query(Crop.id).first() is None:
+        seed_crops(db)
+
+
+def _crop_target(db: Session, crop_name: Optional[str]) -> dict:
+    """Soilless nutrient targets for a crop name, read from the catalog.
+
+    Falls back to the linked :class:`Crop` row via a case-insensitive name match,
+    then to an empty dict so callers can apply the generic default ranges. No
+    hydroponics-owned crop list exists.
+    """
+    name = str(crop_name or "").strip()
+    if not name:
         return {}
-    return CROP_TARGETS.get(str(crop_name).strip().lower(), {})
+    _ensure_crop_catalog(db)
+    crop = (
+        db.query(Crop)
+        .filter(func.lower(Crop.name) == name.lower())
+        .order_by(Crop.is_catalog.desc())
+        .first()
+    )
+    if crop is None or not crop.hydroponic_targets:
+        return {}
+    targets = crop.hydroponic_targets
+    if isinstance(targets, str):
+        try:
+            targets = json.loads(targets)
+        except ValueError:
+            return {}
+    return targets if isinstance(targets, dict) else {}
 
 
-def _expected_range(crop_name: Optional[str], key: str):
-    target = _crop_target(crop_name)
-    if target.get(key):
-        return target[key]
+def _expected_range(db: Session, crop_name: Optional[str], key: str):
+    target = _crop_target(db, crop_name)
+    value = target.get(key)
+    if value and len(value) == 2:
+        return tuple(value)
     return DEFAULT_PH_RANGE if key == "ph" else DEFAULT_EC_RANGE
 
 
@@ -484,8 +527,8 @@ def _unit_range_alerts(db: Session, unit: HydroponicUnit) -> dict:
     ).order_by(HydroponicCrop.planting_date.desc()).first()
 
     crop_name = active_crop.crop_name if active_crop else None
-    ph_min, ph_max = _expected_range(crop_name, "ph")
-    ec_min, ec_max = _expected_range(crop_name, "ec")
+    ph_min, ph_max = _expected_range(db, crop_name, "ph")
+    ec_min, ec_max = _expected_range(db, crop_name, "ec")
 
     result = {
         "ph_min": ph_min,
@@ -603,17 +646,28 @@ def _serialize_crop(db: Session, crop: HydroponicCrop) -> dict:
     info = _crop_map(db, [crop.crop_id]).get(crop.crop_id, {})
     farm = db.query(Farm).filter(Farm.id == crop.farm_id).first() if crop.farm_id else None
     unit = db.query(HydroponicUnit).filter(HydroponicUnit.id == crop.unit_id).first()
-    target = _crop_target(crop.crop_name)
+    target = _crop_target(db, crop.crop_name)
+    linked = db.query(Crop).filter(Crop.id == crop.crop_id).first() if crop.crop_id else None
+
+    # The crop's own lifecycle, so grapes, tomato and rice each show their real
+    # stages instead of a single generic soilless list.
+    stages = (linked.lifecycle_stages if linked else None) or list(
+        stage["key"] for stage in GROWTH_STAGES
+    )
 
     # Days to harvest comes from the recorded date when the farmer gave one,
     # otherwise from the crop's own cycle length.
     harvest_in_days = None
     planted = _parse_date(crop.planting_date)
     recorded_harvest = _parse_date(crop.expected_harvest_date)
+    duration = (
+        target.get("days")
+        or (linked.growth_duration_days if linked else None)
+    )
     if recorded_harvest:
         harvest_in_days = (recorded_harvest - date.today()).days
-    elif planted and target.get("days"):
-        harvest_in_days = (planted + timedelta(days=target["days"]) - date.today()).days
+    elif planted and duration:
+        harvest_in_days = (planted + timedelta(days=int(duration)) - date.today()).days
 
     return {
         "cycle_id": crop.cycle_id,
@@ -633,11 +687,12 @@ def _serialize_crop(db: Session, crop: HydroponicCrop) -> dict:
         "actual_yield": crop.actual_yield,
         "yield_unit": crop.yield_unit,
         "current_stage": crop.current_stage,
+        "lifecycle_stages": stages,
         "status": crop.status,
         "notes": crop.notes,
         "created_at": str(crop.created_at) if crop.created_at else None,
-        "target_ph": list(_expected_range(crop.crop_name, "ph")),
-        "target_ec": list(_expected_range(crop.crop_name, "ec")),
+        "target_ph": list(_expected_range(db, crop.crop_name, "ph")),
+        "target_ec": list(_expected_range(db, crop.crop_name, "ec")),
         "estimated_harvest_in_days": harvest_in_days,
     }
 
@@ -820,7 +875,22 @@ def _settings_for(db: Session, user_id: str):
 
 
 @router.get("/catalog", response_model=dict)
-def get_catalog(current_user: User = Depends(get_current_user)):
+def get_catalog(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Every crop that supports soilless production, straight from the shared
+    # crop catalog. The list grows automatically as the catalog grows.
+    _ensure_crop_catalog(db)
+    soilless = (
+        db.query(Crop)
+        .filter(
+            Crop.is_archived.is_(False),
+            Crop.hydroponic_targets.isnot(None),
+        )
+        .order_by(Crop.name)
+        .all()
+    )
     return {
         "status": "success",
         "data": {
@@ -828,15 +898,19 @@ def get_catalog(current_user: User = Depends(get_current_user)):
             "growth_stages": GROWTH_STAGES,
             "crop_targets": [
                 {
-                    "crop": name,
+                    "crop": crop.name,
+                    "crop_id": crop.id,
+                    "category_code": crop.category_ref.code if crop.category_ref else None,
                     "ph_min": target["ph"][0],
                     "ph_max": target["ph"][1],
                     "ec_min": target["ec"][0],
                     "ec_max": target["ec"][1],
                     "days": target.get("days"),
-                    "category": target.get("category"),
+                    "category": target.get("group"),
                 }
-                for name, target in CROP_TARGETS.items()
+                for crop in soilless
+                for target in [crop.hydroponic_targets or {}]
+                if len(target.get("ph") or ()) == 2 and len(target.get("ec") or ()) == 2
             ],
             "nutrient_reference": NUTRIENT_REFERENCE,
             "equipment_checklist": EQUIPMENT_CHECKLIST,
@@ -871,7 +945,7 @@ def get_dashboard(
     active_crops = [c for c in crops if c.status == "active"]
     harvesting = []
     for crop in active_crops:
-        target = _crop_target(crop.crop_name)
+        target = _crop_target(db, crop.crop_name)
         harvest_date = _parse_date(crop.expected_harvest_date)
         if not harvest_date and crop.planting_date and target.get("days"):
             harvest_date = _parse_date(crop.planting_date) + timedelta(days=target["days"])
@@ -1031,7 +1105,7 @@ def get_recommendations(
             HydroponicCrop.unit_id == unit.id,
             HydroponicCrop.status == "active",
         ).all():
-            target = _crop_target(crop.crop_name)
+            target = _crop_target(db, crop.crop_name)
             harvest = _parse_date(crop.expected_harvest_date)
             if not harvest and crop.planting_date and target.get("days"):
                 harvest = _parse_date(crop.planting_date) + timedelta(days=target["days"])
@@ -1340,42 +1414,101 @@ def create_crop(
     db: Session = Depends(get_db),
 ):
     unit = _unit_or_404(db, unit_id, current_user.id)
+    crop_name = (payload.crop_name or "").strip()
+    if not crop_name and not payload.crop_id:
+        raise HTTPException(status_code=422, detail="crop_name or crop_id is required")
 
+    # Reuse the shared catalog crop whenever one matches. A new Crop is only
+    # created for a genuinely unknown crop, and even then it is classified with
+    # the hydroponic cultivation method and a real lifecycle so downstream
+    # modules treat it like any other crop.
+    # The catalog has to exist before the lookup below, otherwise a named crop
+    # like "Tomato" would not be found and a second, non-catalog row would be
+    # created next to the catalogued one.
+    _ensure_crop_catalog(db)
     crop = None
     if payload.crop_id:
         crop = db.query(Crop).filter(Crop.id == payload.crop_id).first()
         if not crop:
             raise HTTPException(status_code=404, detail="Crop not found")
+    if crop is None and crop_name:
+        crop = (
+            db.query(Crop)
+            .filter(func.lower(Crop.name) == crop_name.lower())
+            .order_by(Crop.is_catalog.desc())
+            .first()
+        )
+    if crop is not None and not crop_name:
+        crop_name = crop.name
+
+    method = (
+        db.query(CultivationMethod)
+        .filter(CultivationMethod.code == "hydroponic")
+        .first()
+    )
+
     if crop is None:
-        crop = db.query(Crop).filter(
-            func.lower(Crop.name) == payload.crop_name.strip().lower()
-        ).first()
-    if crop is None:
-        target = _crop_target(payload.crop_name)
+        target = _crop_target(db, crop_name)
+        stages = ["Germination", "Vegetative growth", "Flowering and fruiting", "Harvest"]
         crop = Crop(
             crop_id=generate_id("FA-CRP", db, Crop),
-            name=payload.crop_name.strip(),
+            name=crop_name,
             variety=payload.variety,
-            category=target.get("category") or "Hydroponic",
+            category="Hydroponic",
             growth_duration_days=target.get("days"),
+            lifecycle_stages=stages,
+            suitable_cultivation_methods=["hydroponic"],
+            hydroponic_targets=target or None,
+            is_catalog=False,
         )
         db.add(crop)
         db.flush()
 
+    # Link a named variety to the crop so cycles stay normalised instead of
+    # carrying an unresolvable free-text variety.
+    variety_id = None
+    if payload.variety:
+        variety = (
+            db.query(CropVariety)
+            .filter(
+                CropVariety.crop_id == crop.id,
+                func.lower(CropVariety.name) == payload.variety.strip().lower(),
+            )
+            .first()
+        )
+        if variety is None:
+            variety = CropVariety(
+                crop_id=crop.id,
+                name=payload.variety.strip(),
+                duration_days=crop.growth_duration_days,
+                is_custom=True,
+            )
+            db.add(variety)
+            db.flush()
+        variety_id = variety.id
+
     planting_date = payload.planting_date or _today()
     expected_harvest = payload.expected_harvest_date
-    target = _crop_target(payload.crop_name)
-    if not expected_harvest and target.get("days"):
-        expected_harvest = _add_days(planting_date, target["days"])
+    target = _crop_target(db, crop_name)
+    if not expected_harvest:
+        duration = crop.growth_duration_days or target.get("days")
+        if duration:
+            expected_harvest = _add_days(planting_date, int(duration))
+
+    stages = crop.lifecycle_stages or []
+    initial_stage = stages[0] if stages else "germination"
 
     cycle = CropCycle(
         cycle_id=generate_id("FA-CYC", db, CropCycle),
         farm_id=unit.farm_id,
         plot_id=unit.plot_id,
         crop_id=crop.id,
+        variety_id=variety_id,
+        cultivation_method_id=method.id if method else None,
         sowing_date=planting_date,
         expected_harvest_date=expected_harvest,
-        yield_unit=payload.yield_unit or "kg",
+        yield_unit=payload.yield_unit or crop.production_unit or "kg",
+        current_stage=initial_stage,
         notes=f"Hydroponic cycle in {unit.name}",
         status="active",
     )
@@ -1389,8 +1522,8 @@ def create_crop(
         farm_id=unit.farm_id,
         plot_id=unit.plot_id,
         crop_cycle_id=cycle.id,
-        crop_id=crop.id if crop else None,
-        crop_name=payload.crop_name.strip(),
+        crop_id=crop.id,
+        crop_name=crop_name,
         variety=payload.variety or (crop.variety if crop else None),
         planting_date=planting_date,
         expected_harvest_date=expected_harvest,
@@ -1398,8 +1531,8 @@ def create_crop(
         growing_area=payload.growing_area,
         area_unit=payload.area_unit or "sq ft",
         expected_yield=payload.expected_yield,
-        yield_unit=payload.yield_unit or "kg",
-        current_stage=payload.current_stage or "germination",
+        yield_unit=payload.yield_unit or crop.production_unit or "kg",
+        current_stage=payload.current_stage or initial_stage,
         status="active",
         notes=payload.notes,
     )
@@ -1448,6 +1581,31 @@ def update_crop(
                 cycle.yield_quantity = crop.actual_yield
             if crop.status:
                 cycle.status = crop.status
+            # Keep the stage in step with the crop's own lifecycle so the cycle
+            # timeline stays valid when the crop changes.
+            if crop.current_stage is not None:
+                cycle.current_stage = crop.current_stage
+
+    # Re-point the cycle when the farmer renames the hydroponic crop to one that
+    # already exists in the catalog, instead of stranding the cycle on a
+    # duplicate crop row.
+    new_name = (crop.crop_name or "").strip()
+    if new_name:
+        linked = db.query(Crop).filter(Crop.id == crop.crop_id).first() if crop.crop_id else None
+        if linked is None or linked.name.strip().lower() != new_name.lower():
+            match = (
+                db.query(Crop)
+                .filter(func.lower(Crop.name) == new_name.lower())
+                .order_by(Crop.is_catalog.desc())
+                .first()
+            )
+            if match is not None:
+                crop.crop_id = match.id
+                crop.variety = crop.variety or match.variety
+                if crop.crop_cycle_id:
+                    cycle = db.query(CropCycle).filter(CropCycle.id == crop.crop_cycle_id).first()
+                    if cycle:
+                        cycle.crop_id = match.id
 
     db.commit()
     db.refresh(crop)

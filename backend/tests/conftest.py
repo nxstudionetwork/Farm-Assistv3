@@ -21,7 +21,16 @@ if str(BACKEND_DIR) not in sys.path:
 # with "no such table: users" or "table ... already exists" on tables that have
 # nothing to do with the test being run. One database per process removes that
 # whole class of cross-run interference.
-TEST_DB = BACKEND_DIR / "tests" / f"test_farm_assist_{os.getpid()}.db"
+#
+# It lives in the system temp directory rather than beside the tests because
+# create_all/drop_all writes every DDL statement to disk several times per test.
+# On a network-backed or virtualised project drive that single step takes tens
+# of minutes and eventually fails outright with "sqlite3.OperationalError: disk
+# I/O error"; on local storage the same run takes seconds. Nothing about the
+# tests depends on where the file is, and it is deleted on exit either way.
+import tempfile
+
+TEST_DB = Path(tempfile.gettempdir()) / f"test_farm_assist_{os.getpid()}.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB}"
 
 

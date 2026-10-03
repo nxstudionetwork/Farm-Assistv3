@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-page="customer-settings">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Farm Assist - Settings</title>
+  <meta name="api-base-url" content="/api/v1">
+  <script>window._API_BASE_URL = '/api/v1';</script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B3D2E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* Sections are collapsible because a customer has more than a farmer's
+       account does, and scrolling eight panels flat would be tedious. */
+    .set-card{margin-bottom:12px;border:1px solid var(--border-light);border-radius:var(--radius-lg);overflow:hidden;background:#fff}
+    .set-head{display:flex;align-items:center;gap:12px;padding:15px;cursor:pointer;user-select:none}
+    .set-head:hover{background:var(--soft-green)}
+    .set-head .sh-icon{width:36px;height:36px;border-radius:11px;background:var(--soft-green);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto}
+    .set-head .sh-title{font-size:14px;font-weight:700}
+    .set-head .sh-sub{font-size:11px;color:var(--text-muted);margin-top:1px}
+    .set-head .sh-arrow{margin-left:auto;color:var(--text-muted);transition:transform .2s;font-size:12px}
+    .set-card.open .set-head .sh-arrow{transform:rotate(180deg)}
+    .set-body{display:none;padding:0 15px 15px}
+    .set-card.open .set-body{display:block}
+    .pref-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light)}
+    .pref-row:last-child{border-bottom:0}
+    .pref-row .pr-icon{width:32px;height:32px;border-radius:10px;background:var(--soft-green);color:var(--primary-green);display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
+    .pref-row .pr-label{font-size:13px;font-weight:600}
+    .pref-row .pr-sub{font-size:10.5px;color:var(--text-muted);margin-top:1px}
+    .pref-row .pr-end{margin-left:auto}
+    .switch{position:relative;width:44px;height:25px;flex:0 0 auto}
+    .switch input{opacity:0;width:0;height:0}
+    .slider{position:absolute;inset:0;background:#d6ded6;border-radius:25px;transition:.2s;cursor:pointer}
+    .slider::before{content:'';position:absolute;height:19px;width:19px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+    .switch input:checked + .slider{background:var(--primary-green)}
+    .switch input:checked + .slider::before{transform:translateX(19px)}
+    .field-label{font-size:11.5px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.3px;margin:14px 0 7px}
+    .field-label:first-child{margin-top:0}
+    select.pref-select,input.pref-input{width:100%;padding:11px 12px;border:1px solid var(--border-light);border-radius:11px;font-size:13.5px;font-family:inherit;background:#fff;color:var(--text-primary)}
+    select.pref-select:focus,input.pref-input:focus{outline:none;border-color:var(--primary-green)}
+    .saved-flag{font-size:11px;color:var(--primary-green);font-weight:700;opacity:0;transition:opacity .2s}
+    .saved-flag.show{opacity:1}
+  </style>
+</head>
+<body>
+  <main class="page-container">
+    <div class="page-header" style="margin-bottom:14px">
+      <h1 style="font-size:19px;font-weight:800">Settings</h1>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:2px">
+        Your customer preferences. These are separate from farmer settings and do not affect any other account.
+      </p>
+    </div>
+
+    <!-- Account -->
+    <section class="set-card open" data-section="account">
+      <div class="set-head">
+        <span class="sh-icon"><i class="fas fa-id-card"></i></span>
+        <div>
+          <div class="sh-title">Account</div>
+          <div class="sh-sub">Your Customer ID and verification</div>
+        </div>
+        <i class="fas fa-chevron-down sh-arrow"></i>
+      </div>
+      <div class="set-body">
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-hashtag"></i></span>
+          <div>
+            <div class="pr-label">Customer ID</div>
+            <div class="pr-sub">Use this to sign in</div>
+          </div>
+          <span class="pr-end" style="font-weight:800;font-size:13px;color:var(--primary-green)" id="set-customer-id">FA-CS-000000</span>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-circle-check"></i></span>
+          <div>
+            <div class="pr-label">Verification status</div>
+            <div class="pr-sub">Shown on your profile</div>
+          </div>
+          <span class="pr-end badge-status warning" id="set-verification">pending</span>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-language"></i></span>
+          <div>
+            <div class="pr-label">Account language</div>
+            <div class="pr-sub">Used across the app</div>
+          </div>
+          <span class="pr-end" id="set-account-language">English</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notifications -->
+    <section class="set-card" data-section="notifications">
+      <div class="set-head">
+        <span class="sh-icon"><i class="fas fa-bell"></i></span>
+        <div>
+          <div class="sh-title">Notifications</div>
+          <div class="sh-sub">Choose what you hear about</div>
+        </div>
+        <i class="fas fa-chevron-down sh-arrow"></i>
+      </div>
+      <div class="set-body">
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-box"></i></span>
+          <div><div class="pr-label">Order updates</div><div class="pr-sub">Confirmations, dispatch and delivery</div></div>
+          <label class="switch pr-end"><input type="checkbox" data-notif="orders"><span class="slider"></span></label>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-tags"></i></span>
+          <div><div class="pr-label">Product &amp; price alerts</div><div class="pr-sub">Deals on items you viewed</div></div>
+          <label class="switch pr-end"><input type="checkbox" data-notif="products"><span class="slider"></span></label>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-seedling"></i></span>
+          <div><div class="pr-label">Growing tips</div><div class="pr-sub">Care reminders for your plants</div></div>
+          <label class="switch pr-end"><input type="checkbox" data-notif="grow"><span class="slider"></span></label>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-users"></i></span>
+          <div><div class="pr-label">Community activity</div><div class="pr-sub">Replies and posts you follow</div></div>
+          <label class="switch pr-end"><input type="checkbox" data-notif="community"><span class="slider"></span></label>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-star"></i></span>
+          <div><div class="pr-label">Points activity</div><div class="pr-sub">Earned and redeemed points</div></div>
+          <label class="switch pr-end"><input type="checkbox" data-notif="points"><span class="slider"></span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Shopping -->
+    <section class="set-card" data-section="shopping">
+      <div class="set-head">
+        <span class="sh-icon"><i class="fas fa-cart-shopping"></i></span>
+        <div>
+          <div class="sh-title">Shopping</div>
+          <div class="sh-sub">Default delivery address and preferences</div>
+        </div>
+        <i class="fas fa-chevron-down sh-arrow"></i>
+      </div>
+      <div class="set-body">
+        <div class="field-label">Default delivery address</div>
+        <select class="pref-select" id="set-default-address">
+          <option value="">None selected</option>
+        </select>
+        <div class="field-label">Favourite categories</div>
+        <input class="pref-input" id="set-shop-prefs" placeholder="Seeds, Tools, Fertilizers">
+        <p style="font-size:11px;color:var(--text-muted);margin-top:6px">Comma separated. Used to tailor what we show you first.</p>
+      </div>
+    </section>
+
+    <!-- Grow -->
+    <section class="set-card" data-section="grow">
+      <div class="set-head">
+        <span class="sh-icon"><i class="fas fa-seedling"></i></span>
+        <div>
+          <div class="sh-title">Grow</div>
+          <div class="sh-sub">Reminders for your plants</div>
+        </div>
+        <i class="fas fa-chevron-down sh-arrow"></i>
+      </div>
+      <div class="set-body">
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-bell"></i></span>
+          <div><div class="pr-label">Growing reminders</div><div class="pr-sub">Seasonal tasks for your area</div></div>
+          <label class="switch pr-end"><input type="checkbox" data-grow="reminders"><span class="slider"></span></label>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-droplet"></i></span>
+          <div><div class="pr-label">Plant care reminders</div><div class="pr-sub">Watering and feeding prompts</div></div>
+          <label class="switch pr-end"><input type="checkbox" data-grow="plant_care_reminders"><span class="slider"></span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Community -->
+    <section class="set-card" data-section="community">
+      <div class="set-head">
+        <span class="sh-icon"><i class="fas fa-users"></i></span>
+        <div>
+          <div class="sh-title">Community</div>
+          <div class="sh-sub">Who can see your posts</div>
+        </div>
+        <i class="fas fa-chevron-down sh-arrow"></i>
+      </div>
+      <div class="set-body">
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-envelope"></i></span>
+          <div><div class="pr-label">Community notifications</div><div class="pr-sub">Replies and mentions</div></div>
+          <label class="switch pr-end"><input type="checkbox" data-community="notifications"><span class="slider"></span></label>
+        </div>
+        <div class="field-label">Post visibility</div>
+        <select class="pref-select" id="set-privacy-visibility">
+          <option value="public">Everyone</option>
+          <option value="community">Community members only</option>
+          <option value="private">Only me</option>
+        </select>
+        <div class="field-label">Show my growing activity</div>
+        <select class="pref-select" id="set-privacy-growing">
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Security -->
+    <section class="set-card" data-section="security">
+      <div class="set-head">
+        <span class="sh-icon"><i class="fas fa-shield-halved"></i></span>
+        <div>
+          <div class="sh-title">Security</div>
+          <div class="sh-sub">PIN, verification and active sessions</div>
+        </div>
+        <i class="fas fa-chevron-down sh-arrow"></i>
+      </div>
+      <div class="set-body">
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-key"></i></span>
+          <div><div class="pr-label">Change sign-in PIN</div><div class="pr-sub">Your 4-digit PIN</div></div>
+          <a class="mini-btn pr-end" href="customer-profile.html#pf-pin-row" style="text-decoration:none">Change</a>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-mobile-screen"></i></span>
+          <div><div class="pr-label">Phone verification</div><div class="pr-sub">Used to sign in</div></div>
+          <span class="pr-end" id="set-phone-verified">-</span>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-envelope"></i></span>
+          <div><div class="pr-label">Email verification</div><div class="pr-sub">Optional backup sign-in</div></div>
+          <span class="pr-end" id="set-email-verified">-</span>
+        </div>
+        <button class="btn-submit" id="set-logout" style="margin-top:14px;background:linear-gradient(135deg,#C0392B,#E74C3C)">
+          <i class="fas fa-right-from-bracket"></i> Log Out Of All Devices
+        </button>
+      </div>
+    </section>
+
+    <!-- App -->
+    <section class="set-card" data-section="app">
+      <div class="set-head">
+        <span class="sh-icon"><i class="fas fa-mobile-screen-button"></i></span>
+        <div>
+          <div class="sh-title">App</div>
+          <div class="sh-sub">Appearance, text size and motion</div>
+        </div>
+        <i class="fas fa-chevron-down sh-arrow"></i>
+      </div>
+      <div class="set-body">
+        <div class="field-label">Theme</div>
+        <select class="pref-select" id="set-theme">
+          <option value="system">Match system</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+        <div class="field-label">Text size</div>
+        <select class="pref-select" id="set-text-size">
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+        </select>
+        <div class="pref-row" style="margin-top:8px">
+          <span class="pr-icon"><i class="fas fa-wind"></i></span>
+          <div><div class="pr-label">Reduce motion</div><div class="pr-sub">Fewer animations</div></div>
+          <label class="switch pr-end"><input type="checkbox" id="set-reduce-motion"><span class="slider"></span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Support -->
+    <section class="set-card" data-section="support">
+      <div class="set-head">
+        <span class="sh-icon"><i class="fas fa-life-ring"></i></span>
+        <div>
+          <div class="sh-title">Support</div>
+          <div class="sh-sub">Get help or report a problem</div>
+        </div>
+        <i class="fas fa-chevron-down sh-arrow"></i>
+      </div>
+      <div class="set-body">
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-circle-question"></i></span>
+          <div><div class="pr-label">Help Centre</div><div class="pr-sub">Answers to common questions</div></div>
+          <a class="mini-btn pr-end" href="help.html" style="text-decoration:none">Open</a>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-comment-dots"></i></span>
+          <div><div class="pr-label">Send Feedback</div><div class="pr-sub">Tell us what you think of the app</div></div>
+          <a class="mini-btn pr-end" href="feedback.html" style="text-decoration:none">Open</a>
+        </div>
+        <div class="pref-row">
+          <span class="pr-icon"><i class="fas fa-store"></i></span>
+          <div><div class="pr-label">Browse Services</div><div class="pr-sub">What Farm Assist can help you with</div></div>
+          <a class="mini-btn pr-end" href="services.html" style="text-decoration:none">Open</a>
+        </div>
+      </div>
+    </section>
+
+    <p style="text-align:center;font-size:11px;color:var(--text-muted);padding:14px 0 8px">
+      <span class="saved-flag" id="saved-flag">Saved</span>
+    </p>
+  </main>
+
+  <script src="js/services.js"></script>
+  <script src="js/userStore.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    /*
+     * Customer Settings.
+     *
+     * Stored in the customer's own settings sheet, not the farmer one: a
+     * customer has no farms, land or crops, so farmer preferences such as
+     * irrigation units or crop cycles have nothing to act on here.
+     *
+     * Saves are immediate and partial -- only the section that changed is
+     * sent, so toggling one switch never rewrites the others.
+     */
+    (function guardRole() {
+      var role = (window.UserStore && UserStore.getRole) ? UserStore.getRole() : 'farmer';
+      if (role !== 'customer') window.location.replace('index.html');
+    })();
+
+    function toast(msg, type) {
+      if (window.showToast) return showToast(msg, type);
+      console.log(msg);
+    }
+
+    var savedTimer = null;
+    function flashSaved() {
+      var flag = document.getElementById('saved-flag');
+      flag.classList.add('show');
+      if (savedTimer) clearTimeout(savedTimer);
+      savedTimer = setTimeout(function () { flag.classList.remove('show'); }, 1600);
+    }
+
+    /* Send only what changed, so two sections never overwrite each other. */
+    function saveSettings(patch) {
+      return API.Customer.updateSettings(patch).then(function (data) {
+        flashSaved();
+        return data;
+      }).catch(function (err) {
+        toast((err && err.message) || 'Could not save settings', 'danger');
+      });
+    }
+
+    function check(selector, on) {
+      var el = document.querySelector(selector);
+      if (el) el.checked = !!on;
+    }
+
+    function applySettings(s) {
+      var n = s.notifications || {};
+      check('[data-notif="orders"]', n.orders);
+      check('[data-notif="products"]', n.products);
+      check('[data-notif="grow"]', n.grow);
+      check('[data-notif="community"]', n.community);
+      check('[data-notif="points"]', n.points);
+
+      var g = s.grow || {};
+      check('[data-grow="reminders"]', g.reminders);
+      check('[data-grow="plant_care_reminders"]', g.plant_care_reminders);
+
+      var c = s.community || {};
+      check('[data-community="notifications"]', c.notifications);
+      var privacy = c.privacy || {};
+      var vis = document.getElementById('set-privacy-visibility');
+      if (vis) vis.value = privacy.visibility || 'public';
+      var growVis = document.getElementById('set-privacy-growing');
+      if (growVis) growVis.value = String(privacy.show_growing !== false);
+
+      var a = s.app || {};
+      var theme = document.getElementById('set-theme');
+      if (theme) theme.value = a.theme || 'system';
+      var size = document.getElementById('set-text-size');
+      if (size) size.value = a.text_size || 'medium';
+      check('#set-reduce-motion', a.reduce_motion);
+
+      var shop = s.shopping || {};
+      var prefs = shop.preferences || {};
+      var cats = prefs.categories || prefs.categorical_preferences;
+      document.getElementById('set-shop-prefs').value =
+        Array.isArray(cats) ? cats.join(', ') : (cats || '');
+    }
+
+    /* Only pre-select an address if one is actually stored. Defaulting the
+       picker to the first address would show a choice the account has not made. */
+    function loadAddresses(select, currentId) {
+      return API.Customer.getAddresses().then(function (list) {
+        list = list || [];
+        select.innerHTML = '<option value="">None selected</option>';
+        list.forEach(function (a) {
+          var label = [a.address_line, a.city || a.village, a.district].filter(Boolean).join(', ');
+          var opt = document.createElement('option');
+          opt.value = a.id;
+          opt.textContent = label || 'Address ' + a.id;
+          select.appendChild(opt);
+        });
+        select.value = currentId || '';
+      }).catch(function () { /* leave the default option in place */ });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      /* Collapsible sections. */
+      document.querySelectorAll('.set-head').forEach(function (head) {
+        head.addEventListener('click', function () {
+          head.parentElement.classList.toggle('open');
+        });
+      });
+
+      /* Notification switches: one patch per toggle. */
+      document.querySelectorAll('[data-notif]').forEach(function (input) {
+        input.addEventListener('change', function () {
+          var patch = {};
+          patch[input.getAttribute('data-notif')] = input.checked;
+          saveSettings({ notifications: patch });
+        });
+      });
+
+      document.querySelectorAll('[data-grow]').forEach(function (input) {
+        input.addEventListener('change', function () {
+          var patch = {};
+          patch[input.getAttribute('data-grow')] = input.checked;
+          saveSettings({ grow: patch });
+        });
+      });
+
+      var communityToggle = document.querySelector('[data-community="notifications"]');
+      if (communityToggle) {
+        communityToggle.addEventListener('change', function () {
+          saveSettings({ community: { notifications: communityToggle.checked } });
+        });
+      }
+
+      var vis = document.getElementById('set-privacy-visibility');
+      vis.addEventListener('change', function () {
+        var growVis = document.getElementById('set-privacy-growing');
+        saveSettings({
+          community: {
+            privacy: { visibility: vis.value, show_growing: growVis.value === 'true' }
+          }
+        });
+      });
+      var growVis2 = document.getElementById('set-privacy-growing');
+      growVis2.addEventListener('change', function () {
+        saveSettings({
+          community: { privacy: { visibility: vis.value, show_growing: growVis2.value === 'true' } }
+        });
+      });
+
+      var addrSelect = document.getElementById('set-default-address');
+      addrSelect.addEventListener('change', function () {
+        saveSettings({ shopping: { default_address_id: addrSelect.value || null } });
+      });
+
+      var shopPrefs = document.getElementById('set-shop-prefs');
+      shopPrefs.addEventListener('change', function () {
+        var categories = shopPrefs.value.split(',')
+          .map(function (v) { return v.trim(); })
+          .filter(Boolean);
+        saveSettings({ shopping: { preferences: { categories: categories } } });
+      });
+
+      var theme = document.getElementById('set-theme');
+      theme.addEventListener('change', function () {
+        saveSettings({ app: { theme: theme.value } });
+        document.documentElement.setAttribute('data-theme', theme.value === 'system' ? 'light' : theme.value);
+      });
+
+      var textSize = document.getElementById('set-text-size');
+      textSize.addEventListener('change', function () {
+        saveSettings({ app: { text_size: textSize.value } });
+        document.documentElement.style.fontSize =
+          textSize.value === 'large' ? '17px' : textSize.value === 'small' ? '14px' : '';
+      });
+
+      var reduceMotion = document.getElementById('set-reduce-motion');
+      reduceMotion.addEventListener('change', function () {
+        saveSettings({ app: { reduce_motion: reduceMotion.checked } });
+      });
+
+      document.getElementById('set-logout').addEventListener('click', function () {
+        if (!confirm('Log out of your customer account?')) return;
+        API.Auth.logout().then(function () {
+          window.location.href = 'login.html?role=customer';
+        }).catch(function () {
+          window.location.href = 'login.html?role=customer';
+        });
+      });
+
+      /* Account facts come from the profile, not from anything the page stores. */
+      API.Customer.getMe().then(function (p) {
+        if (!p) return;
+        document.getElementById('set-customer-id').textContent = p.customer_id || 'FA-CS-000000';
+        var badge = document.getElementById('set-verification');
+        badge.textContent = p.verification_status || 'pending';
+        badge.className = 'pr-end badge-status ' + (p.verification_status === 'verified' ? 'success' : 'warning');
+        document.getElementById('set-account-language').textContent =
+          (p.preferred_language || 'en').toUpperCase();
+        document.getElementById('set-phone-verified').innerHTML = p.phone_verified
+          ? '<span style="color:var(--primary-green);font-weight:700">Verified</span>'
+          : '<span style="color:var(--text-muted)">Not verified</span>';
+        document.getElementById('set-email-verified').innerHTML = p.email_verified
+          ? '<span style="color:var(--primary-green);font-weight:700">Verified</span>'
+          : '<span style="color:var(--text-muted)">Not verified</span>';
+      });
+
+      API.Customer.getSettings().then(function (s) {
+        if (!s) return;
+        applySettings(s);
+        loadAddresses(document.getElementById('set-default-address'),
+          (s.shopping || {}).default_address_id);
+      });
+    });
+  </script>
+</body>
+</html>

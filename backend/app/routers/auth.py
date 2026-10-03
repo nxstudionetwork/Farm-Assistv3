@@ -11,16 +11,26 @@ from sqlalchemy.orm import Session
 from app.database.connection import get_db
 from app.config import settings
 from app.models.user import User, OTPVerification, UserSession, LoginHistory, FarmerProfile, UserAddress
+from app.models.customer import Customer
 from app.schemas.auth import (
     RegisterRequest, LoginRequest, OTPRequest, OTPVerifyRequest,
     UserResponse, TokenResponse,
 )
-from app.services import otp_service
+from app.schemas.customer import (
+    CustomerRegisterRequest, CustomerOTPRequest, CustomerOTPVerifyRequest,
+)
+from app.services import customer_service, otp_service
+from app.services.customer_service import (
+    POINTS_REASON_WELCOME, WELCOME_POINTS, award_points,
+    get_or_create_customer_settings, sync_customer_from_user,
+)
 from app.services.otp_service import OTPError
 from app.utils.auth import (
-    create_access_token, decode_token, hash_password, verify_password,
-    get_current_user, generate_farmer_id, generate_id, normalize_farmer_id,
-    phone_lookup_candidates, revoke_session_by_jti, security,
+    ROLE_CUSTOMER, ROLE_FARMER, assert_role_matches_selection,
+    create_access_token, decode_token, generate_customer_id, generate_farmer_id,
+    generate_id, get_current_user, hash_password, is_customer,
+    normalize_customer_id, normalize_farmer_id, phone_lookup_candidates,
+    revoke_session_by_jti, security, user_role, verify_password,
 )
 from app.utils.masking import (
     mask_aadhaar, mask_email, mask_farmer_card, mask_pan, mask_phone,
@@ -733,7 +743,12 @@ class LoginRequest(BaseModel):
     pin: Optional[str] = None
     password: Optional[str] = None
     farmer_id: Optional[str] = None
+    customer_id: Optional[str] = None
     login_method: Optional[str] = "phone"
+    # Which login form the person used ("farmer" or "customer"). Checked against
+    # the role on the account that was actually found, so a Farmer ID typed into
+    # the Customer form is refused instead of quietly logging a farmer in.
+    role: Optional[str] = None
     # Optional label recorded against the revocable session (e.g. "android").
     # Not a raw user-agent dump, to avoid storing fingerprint data.
     device: Optional[str] = None
@@ -742,6 +757,9 @@ class LoginRequest(BaseModel):
 class OTPRequest(BaseModel):
     phone_number: Optional[str] = None
     email: Optional[str] = None
+    # Optional expected role. When supplied, a code is only ever sent to a
+    # destination owned by an account of that role.
+    role: Optional[str] = None
 
 
 class FarmerOTPRequest(BaseModel):
@@ -759,6 +777,8 @@ class OTPVerifyRequest(BaseModel):
     phone_number: Optional[str] = None
     email: Optional[str] = None
     otp_code: str
+    # Optional expected role, cross-checked against the resolved account.
+    role: Optional[str] = None
 
 
 class ForgotPinRequest(BaseModel):
@@ -771,6 +791,10 @@ class ProfileLookupRequest(BaseModel):
     phone_number: Optional[str] = None
     email: Optional[str] = None
     farmer_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    # Expected role for the lookup, so the login screen can tell "no such ID"
+    # apart from "that ID belongs to the other kind of account".
+    role: Optional[str] = None
 
 
 @router.post("/auth/register", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -920,6 +944,129 @@ def _otp_http_error(exc: OTPError) -> HTTPException:
     return HTTPException(status_code=exc.status_code, detail=exc.message)
 
 
+@router.post("/auth/register/customer", response_model=dict, status_code=status.HTTP_201_CREATED)
+def register_customer(payload: CustomerRegisterRequest, db: Session = Depends(get_db)):
+    """Create a customer account and issue its Customer ID.
+
+    A separate endpoint from ``/auth/register`` on purpose. The farmer path is
+    the original one, complete with farm, plot and identity fields, and it is
+    left exactly as it was so no existing registration changes behaviour. This
+    one collects only what a customer actually needs and creates no farm.
+
+    The returned ``customer_id`` is the canonical ``FA-CS-######`` value and is
+    what the customer types to log in next time. It is allocated by the database
+    sequence, not by anything the client sent.
+    """
+    existing = db.query(User).filter(
+        User.phone_number.in_(phone_lookup_candidates(payload.phone_number))
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+
+    if payload.email:
+        email_exists = db.query(User).filter(User.email == payload.email).first()
+        if email_exists:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+    pin_value = payload.pin or payload.password
+    if not pin_value:
+        raise HTTPException(status_code=400, detail="PIN is required for registration")
+    if len(str(pin_value)) < 4:
+        raise HTTPException(status_code=400, detail="PIN must be at least 4 characters")
+
+    user = User(
+        full_name=payload.full_name,
+        phone_number=payload.phone_number,
+        email=payload.email,
+        password_hash=hash_password(str(pin_value)),
+        preferred_language=payload.preferred_language or "en",
+        # role is the only thing that decides which dashboard and which API
+        # surface this account can reach, so it is written explicitly here.
+        role=ROLE_CUSTOMER,
+        is_verified=False,
+        phone_verified=False,
+        email_verified=False,
+        onboarding_status="registered",
+        is_active=True,
+        created_at=datetime.utcnow(),
+    )
+    db.add(user)
+    db.flush()
+
+    # A customer has no farmer_id. Leaving it NULL keeps the two public ID
+    # namespaces disjoint: a Farmer ID can never be mistaken for a Customer ID,
+    # and the login forms can reject each other's IDs with a clear message.
+    customer_id = generate_customer_id(db)
+    customer = Customer(
+        user_id=user.id,
+        customer_id=customer_id,
+        full_name=payload.full_name,
+        phone_number=payload.phone_number,
+        email=payload.email,
+        date_of_birth=payload.date_of_birth,
+        gender=payload.gender,
+        verification_status="pending",
+        phone_verified=False,
+        email_verified=False,
+        points_balance=0,
+        preferred_language=payload.preferred_language or "en",
+        created_at=datetime.utcnow(),
+    )
+    db.add(customer)
+
+    if any([
+        payload.address_line, payload.city, payload.district,
+        payload.state, payload.pincode,
+    ]):
+        db.add(UserAddress(
+            user_id=user.id,
+            address_line=payload.address_line,
+            village=payload.city or payload.village,
+            mandal=payload.mandal,
+            district=payload.district,
+            state=payload.state,
+            country="India",
+            pincode=payload.pincode,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            is_primary=True,
+        ))
+
+    # Real, recorded loyalty credit rather than a hard-coded number: the badge
+    # in the header is backed by this ledger row.
+    award_points(
+        db, customer, WELCOME_POINTS, POINTS_REASON_WELCOME,
+        reference_type="registration", reference_id=customer_id,
+    )
+    get_or_create_customer_settings(db, user)
+
+    db.commit()
+    db.refresh(user)
+    db.refresh(customer)
+
+    token = _issue_session(db, user, create_access_token(data={"sub": user.id, "phone": user.phone_number}))
+
+    profile_data = UserResponse.model_validate(user).model_dump()
+    profile_data["role"] = user_role(user)
+
+    return {
+        "status": "success",
+        "message": "Registration successful",
+        "data": {
+            "customer_id": customer_id,
+            "access_token": token,
+            "token_type": "bearer",
+            "role": profile_data["role"],
+            "points_balance": int(customer.points_balance or 0),
+            # A brand new account has proved nothing yet. Say so rather than
+            # leaving the client to guess from a missing field.
+            "verification_status": customer.verification_status or "pending",
+            "user": profile_data,
+            "customer": customer_service.customer_summary_payload(db, user, customer),
+        },
+    }
+
+
 @router.post("/auth/send-otp", response_model=dict)
 def send_otp(payload: OTPRequest, db: Session = Depends(get_db)):
     if not payload.phone_number and not payload.email:
@@ -935,6 +1082,11 @@ def send_otp(payload: OTPRequest, db: Session = Depends(get_db)):
         ).first()
     else:
         user = db.query(User).filter(User.email == destination).first()
+
+    # When the login page told us which form is being used, hold the lookup to
+    # that role so a code is never sent to the other kind of account.
+    if user is not None and payload.role:
+        assert_role_matches_selection(user, payload.role)
 
     # Bind the code to the account when one exists, so verification cannot be
     # satisfied by an OTP minted for a different destination.
@@ -1062,6 +1214,10 @@ def verify_otp(payload: OTPVerifyRequest, db: Session = Depends(get_db)):
                 status_code=400,
                 detail="That code is invalid or has expired. Please request a new one.",
             )
+        # If the caller declared which form they are on, refuse to verify the
+        # other kind of account with it.
+        if payload.role:
+            assert_role_matches_selection(user, payload.role)
         otp_record.user_id = user.id
         user.is_verified = True
         _mark_channel_verified(user, channel)
@@ -1084,21 +1240,210 @@ def verify_otp(payload: OTPVerifyRequest, db: Session = Depends(get_db)):
     }
 
 
+CUSTOMER_ID_FORMAT_HINT = "Customer ID should look like FA-CS-000001"
+
+#: Message used when a Customer ID is offered to the Farmer form. Matching on the
+#: prefix means a genuinely mistyped digit still reports "not found", while an ID
+#: that really exists under the other namespace gets the useful answer.
+CUSTOMER_ID_PREFIX = "FA-CS-"
+
+
+def _load_user_for_customer_id(raw_customer_id: str, db: Session):
+    """Resolve a typed Customer ID to its account, rejecting other namespaces."""
+    normalized = normalize_customer_id(raw_customer_id)
+    if not normalized:
+        _raise_missing_id(raw_customer_id, ROLE_CUSTOMER)
+
+    customer = db.query(Customer).filter(Customer.customer_id == normalized).first()
+    if customer is None:
+        _raise_missing_id(raw_customer_id, ROLE_CUSTOMER)
+
+    user = db.query(User).filter(User.id == customer.user_id).first()
+    if user is None or user_role(user) != ROLE_CUSTOMER:
+        raise HTTPException(
+            status_code=403,
+            detail="This ID belongs to a Farmer account. Please use Farmer Login.",
+        )
+    return user, customer
+
+
+@router.post("/auth/send-customer-otp", response_model=dict)
+def send_customer_otp(payload: CustomerOTPRequest, db: Session = Depends(get_db)):
+    """Send a verification code to a customer, using the existing OTP service.
+
+    Not a new verification mechanism: the same issue/consume/rate-limit path the
+    farmer flow already uses, so codes, expiry and resend limits behave
+    identically for customers.
+    """
+    user, _customer = _load_user_for_customer_id(payload.customer_id, db)
+
+    channel = (payload.channel or "phone").lower()
+    if channel not in ("phone", "email"):
+        raise HTTPException(status_code=400, detail="Channel must be 'phone' or 'email'")
+
+    phone = user.phone_number
+    email = user.email
+    if channel == "phone" and not phone:
+        raise HTTPException(status_code=400, detail="No registered phone number found")
+    if channel == "email" and not email:
+        raise HTTPException(status_code=400, detail="No registered email found")
+
+    try:
+        return otp_service.issue_otp(
+            db,
+            channel=channel,
+            destination=phone if channel == "phone" else email,
+            user_id=user.id,
+        )
+    except OTPError as exc:
+        raise _otp_http_error(exc)
+
+
+@router.post("/auth/verify-customer-otp", response_model=dict)
+def verify_customer_otp(payload: CustomerOTPVerifyRequest, db: Session = Depends(get_db)):
+    """Verify a customer OTP and mark that channel verified on the account."""
+    user, customer = _load_user_for_customer_id(payload.customer_id, db)
+
+    channel = (payload.channel or "phone").lower()
+    destination = (user.phone_number if channel == "phone" else user.email) or ""
+
+    try:
+        otp_record = otp_service.consume_otp(
+            db, channel=channel, destination=destination, code=payload.otp_code
+        )
+    except OTPError as exc:
+        raise _otp_http_error(exc)
+
+    # A code minted for a different account must not verify this one.
+    if otp_record.user_id and otp_record.user_id != user.id:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="That code is invalid or has expired. Please request a new one.",
+        )
+
+    otp_record.user_id = user.id
+    user.is_verified = True
+    _mark_channel_verified(user, channel)
+    # Reflect the newly verified channel on the customer profile, so the profile
+    # screen and the header badge agree with what the OTP service confirmed.
+    sync_customer_from_user(db, user, customer)
+    db.commit()
+
+    token = _issue_session(db, user, create_access_token(data={"sub": user.id, "phone": user.phone_number}))
+    return {
+        "status": "success",
+        "message": "OTP verified successfully",
+        "data": {
+            "customer_id": customer.customer_id,
+            "access_token": token,
+            "token_type": "bearer",
+            "user": UserResponse.model_validate(user).model_dump(),
+            "customer": customer_service.customer_summary_payload(db, user, customer),
+        },
+    }
+
+
+def _raise_missing_id(raw_id, expected_role: str):
+    """Raise the most useful error for an ID that did not resolve.
+
+    Three distinct situations, deliberately kept distinct for the person typing:
+    a Customer ID in the Farmer form, a Farmer ID in the Customer form, and an ID
+    that simply does not exist.
+    """
+    text = str(raw_id or "").strip().upper()
+    if expected_role == ROLE_FARMER:
+        if text.startswith(CUSTOMER_ID_PREFIX):
+            raise HTTPException(
+                status_code=403,
+                detail="This ID belongs to a Customer account. Please use Customer Login.",
+            )
+        raise HTTPException(status_code=401, detail="Farmer ID not found")
+
+    # Customer form.
+    if text.startswith("FA-AS-"):
+        raise HTTPException(
+            status_code=403,
+            detail="This ID belongs to a Farmer account. Please use Farmer Login.",
+        )
+    if not normalize_customer_id(raw_id):
+        raise HTTPException(status_code=400, detail=CUSTOMER_ID_FORMAT_HINT)
+    raise HTTPException(
+        status_code=401,
+        detail="Customer ID not found. Please check your ID and try again.",
+    )
+
+
+def _resolve_customer_login(payload: LoginRequest, db: Session):
+    """Find the account behind a Customer ID and check it really is a customer.
+
+    Three separate checks, all server-side: the ID must be a real row in
+    ``customers``, the user behind it must carry the customer role, and the role
+    the login form claimed must match. A correctly formatted ID that nobody owns
+    is not a login.
+    """
+    expected_role = payload.role or ROLE_CUSTOMER
+    normalized = normalize_customer_id(payload.customer_id)
+    if not normalized:
+        _raise_missing_id(payload.customer_id, expected_role)
+
+    customer = (
+        db.query(Customer)
+        .filter(Customer.customer_id == normalized)
+        .first()
+    )
+    if customer is None:
+        _raise_missing_id(payload.customer_id, expected_role)
+
+    user = db.query(User).filter(User.id == customer.user_id).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="Customer ID not found. Please check your ID and try again.")
+
+    # The role on the users row is the authority, not the role sent by the
+    # client and not the mere existence of a customer profile.
+    if user_role(user) != ROLE_CUSTOMER:
+        raise HTTPException(
+            status_code=403,
+            detail="This ID belongs to a Farmer account. Please use Farmer Login.",
+        )
+    assert_role_matches_selection(user, expected_role)
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated")
+
+    return user, customer
+
+
 @router.post("/auth/login", response_model=dict)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    """Authenticate a Farmer or a Customer.
+
+    Four credential shapes are accepted -- Customer ID, Farmer ID, email and
+    phone -- and every one of them ends the same way: the account is loaded from
+    the database, its role is read off that row, the selected login type is
+    checked against it, and the token is issued only if both the credential and
+    the role agree.
+    """
     user = None
 
-    if payload.farmer_id:
+    if payload.customer_id:
+        user, customer = _resolve_customer_login(payload, db)
+        pin = payload.pin or payload.password
+        if not pin or not user.password_hash or not verify_password(pin, user.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid PIN")
+    elif payload.farmer_id:
         normalized_farmer_id = normalize_farmer_id(payload.farmer_id)
         candidates = {normalized_farmer_id}
-        if payload.farmer_id:
-            digits = ''.join(ch for ch in str(payload.farmer_id) if ch.isdigit())
-            if digits:
-                candidates.add(f"FA-AS-{digits.zfill(8)}")
-                candidates.add(digits)
+        digits = ''.join(ch for ch in str(payload.farmer_id) if ch.isdigit())
+        if digits:
+            candidates.add(f"FA-AS-{digits.zfill(8)}")
+            candidates.add(digits)
         user = db.query(User).filter(User.farmer_id.in_(list(candidates))).first()
         if not user:
-            raise HTTPException(status_code=401, detail="Farmer ID not found")
+            _raise_missing_id(payload.farmer_id, ROLE_FARMER)
+        # A Customer ID is a real, well-formed identifier, so recognise it and
+        # say which form to use instead of reporting it as simply missing.
+        assert_role_matches_selection(user, payload.role or ROLE_FARMER)
         pin = payload.pin or payload.password
         if not pin or not user.password_hash or not verify_password(pin, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid PIN")
@@ -1106,6 +1451,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == payload.email).first()
         if not user:
             raise HTTPException(status_code=401, detail="Email not found")
+        assert_role_matches_selection(user, payload.role)
         pin = payload.pin or payload.password
         if not pin or not user.password_hash or not verify_password(pin, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid PIN")
@@ -1116,11 +1462,17 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         ).first()
         if not user:
             raise HTTPException(status_code=401, detail="Phone number not found")
+        # Phone and email are shared by both account types, so this is the path
+        # where "you used the wrong form" actually bites.
+        assert_role_matches_selection(user, payload.role)
         pwd = payload.pin or payload.password
         if not pwd or not user.password_hash or not verify_password(pwd, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid PIN/Password")
     else:
-        raise HTTPException(status_code=400, detail="Phone, email, or Farmer ID required")
+        raise HTTPException(
+            status_code=400,
+            detail="Customer ID, Farmer ID, phone number or email required",
+        )
 
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is deactivated")
@@ -1133,6 +1485,9 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     _issue_session(db, user, token, device=payload.device)
 
     profile_data = UserResponse.model_validate(user).model_dump()
+    # Always report the canonical role, never the role the client claimed, so the
+    # frontend routes on what the backend decided.
+    profile_data["role"] = user_role(user)
     address = db.query(UserAddress).filter(
         UserAddress.user_id == user.id, UserAddress.is_primary == True
     ).first()
@@ -1149,15 +1504,27 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     safe_profile = _farmer_profile_payload(farmer_profile)
     if safe_profile:
         profile_data["farmer_profile"] = safe_profile
+    customer = customer_service.get_customer_for_user(db, user)
+    if customer is not None:
+        profile_data["customer"] = customer_service.customer_summary_payload(
+            db, user, customer
+        )
 
-    return {
-        "status": "success",
-        "data": {
-            "access_token": token,
-            "token_type": "bearer",
-            "user": profile_data,
-        },
+    response_data = {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": profile_data,
     }
+    # Repeated at the top level so a client can read the Customer ID and the
+    # points balance without walking into the nested profile. Absent for
+    # farmers, who have neither.
+    if customer is not None:
+        response_data["role"] = profile_data["role"]
+        response_data["customer_id"] = customer.customer_id
+        response_data["points_balance"] = int(customer.points_balance or 0)
+        response_data["verification_status"] = customer.verification_status or "pending"
+
+    return {"status": "success", "data": response_data}
 
 
 @router.post("/auth/forgot-pin", response_model=dict)
@@ -1226,7 +1593,18 @@ def forgot_pin(payload: ForgotPinRequest, db: Session = Depends(get_db)):
 @router.post("/auth/lookup-profile", response_model=dict)
 def lookup_profile(payload: ProfileLookupRequest, db: Session = Depends(get_db)):
     user = None
-    if payload.phone_number:
+    customer = None
+    if payload.customer_id:
+        # Mirrors the login path: a Farmer ID typed into the customer form is
+        # reported as such instead of as a missing account.
+        normalized = normalize_customer_id(payload.customer_id)
+        if normalized:
+            customer = db.query(Customer).filter(Customer.customer_id == normalized).first()
+            if customer:
+                user = db.query(User).filter(User.id == customer.user_id).first()
+        if user is None:
+            _raise_missing_id(payload.customer_id, payload.role or ROLE_CUSTOMER)
+    elif payload.phone_number:
         user = db.query(User).filter(
             User.phone_number.in_(phone_lookup_candidates(payload.phone_number))
         ).first()
@@ -1248,15 +1626,43 @@ def lookup_profile(payload: ProfileLookupRequest, db: Session = Depends(get_db))
             "message": "No account found",
         }
 
+    # The role that comes back is the one on the users row, so the login screen
+    # routes on the server's answer rather than on what it typed.
+    role = user_role(user)
+
+    # Only the customer_id branch loads the Customer row. A customer reached by
+    # phone or email still needs it for the Customer ID shown before the PIN
+    # step, so resolve it from the user whenever the role says it is a customer.
+    if role == ROLE_CUSTOMER and customer is None:
+        customer = db.query(Customer).filter(Customer.user_id == user.id).first()
+        if customer is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Customer account is incomplete. Please contact support.",
+            )
+
+    data = {
+        "full_name": user.full_name,
+        "role": role,
+        "farmer_id": user.farmer_id if role == ROLE_FARMER else None,
+        "customer_id": customer.customer_id if role == ROLE_CUSTOMER else None,
+        "profile_image": user.profile_image,
+        "phone_masked": user.phone_number[:3] + "****" + user.phone_number[-2:] if user.phone_number and len(user.phone_number) >= 5 else None,
+        "email_masked": user.email[:2] + "***@" + user.email.split("@")[1] if user.email and "@" in user.email else None,
+    }
+
+    # When the caller declared a form, an account of the other kind is refused
+    # here rather than shown on the wrong screen.
+    if payload.role:
+        assert_role_matches_selection(user, payload.role)
+
+    if customer is not None and role == ROLE_CUSTOMER:
+        data["points_balance"] = int(customer.points_balance or 0)
+        data["verification_status"] = customer.verification_status or customer_service.verification_status_for(user)
+
     return {
         "status": "success",
-        "data": {
-            "full_name": user.full_name,
-            "farmer_id": user.farmer_id,
-            "profile_image": user.profile_image,
-            "phone_masked": user.phone_number[:3] + "****" + user.phone_number[-2:] if user.phone_number and len(user.phone_number) >= 5 else None,
-            "email_masked": user.email[:2] + "***@" + user.email.split("@")[1] if user.email and "@" in user.email else None,
-        },
+        "data": data,
         "message": "Profile found",
     }
 
@@ -1291,7 +1697,10 @@ def logout(
 
 
 @router.get("/auth/me", response_model=dict)
-def get_me(current_user: User = Depends(get_current_user)):
+def get_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     profile_data = UserResponse.model_validate(current_user).model_dump()
     address = None
     farmer_profile = None
@@ -1324,6 +1733,20 @@ def get_me(current_user: User = Depends(get_current_user)):
             "farming_experience": farmer_profile.farming_experience,
             "preferred_crops": farmer_profile.preferred_crops,
         }
+
+    # The role reported here is the one stored on the account. The client is told
+    # what it is, never allowed to decide it.
+    profile_data["role"] = user_role(current_user)
+
+    # A customer session carries its Customer ID and points with it, so the
+    # dashboard header can render both straight from /auth/me.
+    customer = customer_service.get_customer_for_user(db, current_user)
+    if customer is not None:
+        profile_data["customer_id"] = customer.customer_id
+        profile_data["points_balance"] = int(customer.points_balance or 0)
+        profile_data["verification_status"] = (
+            customer.verification_status or customer_service.verification_status_for(current_user)
+        )
 
     return {
         "status": "success",
@@ -1449,9 +1872,16 @@ def verify_phone_change_otp(
     otp_record.verified_at = datetime.utcnow()
     current_user.phone_number = new_phone
     current_user.is_verified = True
+    # Proof of ownership of the new number was just given, so record it. Without
+    # this the verification flag stayed false after a successful change.
+    _mark_channel_verified(current_user, otp_service.CHANNEL_PHONE)
+    # The customer profile mirrors the phone number, so refresh it here too;
+    # otherwise a customer's header would keep showing the old number.
+    sync_customer_from_user(db, current_user)
     db.commit()
 
     profile_data = UserResponse.model_validate(current_user).model_dump()
+    profile_data["role"] = user_role(current_user)
     return {
         "status": "success",
         "message": "Phone number updated successfully",

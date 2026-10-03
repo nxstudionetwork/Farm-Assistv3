@@ -821,9 +821,31 @@ _c("rice", "Rice", "Field Crops", "Cereals", scientific="Oryza sativa",
        market_type="Timber", lifecycle=LIFECYCLE_TEMPLATES["tree"], varieties=["Local"]),
 ]
 
+#: Nutrient-solution targets per crop, stored on the crop row as
+#: ``Crop.hydroponic_targets`` so hydroponics reads them from the catalog.
+#: Keys are catalog codes, so a soilless crop is never a second crop record.
+#: ``group`` is the presentation grouping used by the hydroponics reference view.
+#: pH values are solution pH; EC is in mS/cm.
+#:
+#: This is also the single definition of which crops support soilless
+#: production: :data:`HYDROPONIC_FRIENDLY` is derived from it, so a crop cannot
+#: be advertised as hydroponic without targets, and cannot have targets without
+#: being advertised. Adding a soilless crop is a one-line change here.
+HYDROPONIC_TARGETS = {
+    "lettuce": {"ph": [5.5, 6.5], "ec": [0.8, 1.6], "days": 45, "group": "Leafy"},
+    "spinach": {"ph": [5.5, 6.5], "ec": [1.2, 2.0], "days": 40, "group": "Leafy"},
+    "tomato": {"ph": [5.5, 6.5], "ec": [2.0, 3.5], "days": 90, "group": "Fruiting"},
+    "cucumber": {"ph": [5.5, 6.5], "ec": [1.8, 2.8], "days": 80, "group": "Fruiting"},
+    "capsicum": {"ph": [5.5, 6.5], "ec": [1.8, 2.8], "days": 85, "group": "Fruiting"},
+    "brinjal": {"ph": [5.5, 6.5], "ec": [1.8, 2.8], "days": 85, "group": "Fruiting"},
+    "chilli": {"ph": [5.5, 6.5], "ec": [1.8, 2.8], "days": 85, "group": "Fruiting"},
+}
+
 #: Crops that intentionally support soilless / hydroponic production. The list
 #: is metadata, not a second catalog: these rows are reused for hydroponics.
-HYDROPONIC_FRIENDLY = {"tomato", "lettuce", "spinach", "cucumber", "capsicum", "brinjal", "chilli"}
+#: Derived from :data:`HYDROPONIC_TARGETS` so a crop can never claim soilless
+#: support without targets to validate its readings against.
+HYDROPONIC_FRIENDLY = set(HYDROPONIC_TARGETS)
 
 #: (domain, category, subcategory) -> taxonomy code. Built from
 #: :data:`CROP_TAXONOMY` so a catalog entry never invents a code that no node
@@ -950,6 +972,7 @@ def _apply_spec(crop: Crop, spec: CropSpec, node) -> None:
     crop.market_type = spec.market_type
     crop.lifecycle_stages = list(spec.lifecycle) if spec.lifecycle else None
     crop.suitable_cultivation_methods = _cultivation_methods_for(spec)
+    crop.hydroponic_targets = dict(HYDROPONIC_TARGETS[spec.code]) if spec.code in HYDROPONIC_TARGETS else None
     crop.is_catalog = True
     crop.is_archived = False
 
@@ -969,6 +992,43 @@ def _seed_varieties(db: Session, crop: Crop, names) -> int:
         if existing:
             continue
         db.add(CropVariety(crop_id=crop.id, name=name, duration_days=crop.growth_duration_days))
+        added += 1
+    return added
+
+
+def _mirror_legacy_varieties(db: Session, crops) -> int:
+    """Turn a legacy free-text ``crops.variety`` into a real variety row.
+
+    The one-off schema migration does this for rows that predate
+    ``crop_varieties``, but a crop created any other way (an older client, an
+    import, a direct write) can still carry its variety only as free text. The
+    crop system classifies crops here, so it also guarantees every crop's
+    variety is selectable - otherwise a classified crop shows up with no
+    varieties at all. Idempotent, so it is safe on every startup.
+    """
+    added = 0
+    for crop in crops:
+        name = (crop.variety or "").strip()
+        if not name:
+            continue
+        existing = (
+            db.query(CropVariety)
+            .filter(
+                CropVariety.crop_id == crop.id,
+                func.lower(CropVariety.name) == name.lower(),
+            )
+            .first()
+        )
+        if existing:
+            continue
+        db.add(
+            CropVariety(
+                crop_id=crop.id,
+                name=name,
+                duration_days=crop.growth_duration_days,
+                is_custom=True,
+            )
+        )
         added += 1
     return added
 
@@ -1087,7 +1147,16 @@ def _move_varieties(db: Session, keeper: Crop, dup: Crop) -> None:
     was recorded with. A name that already exists on the keeper is deactivated
     rather than deleted - the consolidation rule is "archive, never remove" - and
     any cycle using it is moved to the keeper's row of the same name.
+
+    A catalog row's varieties are deliberately left behind. Its keeper is a
+    farmer's row that has not yet been given the catalog identity, and
+    :func:`seed_crops` re-seeds the catalog's own varieties onto the survivor
+    straight after this runs. Moving them here as well would graft a farmer's
+    custom variety onto the catalog row and duplicate every catalog variety.
     """
+    if dup.is_catalog and not keeper.is_catalog:
+        return
+
     keeper_names = {(v.name or "").strip().lower(): v for v in keeper.varieties}
     for variety in list(dup.varieties):
         key = (variety.name or "").strip().lower()
@@ -1116,7 +1185,9 @@ def _consolidate_duplicate_crops(db: Session) -> dict:
     win the merge, and the taxonomy has to follow it.
     """
     groups = {}
-    for crop in db.query(Crop).filter(Crop.is_archived.is_(False)).all():
+    active_crops = db.query(Crop).filter(Crop.is_archived.is_(False)).all()
+    mirrored = _mirror_legacy_varieties(db, active_crops)
+    for crop in active_crops:
         groups.setdefault(_alias_key(crop.name), []).append(crop)
 
     archived = 0
@@ -1144,8 +1215,14 @@ def _consolidate_duplicate_crops(db: Session) -> dict:
             dup.is_catalog = False
             archived += 1
 
-    if archived:
+    if archived or mirrored:
         db.commit()
+    if mirrored:
+        logger.info(
+            "Crop catalog: mirrored %d legacy free-text variety value(s) into crop_varieties.",
+            mirrored,
+        )
+    if archived:
         logger.info(
             "Crop catalog: archived %d duplicate crop row(s) after re-pointing their cycles.",
             archived,
