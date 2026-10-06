@@ -47,9 +47,16 @@ ADDITIVE_COLUMNS = {
         ("farmer_card_issuing_authority", "VARCHAR(120)"),
         ("farmer_card_last4", "VARCHAR(4)"),
         ("farmer_card_verification_status", "VARCHAR(20)"),
+        ("farmer_card_verification_reference", "VARCHAR(120)"),
         ("identity_verification_status", "VARCHAR(20)"),
+        ("identity_verification_reference", "VARCHAR(120)"),
         ("identity_provider", "VARCHAR(60)"),
         ("identity_provider_ref", "VARCHAR(120)"),
+    ],
+    "ai_conversations": [
+        ("farmer_id", "VARCHAR(36)"),
+        ("title", "VARCHAR(200)"),
+        ("updated_at", "DATETIME"),
     ],
     "feedback": [
         ("category", "VARCHAR(50)"),

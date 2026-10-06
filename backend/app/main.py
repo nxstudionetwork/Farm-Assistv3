@@ -308,6 +308,7 @@ async def startup():
         }
 
     created = demo_summary = market_seeded = input_summary = None
+    mkt_seeded = None
     demo_login = None
     eq_summary = None
     tools_summary = None
